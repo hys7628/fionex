@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ features[0].title }} · {{ service_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
+  {% for f in features %}
+  <link rel="stylesheet" href="{{ url_for(f.id ~ '.static', filename=f.id ~ '.css') }}">
+  {% endfor %}
+</head>
+{# 사이드바 아이콘. 새 아이콘은 여기 추가하고 FEATURE["icon"]에 이름을 지정합니다. #}
+{% macro icon(name) -%}
+<svg class="icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+  {%- if name == "home" -%}
+  <path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>
+  {%- elif name == "chart" -%}
+  <path d="M4 4v16h16"/><path d="M8 16v-4"/><path d="M12 16V8"/><path d="M16 16v-6"/>
+  {%- elif name == "document" -%}
+  <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/>
+  {%- elif name == "shield" -%}
+  <path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/>
+  {%- elif name == "megaphone" -%}
+  <path d="M4 10v4h3l7 4V6l-7 4z"/><path d="M17.5 9a4 4 0 0 1 0 6"/>
+  {%- elif name == "menu" -%}
+  <path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>
+  {%- elif name == "close" -%}
+  <path d="M6 6l12 12"/><path d="M18 6 6 18"/>
+  {%- endif -%}
+</svg>
+{%- endmacro %}
+<body>
+  <a class="skip-link" href="#main-content" data-skip-link>본문으로 건너뛰기</a>
+
+  <div class="app-shell" data-app-shell data-service-name="{{ service_name }}">
+    <header class="topbar">
+      <button type="button" class="btn btn-ghost btn-icon" aria-controls="sidebar" aria-expanded="false" data-menu-toggle>
+        {{ icon("menu") }}<span class="visually-hidden">메뉴 열기</span>
+      </button>
+      <span class="topbar-brand">{{ service_name }}</span>
+    </header>
+
+    <div class="sidebar-backdrop" data-sidebar-backdrop hidden></div>
+
+    <aside class="sidebar" id="sidebar" data-sidebar>
+      <div class="sidebar-head">
+        <span class="sidebar-brand"><span class="brand-mark" aria-hidden="true"></span>{{ service_name }}</span>
+        <button type="button" class="btn btn-ghost btn-icon sidebar-close" data-menu-close>
+          {{ icon("close") }}<span class="visually-hidden">메뉴 닫기</span>
+        </button>
+      </div>
+      <nav aria-label="주 메뉴">
+        <ul class="nav-list">
+          {% for f in features %}
+          <li>
+            <a class="nav-link" href="#{{ f.id }}" data-tab-link="{{ f.id }}"{% if loop.first %} aria-current="page"{% endif %}>
+              {{ icon(f.icon) }}
+              <span class="nav-label">{{ f.label }}</span>
+              <span class="nav-status" data-nav-status="{{ f.id }}" hidden>
+                <span class="nav-status-dot" aria-hidden="true"></span><span class="visually-hidden" data-nav-status-text></span>
+              </span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="main" id="main-content" tabindex="-1">
+      <div class="main-inner">
+        {% for f in features %}
+        <section class="feature-panel feature-{{ f.id }}" id="panel-{{ f.id }}" data-feature-panel="{{ f.id }}"
+                 data-feature-title="{{ f.title }}" aria-labelledby="title-{{ f.id }}"{% if not loop.first %} hidden{% endif %}>
+          <header class="page-header">
+            <div class="page-header-text">
+              <h1 class="page-title" id="title-{{ f.id }}" tabindex="-1">{{ f.title }}</h1>
+              <p class="page-description">{{ f.description }}</p>
+            </div>
+            <p class="status-chip" data-work-status="{{ f.id }}" role="status" hidden></p>
+          </header>
+          {% include f.id ~ "/panel.html" %}
+        </section>
+        {% endfor %}
+      </div>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/leave_guard.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/app_shell.js') }}"></script>
+  {% for f in features %}
+  <script src="{{ url_for(f.id ~ '.static', filename=f.id ~ '.js') }}"></script>
+  {% endfor %}
+</body>
+</html>

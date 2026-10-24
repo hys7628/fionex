@@ -1,0 +1,5 @@
+/*
+ * 홈 탭 전용 스타일. 선택자는 .feature-home 안으로 한정합니다.
+ * 공통 컴포넌트(.card, .btn, .input 등)를 복제·덮어쓰지 말고 tokens.css 변수를 사용합니다.
+ * 예) .feature-home .xxx-list { gap: var(--space-3); }
+ */

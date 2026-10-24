@@ -1,0 +1,40 @@
+{# 제품소개서 작업 영역. 입력 항목은 공통 UI 확인용 예시이며 명세 확정 후 담당자가 교체합니다. #}
+<div class="workspace">
+  <form class="card" aria-labelledby="product_brochure-input-title">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title" id="product_brochure-input-title">자료 입력</h2>
+        <p class="card-description">소개서에 사용할 한국어 제품 자료를 넣습니다.</p>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="product_brochure-file">한국어 제품 자료</label>
+      <input class="file-input" id="product_brochure-file" name="source_file" type="file"
+             aria-describedby="product_brochure-file-hint">
+      <p class="field-hint" id="product_brochure-file-hint">지원 형식과 용량은 기능 명세 확정 후 안내합니다. 파일은 저장하지 않습니다.</p>
+    </div>
+    <div class="field">
+      <label class="field-label" for="product_brochure-notes">요청 사항</label>
+      <textarea class="textarea" id="product_brochure-notes" name="notes"
+                placeholder="강조할 내용이나 바이어 정보를 적어 주세요."></textarea>
+    </div>
+    <div class="btn-row">
+      <button type="submit" class="btn btn-primary" disabled aria-describedby="product_brochure-pending">소개서 생성</button>
+      <span class="field-hint" id="product_brochure-pending">준비 중: 아직 사용할 수 없습니다.</span>
+    </div>
+  </form>
+
+  <section class="card" aria-labelledby="product_brochure-result-title">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title" id="product_brochure-result-title">소개서 미리보기</h2>
+        <p class="card-description">생성된 포르투갈어 소개서를 검토하고 수정합니다.</p>
+      </div>
+      <button type="button" class="btn btn-secondary" disabled>PDF 다운로드</button>
+    </div>
+    <div class="empty-state">
+      <p class="empty-state-title">아직 결과가 없습니다</p>
+      <p>생성 기능이 개발되면 소개서 미리보기가 이곳에 표시됩니다.</p>
+    </div>
+  </section>
+</div>

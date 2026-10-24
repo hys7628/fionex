@@ -1,0 +1,94 @@
+/*
+ * 디자인 변수 단일 원본. 값은 이 파일에서만 정의하고 다른 CSS는 var(--...)로 사용합니다.
+ * 참고: resources/design/dashboard_reference.png (색감·카드·여백만 참고, 이미지 콘텐츠는 미사용)
+ */
+:root {
+  /* 색상: 배경 */
+  --color-bg: #f1f5fa;
+  --color-bg-gradient: linear-gradient(160deg, #eef4fb 0%, #f4f7fa 55%, #eef6f5 100%);
+  --color-surface: #ffffff;
+  --color-surface-muted: #f6f8fb;
+  --color-surface-hover: #eef3fa;
+
+  /* 색상: 글자 (흰 배경 기준 대비 4.5:1 이상) */
+  --color-text: #17243b;
+  --color-text-muted: #55657d;
+  --color-text-inverse: #ffffff;
+
+  /* 색상: 선 */
+  --color-border: #dde4ee;
+  --color-border-strong: #b9c5d6;
+  --color-border-control: #7b8aa1; /* 입력·선택 컨트롤 테두리, 흰 배경 대비 3:1 이상 */
+
+  /* 색상: 포인트 (블루 = 주요 동작, 민트 = 보조 강조) */
+  --color-primary: #1f63d8;
+  --color-primary-hover: #174fb0;
+  --color-primary-soft: #e7effd;
+  --color-primary-text: #1a56bd;
+  --color-accent: #23b39b;
+  --color-accent-soft: #e3f6f2;
+  --color-accent-text: #0b7564;
+  --color-hero-gradient: linear-gradient(120deg, #e4eefc 0%, #eaf5fb 50%, #e2f5ef 100%);
+
+  /* 색상: 상태 (색상만으로 구분하지 않고 텍스트를 함께 표시) */
+  --color-info: #1a56bd;
+  --color-info-soft: #e7effd;
+  --color-success: #0b7564;
+  --color-success-soft: #e3f6f2;
+  --color-warning: #8a5300;
+  --color-warning-soft: #fdf2df;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdeceb;
+
+  /* 초점 표시 */
+  --focus-ring: 0 0 0 3px #ffffff, 0 0 0 5px #1f63d8;
+
+  /* 글꼴: 웹폰트 사용권 미정 → 시스템 글꼴 */
+  --font-sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR",
+    system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.375rem;
+  --font-size-2xl: 1.75rem;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+  --line-height-tight: 1.3;
+  --line-height-base: 1.6;
+
+  /* 간격 (4px 단위) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* 모서리 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  /* 그림자 (은은하게) */
+  --shadow-sm: 0 1px 2px rgba(23, 44, 82, 0.05);
+  --shadow-md: 0 4px 18px rgba(23, 44, 82, 0.07);
+  --shadow-lg: 0 12px 32px rgba(23, 44, 82, 0.14);
+
+  /* 레이아웃 */
+  --sidebar-width: 248px;
+  --topbar-height: 56px;
+  --content-max-width: 1440px;
+  --control-height: 42px;
+
+  /* 움직임 */
+  --transition-fast: 150ms ease;
+  --z-backdrop: 40;
+  --z-sidebar: 50;
+}

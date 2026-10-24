@@ -1,0 +1,46 @@
+{# 홍보 스튜디오 작업 영역. 입력 항목은 공통 UI 확인용 예시이며 명세 확정 후 담당자가 교체합니다. #}
+<div class="workspace">
+  <form class="card" aria-labelledby="promotion_studio-input-title">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title" id="promotion_studio-input-title">콘티 조건</h2>
+        <p class="card-description">대상과 제품 자료를 직접 입력합니다. 다른 탭의 자료는 자동으로 가져오지 않습니다.</p>
+      </div>
+    </div>
+    <fieldset class="fieldset">
+      <legend class="field-label">대상</legend>
+      <div class="btn-row">
+        <label class="choice"><input type="radio" name="audience" value="buyer"> 바이어용</label>
+        <label class="choice"><input type="radio" name="audience" value="consumer"> 소비자용</label>
+      </div>
+    </fieldset>
+    <div class="field">
+      <label class="field-label" for="promotion_studio-description">제품 설명</label>
+      <textarea class="textarea" id="promotion_studio-description" name="description"></textarea>
+    </div>
+    <div class="field">
+      <label class="field-label" for="promotion_studio-images">사진·로고</label>
+      <input class="file-input" id="promotion_studio-images" name="images" type="file" multiple
+             aria-describedby="promotion_studio-images-hint">
+      <p class="field-hint" id="promotion_studio-images-hint">지원 형식과 용량은 기능 명세 확정 후 안내합니다. 파일은 저장하지 않습니다.</p>
+    </div>
+    <div class="btn-row">
+      <button type="submit" class="btn btn-primary" disabled aria-describedby="promotion_studio-pending">콘티 생성</button>
+      <span class="field-hint" id="promotion_studio-pending">준비 중: 아직 사용할 수 없습니다.</span>
+    </div>
+  </form>
+
+  <section class="card" aria-labelledby="promotion_studio-result-title">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title" id="promotion_studio-result-title">콘티 결과</h2>
+        <p class="card-description">장면별 구성과 포르투갈어 문구를 표시합니다.</p>
+      </div>
+      <button type="button" class="btn btn-secondary" disabled>PDF 다운로드</button>
+    </div>
+    <div class="empty-state">
+      <p class="empty-state-title">아직 결과가 없습니다</p>
+      <p>콘티 생성 기능이 개발되면 결과가 이곳에 표시됩니다.</p>
+    </div>
+  </section>
+</div>
