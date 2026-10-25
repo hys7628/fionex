@@ -222,3 +222,15 @@
 - 발견 사항(수정하지 않고 보고): PDF 파일명이 분 단위라 같은 분 반복 다운로드 시 이름이 같아짐(초 단위 추가는 선택 사항). .env.example 2번째 줄 "앱은 .env 파일을 자동으로 읽지 않는다"가 현재 동작과 다름(공통 파일). docs/decisions.md Home 관련 항목 갱신 필요(공통 파일, 보고서 참고).
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 실제 사용자 브라우저(Chrome·Edge·Safari·모바일) 수동 확인, 화면낭독기, 실제 키 기반 USD/KRW·앱 경로 AI 요약 실제 호출.
+
+## DEV-HOME-010 PR 전 공통 문서·설정 정합성 점검
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 18:50~19:05경 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/home, 작업 전 미커밋 변경 없음. develop 병합 커밋 a8d7ec9 이후 — 공통 PDF 입력·pypdf 반영)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: .env.example의 오래된 dotenv 설명 정정, 환경변수 4종 정합성, docs/decisions.md의 Home 관련 차이를 구현 사실/사용자 지시/팀 결정 필요로 구분(규칙상 팀 합의가 필요하면 수정하지 않고 추천안), develop PR blocker 평가. Home 기능 코드·requirements 수정 금지, README는 현재 내용이 맞으면 수정하지 않음. Git 작업 금지.
+- 판단: docs/decisions.md는 AGENTS.md "공통 변경은 사전 공유 → 수정 담당 합의 → 변경 → 검토"에 따라 수정하지 않고 추천 변경안만 보고. .env.example은 사용자 지시에 따라 설명 3줄만 수정(값 변경 없음). README는 develop 병합으로 Home PDF 문장이 "PDF 라이브러리 미선정"으로 되돌아가고 패키지 목록·구현 범위 문구가 현재와 달라 해당 3곳만 최소 수정.
+- 변경 파일: .env.example(2번째 줄 → .env 자동 로딩·OS 우선·.env 없어도 실행·이 파일에는 변수명과 빈 값만 3줄), README.md(현재 단계의 구현 범위 문구에 홈 구현 반영, 패키지 목록에 python-dotenv·reportlab, PDF 출력 문장 복원).
+- 발견 사항: jasonenv에 develop의 pypdf 6.21.2가 미설치 → requirements.txt 그대로 설치. common/ai_client.py가 pdf_utils(pypdf)를 모듈 상단에서 import하므로 미설치 환경에서는 Home AI 요약이 ImportError 처리로 "사용할 수 없음"이 됨(코드 판독, 실행 확인 안 함) → 팀원은 병합 후 `pip install -r requirements.txt` 필요. requirements.txt 20번째 줄 "PDF 출력 도구는 기능 개발 단계에서 선정·검증 후 추가한다"는 reportlab 추가와 맞지 않음(수정 금지 대상, 보고만). README ".env 로딩"의 `flask --app app run` 동작은 Flask 소스 기준이며 직접 실행 확인은 안 함.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: decisions.md 갱신은 팀 합의 후.

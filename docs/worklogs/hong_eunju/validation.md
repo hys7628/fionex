@@ -375,3 +375,16 @@ JS 예외 0. 콘솔 오류 favicon 404(기존)만. fixture 서버가 막은 외�
 
 ### 미검증
 실제 사용자 브라우저(Chrome·Edge·Safari·모바일)에서의 반복 다운로드 파일명 처리, 화면낭독기, 실제 키 기반 USD/KRW, 앱 경로 실제 AI 요약.
+
+## 2026-10-25 PR 전 공통 문서·설정 정합성 (DEV-HOME-010)
+변경: .env.example(설명 3줄), README.md(3곳). Home 기능 코드·requirements.txt 변경 없음.
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| .env.example 설명 | README ".env 로딩"과 같은 동작(python app.py 시 자동 로딩, OS 우선, .env 없어도 실행) | 일치, 값 줄 변경 없음, CRLF 14/LF 0 | 통과 |
+| .env.example 값 | 키 값 없음 | OPENAI_API_KEY·KOTRA_API_KEY·KOREAEXIM_API_KEY 빈 값, OPENAI_MODEL·OPENAI_IMAGE_MODEL은 공개 초기 후보 | 통과 |
+| 환경변수 이름 | 코드 = .env.example = README | OPENAI_API_KEY·OPENAI_MODEL·KOTRA_API_KEY·KOREAEXIM_API_KEY 일치 | 통과 |
+| develop 병합 후 패키지 | requirements 설치 상태 | pypdf 미설치 발견 → requirements.txt 그대로 설치(6.21.2) | 조치 |
+| `python -m unittest discover -s tests/test_home` (FLASK_SKIP_DOTENV=1, 키 환경변수 제거) | OK | 60 OK | 통과 |
+| `python -m unittest discover -s tests/test_common` | OK | 56 OK(병합된 test_pdf 포함) | 통과 |
+| 앱 import·GET /, common.ai_client import | 200 | 200 | 통과 |
+테스트를 다시 돌린 이유: 문서 변경 때문이 아니라 develop 병합으로 공통 코드(ai_client·pdf_utils)가 바뀌었기 때문. 브라우저 검증은 이번에 다시 하지 않음(Home 코드·화면 변경 없음). 외부 API·AI 호출 없음.

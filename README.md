@@ -10,8 +10,9 @@
 2026-10-25 사용자 직접 실행 결과를 전달받아 두 공통 함수의 실제 호출과 반환 형식을 확인했습니다. 업무 결과 품질·비용·소요 시간·응답 모델명·사용량은 미검증입니다.
 PDF 입력 공통 함수(`generate_structured_from_pdf`, PDF 검사 `inspect_pdf`)를 추가했고 모의 테스트를 통과했습니다.
 2026-10-25 사용자 직접 실행 결과(gpt-5.4-mini-2026-03-17, 텍스트 PDF 3쪽 1회, 연결 확인용 최소 추출)를 전달받아 실제 호출과 구조화 응답 반환을 확인했습니다. 스캔 PDF 판독·전체 추출 정확성·비용·소요 시간은 미검증입니다.
-각 기능의 AI 호출, 뉴스 수집, 시장 분석, 기능별 파일·PDF 분석 연결(업로드 라우트·화면), 인증 판정, 소개서·콘티 생성, PDF 출력, 로그 자동 수집은 아직 구현되지 않았습니다.
-각 탭의 입력 항목은 공통 UI 확인용 예시이며 버튼은 "준비 중"으로 비활성화되어 있습니다.
+홈 탭(바이어 시간·뉴스 수집·포르투갈어 뉴스 AI 요약·환율·전시회·일일 브리핑 PDF 출력)은 구현했습니다(features/home/feature_spec.md).
+그 밖의 기능의 AI 호출, 시장 분석, 기능별 파일·PDF 분석 연결(업로드 라우트·화면), 인증 판정, 소개서·콘티 생성, PDF 출력, 로그 자동 수집은 아직 구현되지 않았습니다.
+홈을 제외한 각 탭의 입력 항목은 공통 UI 확인용 예시이며 버튼은 "준비 중"으로 비활성화되어 있습니다.
 Git 초기화·원격 연결·커밋·푸시·배포는 수행하지 않았습니다.
 
 ## 실행 (공통 화면)
@@ -77,9 +78,9 @@ python -m unittest discover -s tests/test_common -v
 ## 기술 기준
 이 구조는 대화에서 제안한 Flask + HTML/CSS/JavaScript 기준입니다.
 로컬 기준 Conda jasonenv / Python 3.11. AI는 서버에서 OpenAI API 호출.
-requirements.txt: Flask 3.1.2, openai 3.37.0, pydantic 2.14.1, httpx2 2.16.0, pypdf 6.21.2(PDF 입력 검사)(jasonenv 설치 확인). 프런트 프레임워크는 쓰지 않습니다.
+requirements.txt: Flask 3.1.2, openai 3.37.0, pydantic 2.14.1, httpx2 2.16.0, python-dotenv 1.1.1(.env 로딩), reportlab 5.1.0(홈 PDF 출력), pypdf 6.21.2(PDF 입력 검사)(jasonenv 설치 확인). 프런트 프레임워크는 쓰지 않습니다.
 OpenAI 모델은 초기 후보(gpt-5.4-mini, gpt-image-2.5-sunburst)이며 최종 선정 전입니다. 실제 호출·반환 형식은 사용자 실행 결과로 확인했고, 품질·비용·소요 시간은 미검증입니다.
-PDF 라이브러리·배포 플랫폼은 아직 선정하지 않았습니다. 공통 AI 함수 사용법은 docs/data_contracts.md를 확인하세요.
+PDF 출력은 홈 일일 브리핑에서 ReportLab 5.1.0 + Noto Sans KR(OFL, features/home/fonts/)로 메모리 생성합니다(2026-10-25). 다른 탭의 PDF 출력 도구·공통 폰트 위치와 배포 플랫폼은 아직 정하지 않았습니다. 공통 AI 함수 사용법은 docs/data_contracts.md를 확인하세요.
 
 ## 개발 순서
 폴더·규칙 확인 → 공통 디자인 확정 → 공통 레이아웃·탭 상태 유지 구현 → 기능 개발 → 통합 검증.
