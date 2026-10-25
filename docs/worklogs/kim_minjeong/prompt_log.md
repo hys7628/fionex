@@ -58,3 +58,40 @@
   - CONAR 내용을 서비스에서 OpenAI에 제공하고 자동 조회하는 feature_spec.md 구조가 CONAR 이용약관과 충돌할 수 있음. 허가 요청·사용 방식 변경·프로젝트 성격 확인 등 팀 결정 필요(명세는 변경하지 않음)
   - 이번 확인 과정에서 CONAR 페이지·PDF·약관을 프로그램으로 1회씩 내려받았고 개발 도구 AI가 내용을 읽었음. 사본은 저장소 밖 세션 임시 폴더에만 있음
   - 한국어 번역은 개발 도구로 작성한 비공식 번역이며 사람·법률 검토 전
+
+## DEV-2026_10_25-03 CONAR 표현 검수 기준 자료 보완
+- 유형: development_instruction (서비스 프롬프트 실험 아님)
+- 날짜/시간: 2026-10-25 16:58~17:06 (Asia/Seoul)
+- 작업자: 김민정 / 기능: green_claim / 브랜치: feature/green_claim (HEAD f7ab5f3 = origin/feature/green_claim, 작업 전 변경 없음. 원격 최신성은 마지막 fetch 2026-10-25 15:43 이후 미확인)
+- 도구·모델/설정: Claude Code(VS Code 확장). 세션 시스템 정보상 모델 ID claude-opus-5-5. 그 밖의 설정 미확인. 서비스 OpenAI·유료 API 호출 없음
+- 지시 요약(팀 합의에 따라 요약본 기록)
+  - 담당자 결정: CDC와 CONAR·부속서 U를 모두 AI 검수 기준에 포함하는 요구사항 유지. 이 결정은 CONAR 이용 허가가 아니며, 허가 미확인 상태를 그대로 기록
+  - CONAR 환경 관련 조항·부속서 U의 원문 발췌(conar_excerpt.md), 비공식 번역·검토 지침(review_criteria_ko.md), 출처·이용 조건(source_register.md) 보완
+  - 직전 저장 보류 기록은 삭제하지 않고 후속 경위 추가. CDC 자료·feature_spec.md·공통 파일 수정 금지
+- 변경 이유: 담당자가 CONAR를 검수 기준에 포함하기로 해, 구현 전에 정확한 조항 원문과 한국어 검토 기준을 준비하기 위함
+- 실제 결과
+  - 직전 확보본(웹 16:31:51, PDF 16:33:58, 약관 16:34:00)을 사용. 다시 접속하지 않음
+  - conar_excerpt.md 추가: 기준 ID 15개, 원문 103줄. Artigo 8º·17·18·27(caput, §1º, §2º, §7º, §8º)·36·36-A·36-B, Anexo "U" 서문 일부·I·II.1~II.9·각주 1~4
+  - review_criteria_ko.md에 "CONAR 후속 경위", "CONAR 상세 기준"(15개 항목: 조항, 원문 발췌, 비공식 번역, 원문 요구, 검토 지침, 적용 범위와 해석 한계, 제품 증빙) 추가. 기존 보류 표는 유지
+  - source_register.md에 후속 경위, 상태 구분, 이용 조건과 남은 위험, 웹·PDF 대조 추가 결과 추가
+  - data/README.md에 conar_excerpt.md 안내와 후속 한 줄 추가(기존 줄 유지)
+  - 번역 자체 점검에서 2곳 수정: "pontuais"(일시적→단발적), 9.2.3 c의 역물류·공급자 회수 조건 누락 보완
+- 한계·미정
+  - CONAR AI 이용 허가 미확인. 발췌를 서비스 OpenAI 입력에 쓰는 것과 공식 출처 자동 조회는 허가 확인 전까지 해결되지 않은 위험
+  - 원격 저장소 공개 여부 미확인(공개라면 재배포 범위 추가 검토 필요)
+  - 번역은 개발 도구가 작성한 비공식 번역, 사람·법률 전문가 검토 전
+  - Anexo U 정확한 승인일·시행일, 내용위원회 결의·기술 노트, Artigo 1º·32 미발췌, 각주 법령 원문 미조회
+  - B2B 적용 범위, 36-B와 부속서 U 문구 차이의 우선순위 해석 미확인
+
+## DEV-2026_10_25-03 후속: "pontuais" 번역 보완 (같은 작업 범위, 커밋 전)
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 17:10 무렵 (Asia/Seoul)
+- 도구·모델/설정: Claude Code, 모델 ID claude-opus-5-5(세션 시스템 정보), 그 밖의 설정 미확인. 외부 API 호출 없음
+- 지시 요약: review_criteria_ko.md의 CONAR-36B·CONAR-U-2에서 "단발적(pontuais)"을 원문 전체 문맥과 대조해, 시간적 일회성으로 오해되지 않도록 문맥에 맞게 수정. 원문 발췌·명세·공통 파일 수정 금지
+- 변경 이유: 원문 "ações ou atributos socioambientais pontuais, específicos ou relacionados a determinadas partes do produto ou etapas isoladas do ciclo de vida"에서 pontuais는 específicos, 제품 일부, 수명주기의 개별 단계와 나란히 놓여 이익이 특정 범위에 국한됨을 뜻한다. 직전 수정("일시적"→"단발적")도 시간적 일회성으로 읽힐 수 있었다
+- 변경 차이(review_criteria_ko.md, 두 곳)
+  - CONAR-36B b: "단발적(pontuais)·특정한 활동이나 속성, 제품의 일부 또는 수명주기의 일부 단계에만 관련된 주장은" → "특정 범위에 한정된(pontuais)·특정한(específicos) 활동이나 속성, 또는 제품의 일부나 수명주기의 개별 단계(etapas isoladas)에 관련된 주장은"
+  - CONAR-U-2: "단발적(pontuais)·특정한 활동이나 속성, 제품 일부 또는 수명주기의 일부 단계에 관련된 주장은" → 위와 같은 문구
+  - 36-B b에서 원문에 없는 "~에만"을 함께 삭제(원문 "relacionados a"에 "오직"의 뜻 없음)
+- 결과: 번역 2곳 수정. conar_excerpt.md(포르투갈어 원문) 변경 없음
+- 한계: 비공식 번역이며 사람·전문가 검토 전. 위 이전 기록의 "일시적→단발적" 수정 내역은 당시 기록으로 유지

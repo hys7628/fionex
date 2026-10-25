@@ -5,8 +5,10 @@ brazil_claim_criteria/
 - source_register.md: 출처·조회 시각·버전 단서·사용권 확인 상태
 - cdc_l8078_excerpt.md: CDC 관련 조항 포르투갈어 원문 발췌
 - review_criteria_ko.md: 한국어 검토 기준 정리(비공식 번역)
+- conar_excerpt.md: CONAR 환경 관련 조항·부속서 U 포르투갈어 원문 발췌(2026-10-25 후속 추가)
 
 CONAR 원문 발췌·번역은 이용약관 제한으로 저장 보류. 조항 번호·제목만 기록.
+후속(2026-10-25): 담당자가 CONAR를 검수 기준에 포함하는 요구사항을 유지해 발췌·비공식 번역을 추가했다. CONAR AI 이용 허가는 미확인(source_register.md).
 자동 조회·변경 감지·갱신은 구현되지 않았다. 기준 자료 파일 구조·버전 관리 방식은 구현 전에 확정한다(feature_spec.md).
 
 ## 후속 단계: 인증 갭 분석

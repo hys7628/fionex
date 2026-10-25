@@ -25,3 +25,12 @@
 | CONAR 이용약관 | CONAR | https://www.conar.org.br/termos-de-uso | 2026-10-25 16:34:00 | HTTP 200, 본문 확인 | 2026년 5월 이사회 제정 | - |
 | Lei nº 9.610/1998 | Planalto(Casa Civil) | https://www.planalto.gov.br/ccivil_03/leis/l9610.htm | 2026-10-25 16:35:20 | HTTP 200, Art. 8º 확인 | 사용권 판단 근거 | - |
 - 미조회: 영문 PDF(Brazilian_Advertising_Self-Regulation.pdf, 링크만 확인)
+
+## 2026-10-25 CONAR 발췌 보완 (DEV-2026_10_25-03)
+이전 항목(미조회, 저장 보류)은 그대로 유지하고 후속 내용을 추가한다. 이번에는 새로 접속하지 않았다.
+| 자료 | 기관 | URL | 확인 시각(KST) | 자료 경로 | 버전 | 이용 조건 |
+|---|---|---|---|---|---|---|
+| CONAR 코드 웹 게시본 | CONAR | https://www.conar.org.br/codigos | 2026-10-25 16:31:51(직전 확보본 사용) | features/green_claim/data/brazil_claim_criteria/conar_excerpt.md | PDF "Edição 2025"와 대조. Anexo U 개정 2025년 11월 승인(PDF 각주) | 일부 복제는 의미 유지·비상업·출처 표시 조건으로 허용. AI 입력·자동 수집·상업 이용은 사전 허가 필요. **AI 이용 허가 미확인** |
+| CONAR 코드 PDF | CONAR | https://conar.wpenginepowered.com/wp-content/uploads/2026/08/Codigo_CONAR_2026.pdf | 2026-10-25 16:33:58(직전 확보본 사용) | 저장소에 넣지 않음(대조용) | 같음 | 같음 |
+| CONAR 이용약관 | CONAR | https://www.conar.org.br/termos-de-uso | 2026-10-25 16:34:00(직전 확보본, 재확인 안 함) | source_register.md 요약 | 2026년 5월 제정 | - |
+- 담당자의 요구사항 유지 결정은 이용 허가가 아님
