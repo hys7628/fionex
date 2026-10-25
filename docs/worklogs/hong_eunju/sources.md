@@ -68,3 +68,9 @@
 - 조회일: 2026-10-25
 - 적용 범위: README·feature_spec의 KOREAEXIM_API_KEY 발급 안내. 신청서 입력 항목·인코딩/디코딩 키 구분은 본인 인증 이후 화면이라 미확인
 - 사용권: 수출입은행 개인정보 수집 동의(실명인증정보·성명·이메일, 2년 보유) 필요
+
+## PDF 폰트·라이브러리 (일일 브리핑)
+- Noto Sans KR — Google Fonts 공식 저장소 https://github.com/google/fonts/tree/main/ofl/notosanskr (NotoSansKR[wght].ttf v2.004, OFL.txt), 조회일 2026-10-25. 적용 범위: 홈 일일 브리핑 PDF 글꼴(정적 400·700 추출본). 사용권: SIL OFL 1.1, 예약 폰트 이름 'Source'.
+- Nanum Gothic — 같은 저장소 ofl/nanumgothic, 조회일 2026-10-25. 포르투갈어 악센트 글리프가 없어 채택하지 않음(비교용).
+- ReportLab 5.1.0 — PyPI 패키지 메타데이터(License: BSD), 2026-10-25 설치. 적용 범위: PDF 생성.
+- fpdf2 2.8.9 — PyPI 패키지 메타데이터(LGPL-3.0-only), 2026-10-25 임시 설치·비교만(채택 안 함).

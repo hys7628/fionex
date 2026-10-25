@@ -731,6 +731,68 @@
     if (!fairsLoaded && !fairsBusy) loadFairs();
   }
 
+  /* ---------- 일일 브리핑 PDF ---------- */
+  // 서버가 그 시점의 홈 데이터로 PDF를 만들어 돌려줍니다. 기준 도시만 함께 보냅니다.
+  // 다운로드는 fetch → Blob → AppShell.work.downloadBlob(페이지 이동 없음, 저장 성공 여부는 브라우저 몫).
+  const reportEl = {
+    body: panel.querySelector("#home-report-body"),
+    button: panel.querySelector("#home-report-button"),
+    loading: panel.querySelector("#home-report-loading"),
+    status: panel.querySelector("#home-report-status"),
+    notices: panel.querySelector("#home-report-notices"),
+    city: panel.querySelector("#home-report-city"),
+  };
+  let reportBusy = false;
+
+  function reportFilename(res) {
+    const match = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") || "");
+    return match ? match[1] : "fionex_daily_briefing.pdf";
+  }
+
+  function showReportError(message) {
+    const notice = make("div", "notice notice-danger");
+    notice.append(make("p", "notice-title", "PDF를 만들지 못했습니다"),
+      make("p", "", message + " 버튼을 다시 눌러 시도할 수 있습니다."));
+    reportEl.notices.replaceChildren(notice);
+  }
+
+  async function downloadReport() {
+    if (reportBusy) return;
+    reportBusy = true;
+    reportEl.button.disabled = true;
+    reportEl.body.setAttribute("aria-busy", "true");
+    reportEl.loading.hidden = false;
+    reportEl.status.hidden = true;
+    reportEl.notices.replaceChildren();
+    try {
+      const res = await fetch("/api/home/report/daily.pdf?city=" + encodeURIComponent(citySelect.value));
+      if (!res.ok || (res.headers.get("Content-Type") || "").indexOf("application/pdf") !== 0) {
+        let message = "서버에서 PDF를 받지 못했습니다.";
+        try { message = (await res.json()).error.message || message; } catch (err) { /* JSON 아님 */ }
+        const error = new Error(message);
+        error.fromServer = true;
+        throw error;
+      }
+      const blob = await res.blob();
+      AppShell.work.downloadBlob(FEATURE_ID, blob, reportFilename(res));
+      reportEl.status.textContent = "다운로드를 요청했습니다. 저장 여부는 브라우저에서 확인하세요.";
+      reportEl.status.hidden = false;
+    } catch (err) {
+      // 네트워크 오류 원문(브라우저 영어 문구 등)은 보여 주지 않고 서버가 준 고정 문장만 씁니다.
+      showReportError(err.fromServer ? err.message : "서버에 연결하지 못했습니다.");
+    } finally {
+      reportBusy = false;
+      reportEl.button.disabled = false;
+      reportEl.body.setAttribute("aria-busy", "false");
+      reportEl.loading.hidden = true;
+    }
+  }
+
+  reportEl.button.addEventListener("click", downloadReport);
+  citySelect.addEventListener("change", function () {
+    setText(reportEl.city, citySelect.selectedOptions[0].textContent);
+  });
+
   // 화면에 분 단위까지만 표시하므로 매 분 경계에 한 번 갱신합니다. 홈이 숨겨지면 멈춥니다.
   let timer = null;
 

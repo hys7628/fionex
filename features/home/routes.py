@@ -2,9 +2,13 @@
 
 API는 /api/home 접두어를 사용합니다(docs/data_contracts.md).
 """
-from flask import Blueprint, jsonify, request
+import logging
+
+from flask import Blueprint, Response, jsonify, request
 
 from features.home import service
+
+logger = logging.getLogger(__name__)
 
 bp = Blueprint(
     "home",
@@ -102,3 +106,30 @@ def fairs():
             "message": "전시회 일정 자료를 확인할 수 없습니다.",
         }), 503
     return jsonify(ok=True, data=data)
+
+
+@bp.get("/api/home/report/daily.pdf")
+def daily_report():
+    """일일 브리핑 PDF. ?city=화면 기준 도시 값(IANA, 기본 America/Sao_Paulo)
+
+    성공: application/pdf 첨부 파일(메모리에서 생성, 서버에 저장하지 않음). 영역별 수집 실패는 PDF 안에 표시합니다.
+    실패: 400 invalid_city, PDF 생성 자체 실패 500 report_failed.
+    """
+    city = request.args.get("city", service.REPORT_DEFAULT_CITY)
+    if city not in service.REPORT_CITIES:
+        return jsonify(ok=False, error={
+            "code": "invalid_city",
+            "message": "city는 " + ", ".join(service.REPORT_CITIES) + " 중 하나여야 합니다.",
+        }), 400
+    try:
+        pdf, filename = service.build_daily_report(city)
+    except Exception:
+        logger.exception("일일 브리핑 PDF 생성 실패")
+        return jsonify(ok=False, error={
+            "code": "report_failed",
+            "message": "PDF를 만들지 못했습니다. 잠시 후 다시 시도하세요.",
+        }), 500
+    return Response(pdf, mimetype="application/pdf", headers={
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Cache-Control": "no-store",
+    })

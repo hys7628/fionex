@@ -19,7 +19,7 @@ from pathlib import Path
 from time import monotonic
 from zoneinfo import ZoneInfo
 
-from features.home import fairs, fx, news_summary
+from features.home import buyer_time, fairs, fx, news_summary, report
 
 # 환율은 features/home/fx.py, 전시회 일정은 features/home/fairs.py에서 처리합니다.
 FX_SOURCES = fx.SOURCES
@@ -28,6 +28,10 @@ FAIRS_DEFAULT_LIMIT = fairs.DEFAULT_LIMIT
 FAIRS_MAX_LIMIT = fairs.MAX_LIMIT
 FairsDataError = fairs.FairsDataError
 get_upcoming_fairs = fairs.get_upcoming
+# 일일 브리핑 PDF는 features/home/report.py가 위 함수들을 모아 만듭니다.
+REPORT_CITIES = buyer_time.CITIES
+REPORT_DEFAULT_CITY = buyer_time.DEFAULT_CITY
+build_daily_report = report.build_daily
 
 logger = logging.getLogger(__name__)
 

@@ -185,3 +185,25 @@
 - 발견한 문서 차이(수정하지 않고 보고): .env.example 2번째 줄 "앱은 .env 파일을 자동으로 읽지 않는다"가 DEV-COMMON-001 이후 README(.env 자동 로딩)와 다름. feature_spec.md 기존 `## 검증`의 "현재 기능 미구현"이 현재 상태와 다름.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 실제 키 기반 USD/KRW 응답·`deal_bas_r` 실제 형식·11시 이전·비영업일 응답 미확인. 신청서(02단계) 입력 항목·인코딩/디코딩 키 구분 여부는 본인 인증 뒤 화면이라 미확인.
+
+## DEV-HOME-008 홈 일일 브리핑 PDF 다운로드
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 17:40~18:10경 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/home, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: 보고서 카드를 "일일 브리핑 PDF 받기"로 교체. 머리말·바이어 시간·환율·최신 뉴스(8건, AI 요약은 있는 경우만)·다가오는 전시회(3건)·출처 및 유의사항(실패 목록 포함)의 A4 동적 PDF. 기존 service·캐시 재사용, 중복 API 호출 금지, 서버 디스크 저장 금지, 부분 실패 시 해당 섹션만 확인 불가, fetch→Blob→AppShell.work.downloadBlob. PDF 라이브러리·폰트·requirements 변경은 먼저 보고. 테스트는 FLASK_SKIP_DOTENV=1·mock. Git 작업 금지.
+- 사전 조사(저장소·jasonenv 변경 없이 scratchpad에만 설치): fpdf2 2.8.9(LGPL-3.0)·reportlab 5.1.0(BSD) 모두 한글·포르투갈어·링크·A4 다쪽·메모리 생성 가능. Noto Sans KR 가변 폰트는 두 라이브러리 모두 기본 굵기 Thin으로 들어가고 fpdf2 굵게 변환에 23초 → 정적 인스턴스 필요. Nanum Gothic은 포르투갈어 악센트(ç ã é ô 등) 없음, 맑은 고딕은 재배포 불가.
+- 사용자 결정(질문 응답): ReportLab 5.1.0, Noto Sans KR 정적 Regular·Bold 저장소 포함, 위치 features/home/fonts/, 바이어 시간은 서버에서 화면과 같은 규칙으로 계산.
+- 변경 파일: requirements.txt(reportlab==5.1.0), README.md(PDF 문장), features/home/buyer_time.py·report.py(신규), fonts/(신규 4개), service.py(연결), routes.py(GET /api/home/report/daily.pdf), panel.html·home.js(보고서 카드), tests/test_home/test_report.py(신규)
+- 구현 판단:
+  - 엔드포인트: data_contracts의 /api/home 접두어에 맞춰 GET /api/home/report/daily.pdf?city=. city는 화면 기준 도시 선택값(IANA, 예 America/Manaus)을 그대로 사용(지시 예시 sao_paulo 대신 현재 화면 코드값 재사용), 잘못된 값 400 invalid_city, PDF 엔진 실패 500 report_failed.
+  - 데이터: get_holidays·get_fx·get_news·get_upcoming_fairs(3)를 PDF 요청당 1회씩 호출(캐시 우선, 만료 영역만 기존 정책대로 갱신). AI 요약은 get_news가 붙여 주는 캐시된 요약만 사용(PDF로 OpenAI 호출 없음). KOTRA 항목에는 요약을 넣지 않음.
+  - 바이어 시간: buyer_time.py에 home.js와 같은 규칙(공휴일→주말→09~18시, 다음 업무 시작 최대 31일, zoneinfo 변환). PDF의 가까운 공휴일은 지시대로 7일 이내(화면 카드는 14일).
+  - 외부 문자열은 ReportLab 문단 마크업을 이스케이프해서 넣음(제목의 < > & 확인). 링크는 http(s) URL만 <a href>.
+  - 응답 헤더 Content-Disposition attachment(서울 시각 파일명), Cache-Control no-store. BytesIO만 사용, 임시 파일 없음.
+  - 화면: 생성 중 버튼 disabled·aria-busy·진행 문구, 완료 시 "다운로드를 요청했습니다. 저장 여부는 브라우저에서 확인하세요.", 실패 시 notice-danger(서버 고정 문장 또는 "서버에 연결하지 못했습니다") 후 재시도 가능.
+- 발견 문제: 네트워크 실패 시 브라우저 영어 원문("Failed to fetch")이 안내에 노출 → 고정 한국어 문장으로 수정. 검증 스크립트 문제 2건(WebSocket open 이벤트 놓침, 배열 비교 정규식)은 스크립트만 수정.
+- 외부 호출: 조사 단계 pip(scratchpad)·Google Fonts 공식 저장소 폰트 내려받기. 브라우저 검증 서버는 FLASK_SKIP_DOTENV=1·키 없음 → KOTRA·OpenAI·수출입은행 호출 없음(Google News RSS·PTAX·BrasilAPI 공개 데이터는 Home 화면 로딩과 PDF 생성 중 조회). 계획에 없던 KOTRA·OpenAI 호출 없음.
+- 검증: validation.md 2026-10-25 일일 브리핑 항목.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 헤드리스 Chrome에서 같은 페이지 두 번째 이후 다운로드가 디스크에 저장되지 않음(앱은 Blob 다운로드 요청까지 확인, 원인 미확정 — Chrome 다중 다운로드 정책 추정). 실제 사용자 브라우저 확인 필요. docs/decisions.md의 "홈 보고서 고정/동적 미정"과 feature_spec PDF 섹션은 미갱신(팀 문서).

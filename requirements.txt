@@ -10,5 +10,8 @@ httpx2==2.16.0
 # 로컬 .env 로딩. Flask가 `python app.py`(app.run)·`flask run` 시작 시 이 패키지로 .env를 읽는다(OS 환경변수 우선).
 # 앱 코드에서 직접 import하지 않는다. jasonenv에 설치 후 동작 확인(2026-10-25).
 python-dotenv==1.1.1
+# PDF 생성(홈 일일 브리핑). 메모리(BytesIO)에서 생성, 폰트는 features/home/fonts/Noto Sans KR(OFL).
+# 설치 시 pillow·charset-normalizer가 함께 설치된다. jasonenv에 설치 후 생성·렌더링 확인(2026-10-25).
+reportlab==5.1.0
 # 이 밖의 하위 의존성(anyio, jiter, sniffio, typing-extensions 등)은 openai 설치 시 자동 설치된다.
 # PDF 도구는 기능 개발 단계에서 선정·검증 후 추가한다.
