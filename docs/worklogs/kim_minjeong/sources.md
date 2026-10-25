@@ -84,3 +84,13 @@
 | 설치 결과 | jasonenv pip install pillow==13.0.0 | 같음 | 설치 1개, 하위 의존성 없음, pip check 정상, License-Expression MIT-CMU, 내장 libjpeg-turbo 8.0·zlib-ng 확인 | 실제 설치 |
 | Pillow 동작 | 로컬 확인 스크립트(저장소 밖) | 같음 | 16비트 회색 변환 잘림, verify/load 차이, MPO·APNG 프레임, exif_transpose 후 info 유지 등(validation 기록) | 실제 실행 |
 - 이미지 형식 사양(PNG·JPEG·EXIF) 원문은 이번에도 직접 조회하지 않음. OpenAI 공식 문서도 조회하지 않음
+
+## 2026-10-26 기준 자료 로더 재사용 자료 (DEV-2026_10_26-01)
+- 이번에는 공식 사이트(Planalto·CONAR)를 새로 조회하지 않았다. 저장소의 기존 자료만 재사용했다.
+| 재사용 자료 | 위치 | 원래 조회 정보 | 이번 사용 |
+|---|---|---|---|
+| CDC 원문 발췌 | features/green_claim/data/brazil_claim_criteria/cdc_l8078_excerpt.md | SRC-CDC, 2026-10-25 16:31:44 조회 | 구조화 기준 text_pt, 미수정 |
+| CONAR 원문 발췌 | 같은 폴더 conar_excerpt.md | SRC-CONAR-WEB 2026-10-25 16:31:51 확보본, SRC-CONAR-PDF 16:33:58 대조 | 구조화 기준 text_pt, 미수정 |
+| 한국어 비공식 번역·검토 지침 | 같은 폴더 review_criteria_ko.md | 2026-10-25 작성(개발 도구 비공식 번역, pontuais 정정 반영본) | 번역·지침·한계 칸, 미수정 |
+| 출처 목록·사용권 | 같은 폴더 source_register.md | 2026-10-25 기록(CONAR 이용약관 16:34:00 확인, AI 이용 허가 미확인) | 자료 정보·대조, 미수정 |
+- 구조화 파일의 retrieved_at은 위 원래 조회 시각이며, bundle_created_at(2026-10-26 00:35:43)은 구조화 파일 작성 시각이다.

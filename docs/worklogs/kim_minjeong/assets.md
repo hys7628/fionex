@@ -67,3 +67,9 @@
 | 2026-10-25 | 16비트 회색조 가상 PNG, 투명 PNG(브라우저 흐름용) | 같은 임시 폴더 fixtures/img2/gray16.png, alpha_black_text.png | 스크립트 | 같음 | 가상 자료. 저장소에 넣지 않음 |
 | 2026-10-25 | 화면 캡처 PNG(1440 전체, 모의 이미지 판독 결과, 2차 갱신) | 같은 임시 폴더 green_claim_image_ocr_mock_1440.png(1차 파일을 덮어씀) | Chrome 헤드리스 CDP | 같음 | 모의 결과 화면. 저장소에 넣지 않음 |
 - 저장소 테스트(tests/test_image_ocr.py)는 가상 이미지를 메모리에서 생성하며 파일 자료를 추가하지 않음
+
+## 2026-10-26 구조화 기준 묶음 (DEV-2026_10_26-01)
+| 날짜 | 종류 | 경로 | 생성 도구 | 관련 기록 | 사용권·검토 상태 |
+|---|---|---|---|---|---|
+| 2026-10-26 | 구조화 기준 묶음 JSON(CDC·CONAR 원문 발췌·비공식 번역·검토 지침 포함) | features/green_claim/data/brazil_claim_criteria/criteria_bundle.json | 저장소 밖 생성 스크립트(scratchpad/tools/build_criteria_bundle.py)가 기존 md 칸을 그대로 옮김 | validation DEV-2026_10_26-01 | CDC는 법령 텍스트 저장(법률 검토 없음). **CONAR 발췌 포함, AI 이용 허가 미확인**(source_register.md). 번역은 비공식 |
+| 2026-10-26 | 묶음 생성 스크립트 | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/010a049a-1a72-42db-bb4c-cb26f412c3b5/scratchpad/tools/build_criteria_bundle.py | 직접 작성 | 같음 | 저장소에 넣지 않음. 갱신 기능에서 정식화 필요 |

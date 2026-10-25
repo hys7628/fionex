@@ -565,6 +565,39 @@ Pillow 역할 [구현]
 
 미검증(2차 후에도 남는 것): 실제 OpenAI 호출, 공급자의 이미지 PDF 렌더링·판독 결과, 판독 정확도·비용·소요 시간, 회전된 실제 사진·작은 글자·복잡한 배치·투명 PNG의 실제 판독, 4,096토큰 출력으로 처리 가능한 분량, 실제 메모리 사용량, 사람이 조작하는 실제 브라우저.
 
+### 검수 기준 자료 로더 (2026-10-26 구현 전 작성)
+범위: 저장된 CDC·CONAR 기준 자료를 읽어 문구 검수에 쓸 구조로 돌려주는 로더와 구조화 기준 파일, 무결성 검증까지. 공식 사이트 접속·자동 수집·갱신, OpenAI 호출·그린워싱 검수, 화면·결과 PDF, 인증 갭 분석은 범위 밖.
+
+기존 자료 점검 결과 (2026-10-26 로컬 파일 기준)
+- 원문 발췌: `data/brazil_claim_criteria/cdc_l8078_excerpt.md`(CDC 10개 구간), `conar_excerpt.md`(CONAR 15개 구간). 기준 ID별 `## ID — 조항` 머리글과 인용문(>) 형식.
+- 한국어 비공식 번역·서비스 검토 지침: `review_criteria_ko.md`. CDC는 `### ID 제목` 아래 원문 조항·원문 발췌·한국어 번역(비공식)·검토 활용·적용 범위와 한계·제품 사실 검증 필요·상태. CONAR는 `#### ID 제목`("CONAR 상세 기준") 아래 조항·원문 발췌·한국어 번역(비공식)·원문 요구·검토 지침·적용 범위와 해석 한계·제품 증빙.
+- 출처·조회 시각·버전 단서·사용권: `source_register.md`(SRC-CDC, SRC-CONAR-WEB, SRC-CONAR-PDF 등).
+- 현재 유효 내용 판단 근거: review_criteria_ko.md의 CONAR "저장 보류" 표는 직전 시점 기록이며, 같은 파일의 "CONAR 후속 경위"가 "위 표의 '보류' 칸은 아래 상세 기준으로 대체해 읽는다"고 명시 → 로더는 "#### CONAR-…" 상세 기준만 쓴다. "pontuais" 번역은 개인 기록(DEV-2026_10_25-03 후속)에 따라 현재 파일 문구("특정 범위에 한정된")가 유효.
+- CDC 항목에는 "원문 요구" 칸이 따로 없다(번역과 "검토 활용"만 있음). 새로 만들지 않고 빈 값(null)으로 둔다.
+- CONAR AI 이용 허가는 미확인(source_register.md). 담당자의 요구사항 유지 결정은 허가가 아니다. 로더 구현도 허가 확인이 아니다.
+
+구조화 기준 파일 [구현]: `data/brazil_claim_criteria/criteria_bundle.json`(UTF-8 JSON, 표준 라이브러리로 읽음). 기존 md 파일은 수정하지 않는다.
+- 묶음 정보: `schema_version`(로더가 지원하는 정수, 현재 1), `bundle_id`(자체 식별자), `bundle_version`(**자체 기준 묶음 버전**, 공식 법령·코드 버전 아님), `bundle_created_at`(**구조화 파일 작성 시각**, 공식 조회 시각 아님), `freshness`(저장된 기준 사용 여부·최신성 재확인 시각. 이번에는 재확인 없음 → `rechecked_at: null`), `content_hash`(아래).
+- 자료(`sources`): `id`(SRC-…), 기관, 자료명, `legal_nature`(`law` 법률 / `advertising_self_regulation` 광고 자율규제), 공식 URL, `retrieved_at`(source_register.md의 **실제 조회 시각**), 공식 판·버전 표기(`official_edition`, 없으면 null), 확인 가능한 제정·게재·승인·시행 정보(모르면 null, 월까지만 아는 것은 월까지만), 버전 단서 문장, 근거 파일, `usage_rights`(저장 근거·AI 이용 허가 상태: CDC는 법률 텍스트 저장·법률 검토 없음, CONAR는 **AI 이용 허가 미확인**).
+- 기준(`criteria`) 필수 필드: `id`(고유), `source_id`, `legal_nature`, `title_ko`, `provisions`(조항·항목 번호), `excerpt`(`file`, `heading`, `text_pt` = 원문 발췌 파일 해당 구간의 인용문 전체), `review`(`file`, `heading`), `quote_pt`(검토 정리의 핵심 원문 문장), `translation_ko`(비공식), `translation_official: false`, `requirement_ko`(원문 요구, 없으면 null), `review_guidance_ko`(서비스 검토 지침), `scope_limits_ko`(적용 범위·해석 한계), `evidence_needed_ko`(제품 사실·증빙 확인 필요), `status_ko`(CDC "상태", 없으면 null), `amendment_note_ko`(개별 개정 표기, 없으면 null).
+- 텍스트 값은 기존 md 파일의 해당 칸 문장을 그대로 옮긴다(새 번역·해석 없음). 단어 금칙어 목록을 만들지 않는다.
+- `content_hash`: `algorithm`("sha256"), `value`, 대상은 `content_hash`를 뺀 묶음 전체(정렬된 키·UTF-8 JSON 직렬화), 근거 md 파일 4개의 줄바꿈 정규화(CRLF·CR→LF) 내용 해시(`evidence_files`). 해시는 어느 내용을 썼는지 식별하고 변경을 감지할 뿐, **최신성이나 법적 효력을 증명하지 않는다**.
+
+로더 [구현]: `features/green_claim/criteria_loader.py`
+- 입력: 없음(`load_criteria()`). 모듈 위치 기준의 고정 경로(`data/brazil_claim_criteria/`)만 읽으며 작업 디렉터리와 무관. 사용자 입력 경로를 받지 않는다. 테스트용 경로 지정은 내부 함수(`_load_from(directory)`)로만 두고 라우트·사용자 API에 노출하지 않는다.
+- 출력(성공): dict `{"status": "ready", "bundle": {bundle_id, bundle_version, schema_version, bundle_created_at, content_hash}, "freshness": {...}, "sources": [...], "criteria": [...], "counts": {...}}`. `freshness.mode`는 `"stored_only"`(저장된 기준 사용, 최신성 재확인 미실행). 확인하지 않은 자료를 최신이라고 표시하지 않는다. 반환 값은 호출마다 새로 만든 사본이다.
+- 검사: JSON 파싱 → 지원 스키마 버전 → 묶음·자료·기준 필수 필드와 타입 → 빈 기준 목록·중복 ID·알 수 없는 source_id·legal_nature 불일치 → 내용 해시 → 근거 md 파일 존재·해시 → 기준마다 원문 발췌 구간(`## ID — …`) 존재와 `text_pt` 일치, 검토 정리 구간(CDC `### ID`, CONAR `#### ID`) 존재와 각 칸 문장 일치 → 자료의 URL·조회 시각이 source_register.md의 같은 ID 행과 일치.
+- 오류: `CriteriaError(code)` — `CRITERIA_FILE_MISSING`, `CRITERIA_INVALID_JSON`, `CRITERIA_SCHEMA_UNSUPPORTED`, `CRITERIA_INVALID`(필드 누락·타입·빈 목록·중복·참조 오류), `CRITERIA_HASH_MISMATCH`, `CRITERIA_EVIDENCE_MISSING`, `CRITERIA_EVIDENCE_MISMATCH`. 사용자용 `to_dict()`는 code와 고정 문장만(내부 경로·예외 원문 없음). 개발자 진단용 `detail`(기준 ID·필드 이름)은 예외 속성에만 둔다.
+- 일부 기준이 잘못되면 그 기준만 건너뛰지 않고 전체를 실패로 처리한다(빈 정상 결과로 바꾸지 않음). 자료 부족을 인증 미보유·허위 광고 판단으로 쓰지 않는다.
+- 외부 요청·API 호출·사용자 내용 저장 없음. 로그에는 오류 code만.
+
+향후 갱신 기능과의 경계 (이번 미구현)
+- 공식 출처 재조회·변경 감지·신규 후보 묶음 작성·검증 후 교체·동시 갱신 방지는 다음 작업. 갱신 기능은 새 묶음을 같은 스키마로 만들고 이 로더 검증을 통과한 경우에만 교체하며, 실패 시 기존 정상 묶음을 유지해야 한다(위 "기준 자료와 갱신" 원칙).
+- 재확인에 성공하면 `freshness`에 재확인 시각·결과를 기록하고, 공식 조회 시각(`sources[].retrieved_at`)과 묶음 작성 시각을 계속 구분한다.
+- 검수 기능은 결과에 `bundle_id`·`bundle_version`·`content_hash`를 연결해 어떤 기준으로 검수했는지 남긴다(검수 미구현).
+
+검증 계획: 실제 저장 기준 정상 로드, CDC·CONAR 및 법률·자율규제 구분, 기준 ID 중복·필드 누락·잘못된 타입·빈 기준·손상 JSON·파일 없음·미지원 스키마·잘못된 해시·근거 파일 누락·조항/문장 불일치(임시 복사본으로), 다른 작업 디렉터리에서 로드, 기존 md 파일 미변경, 공식 조회 시각과 작성 시각 구분, 이용 허가·최신성 미확인 상태 보존, 기존 기능·공통 회귀. 자료 구조·대응 검증은 법률 검토나 검수 품질 검증이 아니다.
+
 ## 검증
 현재 기능 미구현·실행 검증 미실시. 아래는 앞으로 수행할 계획이며 실행 결과가 아니다.
 
@@ -603,6 +636,12 @@ Pillow 역할 [구현]
 - 패키지: Pillow 13.0.0 추가(requirements.txt 끝, 기존 항목 변경 없음).
 - 계속 미구현: Word 삽입 이미지·텍스트 상자·머리글 등의 글자, AI 그린워싱 검수, 결과 PDF. 기능 전체 완료 아님.
 - 미검증: 실제 이미지 판독 정확도·비용·소요 시간, 공급자의 사본 PDF 처리, 회전된 실제 사진·작은 글자·복잡한 배치, 실제 메모리 사용량. 공통 범위("이미지 분석 입력 제외")와의 관계는 공통 담당 확인 전.
+
+### 구현 상태 갱신 (2026-10-26 기준 자료 로더)
+- 추가 구현: `criteria_loader.load_criteria()`, 구조화 기준 묶음 `data/brazil_claim_criteria/criteria_bundle.json`(스키마 1, 자체 버전 2026-10-26.1), 로더 테스트. 위 "검수 기준 자료 로더" 계약 기준.
+- 기준 수: CDC 9개(법률), CONAR 15개(광고 자율규제). CDC-118(시행 조항) 발췌는 검토 기준 항목이 없어 기준으로 만들지 않고 CDC 자료의 보조 발췌(`supporting_excerpt_ids`)로 연결.
+- 기존 md 자료(원문 발췌·번역·출처 목록)는 수정하지 않았다. 공식 사이트는 다시 조회하지 않았다(저장된 기준 사용, 최신성 재확인 미실행).
+- CONAR AI 이용 허가는 계속 미확인. 검수 기능 연결·공식 재조회·갱신·교체는 미구현.
 
 ### 완료 기준·검증 계획
 - 직접 입력과 파일 업로드의 각 흐름.
