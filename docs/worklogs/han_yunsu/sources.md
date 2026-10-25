@@ -88,3 +88,9 @@
 | K-stat FAQ | 한국무역협회 | https://stat.kita.net/stat/guide/guide_19.screen | 2026-10-26 | 원천 데이터는 유료 구매 후 회원사 제공, 화면 자료 엑셀 다운로드 | — |
 | KITA.net FAQ(회원 구분) | 한국무역협회 | https://kita.net/board/faq/faqList.do | 2026-10-26(검색 결과 요약) | 회원사=가입 신청·무역업고유번호·연회비 기업, 사이트 회원은 일부 메뉴 제한(해외 무역통계 등). 회비 금액 미확인 | — |
 | 관세청 시도별 품목별 수출입실적(참고) | 관세청(공공데이터포털) | https://www.data.go.kr/en/data/15101641/openapi.do | 2026-10-26 | 무료 Open API, HS·시도 단위(국가 구분은 이 API 설명에 없음), 개발 계정 10,000 | 이용 허락 범위 제한 없음 표시 |
+
+## 2026-10-26 NewsData.io 실제 호출(발급 키)
+| 자료명 | 기관 | URL | 조회일 | 확인한 내용 | 사용권 |
+|---|---|---|---|---|---|
+| NewsData.io Latest API 실제 응답 | NewsData.io | https://newsdata.io/api/1/latest | 2026-10-26 | apikey 쿼리 인자, 필드 article_id·title·link·description·content(유료 전용)·pubDate(UTC)·source_id·source_name·language("portuguese")·country(["brazil"])·category·keywords·ai_summary(유료 전용)·sentiment, nextPage, 헤더 X-RateLimit-Limit 60·X-API-Limit-Remaining | 약관: 내부 업무 목적 라이선스, 'Powered by NewsData.io' 표기 |
+| NewsData.io Archive API 실제 응답 | NewsData.io | https://newsdata.io/api/1/archive | 2026-10-26 | 무료 키 403 AccessDenied(유료 필요) | — |

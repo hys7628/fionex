@@ -391,6 +391,9 @@ def _news_section(news, W, st):
     for s in news.get("sources") or []:
         if s.get("stale"):
             out.append(_p("%s: 새 조회 실패로 %s에 받은 이전 자료를 표시했습니다." % (s["label"], s.get("collected_at") or "?"), st["notice"]))
+    if any(s.get("source") == "newsdata" and s.get("state") == "ok" for s in news.get("sources") or []):
+        out.append(_p("일반 뉴스: Powered by NewsData.io (https://newsdata.io). 무료 플랜이라 최근 48시간 기사만 검색했고 본문은 받지 않았습니다. "
+                      "언론사 설명은 PDF에 넣지 않고 제목·링크만 수록합니다. 기사 저작권은 각 언론사에 있습니다.", st["small"]))
     if any(it.get("source") == "gdelt" for it in items + others):
         out.append(_p("일반 뉴스 출처: The GDELT Project (https://www.gdeltproject.org/). 일반 뉴스는 제목·메타데이터만 확인했고 기사 본문은 확인하지 않았습니다. "
                       "GDELT 시각은 GDELT가 기사를 처음 발견한 시각이며 게시일이 아닙니다.", st["small"]))
@@ -417,7 +420,7 @@ def _summary_text(it):
 def _article_table(items, W, st):
     """기사 제목 | 핵심 요약 1줄 | 원문 URL (화면과 같은 구성). 제목 칸에 ID·출처·날짜를 함께 적습니다."""
     rows = [["기사 제목", "핵심 요약 1줄", "원문 URL"]]
-    access = {"full_text": "원문 확보(본문 미수록)", "title_only": "제목·메타데이터만 확인"}
+    access = {"full_text": "원문 확보(본문 미수록)", "description": "제목·언론사 설명만 확인", "title_only": "제목·메타데이터만 확인"}
     for it in items:
         date = ("게시일 " + it["published"]) if it.get("published") else (
             ("GDELT 최초 발견 " + it["seen_at"]) if it.get("seen_at") else "날짜 미확인")

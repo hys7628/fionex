@@ -191,6 +191,14 @@
 .feature-market_analysis .ma-news-id { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
 .feature-market_analysis .ma-news-summary { font-size: var(--font-size-sm); }
 .feature-market_analysis .ma-news-none { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.feature-market_analysis .ma-news-more summary {
+  cursor: pointer;
+  color: var(--color-primary-text);
+  font-size: var(--font-size-xs);
+}
+.feature-market_analysis .ma-news-more[open] summary { margin-bottom: var(--space-1); }
+.feature-market_analysis .ma-news-wrap + .field-hint a,
+.feature-market_analysis [data-ma-news] > .field-hint a { color: var(--color-primary-text); }
 .feature-market_analysis .ma-news-url a { color: var(--color-primary-text); word-break: break-all; font-size: var(--font-size-xs); }
 .feature-market_analysis [data-ma-ai] .table td a { color: var(--color-primary-text); }
 

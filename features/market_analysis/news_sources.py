@@ -7,8 +7,12 @@
   확인되지 않아 제목·링크·게시일과 KOTRA 원문 요약 표시만 하고, AI 입력·PDF 본문·캐시는 끕니다.
   2026-10-26 실제 응답(브라질 최근 6개월 28건)에는 명세의 요약(cntntSumar)·본문(newsBdt) 필드가 없어
   기사별 확보 범위를 응답 내용으로 판단합니다(본문이 없으면 title_only).
-- 일반 뉴스: 2026-10-26 사용자 결정으로 GDELT 자동 호출을 중단하고 새 공급자 선택을 기다립니다(PROVIDERS에서 제외,
-  '공급자 선택 대기' 상태 표시). 아래 GDELT 어댑터는 선택 결과가 나올 때까지 호출되지 않는 상태로 둡니다.
+- 일반 뉴스: 2026-10-26 사용자 결정으로 GDELT 자동 호출을 중단하고, 같은 날 NewsData.io를 공급자로 선택했습니다.
+- NewsData.io(일반 뉴스, 2026-10-26 실제 키로 확인): GET https://newsdata.io/api/1/latest, apikey 쿼리 인자.
+  무료 플랜은 최근 48시간·12시간 지연, 본문(content)·ai_summary는 "ONLY AVAILABLE IN PAID PLANS", /archive는 403(유료).
+  description(언론사 리드 문단)을 요약 칸에 원문 그대로 표시하고 AI 입력에 쓰며, PDF에는 제목·링크만 넣습니다.
+  응답 헤더: X-RateLimit-Limit 60, X-API-Limit-Remaining(일일 크레딧 잔량, 무료 200). 표기: Powered by NewsData.io.
+- GDELT 어댑터는 호출되지 않는 상태로 보존합니다(PROVIDERS에서 제외).
 - GDELT DOC 2.0 API(2026-10-26 일반 뉴스 공급자로 통일했다가 같은 날 자동 호출 중단, 현재 비활성): 인증키 없음.
   공식 안내: 65개 언어 기사를 영어로 기계 번역해 영어 검색어로 찾고, 검색 범위는 최근 3개월이라고 안내하지만 2026-10-26 실측에서 120~150일 전 구간도 결과가 나와 구간을 나눠 6개월을 조회함,
   artlist 최대 250건. 이용 조건: 상업적 이용 포함 무료, 사용·재배포 시 GDELT 표기와 링크 필요.
@@ -45,8 +49,9 @@ MAX_OTHER_ITEMS = 50  # 주제 기준 밖 수집 기사(화면 참고용) 표시
 
 # 환경변수 이름. 값은 코드·저장소에 두지 않습니다.
 ENV_DATA_GO_KR_KEY = "DATA_GO_KR_SERVICE_KEY"
+ENV_NEWSDATA_KEY = "NEWSDATA_API_KEY"
 
-# 기사별 사용 범위. access: full_text(원문 본문 확보) | title_only(제목·메타데이터만 확인)
+# 기사별 사용 범위. access: full_text(원문 본문 확보) | description(제목·언론사 설명만, 본문 미확인) | title_only(제목·메타데이터만 확인)
 # ai_input·pdf_text: 확인되기 전에는 False. 사용 범위가 확정되면 이 표만 고칩니다.
 USAGE = {
     # access는 기사별 응답 내용으로 정합니다(fetch_kotra).
@@ -54,6 +59,9 @@ USAGE = {
               "note": "공공누리 제4유형(출처표시·상업적 이용금지·변경금지). 업무용 AI 요약·번역·PDF 수록·캐시 허용 여부 확인 필요"},
     "gdelt": {"access": "title_only", "ai_input": True, "pdf_text": True, "cache": True,
               "note": "GDELT 검색 결과의 제목·링크·매체·언어만 사용(본문 없음, 원문 미확인). 기사 저작권은 각 언론사. 출처 표기: The GDELT Project (gdeltproject.org)"},
+    # access는 description 유무로 정합니다(fetch_newsdata). 약관상 내부 업무 이용·표기 조건 → AI 입력은 허용, PDF에는 설명 미수록.
+    "newsdata": {"ai_input": True, "pdf_text": False, "cache": True,
+                 "note": "NewsData.io 무료 플랜: 제목·언론사 설명(description)·링크(본문 미제공, 최근 48시간·12시간 지연). 기사 저작권은 각 언론사. 표기: Powered by NewsData.io"},
 }
 
 # 관련성 판단 주제. 제목은 원문 언어로 오므로 한국어·영어·포르투갈어를 함께 봅니다.
@@ -71,6 +79,15 @@ TOPICS = {
 }
 PRODUCT_TOPICS = ("섬유·의류", "폴리에스터·DTY", "재생 섬유·T2T")
 BRAZIL_WORDS = ["브라질", "brazil", "brasil", "brazilian", "brasileiro", "brasileira", "brasileiros", "brasileiras"]
+# 일반 뉴스(NewsData·GDELT)는 생활·선거 기사에도 '옷·원단' 단어가 섞여(2026-10-26 실측) 산업·시장 맥락어를 함께 요구합니다.
+# 무역 정책 단어도 맥락으로 인정합니다. KOTRA(시장 뉴스)에는 적용하지 않습니다.
+INDUSTRY_WORDS = ["산업", "시장", "수입", "수출", "생산", "기업", "공장",
+                  "indústria", "industrial", "setor", "mercado", "importação", "importações", "exportação", "exportações",
+                  "produção", "fábrica", "empresa", "empresas", "varejo", "fornecedor", "fabricante", "cadeia produtiva",
+                  "investimento", "faturamento", "vendas",
+                  "industry", "manufactur", "market", "imports", "exports", "production", "factory", "retail", "supplier",
+                  "company", "companies", "supply chain"]
+GENERAL_LEAD_CHARS = 400  # 일반 뉴스 관련성 판단에 쓰는 설명 앞부분 길이(긴 설명 뒤쪽의 우연한 단어 배제)
 
 # GDELT 검색어(영어, 기계 번역본 검색). 공식 안내상 OR 묶음은 중첩할 수 없습니다.
 GDELT_QUERIES = [
@@ -80,6 +97,15 @@ GDELT_QUERIES = [
     "(tariff OR antidumping OR safeguard) textile brazil",
 ]
 GDELT_QUERIES_WIDE = ['(textile OR polyester OR yarn) (brazil OR "latin america")']
+
+# NewsData.io 검색어(브라질·포르투갈어 매체). 2026-10-26 실측: 영어 검색은 브라질과 무관한 결과가 대부분이라 쓰지 않습니다.
+NEWSDATA_QUERIES = [
+    "têxtil OR vestuário OR confecção OR tecelagem",
+    'poliéster OR "fios de poliéster" OR "fibra sintética"',
+    '"poliéster reciclado" OR "reciclagem têxtil" OR "moda circular"',
+    "antidumping AND (têxtil OR poliéster OR fios)",
+]
+NEWSDATA_QUERIES_WIDE = ['"indústria têxtil" OR "setor têxtil" OR Abit']
 
 
 class SourceError(Exception):
@@ -447,6 +473,106 @@ def fetch_gdelt(start, end, collected_at, queries=None, today=None):
     return out, coverage
 
 
+# ---------- NewsData.io ----------
+NEWSDATA_URL = "https://newsdata.io/api/1/latest"
+NEWSDATA_FREE_DAYS = 2      # 무료 플랜 검색 범위(최근 48시간, 요금표·/archive 403 실측)
+NEWSDATA_MAX_PAGES = 2      # 검색어당 최대 쪽 수(1쪽 = 1크레딧, 최대 10건)
+_UNAVAILABLE_MARK = "ONLY AVAILABLE IN"  # 유료 플랜 전용 필드의 자리표시 문자열
+
+
+def _newsdata_key():
+    return os.environ.get(ENV_NEWSDATA_KEY, "").strip()
+
+
+def _newsdata_classify(status, doc, raw):
+    if isinstance(doc, dict) and doc.get("status") == "error":
+        code = str(((doc.get("results") or {}) if isinstance(doc.get("results"), dict) else {}).get("code") or "")
+        if status == 401 or code == "Unauthorized":
+            return SourceError("auth", "NewsData.io API 키가 없거나 올바르지 않습니다. 대시보드의 키와 서버 환경변수를 확인해 주세요.")
+        if status == 429 or "limit" in code.lower():
+            return SourceError("rate_limited", "NewsData.io 호출 한도(분당 또는 일일 크레딧)를 넘었습니다.")
+        if status == 403 or code == "AccessDenied":
+            return SourceError("rejected", "NewsData.io가 현재 요금제로는 허용하지 않는 요청입니다.")
+        if status >= 500:
+            return SourceError("unavailable", "NewsData.io 서버 오류입니다.")
+        return SourceError("rejected", "NewsData.io가 요청을 거부했습니다(코드 %s)." % (code or status))
+    if status == 200 and isinstance(doc, dict) and not isinstance(doc.get("results", []), list):
+        return SourceError("bad_response", "NewsData.io 응답 형식이 예상과 다릅니다.")
+    return None
+
+
+def _newsdata_text(value):
+    text = _clean(value)
+    return "" if text.upper().startswith(_UNAVAILABLE_MARK) else text
+
+
+def _newsdata_item(a, collected_at):
+    if not isinstance(a, dict):
+        return None
+    url, title = safe_url(a.get("link")), _newsdata_text(a.get("title"))
+    if not url or not title:
+        return None
+    policy = USAGE["newsdata"]
+    excerpt = _newsdata_text(a.get("description"))
+    countries = [str(c).lower() for c in (a.get("country") or []) if c]
+    outlet = _clean(a.get("source_name")) or _clean(a.get("source_id")) or urllib.parse.urlsplit(url).netloc
+    published = _parse_date(a.get("pubDate"))
+    keywords = " ".join(_clean(k) for k in (a.get("keywords") or []) if isinstance(k, str))
+    return NewsItem(
+        id="", source="newsdata", source_name="NewsData.io · " + outlet, title=title, url=url,
+        published=published.isoformat() if published else None, collected_at=collected_at,
+        language=_clean(a.get("language")) or None, excerpt=excerpt,  # 언론사 설명을 자르지 않고 그대로 둡니다
+        access="description" if excerpt else "title_only", usage_note=policy["note"], ai_input=policy["ai_input"],
+        pdf_text=policy["pdf_text"], outlet=outlet, source_country=", ".join(countries) or None,
+        brazil_context="brazil" in countries, body=keywords or None,
+    )
+
+
+def fetch_newsdata(start, end, collected_at, queries=None):
+    """브라질·포르투갈어 최신 뉴스(무료 플랜 최근 48시간). 반환 (items, coverage). 검색어별로 다음 쪽은 최대 1번 더."""
+    key = _newsdata_key()
+    if not key:
+        raise SourceError("config", "NewsData.io API 키(%s)가 서버 환경변수에 없습니다. .env에 넣은 뒤 서버를 다시 시작해 주세요." % ENV_NEWSDATA_KEY)
+    out, seen, last_error, ok = [], set(), None, 0
+    for q in list(queries or NEWSDATA_QUERIES):
+        page = None
+        for _ in range(NEWSDATA_MAX_PAGES):
+            params = {"apikey": key, "q": q, "country": "br", "language": "pt"}
+            if page:
+                params["page"] = page
+            try:
+                doc = _get_json("NewsData.io", NEWSDATA_URL + "?" + urllib.parse.urlencode(params), classify=_newsdata_classify)
+            except SourceError as err:
+                if err.kind in ("auth", "config"):
+                    raise  # 키 문제는 다른 검색어도 같으므로 바로 멈춤
+                last_error = err
+                break
+            ok += 1
+            for a in doc.get("results") or []:
+                item = _newsdata_item(a, collected_at)
+                if item and item.url not in seen:
+                    seen.add(item.url)
+                    out.append(item)
+            page = doc.get("nextPage")
+            if not page:
+                break
+        if last_error is not None and last_error.kind == "rate_limited":
+            break  # 한도 초과면 남은 검색어로 크레딧을 더 쓰지 않음
+    if not ok and last_error:
+        raise last_error
+    searched_from = max(start, end - timedelta(days=NEWSDATA_FREE_DAYS))
+    missing = []
+    if searched_from > start:
+        missing.append({"from": start.isoformat(), "to": (searched_from - timedelta(days=1)).isoformat(),
+                        "reason": "무료 플랜은 최근 48시간 기사만 제공(과거 기사 /archive는 유료, 2026-10-26 실측 403)"})
+    if last_error:
+        missing.append({"from": searched_from.isoformat(), "to": end.isoformat(),
+                        "reason": "일부 검색어 조회 실패(%s)" % last_error.kind})
+    coverage = {"requested_from": start.isoformat(), "requested_to": end.isoformat(),
+                "searched_from": searched_from.isoformat(), "searched_to": end.isoformat(), "missing": missing, "truncated": False}
+    return out, coverage
+
+
 # ---------- 정리: 관련성·중복 ----------
 _TRACKING_PARAMS = ("utm", "fbclid", "gclid")
 
@@ -473,10 +599,15 @@ def _has(text, word):
 
 
 def score_item(item):
-    """(점수, 주제 목록). 제품·산업 주제 1개 이상 + 브라질 관련성이 모두 있어야 선정. 무역 정책·브라질 단어만으로는 0."""
-    text = " ".join([item.title, item.excerpt, item.body or ""]).lower()
+    """(점수, 주제 목록). 제품·산업 주제 1개 이상 + 브라질 관련성이 모두 있어야 선정. 무역 정책·브라질 단어만으로는 0.
+    일반 뉴스는 제목·설명 앞부분·키워드만 보고, 산업·시장 맥락어(또는 무역 정책어)도 있어야 선정합니다."""
+    general = item.source in GENERAL_NEWS_PROVIDERS
+    excerpt = item.excerpt[:GENERAL_LEAD_CHARS] if general else item.excerpt
+    text = " ".join([item.title, excerpt, item.body or ""]).lower()
     topics = [name for name, words in TOPICS.items() if any(_has(text, w) for w in words)]
     if not any(t in PRODUCT_TOPICS for t in topics):
+        return 0.0, topics
+    if general and "무역 정책" not in topics and not any(_has(text, w) for w in INDUSTRY_WORDS):
         return 0.0, topics
     if not (item.brazil_context or any(_has(text, w) for w in BRAZIL_WORDS)):
         return 0.0, topics
@@ -497,7 +628,7 @@ def _date_key(it):
 def select_items(items, limit=MAX_ITEMS):
     """URL·제목 중복 제거 후 관련성 상위 limit건. 같은 기사면 원문 자료(KOTRA)를 남깁니다."""
     best = {}
-    order = {"full_text": 0, "title_only": 1}
+    order = {"full_text": 0, "description": 1, "title_only": 2}
     for it in items:
         it.score, it.topics = score_item(it)
         if it.score <= 0:
@@ -545,11 +676,13 @@ def other_items(raw, picked, limit=MAX_OTHER_ITEMS):
 
 
 # ---------- 전체 수집 ----------
-# 자동으로 호출하는 출처. 일반 뉴스 공급자는 사용자 선택 전까지 비워 둡니다(GDELT 자동 호출 중단, 2026-10-26).
-PROVIDERS = {"kotra": fetch_kotra}
-GENERAL_NEWS_PROVIDERS = ("gdelt",)  # PROVIDERS에 이 중 하나가 있으면 일반 뉴스 공급자가 연결된 상태
-SOURCE_LABELS = {"kotra": "KOTRA 해외시장뉴스", "gdelt": "GDELT (일반 뉴스 검색)", "kita": "한국무역협회(KITA)",
-                 "general": "일반 뉴스"}
+# 자동으로 호출하는 출처. 일반 뉴스는 NewsData.io(2026-10-26 사용자 선택). GDELT는 자동 호출 중단 상태로 보존.
+PROVIDERS = {"kotra": fetch_kotra, "newsdata": fetch_newsdata}
+GENERAL_NEWS_PROVIDERS = ("newsdata", "gdelt")  # PROVIDERS에 이 중 하나가 있으면 일반 뉴스 공급자가 연결된 상태
+SOURCE_LABELS = {"kotra": "KOTRA 해외시장뉴스", "newsdata": "NewsData.io (일반 뉴스)", "gdelt": "GDELT (일반 뉴스 검색)",
+                 "kita": "한국무역협회(KITA)", "general": "일반 뉴스"}
+# 검색어를 받는 출처: (기본 검색어, 근거 보강용 추가 검색어)
+PROVIDER_QUERIES = {"newsdata": (NEWSDATA_QUERIES, NEWSDATA_QUERIES_WIDE), "gdelt": (GDELT_QUERIES, GDELT_QUERIES_WIDE)}
 GENERAL_PENDING_MESSAGE = ("GDELT는 호출 간격 제한(5초에 1회)으로 수집이 계속 실패해 자동 호출을 중단했습니다. "
                            "새 무료 뉴스 공급자를 선택하기 전까지 일반 뉴스는 수집하지 않습니다(오류 아님).")
 
@@ -557,6 +690,8 @@ GENERAL_PENDING_MESSAGE = ("GDELT는 호출 간격 제한(5초에 1회)으로 �
 def has_general_provider():
     """일반 뉴스 공급자가 자동 수집에 연결돼 있는지. 없으면 근거 보강용 넓은 검색도 하지 않습니다."""
     return any(name in PROVIDERS for name in GENERAL_NEWS_PROVIDERS)
+
+
 _STATUS_TEXT = {
     "config": "설정 필요", "auth": "인증·권한 확인 필요", "rate_limited": "호출 한도", "unavailable": "연결 실패·시간 초과",
     "bad_response": "응답 해석 실패", "rejected": "요청 거부",
@@ -596,7 +731,8 @@ def collect(months=DEFAULT_MONTHS, widen=False, today=None, refresh=False):
     raw, statuses = [], []
     for name, fn in PROVIDERS.items():
         started = time.monotonic()
-        queries = tuple(GDELT_QUERIES + (GDELT_QUERIES_WIDE if widen else [])) if name == "gdelt" else ()
+        base_q, wide_q = PROVIDER_QUERIES.get(name, ([], []))
+        queries = tuple(base_q + (wide_q if widen else []))
         key = (name, queries, start.isoformat(), today.isoformat())
         with _cache_lock:
             cached = _provider_cache.get(key)
@@ -609,7 +745,7 @@ def collect(months=DEFAULT_MONTHS, widen=False, today=None, refresh=False):
                              "collected_at": cached["collected_at"], "stale": False, "coverage": cached["coverage"]})
             continue
         try:
-            got, coverage = fn(start, today, collected_at, list(queries)) if name == "gdelt" else fn(start, today, collected_at)
+            got, coverage = fn(start, today, collected_at, list(queries)) if name in PROVIDER_QUERIES else fn(start, today, collected_at)
             if USAGE[name]["cache"]:
                 with _cache_lock:
                     _provider_cache[key] = {"day": today.isoformat(), "items": _copy(got), "collected_at": collected_at,
@@ -646,6 +782,12 @@ def collect(months=DEFAULT_MONTHS, widen=False, today=None, refresh=False):
     gd = next((s for s in statuses if s["source"] == "gdelt"), None)
     gd_cov = gd and gd.get("coverage")
     notes = []
+    nd = next((s for s in statuses if s["source"] == "newsdata"), None)
+    if nd and nd["state"] != "config":
+        if not nd.get("coverage"):
+            notes.append("일반 뉴스(NewsData.io)를 조회하지 못해 요청 기간 %s~%s의 일반 뉴스를 확보하지 못했습니다." % (start.isoformat(), today.isoformat()))
+        for m in (nd.get("coverage") or {}).get("missing") or []:
+            notes.append("일반 뉴스(NewsData.io) %s~%s: %s. 이 기간의 일반 뉴스는 확보하지 못했습니다." % (m["from"], m["to"], m["reason"]))
     if gd and not gd_cov:
         notes.append("일반 뉴스(GDELT)를 조회하지 못해 요청 기간 %s~%s 전체의 일반 뉴스를 확보하지 못했습니다." % (start.isoformat(), today.isoformat()))
     if gd_cov:

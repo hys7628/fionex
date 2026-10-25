@@ -26,6 +26,8 @@ REVIEW_PROMPT = "market_analysis_review_v2.md"
 MAX_OUTPUT_TOKENS = 4096
 TIME_BUDGET_SECONDS = 480.0
 MIN_EVIDENCE_FOR_NO_WIDEN = 5
+# AI 입력에 넣는 기사 설명 길이 상한(토큰 관리). 화면 표시는 자르지 않습니다. 수치 검사도 같은 잘린 문자열 기준입니다.
+EVIDENCE_SUMMARY_CHARS = 1500
 
 SECTIONS = ("핵심 요약", "변화 배경", "영업 기회", "위험")
 SECTION_LIMITS = {"핵심 요약": (3, 5), "변화 배경": (0, 4), "영업 기회": (0, 3), "위험": (0, 3)}
@@ -168,12 +170,17 @@ def build_pack(stats, news_items):
     facts = build_facts(stats)
     allowed = [it for it in news_items if it.get("ai_input")]
     excluded = [it for it in news_items if not it.get("ai_input")]
-    general_note = ("일반 뉴스는 GDELT 검색 결과의 제목·메타데이터만 있고 본문은 확인하지 않았다(access=title_only)."
-                    if any(it.get("source") == "gdelt" for it in news_items)
-                    else "일반 뉴스 공급자를 선택하기 전이라 일반 뉴스 근거는 없다. 기사 근거가 없으면 기사로 뒷받침되는 내용을 만들지 않는다.")
+    sources_present = {it.get("source") for it in news_items}
+    if "newsdata" in sources_present:
+        general_note = ("일반 뉴스는 NewsData.io 무료 플랜의 제목과 언론사 설명(description, access=description)만 있고 본문은 확인하지 않았다. "
+                        "최근 48시간 기사만 검색됐다. 설명에 없는 수치·원인·회사 계획은 만들지 않는다.")
+    elif "gdelt" in sources_present:
+        general_note = "일반 뉴스는 GDELT 검색 결과의 제목·메타데이터만 있고 본문은 확인하지 않았다(access=title_only)."
+    else:
+        general_note = "일반 뉴스 근거가 없다. 기사 근거가 없으면 기사로 뒷받침되는 내용을 만들지 않는다."
     evidence = [{"id": it["id"], "title": it["title"], "source": it["source_name"], "outlet": it.get("outlet"),
                  "language": it.get("language"), "date": evidence_date(it)[0], "date_basis": evidence_date(it)[1],
-                 "access": it["access"], "summary": it.get("excerpt") or ""} for it in allowed]
+                 "access": it["access"], "summary": (it.get("excerpt") or "")[:EVIDENCE_SUMMARY_CHARS]} for it in allowed]
     q = stats["query"]
     pack = {
         "context": {

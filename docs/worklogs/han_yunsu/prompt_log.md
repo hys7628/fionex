@@ -271,3 +271,82 @@
 - 재실행 결과: 없음
 - 담당자 판단: 미확인
 - 남은 한계: 근거 1건·공식 공지만의 조건. 일반 뉴스 근거 조건은 공급자 선택 후 재검증
+
+## DEV-MA-20261026-07 세션 시작 문서 확인·첫 커밋 안내 (기록 누락분 추가, 시간상 DEV-MA-20261026-05보다 앞)
+- 유형: development_instruction (코드 변경 없음)
+- 날짜: 2026-10-25 밤 (Asia/Seoul, 정확한 시각 미기록)
+- 작업자: 한윤수 / 기능: market_analysis / 브랜치: feature/market_analysis (HEAD 2e3a8c4)
+- 모델/설정: Claude Code (claude-opus-5-5), VSCode 확장. 서비스 모델 호출 없음
+- 지시 원문(요약):
+  1. 기획·Claude Code용 개발 프롬프트 작성 보조 역할 안내 + "[지금 할 일] 우선 저장소 문서를 읽고 … 실제로 읽은 파일과 접근하지 못한 파일, 내 담당 기능과 작업 범위, 개발 전에 결정하거나 보완해야 할 사항, 권장하는 첫 번째 개발 작업 … 아직 코드를 작성하거나 개발 실행 프롬프트를 만들지는 마."
+  2. "commit하려고 하는데 터미널에 사용할 코드 만들어줘"
+- 처리:
+  1. GitHub 대신 로컬 저장소 문서(README, CLAUDE.md, AGENTS.md, docs 5종, feature_spec.md, worklogs 일부)를 읽기 전용으로 확인. 안내문(기능 개발 전제)과 실제 상태(1~3단계 구현·푸시 완료)의 차이, 새로고침 유지 요구 충돌, 명세 내 KOTRA 상태 불일치, python-dotenv 설치 기록 불일치 등을 보고. 첫 작업으로 '과금 없는 실데이터 E2E 점검·명세 정합화' 권장
+  2. 변경이 .env.example 마지막 줄바꿈뿐(비밀값 없음)임을 확인하고 커밋하지 않는 정리 방법(git restore, .git/info/exclude)과 커밋할 경우의 명령을 안내
+- 결과: 코드·문서 변경 없음
+- 담당자 판단: 이후 다섯 가지 문제 해결 지시(DEV-MA-20261026-05)로 진행
+
+## DEV-MA-20261026-08 일반 뉴스 공급자 결정·K-stat 미사용·휴대폰 검증 생략·커밋 분리 안내
+- 유형: development_instruction (코드 변경 없음)
+- 날짜: 2026-10-26 (Asia/Seoul, 정확한 시각 미기록)
+- 작업자: 한윤수 / 기능: market_analysis / 브랜치: feature/market_analysis
+- 모델/설정: Claude Code (claude-opus-5-5). 서비스 모델 호출 없음
+- 지시 원문:
+  1. "1. NewsData.io 사용할게. api 불러오는 법 알려줘. 2. K-stat 사용하지 않을게. 3. 휴대폰 브라우저 검증은 굳이 안해도 될 것 같아."
+  2. (1번 처리 중 사용자 중단) "추천 커밋 제목대로 나눠서 commit하려고 해. vs code 터미널에 넣을 코드 각각 알려줘"
+  3. "첫 번째 커밋으로 할 때 .env.example과 .vscode/를 넣지 않는 방법 알려줘."
+  4. "지금까지의 대화 내용을 기반으로 prompt_log.md 최신화해줘."
+- 담당자 결정(사용자 답변):
+  - 일반 뉴스 공급자: NewsData.io 사용(DEV-MA-20261026-06 후보 표의 1번). 연결 구현은 아직 하지 않음
+  - K-stat: 사용하지 않음(조사 결과: 브라질 품목별은 회원사 전용, 제공기관 Trade Map, Open API 없음, 자동 수집 금지)
+  - 실제 휴대폰 브라우저 검증: 생략(헤드리스 390px 확인만 유지)
+- 처리:
+  1. NewsData.io 공식 문서 확인을 시작했으나 사용자 중단으로 안내하지 못함. 확인된 내용: 공식 문서 첫 페이지에 엔드포인트 이름(Latest News, News Archive 등)과 무료 플랜(일 200 크레딧, 최근 48시간, 12시간 지연)만 있고, 주소·인증 방식·인자·페이지 넘김은 세부 페이지 확인 필요(제3자 SDK 기준 /latest·/archive, page=nextPage 값은 공식 확인 전)
+  2. 커밋 2개 분리 명령(PowerShell): requirements.txt 단독 커밋 → 기능·테스트·기록 16개 파일 지정 커밋 → 확인·푸시
+  3. 파일을 직접 지정해 git add, `git add .`·`-A`·VS Code 전체 스테이징 사용 금지, `git diff --cached --name-only` 확인, 실수 시 `git restore --staged`, 선택 사항으로 .git/info/exclude에 .vscode/ 추가·.env.example 줄바꿈 변경 되돌리기 안내
+- 결과(git log로 확인): 389338e "chore: python-dotenv 1.2.4 의존성 추가", 95c8577 "feat: 시장 분석 뉴스 기사별 표시와 AI 설정 진단 추가, 일반 뉴스 자동 수집 중단". 남은 변경: .env.example(줄바꿈), .vscode/(미추적)
+- 남은 일:
+  - NewsData.io 연결: 공식 세부 문서로 엔드포인트·인증·인자 확인, 사용자의 키 발급 후 .env에 새 환경변수(이름은 공통 규칙에 맞춰 확정, .env.example 추가는 공통 합의) 설정, 실제 호출 검증
+  - 사용자 조건 '최근 6개월 기사'와 NewsData.io 무료 플랜(최근 48시간·12시간 지연)이 맞지 않음 → 6개월 확보 방법(유료 Archive 등) 또는 조건 조정을 담당자와 확인 필요
+  - feature_spec.md에 위 세 가지 결정 반영(이번 지시는 prompt_log 최신화만이라 미반영)
+
+## DEV-MA-20261026-09 NewsData.io 호출 방법 안내 (DEV-MA-20261026-08의 1번 재지시)
+- 유형: development_instruction (코드 변경 없음, feature_spec.md에 결정 사항 반영)
+- 날짜: 2026-10-26 (Asia/Seoul, 정확한 시각 미기록)
+- 지시 원문: "1. NewsData.io 사용할게. api 불러오는 법 알려줘. 2. K-stat 사용하지 않을게. 3. 휴대폰 브라우저 검증은 굳이 안해도 될 것 같아." (같은 지시 재전송)
+- 확인: 공식 문서 페이지는 세부 내용이 화면에 렌더링되지 않아 확인 못 함. 키 없이 실제 호출로 /api/1/latest·/api/1/archive 존재, apikey 쿼리 인자, 401 오류 형식 확인(과금 없음). 공식 Python SDK(newsdataapi, PyPI) 예시: latest_api(q, country, language)
+- 처리: 키 발급·설정·호출 예시 안내, feature_spec.md에 세 결정과 확인 내용 반영
+- 남은 일: 키 발급 후 실제 응답 필드·브라질/포르투갈어 결과·응답 시간·무료 플랜의 기간 제한 실측, 연결 구현(사용자 요청 시)
+
+## DEV-MA-20261026-10 NewsData.io 키 동작 확인·일반 뉴스 연결·대시보드 검증
+- 유형: development_instruction
+- 날짜: 2026-10-26 01시대 (Asia/Seoul, 정확한 시각 미기록)
+- 작업자: 한윤수 / 기능: market_analysis / 브랜치: feature/market_analysis (HEAD 95c8577, 미커밋 변경)
+- 모델/설정: Claude Code (claude-opus-5-5). NewsData.io 실제 호출(무료 크레딧), OpenAI 6호출 1회(SVC-MA-20261026-03, 승인 3회 중 3회째)
+- 지시 원문: "newsdata api key 받아왔어. 작동하는지 실행해보고 대시보드에서 잘 구현되는지 검증해줘."
+- 실제 확인(키 값 미출력): .env에 NEWSDATA_API_KEY(36자). /latest 200·0.7~1.2초, 헤더 X-RateLimit-Limit 60·X-API-Limit-Remaining(일일 크레딧 잔량 199부터 감소), 무료 플랜 content·ai_summary는 "ONLY AVAILABLE IN PAID PLANS", ai_region·ai_org는 CORPORATE 전용, /archive(5~4개월 전)는 403 AccessDenied("upgrade your plan"). description은 93~6,000자 언론사 리드 문단
+- 변경:
+  - news_sources.py: fetch_newsdata(브라질·포르투갈어 검색어 4개, 검색어당 최대 2쪽, 401/키 오류는 즉시 중단, 한도 초과 시 남은 검색어 중단, 403은 해당 검색어만 실패), PROVIDERS에 newsdata, access 'description', 48시간 범위 coverage·안내, 일반 뉴스 관련성 규칙(제목·설명 앞 400자·키워드 + 산업·시장 맥락어 또는 무역 정책어 필요)
+  - analysis.py: NewsData 근거 context 문장, AI 입력 설명 1,500자 상한(화면은 자르지 않음)
+  - market_analysis.js/.css: 긴 언론사 설명 접기(자르지 않음), 'Powered by NewsData.io' 링크, 게시일(UTC) 표시
+  - pdf_report.py: NewsData 표기, 설명은 PDF 미수록(제목·링크만)
+  - service.py: meta.general_news.provider
+  - .env.example: NEWSDATA_API_KEY= (이름만, 공통 검토 필요 표시)
+  - tests: NewsdataTest 10개, 기본 공급자 테스트 갱신
+- 발견 문제와 대응: 대시보드 1차 실행에서 선거 안내·다림질 요령 등 무관 기사가 '섬유·의류'로 선정됨(긴 설명 뒤쪽의 'vestuário' 등) → AI도 "뉴스 목록은 대부분 비관련 일반 기사"라고 표시 → 관련성 규칙 보강 후 관련 1건(산업 기사)만 선정, 나머지 23건은 주제 밖으로 분리
+- 실수: 5003 재시작 시 부모 프로세스만 종료해 디버그 자동 재시작 자식(33200)이 포트를 계속 점유 → 제가 띄운 서버의 자식임을 확인하고 종료. 화면 확인 스크립트의 정규식 이스케이프 오류로 일부 텍스트 출력이 깨짐(화면 문제 아님)
+- 검증: validation.md 2026-10-26 'NewsData.io' 항목
+- 담당자 판단: 미확인
+- 남은 한계: 무료 플랜은 최근 48시간만(6개월 조건 미충족), 관련성 규칙 수정 후 AI 재실행 안 함(추가 승인 필요), NewsData.io 약관의 AI 입력 허용 범위는 약관 문구 해석(내부 업무 목적) 기준이며 제공사 확인은 안 함
+
+## SVC-MA-20261026-03 대시보드에서 NewsData.io 근거로 실제 실행 (프롬프트 v2)
+- 유형: service_prompt_experiment
+- 날짜: 2026-10-26 01:49~01:50 (Asia/Seoul)
+- 승인: 기존 승인 범위(최대 3회) 중 3회째(마지막). 사용자 지시 "대시보드에서 잘 구현되는지 검증"
+- 실행 경로: 5003 대시보드 → 분석 실행 → AI 분석 실행 버튼(서비스 경로 그대로)
+- 입력: ComexStat 실제 통계 + NewsData.io 관련 기사(관련성 규칙 수정 전, 무관 기사 다수) + KOTRA 2건(AI 입력 제외)
+- 실제 응답: experiments/SVC-MA-20261026-03.json(화면 텍스트). 6호출, 55.8초, 입력 32,933·출력 7,779 토큰, 추정 USD 0.0597, 5차례 검토 완료
+- 관찰: 통계 수치 행은 SVC-01·02와 같은 값. 기사 근거 행은 "N2: 폴리에스터가 세계 섬유 생산에서 큰 비중… 브라질 수입 통계의 직접 원인으로 확인되지 않음(미확인)", 위험 행에 "뉴스 목록은 대부분 비관련 일반 기사"(미확인, N1~N11 출처) → 모델이 무관 근거를 사실로 끌어오지 않고 한계를 명시함. 반면 무관 기사 9건을 출처로 나열한 행은 출처 칸이 길어 가독성이 떨어짐
+- 변경 이유·제어: 입력 품질 문제(무관 기사) → 프롬프트가 아니라 수집 단계 관련성 규칙으로 제어(DEV-MA-20261026-10)
+- 재실행: 없음(승인 소진)
+- 담당자 판단: 미확인

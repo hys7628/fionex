@@ -258,7 +258,10 @@
 - 일반 뉴스 공급자 선택(후보 비교는 worklogs sources.md 2026-10-26 절). 사용자 조건(2026-10-26): 최소 최근 6개월 기사 검색 가능. 이 조건과 무료·업무 사용을 함께 공식 확인한 후보는 아직 없음. 선택 후 이용 조건·키 발급·실제 호출 검증과 함께 연결.
 - AI 코드 검사 개선 후보(첫 실제 실행에서 확인): 'T2T 해석' 규칙이 부정·주의 문장도 잡는 오탐, 모델의 changes 진술과 실제 표 변경(rows_changed) 불일치 표시.
 - (2026-10-26 처리) 사용자가 requirements.txt에 python-dotenv를 추가 → python-dotenv==1.2.4로 고정·jasonenv 설치 완료. `python app.py`만으로 .env가 로드되어 5003 서버에서 ai.ready=true 확인. README의 python-dotenv 설명(‘requirements.txt에는 없음’) 갱신은 공통 문서라 담당 합의 필요.
-- K-stat(stat.kita.net) 활용 검토: 브라질 해외무역통계는 제공기관 'Trade Map', 품목별·국가별은 무역협회 회원사 전용, 엑셀 다운로드만 있고 Open API 없음(2026-10-26 조사, worklogs sources.md). 적용 여부는 담당자 검토 대기.
+- K-stat(stat.kita.net): 사용하지 않음(2026-10-26 담당자 결정). 조사 결과는 브라질 품목별·국가별 회원사 전용, 제공기관 Trade Map, Open API 없음(worklogs sources.md).
+- (2026-10-26 연결 완료) NewsData.io를 PROVIDERS에 연결하고 대시보드에서 검증. 환경변수 NEWSDATA_API_KEY(.env.example에 이름만 추가, 공통 검토 필요). 브라질(country=br)·포르투갈어(language=pt) 검색어 4개, 검색어당 최대 2쪽. 무료 플랜 실측: /latest 200(0.7~1.2초), content·ai_summary 유료 전용, /archive 403 → 최근 48시간만 수집하고 나머지 기간은 '확보하지 못함'으로 안내. 요약 칸은 언론사 description 원문(길면 접기, 자르지 않음), AI 입력 허용(1,500자 상한), PDF는 제목·링크만, 'Powered by NewsData.io' 표기. 일반 뉴스 관련성: 제목·설명 앞 400자·키워드에서 제품 주제 + 산업·시장 맥락어(또는 무역 정책어) 필요(무관 생활·선거 기사 실측 후 추가). 대시보드 AI 실행 1회(SVC-MA-20261026-03)로 승인 3회 소진.
+- 일반 뉴스 공급자: NewsData.io로 결정(2026-10-26 담당자 결정). 키 없이 실제 확인: https://newsdata.io/api/1/latest·/api/1/archive, 키는 apikey 쿼리 인자, 키 없음·잘못된 키는 HTTP 401 + {"status":"error","results":{"code":"Unauthorized"}}. 무료 플랜은 최근 48시간·12시간 지연(요금표)이라 '최근 6개월' 조건과 맞지 않음 → 6개월 확보 방법(유료 Archive 등)·조건 조정은 담당자 확인 필요. 환경변수 이름 제안 NEWSDATA_API_KEY(.env.example 추가는 공통 합의).
+- 실제 휴대폰 브라우저 검증: 생략(2026-10-26 담당자 결정). 헤드리스 Chrome 390px 확인으로 대신함.
 - AI 해석 오류(SVC-MA-20261026-02): 근거의 점 표기 코드(5402.33.10)를 조회 코드(54023310)와 다른 범위로 해석. 코드 표기 동일성 안내·검사 추가 후보.
 - KITA: 자동 수집용 공식 API·RSS 미확인. kita.net 저작권 정책은 상업적 이용·자동 수집 금지. 자료 제공·제휴 여부는 KITA 문의 필요(문의 내용은 worklogs sources.md).
 - OpenAI 실제 분석(비용 승인 범위 안), KOTRA 요약·AI 사용 허용 범위 확인.

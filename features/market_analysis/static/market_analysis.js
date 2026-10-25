@@ -341,7 +341,9 @@
   }
 
   /* ---------- 근거 자료(뉴스·보고서) ---------- */
-  const ACCESS_TEXT = { full_text: "원문 확보", title_only: "제목·메타데이터만 확인" };
+  const ACCESS_TEXT = { full_text: "원문 확보", description: "제목·언론사 설명만 확인(본문 미확인)", title_only: "제목·메타데이터만 확인" };
+  const SUMMARY_LABEL = { kotra: "KOTRA 제공 요약(원문 그대로)", newsdata: "언론사 제공 설명(NewsData.io, 원문 그대로)" };
+  const SUMMARY_INLINE_MAX = 220;  // 이보다 긴 출처 요약은 자르지 않고 접어서 전체를 보여 줍니다
   const STATE_TONE = { ok: "success", pending: "info", config: "warning", auth: "danger", rate_limited: "warning",
     unavailable: "danger", bad_response: "danger", rejected: "danger" };
 
@@ -349,7 +351,7 @@
     const box = resultBox.querySelector("[data-ma-news]");
     if (!box || !lastResult) return;
     box.setAttribute("aria-busy", "true");
-    box.innerHTML = '<p class="field-hint"><span class="spinner" aria-hidden="true"></span> 근거 자료(KOTRA 해외시장뉴스)를 불러오는 중입니다. 통계는 위에 먼저 표시했습니다.</p>';
+    box.innerHTML = '<p class="field-hint"><span class="spinner" aria-hidden="true"></span> 근거 자료(KOTRA 해외시장뉴스·NewsData.io 일반 뉴스)를 불러오는 중입니다. 통계는 위에 먼저 표시했습니다.</p>';
     try {
       const res = await fetch("/api/market-analysis/news", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -383,14 +385,19 @@
   // 핵심 요약 1줄: 출처가 제공한 요약만 원문 그대로 표시합니다. 자동으로 잘라 내거나 AI로 새로 만들지 않습니다.
   function summaryCell(it) {
     if (it.excerpt) {
-      return '<p class="ma-news-summary">' + esc(it.excerpt) + '</p><p class="field-hint">' +
-        esc(it.source === "kotra" ? "KOTRA 제공 요약(원문 그대로)" : "출처 제공 요약(원문 그대로)") + "</p>";
+      const label = SUMMARY_LABEL[it.source] || "출처 제공 요약(원문 그대로)";
+      if (it.excerpt.length > SUMMARY_INLINE_MAX) {
+        return '<details class="ma-news-more"><summary>' + esc(label + " · " + it.excerpt.length + "자, 펼쳐 보기") + "</summary>" +
+          '<p class="ma-news-summary">' + esc(it.excerpt) + "</p></details>";
+      }
+      return '<p class="ma-news-summary">' + esc(it.excerpt) + '</p><p class="field-hint">' + esc(label) + "</p>";
     }
     return '<p class="ma-news-none">요약 제공 없음 · 원문 확인 필요</p>';
   }
 
   function articleMeta(it) {
-    const date = it.published ? "게시일 " + it.published : (it.seen_at ? "GDELT 최초 발견 " + it.seen_at : "날짜 미확인");
+    const date = it.published ? "게시일 " + it.published + (it.source === "newsdata" ? "(UTC)" : "")
+      : (it.seen_at ? "GDELT 최초 발견 " + it.seen_at : "날짜 미확인");
     return '<p class="field-hint">' + esc([it.source_name, date, it.topics && it.topics.length ? "주제: " + it.topics.join(", ") : ""]
       .filter(Boolean).join(" · ")) + " " + badge(it.access === "title_only" ? "warning" : "info", ACCESS_TEXT[it.access] || it.access) +
       (it.ai_input ? "" : " " + badge("warning", "AI 입력·PDF 본문 미사용 · 이용 범위 확인 필요")) + "</p>";
@@ -433,6 +440,10 @@
         ". 확보한 자료만 표시했습니다. 결과가 완전하지 않을 수 있습니다. 아래 '근거 자료 다시 불러오기'로 다시 시도할 수 있습니다.</p></div>";
     }
     const hasGdelt = items.concat(others).some(function (it) { return it.source === "gdelt"; });
+    const hasNewsdata = n.sources.some(function (s) { return s.source === "newsdata" && s.state === "ok"; });
+    if (hasNewsdata) {
+      html += '<p class="field-hint">일반 뉴스: <a href="https://newsdata.io" target="_blank" rel="noopener noreferrer">Powered by NewsData.io</a> · 무료 플랜이라 최근 48시간 기사만 검색하며(12시간 지연) 본문은 받지 않습니다. 기사 저작권은 각 언론사에 있습니다.</p>';
+    }
     html += '<p class="field-hint">관련 기사: 주제(브라질 섬유·의류, 폴리에스터 원사·DTY, 재생 섬유·T2T)에 맞는 상위 ' + items.length + "건 / 중복 제거 후 후보 " + n.candidates + "건." +
       (hasGdelt ? " 일반 뉴스 출처: The GDELT Project — 제목·메타데이터만 확인했고 본문은 확인하지 않았습니다. GDELT 시각은 처음 발견한 시각이며 게시일이 아닙니다." : "") +
       " 요약은 출처가 제공한 경우에만 원문 그대로 표시합니다.</p>";

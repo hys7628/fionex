@@ -444,7 +444,8 @@ def meta():
         "error": None,
         # OpenAI 설정 존재 여부(값 없음, 환경변수 이름만). 화면이 AI 실행 전에 안내할 수 있게 합니다.
         "ai": analysis.config_status(),
-        "general_news": {"provider_selected": news_sources.has_general_provider()},
+        "general_news": {"provider_selected": news_sources.has_general_provider(),
+                         "provider": next((p for p in news_sources.GENERAL_NEWS_PROVIDERS if p in news_sources.PROVIDERS), None)},
     }
     try:
         entry, stale = get_latest()

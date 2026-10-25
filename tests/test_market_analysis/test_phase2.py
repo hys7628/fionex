@@ -89,7 +89,7 @@ class NewsBase(unittest.TestCase):
         p = mock.patch.dict(os.environ, values, clear=False)
         p.start()
         self.addCleanup(p.stop)
-        for k in ("DATA_GO_KR_SERVICE_KEY",):
+        for k in ("DATA_GO_KR_SERVICE_KEY", "NEWSDATA_API_KEY"):
             if k not in values:
                 os.environ.pop(k, None)
 
@@ -161,6 +161,131 @@ def gdelt_article(i, title="Indústria têxtil brasileira amplia importação de
          "sourcecountry": "Brazil"}
     a.update(kw)
     return a
+
+
+ND_KEY = "pub_FAKEKEY0000"  # 실제 키 아님
+
+
+def nd_article(i, title="Indústria têxtil brasileira amplia compra de fios de poliéster", desc="Setor têxtil do Brasil ...", **kw):
+    # 2026-10-26 실제 무료 플랜 응답과 같은 필드·자리표시 문자열
+    a = {"article_id": "a%d" % i, "title": title + " %d" % i, "link": "https://valor.globo.com/n/%d" % i, "keywords": ["têxtil"],
+         "creator": None, "description": desc, "content": "ONLY AVAILABLE IN PAID PLANS", "pubDate": "2026-10-24 19:20:39",
+         "pubDateTZ": "UTC", "image_url": None, "source_id": "valor_globo", "source_name": "Valor Globo", "language": "portuguese",
+         "country": ["brazil"], "category": ["business"], "ai_summary": "ONLY AVAILABLE IN PAID PLANS", "duplicate": False}
+    a.update(kw)
+    return a
+
+
+def nd_doc(articles, next_page=None):
+    return {"status": "success", "totalResults": len(articles), "results": articles, "nextPage": next_page}
+
+
+class NewsdataTest(NewsBase):
+    def fetch(self, responses, queries=("q1",)):
+        self.env(NEWSDATA_API_KEY=ND_KEY)
+        t = Transport(responses)
+        with mock.patch.object(news_sources, "_transport", t):
+            items, cov = news_sources.fetch_newsdata(date(2026, 4, 25), date(2026, 10, 25), "t", queries=list(queries))
+        return items, cov, t
+
+    def test_no_key_is_config(self):
+        self.env()
+        with self.assertRaises(news_sources.SourceError) as ctx:
+            news_sources.fetch_newsdata(date(2026, 4, 25), date(2026, 10, 25), "t")
+        self.assertEqual(ctx.exception.kind, "config")
+
+    def test_request_and_parse_real_shape(self):
+        long_desc = "Setor têxtil do Brasil " * 300  # 실측처럼 아주 긴 설명도 자르지 않음
+        items, cov, t = self.fetch([http(200, nd_doc([nd_article(1, desc=long_desc)]))])
+        url = t.calls[0][0]
+        self.assertTrue(url.startswith(news_sources.NEWSDATA_URL + "?"))
+        for part in ("apikey=" + ND_KEY, "q=q1", "country=br", "language=pt"):
+            self.assertIn(part, url)
+        it = items[0]
+        self.assertEqual((it.source, it.published, it.access, it.ai_input, it.pdf_text, it.brazil_context, it.outlet),
+                         ("newsdata", "2026-10-24", "description", True, False, True, "Valor Globo"))
+        self.assertEqual(it.excerpt, news_sources._clean(long_desc))
+        self.assertNotIn("ONLY AVAILABLE", json.dumps(it.public(), ensure_ascii=False))
+        self.assertEqual((cov["searched_from"], cov["searched_to"]), ("2026-10-23", "2026-10-25"))
+        self.assertIn("48시간", cov["missing"][0]["reason"])
+
+    def test_placeholder_description_bad_link_and_missing_title(self):
+        arts = [nd_article(1, description="ONLY AVAILABLE IN PAID PLANS"), nd_article(2, link="javascript:alert(1)"),
+                {**nd_article(3), "title": ""}, {"no": "dict fields"}, "not a dict", nd_article(4, country=["portugal"])]
+        items, _, _ = self.fetch([http(200, nd_doc(arts))])
+        self.assertEqual([i.title[-1] for i in items], ["1", "4"])
+        self.assertEqual((items[0].excerpt, items[0].access), ("", "title_only"))
+        self.assertFalse(items[1].brazil_context)
+
+    def test_next_page_followed_once(self):
+        items, _, t = self.fetch([http(200, nd_doc([nd_article(1)], "p2")), http(200, nd_doc([nd_article(2)], "p3"))])
+        self.assertEqual(len(t.calls), 2)  # 최대 2쪽
+        self.assertIn("page=p2", t.calls[1][0])
+        self.assertEqual(len(items), 2)
+
+    def test_auth_error_stops_without_retry_and_key_not_logged(self):
+        err = {"status": "error", "results": {"message": "The provided API key is not valid.", "code": "Unauthorized"}}
+        with self.assertLogs("features.market_analysis.news_sources", "WARNING") as logs, self.assertRaises(news_sources.SourceError) as ctx:
+            self.fetch([http(401, err)], queries=("a", "b"))
+        self.assertEqual(ctx.exception.kind, "auth")
+        self.assertNotIn(ND_KEY, " ".join(logs.output) + ctx.exception.message)
+
+    def test_access_denied_one_query_others_continue(self):
+        denied = {"status": "error", "results": {"message": "upgrade your plan", "code": "AccessDenied"}}
+        items, cov, t = self.fetch([http(403, denied), http(200, nd_doc([nd_article(1)]))], queries=("a", "b"))
+        self.assertEqual((len(t.calls), len(items)), (2, 1))
+        self.assertIn("rejected", cov["missing"][-1]["reason"])
+
+    def test_rate_limit_retried_then_stops_remaining(self):
+        lim = {"status": "error", "results": {"message": "limit", "code": "RateLimitExceeded"}}
+        with self.assertRaises(news_sources.SourceError) as ctx:
+            self.fetch([http(429, lim)] * 3, queries=("a", "b"))
+        self.assertEqual(ctx.exception.kind, "rate_limited")
+
+    def test_collect_with_newsdata(self):
+        self.env(NEWSDATA_API_KEY=ND_KEY)
+        n = len(news_sources.NEWSDATA_QUERIES)
+        arts = [nd_article(1), nd_article(2, title="Receita de bolo de cenoura", desc="culinária", keywords=["receita"])]
+        t = Transport([http(200, nd_doc(arts))] * n)
+        with mock.patch.object(news_sources, "_transport", t):
+            out = service._news_public(news_sources.collect(today=date(2026, 10, 25)))
+        nd = next(s for s in out["sources"] if s["source"] == "newsdata")
+        self.assertEqual((nd["state"], nd["count"]), ("ok", 2))  # 같은 URL은 검색어가 달라도 한 번만
+        self.assertFalse(any(s["source"] == "general" for s in out["sources"]))
+        self.assertEqual([i["source"] for i in out["items"]], ["newsdata"])  # 요리 기사는 주제 기준 밖
+        self.assertEqual(len(out["other_items"]), 1)
+        self.assertTrue(any("48시간" in note for note in out["window"]["notes"]))
+        pack, _, _ = analysis.build_pack(make_stats(), out["items"])
+        self.assertIn("NewsData.io", " ".join(pack["context"]["notes"]))
+        self.assertLessEqual(len(pack["evidence"][0]["summary"]), analysis.EVIDENCE_SUMMARY_CHARS)
+
+    def test_general_news_needs_industry_context_in_lead(self):
+        # 2026-10-26 실측에서 선정된 무관 기사 유형(선거 안내·생활 요령)은 제외, 산업 기사는 유지
+        election = nd_article(1, title="Posso votar de boné?", keywords=[],
+                              desc="A legislação eleitoral permite que cada pessoa demonstre preferência. " * 8 + "Vestuário com propaganda é proibido.")
+        ironing = nd_article(2, title="O ferro de passar grudou no tecido sintético e travou?", keywords=[],
+                             desc="Veja por que a base do ferro fica preta e como limpar com sal.")
+        industry = nd_article(3, title="Plástico domina 59% da produção mundial de fibras", keywords=[],
+                              desc="O plástico respondeu por 59% da produção mundial de fibras têxteis, por meio do poliéster.")
+        items, _, _ = self.fetch([http(200, nd_doc([election, ironing, industry]))])
+        picked, _ = news_sources.select_items(items)
+        self.assertEqual([p.title for p in picked], [industry["title"]])
+        kotra = news_sources.NewsItem(id="", source="kotra", source_name="KOTRA", title="브라질 섬유 동향", url="https://k.r/1",
+                                      published=None, collected_at="t", language="ko", excerpt="", access="title_only",
+                                      usage_note="", ai_input=False, pdf_text=False, brazil_context=True)
+        self.assertGreater(news_sources.score_item(kotra)[0], 0)  # KOTRA에는 맥락어 조건을 적용하지 않음
+
+    def test_pdf_attribution_and_no_description(self):
+        from pypdf import PdfReader
+        stats = make_stats()
+        news = {"window": {"from": "2026-04-25", "to": "2026-10-25", "months": 6, "notes": []}, "candidates": 1, "other_items": [],
+                "sources": [{"source": "newsdata", "label": "NewsData.io (일반 뉴스)", "state": "ok", "status_text": "연결됨", "count": 1}],
+                "items": [{"id": "N1", "source": "newsdata", "source_name": "NewsData.io · Valor Globo", "title": "Setor têxtil",
+                           "url": "https://valor.globo.com/n/1", "published": "2026-10-24", "access": "description",
+                           "excerpt": "DESCRICAO-NAO-NO-PDF", "ai_input": True, "pdf_text": False, "topics": []}]}
+        text = "\n".join(p.extract_text() for p in PdfReader(io.BytesIO(pdf_report.build_pdf({"stats": stats, "news": news, "ai": None}))).pages)
+        self.assertIn("Powered by NewsData.io", text)
+        self.assertNotIn("DESCRICAO-NAO-NO-PDF", text)
 
 
 class GdeltTest(NewsBase):
@@ -404,7 +529,7 @@ class CollectTest(NewsBase):
 
 
 class DefaultCollectTest(NewsBase):
-    """기본 설정: 일반 뉴스 공급자 선택 대기(GDELT 자동 호출 없음) + KOTRA 기사별 표시 자료."""
+    """기본 설정(KOTRA + NewsData.io, GDELT 자동 호출 없음)의 KOTRA 기사별 표시 자료. NewsData.io 키는 넣지 않아 호출되지 않음."""
 
     def collect(self, kotra_items):
         self.env(DATA_GO_KR_SERVICE_KEY=FAKE_KEY)
@@ -413,15 +538,24 @@ class DefaultCollectTest(NewsBase):
             out = news_sources.collect(today=date(2026, 10, 25))
         return service._news_public(out), t  # 화면 응답과 같은 공개 형식(dict)
 
-    def test_no_gdelt_call_and_general_pending(self):
-        self.assertEqual(set(news_sources.PROVIDERS), {"kotra"})
-        self.assertFalse(news_sources.has_general_provider())
+    def test_default_providers_no_gdelt_call(self):
+        self.assertEqual(set(news_sources.PROVIDERS), {"kotra", "newsdata"})
+        self.assertTrue(news_sources.has_general_provider())
         out, t = self.collect([kotra_item(1)])
         self.assertEqual(len(t.calls), 1)
-        self.assertTrue(all(url.startswith(news_sources.KOTRA_URL) for url, _ in t.calls))  # GDELT 호출 없음
+        self.assertTrue(all(url.startswith(news_sources.KOTRA_URL) for url, _ in t.calls))  # GDELT·NewsData 호출 없음(키 없음)
+        nd = next(s for s in out["sources"] if s["source"] == "newsdata")
+        self.assertEqual((nd["state"], nd["status_text"]), ("config", "설정 필요"))
+        self.assertIn("NEWSDATA_API_KEY", nd["message"])
+        self.assertEqual(out["window"]["notes"], [])  # 키 없음은 기간 누락 경고 대상 아님
+        self.assertEqual([s["source"] for s in out["sources"]], ["kotra", "newsdata", "kita"])
+
+    def test_general_pending_without_provider(self):
+        with mock.patch.object(news_sources, "PROVIDERS", {"kotra": news_sources.fetch_kotra}):
+            self.assertFalse(news_sources.has_general_provider())
+            out, _ = self.collect([kotra_item(1)])
         general = next(s for s in out["sources"] if s["source"] == "general")
         self.assertEqual((general["state"], general["status_text"]), ("pending", "공급자 선택 대기"))
-        self.assertEqual(out["window"]["notes"], [])  # GDELT 기간 경고 없음
         self.assertEqual([s["source"] for s in out["sources"]], ["kotra", "general", "kita"])
 
     def test_real_response_shape_without_summary_or_body(self):
@@ -681,7 +815,7 @@ class AnalysisTest(unittest.TestCase):
         news = news_for(self.stats, n=0, kotra=1)
         pack, _, excluded = analysis.build_pack(self.stats, news["items"])
         notes = " ".join(pack["context"]["notes"])
-        self.assertIn("일반 뉴스 공급자를 선택하기 전", notes)
+        self.assertIn("일반 뉴스 근거가 없다", notes)
         self.assertNotIn("GDELT", notes)
         self.assertEqual((pack["evidence"], excluded), ([], 1))
 
@@ -796,7 +930,8 @@ class BundleTest(unittest.TestCase):
             st = analysis.new_state()
             st["result"] = {}
             return st
-        with mock.patch.object(service.analysis, "run", fake_run):
+        with mock.patch.object(service.analysis, "run", fake_run), \
+                mock.patch.object(service.news_sources, "has_general_provider", lambda: False):
             service.run_ai(self.bid)
         self.assertIsNone(seen["widen_fn"])
 
@@ -807,7 +942,7 @@ class BundleTest(unittest.TestCase):
                 mock.patch.object(comex, "get_latest_month", return_value=(2026, 9, "2026-10-06")):
             m = service.meta()
         self.assertEqual(m["ai"], {"ready": False, "api_key_set": True, "model_set": False, "missing": ["OPENAI_MODEL"]})
-        self.assertEqual(m["general_news"], {"provider_selected": False})
+        self.assertEqual(m["general_news"], {"provider_selected": True, "provider": "newsdata"})
         self.assertNotIn("FAKE-secret", json.dumps(m, ensure_ascii=False))
 
     def test_news_collected_once_per_bundle(self):
