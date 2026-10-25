@@ -1,16 +1,53 @@
 {# 홈 작업 영역. 제목·설명은 base.html 공통 머리글이 표시합니다.
    실제 시간·소식·보고서는 기능 개발 단계에서 담당자가 구현합니다. 꾸민 데이터를 넣지 않습니다. #}
 <div class="grid">
-  <article class="card">
+  {# 바이어 시간: 시각·상태 계산은 home.js(Intl.DateTimeFormat), 공휴일은 /api/home/holidays.
+     도시 선택은 보기 설정이라 작성 중 감지에서 제외합니다(data-work-ignore). #}
+  <article class="card" aria-labelledby="home-buyer-title" id="home-buyer-time">
     <div class="card-header">
       <div>
-        <h2 class="card-title">바이어 현지 시간</h2>
-        <p class="card-description">브라질 바이어 기준 도시의 현재 시간을 표시합니다.</p>
+        <h2 class="card-title" id="home-buyer-title">바이어 현지 시간</h2>
+        <p class="card-description">지금 브라질 바이어에게 연락해도 되는지, 아니면 한국 시간으로 언제 다시 연락할 수 있는지 확인합니다.</p>
       </div>
     </div>
-    <div class="empty-state">
-      <p class="empty-state-title">표시할 시간이 없습니다</p>
-      <p>기준 도시가 정해지면 이곳에 표시됩니다.</p>
+    <div class="stack">
+      <div class="field" data-work-ignore>
+        <label class="field-label" for="home-city">기준 도시</label>
+        <select class="select" id="home-city" aria-describedby="home-hours-hint">
+          <option value="America/Sao_Paulo" selected>상파울루</option>
+          <option value="America/Fortaleza">포르탈레자</option>
+          <option value="America/Manaus">마나우스</option>
+          <option value="America/Rio_Branco">히우브랑쿠</option>
+        </select>
+      </div>
+
+      <dl class="home-time-list">
+        <div class="home-time-row">
+          <dt>서울 현재 시각</dt>
+          <dd><span class="home-time-value" id="home-seoul-time">-</span></dd>
+        </div>
+        <div class="home-time-row">
+          <dt>브라질 현재 시각</dt>
+          <dd><span class="home-time-value" id="home-brazil-time">-</span>
+            <span class="home-time-sub" id="home-brazil-city">상파울루</span></dd>
+        </div>
+        <div class="home-time-row">
+          <dt>상태</dt>
+          <dd aria-live="polite"><span class="badge" id="home-status">확인 중</span></dd>
+        </div>
+        <div class="home-time-row" id="home-next-row" hidden>
+          <dt>다음 업무 시작</dt>
+          <dd><span class="home-time-value" id="home-next-start">-</span>
+            <span class="home-time-sub" id="home-next-local"></span></dd>
+        </div>
+        <div class="home-time-row">
+          <dt>공휴일</dt>
+          <dd id="home-holiday">확인 중</dd>
+        </div>
+      </dl>
+
+      <p class="field-hint" id="home-hours-hint">기준: 현지 09:00~18:00 (가정, 확정되지 않은 업무시간) · 점심시간 미반영 · 브라질 국가 공휴일만 반영(주·시 공휴일 제외)</p>
+      <p class="field-hint" id="home-holiday-source" role="status">공휴일 정보 확인 중</p>
     </div>
   </article>
 
