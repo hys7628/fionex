@@ -81,3 +81,53 @@
 - 미검증 유지: 비용, 소요 시간, 스캔 PDF 판독(미구현), 번역 품질, 응답 모델명·사용량, 오류 경로의 실제 공급자 응답(모의 테스트로만 확인), 실제 `.env` 로드 동작
 - 이전 기록(모의 테스트 통과·실제 연결 미검증)은 당시 상태로 유지하며 이 항목으로 후속 보완함
 - 공통 문서 반영(2026-10-25): docs/data_contracts.md, README.md, docs/decisions.md의 "실제 호출 미검증" 표현을 위 결과에 맞게 정정. 실행 검증 아님(문서 수정만, 테스트 재실행 없음)
+
+## 2026-10-25 제품소개서 첫 화면 (PDF 선택·결과 확인·수정)
+- 변경 내용: panel.html, product_brochure.js, product_brochure.css, feature_spec.md, tests/test_product_brochure/test_panel.py
+- 환경: Conda jasonenv Python 3.11.17, Flask 3.1.2, Node v24.20.0(로직 점검용, 프로젝트 의존성 아님)
+
+### Claude가 직접 실행한 검증
+- `python -m unittest discover -s tests/test_product_brochure -v` → 12개 실행, OK
+  - Flask test_client로 `GET /` 200, 5개 탭 패널 모두 렌더링
+  - 파일 입력 1개(`multiple` 없음, accept .pdf), 스캔 PDF·상한 미정 안내 문구
+  - 분석 버튼 비활성 + "PDF 분석 연결 준비 중", 카탈로그 생성·PDF 다운로드 비활성(비활성 버튼 3개)
+  - 예시 버튼은 type=button·활성, 검토 영역은 처음 hidden, 예시 안내 문장 존재, 검토 영역 `data-work-ignore`
+  - 이전 예시 입력(요청 사항 textarea)·바이어 입력 없음
+  - JS 정적 검사: fetch·XMLHttpRequest·sendBeacon·localStorage·sessionStorage·indexedDB·FileReader·파일 읽기 메서드 없음, innerHTML 등 HTML 삽입 없음, setResult·downloadBlob 없음
+  - CSS 선택자 모두 `.feature-product_brochure ` 범위
+- `python -m unittest discover -s tests/test_common` → 32개 실행, OK(기존 공통 테스트 영향 없음 확인)
+- `node --check product_brochure.js` → 문법 오류 없음
+- Node 상태 로직 점검(스크래치패드 스크립트, 저장소 미포함) → 11개 통과
+  - 예시 8개 항목 미확인 시작·dirty 아님, MOQ·샘플·납기 제공+가상, 원사 규격·탄소 저감률·인증 미제공
+  - 값 수정 시 확인 해제·사용자 수정, 같은 값 입력은 확인 유지, 원래 값 복귀 시 사용자 수정 해제
+  - 미제공 항목 입력 → 사용자 추가(제공 여부는 false 유지), 공백만 입력은 추가 아님
+  - 미제공+가상 동시 성립, 예시의 가상 조건 해제 불가, 요약 집계
+  - 파일 검사: 미선택·확장자 오류(MIME이 application/pdf여도 .docx·.pdf.exe 거부)·빈 파일·대문자 .PDF 허용
+
+### 미검증(브라우저 미실행)
+- 실제 브라우저에서의 파일 선택·안내 표시, 확인 대화상자(예시 재불러오기·새 PDF 선택), 취소 시 이전 파일 복원(DataTransfer)
+- 탭 이동 후 상태 유지, 머리글 "작성 중" 표시·새로고침 경고, 새로고침 후 미복원
+- 네트워크 요청이 실제로 발생하지 않는지(정적 검사로만 확인)
+- 화면 배치·반응형·키보드 접근성·화면낭독기 안내
+- 코드 검토와 단위 점검은 브라우저 동작 확인이 아님
+
+## 2026-10-25 제품소개서 첫 화면 후속: 사용자 직접 확인 결과를 전달받음
+- 실행 주체: 사용자(브라우저). Claude는 직접 관측하지 않았고 전달받은 내용을 그대로 기록함
+- 대상: DI-2026_10_25-06 화면(배치 정리 전)
+- 사용자 보고(정상)
+  - 값 수정 시 사용자 확인 체크 해제
+  - 다른 탭 이동 후 수정값 유지
+  - 수정 후 예시 재불러오기에서 취소하면 수정값 유지
+  - 새로고침 경고에서 취소하면 값 유지
+  - 새로고침을 진행하면 작업 내용 초기화(미복원)
+- 여전히 미검증: 파일 선택 안내(미선택·빈 파일·확장자), 새 PDF 선택 시 확인 대화상자와 취소 시 이전 파일 복원, 예시 재불러오기 확인 후 초기화, "확인 내용 적용" 요약 표시, 네트워크 요청 미발생(정적 검사만), 머리글 "작성 중" 표시, 반응형·키보드·화면낭독기
+
+## 2026-10-25 제품소개서 확인·수정 화면 배치·문구 정리
+- 변경 내용: panel.html, product_brochure.js(렌더링 부분만), product_brochure.css, feature_spec.md
+- Claude가 직접 실행한 검증
+  - `python -m unittest discover -s tests/test_product_brochure` → 12개 실행, OK
+  - `python -m unittest discover -s tests/test_common` → OK
+  - `node --check product_brochure.js` → 문법 오류 없음
+  - Node 상태 로직 점검(스크래치패드 스크립트, 저장소 미포함) → 11개 통과. 상태 로직은 이번에 변경하지 않음
+- 코드 확인: 입력·체크박스 이벤트 처리, setDraft 연동, 파일 교체·예시 재불러오기 확인 로직은 변경하지 않음(렌더링 문구·감싸는 요소만 변경)
+- 미검증(브라우저 미실행): 2열/1열 전환이 실제 카드 폭에서 의도대로 되는지, 제품 설명 전체 폭, 화면 길이 감소 정도, 숨긴 안내와 aria-describedby의 화면낭독기 동작, 배치 변경 후 사용자 보고 항목(확인 해제·탭 유지 등)의 재확인

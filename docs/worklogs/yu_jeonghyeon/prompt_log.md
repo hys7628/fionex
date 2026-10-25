@@ -73,3 +73,31 @@
 - 유형: development_instruction / 날짜: 2026-10-25 (Asia/Seoul) / 작업자: 유정현
 - 변경: docs/data_contracts.md(개요·후속 작업), README.md(현재 단계·기술 기준), docs/decisions.md(공통 OpenAI 연결)의 "실제 OpenAI 호출 미검증"을 "사용자 직접 실행 결과로 실제 호출·반환 형식 확인, 업무 품질·비용·소요 시간·응답 모델명·사용량 미검증, PDF·스캔 PDF 입력 미구현"으로 정정
 - 서비스 코드·설정·패키지 변경 없음. API 호출·테스트 재실행 없음
+
+## DI-2026_10_25-06 제품소개서 첫 화면(PDF 선택·결과 확인·수정) 구현
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 07:19 (Asia/Seoul) / 작업자: 유정현 / 기능: 제품소개서(product_brochure)
+- 도구·모델: Claude Code (Opus 5.5). 서비스 모델(OpenAI) 호출 없음
+- 사전 확인: 브랜치 feature/product_brochure, develop 병합 커밋 a619bc6가 origin과 일치, 작업 트리 깨끗, 병합 진행 중 아님. stash@{0}는 건드리지 않음
+- 지시 요약: 한국어 PDF 1개 선택 화면과 분석 결과 항목별 확인·수정 화면만 구현. 실제 PDF 분석·OpenAI 호출·카탈로그 생성·PDF 출력 금지, 공통 코드·연결 규약 변경 금지. 분석 버튼 비활성("PDF 분석 연결 준비 중"), 별도 "개발용 예시 불러오기"(자동 불러오기 없음, 분석 결과가 아님을 표시), 항목별 값·제공·가상·사용자 확인을 독립 상태로 구분, 값 수정 시 확인 해제, 미제공 항목 입력은 사용자 추가 정보, 예시 재불러오기·새 PDF 선택 시 수정 내용 보호, 브라우저 저장소 미사용
+- 변경: features/product_brochure/templates/product_brochure/panel.html, static/product_brochure.js, static/product_brochure.css, feature_spec.md(§17 추가, 머리말·§12·§16 갱신), tests/test_product_brochure/test_panel.py(신규)
+- 설계 판단
+  - 파일 입력은 공통 shell 자동 감지, 검토 영역은 `data-work-ignore` + `AppShell.work.setDraft`(수정·확인이 있을 때만). 예시는 결과가 아니므로 `setResult` 미사용
+  - 예시에서 가상으로 제공된 MOQ·샘플·납기는 가상 표시 해제 불가, 제공 여부는 사용자가 변경 불가
+  - 새 PDF 선택 취소 시 DataTransfer로 이전 파일 선택 복원
+  - 상태 로직을 같은 JS 파일 안의 DOM 없는 객체로 분리하고 Node에서만 module.exports로 불러올 수 있게 함
+- 서비스 프롬프트 실험: 해당 없음 / OpenAI 호출: 없음
+- 담당자 판단: 검토 대기
+- 남은 한계: 브라우저 동작 미확인. 분석 API·스키마·파일 상한·추출 항목 확정은 후속
+
+## DI-2026_10_25-07 제품소개서 확인·수정 화면 배치·문구 정리
+- 유형: development_instruction / 날짜: 2026-10-25 (Asia/Seoul) / 작업자: 유정현 / 기능: 제품소개서
+- 지시 요약: 항목마다 반복되는 안내를 검토 영역 상단으로 모으고, 제품 설명은 넓게, 짧은 항목은 카드 가용 폭이 충분할 때만 2열·좁으면 1열. 확인 체크·가상 표시·기존 로직 유지, 글자 축소·내부 스크롤 금지, 공통 토큰·컴포넌트 재사용
+- 변경
+  - panel.html: 카드 설명 중복 문장 제거, 상단 "검토 방법"(.notice-info) 4줄 추가
+  - product_brochure.js: 항목별 반복 문구(근거 위치·원문 발췌 없음, 체크 라벨의 부연) 제거, 미제공·사용자 추가 안내만 항목별 표시(안내가 없으면 숨기고 aria-describedby 해제), 그룹 항목을 공통 `.grid`로 감쌈, 제품 설명에 전체 폭 클래스
+  - product_brochure.css: 항목 간격, 전체 폭 항목, 안내 목록 스타일(모두 `.feature-product_brochure` 범위)
+  - feature_spec.md §17 화면 배치 설명 추가
+- 상태 로직(Review)·이벤트 처리 변경 없음. 공통 파일·패키지 변경 없음. 테스트 추가 없음
+- 서비스 프롬프트 실험: 해당 없음 / OpenAI 호출: 없음
+- 남은 한계: 실제 배치·반응형은 브라우저 미확인

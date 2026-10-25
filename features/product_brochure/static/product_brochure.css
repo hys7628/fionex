@@ -1,5 +1,71 @@
 /*
  * 제품소개서 탭 전용 스타일. 선택자는 .feature-product_brochure 안으로 한정합니다.
  * 공통 컴포넌트(.card, .btn, .input 등)를 복제·덮어쓰지 말고 tokens.css 변수를 사용합니다.
- * 예) .feature-product_brochure .xxx-list { gap: var(--space-3); }
  */
+.feature-product_brochure .product_brochure-file-info {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  font-size: var(--font-size-sm);
+}
+
+.feature-product_brochure .product_brochure-file-info div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.feature-product_brochure .product_brochure-file-info dt {
+  color: var(--color-text-muted);
+}
+
+.feature-product_brochure .product_brochure-file-info dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.feature-product_brochure .product_brochure-dev {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--color-border-strong);
+}
+
+.feature-product_brochure .product_brochure-group {
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+/* 항목 배치는 공통 .grid(카드 폭이 충분할 때만 2열). 제품 설명처럼 긴 항목은 전체 폭 */
+.feature-product_brochure .product_brochure-items {
+  gap: var(--space-5) var(--space-6);
+}
+
+.feature-product_brochure .product_brochure-item-wide {
+  grid-column: 1 / -1;
+}
+
+.feature-product_brochure .product_brochure-guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.feature-product_brochure .product_brochure-badges,
+.feature-product_brochure .product_brochure-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.feature-product_brochure .product_brochure-badges {
+  gap: var(--space-2);
+}
