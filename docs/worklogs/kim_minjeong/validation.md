@@ -182,3 +182,42 @@
   | 위치 안내 | 수정 후 원문 위치 부정확 가능 안내 | 표시됨 | 통과(사용자 보고) |
 - Claude가 사용자 화면이나 문서를 직접 본 것은 아님
 - 이번 사용자 확인에 포함되지 않아 그대로 미검증: 실제 Office 암호화 .docx, 실제 30초 초과 문서, 대용량·복잡한 실제 홍보물 Word, 메모리 사용량, 텍스트 상자·이미지 등 머리글 외 미지원 요소의 실제 문서 확인, 중첩 표의 사용자 확인, 오류 파일(손상·docm형·ZIP 상한 등)의 실제 브라우저 확인, 처리 중 파일 교체·방식 전환 취소의 실제 브라우저 확인, 새로고침 경고·초기화의 실제 브라우저 확인, Edge·Firefox·Safari·모바일 기기·화면낭독기, 공통 회귀 테스트(jasonenv에 httpx2·openai·pydantic 없음), 이미지·스캔 PDF(미구현)
+
+## 2026-10-25 PDF AI 글자 판독 확인 (DEV-2026_10_25-07)
+- 환경: jasonenv Python 3.11.17, Flask 3.1.2, pypdf 6.21.2, python-docx 1.2.0. **openai·pydantic·httpx2 없음** → common.ai_client import 불가. 실행 셸에 OPENAI_API_KEY·OPENAI_MODEL 없음, .env 없음. 사용자 서버(5003, PID 7744) 유지, 검증용 5013(실제 코드)·5014(모의) 실행 후 종료. 실제 OpenAI 호출 0회
+- 구분 A. 실제 실행(외부 호출 없음)
+  - 앱 시작 시 openai·common.ai_client를 불러오지 않음, /api/green-claim/ocr 등록 확인
+  - 실제 코드 서버(5013)에서 AI 판독 클릭 → AI_DEPENDENCY_MISSING(503) 안내, 기존 편집 문구 유지(헤드리스 브라우저)
+  - 사전 검사(공통 inspect_pdf 포함) 실패 7종: FILE_EMPTY·FILE_TOO_LARGE·FILE_TYPE_UNSUPPORTED·PDF_INVALID·PDF_ENCRYPTED·PDF_TOO_MANY_PAGES·PDF_CORRUPT, AI 연결을 불러오지도 않음
+  - 서버 로그: 접속 기록과 오류 code 줄만, 문서·판독 텍스트 흔적 0건. 서버 자식 프로세스 0개
+- 구분 B. 모의 검증(가짜 generate 함수, 실제 판독 아님)
+  - 자동 테스트 tests/test_ocr.py 13개 통과, 1개 건너뜀(pydantic 없음: 스키마 필드 확인)
+    - 공통 함수 1회 호출, 인자 instructions(프롬프트 파일)·pdf_bytes·schema·input_text(서버 페이지 수, 파일명 미포함)
+    - 페이지 번호 범위 밖(0·N+1)·중복·누락·정수 아님·bool → OCR_PAGE_MISMATCH, 정렬·범위·[판독 불가] 수·불확실 수
+    - 글자 없음 OCR_NO_TEXT, 9,999+2+9,999=20,000 통과/20,001 TEXT_TOO_LONG(자르지 않음)
+    - 의존성 없음 AI_DEPENDENCY_MISSING, 동시 실행 EXTRACT_BUSY(호출 없음), 오류 시 재시도 없음(호출 1회)
+    - 라우트: 성공 응답 필드, 공통 오류 8종(설정·인증·요청 제한·연결·시간 초과·거절·미완료·형식) code·HTTP 상태, 예상 밖 예외 AI_UNKNOWN_ERROR(내부 문자열 미노출)
+    - 페이지 로딩·일반 추출·텍스트 없음 실패에서 AI 연결 미호출, 거부 로그에 문서 내용 없음, 프롬프트 필수 규칙 포함
+  - 브라우저(Chrome 헤드리스, 모의 서버 5014 + 실제 5013) 33/33 통과
+    - 버튼 옆 OpenAI 전송·요금·PDF만 안내, 로딩·파일 선택·탭 전환·일반 추출 실패 시 AI 요청 0건
+    - 일반 추출 출처·AI 선택 안내, 처리 중 두 버튼 비활성·요금 취소 미보장 안내, 중복 클릭 추가 요청 없음
+    - 교체 확인 후 반영, 글자 수 재계산, 출처(AI 판독·모델명)·검수 아님·모델 보고 불확실/한계(측정 정확도 아님)·페이지별 판독 범위 표시, 검수·PDF 다운로드 비활성, 편집 후 위치 안내
+    - 모의 출력 잘림(AI_INCOMPLETE)·페이지 누락(OCR_PAGE_MISMATCH) 안내와 기존 문구·파일 유지, Word 선택 시 AI 판독 거부·요청 없음
+    - 처리 중 파일 교체·방식 전환 → 취소·이전 응답 미반영, 탭 왕복 재실행 없음, 저장소 0건, 390px 가로 스크롤 없음, 새로고침 경고·복원 없음, 콘솔 오류 0
+- 구분 C. 회귀(실제 코드 서버 5013): Word 45/45, PDF 66/66, 직접 입력 51/51. 첫 실행에서 3건 실패 → 원인은 검증 스크립트(PDF 다운로드 버튼을 "PDF" 글자로 찾아 새 AI 판독 버튼을 잡음, Word 안내 기대값이 바뀐 문구와 다름). 실제 PDF 다운로드 버튼 disabled 확인 후 스크립트만 수정해 통과. 담당 자동 테스트 PDF 17·Word 18 통과. CRLF 변환·프롬프트 LF 정규화 후 전체 재실행 통과
+- 구분 D. 공통 테스트: tests/test_common 두 모듈 모두 "No module named httpx2"로 import 실패, 실행 불가
+- 미실행·미검증: 실제 OpenAI 호출, 실제 스캔 PDF 판독 정확도·비용·소요 시간, 4,096토큰 출력으로 처리 가능한 분량, 공급자의 스캔 PDF 처리 가능 여부, pydantic 스키마의 실제 strict JSON Schema 변환, 사람이 조작하는 실제 브라우저·다른 브라우저·화면낭독기
+
+## 2026-10-25 후속: 패키지 설치 후 재검증 (DEV-2026_10_25-07 후속)
+- 사용자 보고(Claude가 직접 실행하지 않음): jasonenv에 기존 requirements.txt 패키지 설치 완료, 사용자가 실행한 pip check 결과 "No broken requirements found."
+- Claude 직접 확인(2026-10-25 20:50~21:00 무렵, C:/Users/user/miniforge3/envs/jasonenv/python.exe 명시, Python 3.11.17)
+  - import·설치 버전: openai 3.37.0, pydantic 2.14.1, httpx2 2.16.0(requirements.txt 고정 버전과 같음), common.ai_client import 가능. httpx·python-dotenv는 없음(requirements.txt에 없는 패키지). 추가 설치·업데이트 없음
+  - 실행 전 외부 호출 여부 확인: tests/test_common은 클라이언트 생성 함수를 기본 차단하고 필요한 테스트만 httpx2 MockTransport로 교체, OPENAI_ 환경변수를 가짜 값으로 대체. test_ocr은 _load_ai를 가짜 함수로 교체. .env 파일 없음, 실행 셸에 OPENAI_ 환경변수 없음(값 미조회)
+  - 공통 회귀 tests/test_common(test_ai_client·test_pdf): 56개 실행, 56개 통과, 실패 0, 건너뜀 0. 앞선 "No module named httpx2" 실행 불가 기록(구분 D)의 후속 해결
+  - features/green_claim/tests/test_ocr.py: 14개 실행, 14개 통과, 건너뜀 0(앞서 pydantic 없음으로 건너뛴 스키마 필드 테스트 포함)
+  - 담당 회귀: test_pdf_extract 17개 통과, test_docx_extract 18개 통과
+  - 추가 확인(저장소 밖 임시 스크립트 scratchpad/tools/check_ocr_no_key.py, 외부 호출 없음)
+    - OcrResult가 openai 라이브러리의 strict JSON Schema 변환을 통과(required: pages·limitations / page·text·uncertain, additionalProperties false). 앞의 미검증 항목 "strict JSON Schema 변환"은 로컬 변환까지만 확인, 공급자 수락 여부는 미검증
+    - 키·모델 없는 상태에서 Flask 테스트 클라이언트로 /api/green-claim/ocr에 가상 1쪽 PDF 전송 → HTTP 503, AI_CONFIG_MISSING("AI 기능 설정이 준비되지 않았습니다…"), 클라이언트 생성 0회(호출 시 실패하도록 막아 둠). 패키지 설치 후에는 AI_DEPENDENCY_MISSING 대신 이 안내가 나옴
+- 기능 코드·공통 파일·테스트 코드 수정 없음. 브라우저 회귀는 이번에 다시 실행하지 않음(코드 변경 없음)
+- 여전히 미검증: 실제 OpenAI 호출, 실제 스캔 PDF 판독 정확도·비용·소요 시간, 4,096토큰 출력으로 처리 가능한 분량, 공급자의 스캔 PDF 처리 가능 여부와 스키마 수락. 모의 테스트 통과는 실제 판독 성공이 아님

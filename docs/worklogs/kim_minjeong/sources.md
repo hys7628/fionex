@@ -53,3 +53,13 @@
 | python-docx 1.2.0 설치본 소스 | jasonenv site-packages/docx (oxml/parser.py, document.py, blkcntnr.py, table.py, text/paragraph.py, oxml/text/paragraph.py) | 2026-10-25 20:00 무렵 | XMLParser(resolve_entities=False), iter_inner_content 문서 순서·감싸인 요소 제외, Paragraph.text = w:r·w:hyperlink, row.cells가 병합 셀 반복, _Cell.iter_inner_content | 설치본 직접 확인 |
 | 공통 PDF 연결(develop 병합분) | common/pdf_utils.py, common/config.py, docs/data_contracts.md | 2026-10-25 19:45 무렵 | inspect_pdf 순서·상한(10 MiB, 20쪽), 하위 클래스 암호 해제 차단, pypdf 로거 전파 차단 | 로컬 파일 읽기 전용 |
 - 사용권: python-docx·lxml·typing_extensions 라이선스는 PyPI 메타데이터 표기만 확인(라이선스 원문 검토 안 함)
+
+## 2026-10-25 PDF AI 판독 구현 참고 (DEV-2026_10_25-07)
+| 자료 | 위치 | 확인 시각(KST) | 확인 내용 | 상태 |
+|---|---|---|---|---|
+| 공통 PDF 입력 연결 | common/ai_client.py generate_structured_from_pdf, _check_structured_args, _structured_result | 2026-10-25 20:27 무렵 | inspect_pdf 선행, OPENAI_MODEL, input_file(base64, 고정 파일명, detail), responses.parse, incomplete·failed·refusal·스키마 불일치 오류 처리, 스키마는 pydantic BaseModel | 로컬 파일 읽기 전용 |
+| 공통 설정 | common/config.py | 같음 | PDF_TIMEOUT_SECONDS 120, PDF_MAX_RETRIES 0, PDF_MAX_OUTPUT_TOKENS 4096, PDF_STORE False, PDF_DETAIL high, PDF_MAX_BYTES 10 MiB, PDF_MAX_PAGES 20 | 로컬 파일 읽기 전용 |
+| 공통 오류 | common/errors.py | 같음 | AIError 계열 code·http_status·retryable, PdfValidationError 계열 | 로컬 파일 읽기 전용 |
+| 공통 연결 문서 | docs/data_contracts.md(develop 병합분) | 같음 | 공식 file-inputs 가이드 근거(detail, 공급자 상한 50 MB), 스캔 PDF 처리는 가이드에 명시 없음, store=False가 모든 보관을 없애지 않음 | 공통 문서 내용 확인(공식 가이드는 이번에 직접 조회하지 않음) |
+| .env.example | 저장소 루트 | 같음 | 변수 이름 OPENAI_API_KEY·OPENAI_MODEL·OPENAI_IMAGE_MODEL만 확인 | 값 미확인·미출력 |
+- OpenAI 공식 문서는 이번에 직접 조회하지 않음(공통 문서의 기록만 참고)

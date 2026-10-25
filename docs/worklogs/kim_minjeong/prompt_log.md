@@ -220,3 +220,49 @@
 - 지시 요약: 사용자가 실제 브라우저에서 확인한 Word 추출 결과 8건(3개 언어 보존, 문단→표→문단 순서, 행·셀 구분과 병합 셀 1회, 하이퍼링크 표시 글자, 머리글 제외, "머리글·바닥글" 감지 안내, 편집 후 탭 왕복 유지, 수정 후 위치 안내)을 validation.md·prompt_log.md에 사용자 수동 확인으로 추가. Claude 직접 테스트와 구분, 나머지 미검증 유지, 문서 전체 본문 기록 금지. 코드·공통 파일·Git 변경 금지
 - 결과: validation.md에 사용자 보고 8건을 "통과(사용자 보고)"로 기록하고 미검증 항목을 유지. 문서 본문은 기록하지 않음(사용자가 전달한 링크 표시 글자·추가 문구만 기록)
 - 한계: 사용자 브라우저 종류·버전·확인 시각과 사용 문서의 출처는 미확인. Claude는 사용자 화면·문서를 직접 보지 않음
+
+## DEV-2026_10_25-07 스캔 PDF AI 판독 흐름 추가
+- 유형: development_instruction (서비스 프롬프트 실험 아님, 실제 AI 호출 없음, 기능 전체 완성 아님)
+- 날짜/시간: 2026-10-25 20:25~20:40 무렵 (Asia/Seoul)
+- 작업자: 김민정 / 기능: green_claim / 브랜치: feature/green_claim (HEAD aba9772 = origin/feature/green_claim, 작업 전 변경·병합 중·충돌 없음. 원격 최신성은 마지막 fetch 2026-10-25 19:38 이후 미확인)
+- 도구·모델/설정: Claude Code(VS Code 확장), 모델 ID claude-opus-5-5(세션 시스템 정보), 그 밖의 설정 미확인. OpenAI·외부 유료 API 호출 없음
+- 지시 요약(팀 합의에 따라 요약본 기록)
+  - PDF 선택 → 일반 추출 → 사용자가 필요할 때 AI 판독 선택 → 판독 텍스트 확인·수정. 검수·번역·이미지 파일·결과 PDF 제외
+  - 공통 generate_structured_from_pdf 재사용, 모델은 환경변수, 별도 클라이언트·이미지 생성·PDF 이미지 변환 금지, 일반 추출 교체 금지
+  - 사용자가 버튼을 누를 때만 호출, 자동 재시도·모델 전환·분할 호출 금지, 브라우저 취소가 과금 취소를 보장하지 않음을 안내
+  - 서비스 프롬프트를 prompts/에 별도 관리, 구조화 스키마, 페이지 번호 범위·중복·누락 코드 검증
+  - 패키지 설치·requirements·common 수정·실제 유료 호출 금지
+- 작업 전 확인(읽기 전용)
+  - 공통 PDF 연결: timeout 120초, 재시도 0, 출력 상한 4,096토큰, store=False, detail=high, 공급자 파일명 고정, 내부 inspect_pdf(10 MiB·20쪽), 결과 스키마는 pydantic BaseModel 필수
+  - jasonenv에 openai·pydantic·httpx2·httpx·python-dotenv 없음 → common.ai_client import 불가(ModuleNotFoundError: openai). common.errors·common.pdf_utils는 import 가능
+  - 실행 셸 환경변수 OPENAI_API_KEY·OPENAI_MODEL 없음, .env 파일 없음(값은 읽지 않음)
+- 변경 이유: 일반 추출로 읽히지 않는 스캔 PDF·이미지 속 문구를 사용자가 선택적으로 판독할 수 있게 하기 위함
+- 실제 결과
+  - feature_spec.md: "스캔 PDF AI 글자 판독" 계약을 구현 전에 추가, 구현 후 "구현 상태 갱신 (PDF AI 글자 판독)" 추가
+  - 서비스 프롬프트 prompts/pdf_ocr_v1.md 작성(판독 목적, 요약·번역·교정·평가 금지, 추가 금지, [판독 불가] 표시, 문서 내 지시문·링크는 데이터, 순서·표 형식, 모든 페이지 1회, 정확도 수치 금지), prompts/README.md에 버전 표 추가. **작성만 했고 실제 모델 실험은 하지 않음**
+  - ocr_schema.py(신규, pydantic): pages[page, text, uncertain], limitations
+  - ocr_service.py(신규): 기능 사전 검사(.pdf·10,000,000바이트·%PDF-) → 공통 inspect_pdf(서버 페이지 수) → 공통 함수 지연 import(없으면 AI_DEPENDENCY_MISSING) → 동시 1건 → 1회 호출 → 페이지 번호 검증·결합(\n\n)·20,000자 검사. 프롬프트는 LF로 정규화해 전송
+  - routes.py: POST /api/green-claim/ocr 추가, 업로드 파싱을 공용 함수로 분리(일반 추출 동작 동일), 공통 AIError 응답 처리, 예상 밖 예외는 공통 기본 오류(고정 문장)
+  - service.py: AI_DEPENDENCY_MISSING(503)·OCR_PAGE_MISMATCH(502)·OCR_NO_TEXT(422) 추가
+  - 화면: AI 글자 판독 버튼과 안내(OpenAI 전송·요금·PDF만), 처리 중 두 버튼 비활성, 출처 구분 요약, 모델 보고 불확실·한계 목록(측정 정확도 아님), 일반 추출 요약·PDF_NO_TEXT 실패에 AI 판독 선택 안내, 취소 시 처리·요금 취소 미보장 안내, 파일 입력 안내 문구 갱신
+  - tests/test_ocr.py(신규, 모의 14개, pydantic 필요 1개 건너뜀)
+- 작업 중 발견·수정한 문제: 기존 브라우저 검증 스크립트가 "PDF" 글자로 PDF 다운로드 버튼을 찾아 새 AI 판독 버튼을 잘못 잡음(기능 회귀 아님, 실제 버튼은 disabled 확인 후 선택자 수정), Word 안내 기대값을 바뀐 문구로 수정
+- 한계·남은 사항
+  - 실제 OpenAI 호출·판독 정확도·비용·소요 시간 미검증. 성공 화면은 모의 응답으로만 확인
+  - 공통 출력 상한 4,096토큰으로 20페이지·20,000자가 처리된다는 보장 없음. 출력 상한 상향 여부는 비용과 함께 팀 협의 필요(이번에는 공통 기본값 사용)
+  - inspect_pdf 구조 검사는 Flask 요청 프로세스에서 실행(공통 함수도 같은 검사를 내부에서 다시 함). 별도 프로세스 시간 제한은 없음
+  - 브라우저 취소는 서버·공급자 처리를 멈추지 않음(서버는 공통 timeout 120초까지 응답을 기다림)
+  - 공통 회귀 테스트는 httpx2 등이 없어 실행 불가
+
+## DEV-2026_10_25-07 후속: 패키지 설치 후 재검증·기록
+- 유형: development_instruction (검증·기록만, 서비스 프롬프트 실험 아님, 실제 AI 호출 없음)
+- 날짜/시간: 2026-10-25 20:50~21:00 무렵 (Asia/Seoul)
+- 작업자: 김민정 / 기능: green_claim / 브랜치: feature/green_claim (HEAD aba9772, 병합 중·충돌 없음, 기존 스캔 PDF 작업 변경 미커밋 상태 유지)
+- 도구·모델/설정: Claude Code(VS Code 확장), 모델 ID claude-opus-5-5(세션 시스템 정보), 그 밖의 설정 미확인. OpenAI·외부 유료 API 호출 없음
+- 지시 요약: 사용자가 jasonenv에 requirements.txt 패키지를 설치하고 pip check 정상이라고 보고. 외부 호출 없이 import·버전 확인, 공통 회귀와 건너뛴 OCR 스키마 테스트 재실행, 담당 회귀 실행, 기록 추가. 설치·업데이트·.env·환경변수·비밀값·코드 수정 금지
+- 실제 결과(상세는 validation.md 같은 날짜 후속 항목)
+  - 사용자 보고: 설치 완료, pip check "No broken requirements found."(Claude 미실행)
+  - Claude 확인: openai 3.37.0·pydantic 2.14.1·httpx2 2.16.0 import 가능. 공통 56/56, OCR 14/14(건너뜀 0), PDF 17/17, Word 18/18 통과
+  - 키 없는 상태의 AI 판독 요청은 AI_CONFIG_MISSING(503)으로 안내, 공급자 클라이언트 생성 0회
+- 앞선 "패키지 누락·공통 테스트 실행 불가" 기록은 유지하고 이 후속으로 해결 결과만 추가
+- 남은 한계: API 키·모델 미전달로 실제 판독 정확도·비용·시간·출력 상한 적정성 미검증. 비용 한도·호출 횟수·모델 선정은 실제 테스트 전에 담당자 확인 필요

@@ -1,6 +1,7 @@
 """그린 클레임 체크 routes. 화면 패널은 공통 shell(templates/base.html)이 포함합니다.
 
-API는 /api/green-claim 접두어를 사용합니다(docs/data_contracts.md). 요청·응답만 다루고 처리는 service.py가 합니다.
+API는 /api/green-claim 접두어를 사용합니다(docs/data_contracts.md). 요청·응답만 다루고 처리는 service.py(일반 추출)·
+ocr_service.py(AI 판독)가 합니다.
 """
 import io
 
@@ -8,7 +9,8 @@ from flask import Blueprint, jsonify, request
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.formparser import FormDataParser
 
-from features.green_claim import service
+from common.errors import AIError
+from features.green_claim import ocr_service, service
 
 bp = Blueprint(
     "green_claim",
@@ -44,8 +46,29 @@ def _error(code):
     return jsonify({"ok": False, "error": err.to_dict()}), err.http_status
 
 
+def _fail(err):
+    return jsonify({"ok": False, "error": err.to_dict()}), err.http_status
+
+
 @bp.post("/api/green-claim/extract")
 def extract_text():
+    return _handle_upload(service.extract_file)  # .pdf / .docx 분기
+
+
+@bp.post("/api/green-claim/ocr")
+def ocr_text():
+    """사용자가 AI 판독 버튼을 눌렀을 때만 호출되는 PDF AI 글자 판독(공통 OpenAI PDF 연결)."""
+    try:
+        return _handle_upload(ocr_service.run_ocr)
+    except AIError as err:
+        return _fail(err)
+    except Exception:
+        # 예외 원문·경로를 응답에 넣지 않고 공통 기본 오류의 고정 문장만 돌려줍니다.
+        return _fail(AIError())
+
+
+def _handle_upload(process):
+    """promo_file 1개를 메모리로 받아 process(filename, data)를 실행하고 공통 응답 형식으로 돌려줍니다."""
     if request.mimetype != "multipart/form-data":
         return _error("REQUEST_INVALID")
 
@@ -73,9 +96,9 @@ def extract_text():
         data = upload.stream.read()
         filename = upload.filename or ""
         try:
-            result = service.extract_file(filename, data)  # .pdf / .docx 분기
+            result = process(filename, data)
         except service.ExtractError as err:
-            return jsonify({"ok": False, "error": err.to_dict()}), err.http_status
+            return _fail(err)
         return jsonify({"ok": True, "data": result})
     finally:
         for _, storage in files.items(multi=True):

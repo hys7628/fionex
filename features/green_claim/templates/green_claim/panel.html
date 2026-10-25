@@ -1,5 +1,5 @@
-{# 그린 클레임 체크 작업 영역. 문구 직접 입력 + 일반 PDF·Word(.docx) 글자 추출·확인·수정(feature_spec.md).
-   AI 검수·스캔 PDF 글자 인식·이미지·결과 PDF는 아직 연결되지 않았습니다.
+{# 그린 클레임 체크 작업 영역. 문구 직접 입력 + 일반 PDF·Word(.docx) 글자 추출 + PDF AI 글자 판독(사용자 선택)·확인·수정(feature_spec.md).
+   AI 그린워싱 검수·이미지 파일 판독·결과 PDF는 아직 연결되지 않았습니다.
    검수 결과는 제공 근거 범위의 표현 스크리닝이며 법적 적합성 보장이 아닙니다(docs/data_contracts.md). #}
 <div class="workspace">
   <form class="card" aria-labelledby="green_claim-input-title" autocomplete="off" novalidate>
@@ -45,13 +45,23 @@
                aria-describedby="green_claim-file-hint green_claim-file-error">
         <p class="field-hint" id="green_claim-file-hint">지원: 일반 PDF 또는 Word(.docx) 1개, 10,000,000바이트(약 10MB) 이하(PDF는 20페이지 이하).
           파일 안의 텍스트만 읽으며 원본 PDF·Word는 수정하지 않습니다.
-          준비 중: 스캔 PDF 글자 인식(OCR), 이미지 파일, Word 속 이미지·텍스트 상자·머리글 등의 글자.</p>
+          스캔 PDF는 아래 'AI 글자 판독'을 직접 선택할 수 있습니다(PDF만).
+          준비 중: 이미지 파일(JPG·PNG), Word 속 이미지·텍스트 상자·머리글 등의 글자.</p>
         <p class="field-error" id="green_claim-file-error" hidden></p>
       </div>
 
       <div class="btn-row">
         <button type="button" class="btn btn-secondary" id="green_claim-extract">글자 추출</button>
         <span class="field-hint green-claim-extract-status" id="green_claim-extract-status" role="status"></span>
+      </div>
+
+      <div class="green-claim-ocr">
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary" id="green_claim-ocr" aria-describedby="green_claim-ocr-hint">AI 글자 판독 (PDF만)</button>
+        </div>
+        <p class="field-hint" id="green_claim-ocr-hint">누를 때만 실행됩니다. 선택한 PDF 파일이 OpenAI로 전송되어 AI가 글자를 판독하며 요금이 발생할 수 있습니다.
+          스캔 PDF처럼 '글자 추출'로 읽히지 않거나 이미지 속 문구가 빠졌을 때 사용하세요. 결과는 원본과 비교해 고쳐야 합니다.
+          Word·JPG·PNG는 지원하지 않습니다.</p>
       </div>
 
       <div id="green_claim-extract-message" aria-live="polite"></div>
@@ -69,7 +79,7 @@
         <p class="notice-title" id="green_claim-extract-summary-title"></p>
         <p id="green_claim-extract-summary-text"></p>
         <div id="green_claim-extract-detected-box" hidden>
-          <p>이 문서에서 감지한 미지원 요소(추출하지 않음):</p>
+          <p id="green_claim-extract-detected-title">이 문서에서 감지한 미지원 요소(추출하지 않음):</p>
           <ul class="green-claim-notice-list" id="green_claim-extract-detected"></ul>
         </div>
         <p>일반 안내:</p>

@@ -370,6 +370,78 @@ OpenAI
 - 처리 중 파일을 바꾸거나 입력 방식을 바꾸면 진행 중 요청을 취소하고 그 응답을 반영하지 않는다.
 - 새 결과로 편집 문구를 바꾸기 전 확인, 실패 시 기존 문구·선택 파일 유지, 수정 후 위치 안내는 PDF와 같다.
 
+### 스캔 PDF AI 글자 판독 (2026-10-25 구현 기준, 실제 AI 호출 미검증)
+범위: 사용자가 버튼으로 직접 선택한 PDF 1개를 공통 OpenAI PDF 입력 연결로 보내 **보이는 글자를 원문 언어로 옮기는 판독**까지. 그린워싱 검수·번역·이미지(JPG/PNG)·Word 삽입 이미지 판독·결과 PDF는 이번 범위 밖(최종 목표는 유지).
+
+공통 연결 재사용 [확정]
+- `common.ai_client.generate_structured_from_pdf(instructions, pdf_bytes, schema, input_text)`를 그대로 쓴다. 별도 OpenAI 클라이언트·이미지 생성 함수·PDF 이미지 변환 도구를 쓰지 않는다.
+- 모델은 공통 환경변수 `OPENAI_MODEL`(코드에 고정하지 않음). 공통 설정(common/config.py, 2026-10-25 확인): timeout 120초, 재시도 0회, 출력 상한 4,096토큰(`PDF_MAX_OUTPUT_TOKENS`, 기능에서 다른 값을 넘기지 않음), `store=False`, `detail="high"`, 공급자에는 고정 파일명만 전송.
+- 공통 함수는 요청 전에 `inspect_pdf`(10 MiB·20쪽·서명·구조·암호화)를 다시 실행한다. 기능은 그보다 엄격한 10,000,000바이트를 먼저 적용한다.
+- 공통 함수는 `openai`·`pydantic`이 설치된 환경에서만 불러올 수 있다. 기능은 판독 요청 때만 불러오며(지연 import), 없으면 AI_DEPENDENCY_MISSING으로 안내한다.
+- 일반 PDF 추출(pypdf, 30초 별도 프로세스)은 그대로 두고 AI 판독으로 일괄 교체하지 않는다. 일반 추출 30초 제한과 AI 호출 120초 제한은 별개다.
+
+실행 방식 [확정]
+- 화면에서 "글자 추출"(일반)과 "AI 글자 판독"(OpenAI 전송)을 별도 버튼으로 구분한다.
+- 사용자가 AI 판독 버튼을 누를 때만 요청한다. 탭 전환·파일 선택·페이지 로딩·일반 추출 실패로 자동 호출하지 않는다.
+- 일반 추출에서 텍스트가 없거나 일부 페이지가 비면 AI 판독을 선택할 수 있다고 안내한다. 텍스트가 없다는 이유로 스캔 PDF라고 단정하지 않는다.
+- 실패·출력 잘림·형식 오류에 자동 재시도·다른 모델 전환·자동 분할 호출을 하지 않는다. 사용자가 다시 누를 수 있다.
+- 서버의 동시 AI 판독은 1건(초과 시 EXTRACT_BUSY).
+
+서비스 프롬프트: `features/green_claim/prompts/pdf_ocr_v1.md`(instructions로 전체 전송). 개발 지시와 구분해 관리하며, 실험 후 수정이 필요하면 새 버전 파일을 만든다.
+- 목적: 보이는 글자를 원문 언어(한국어·영어·브라질 포르투갈어 등) 그대로 옮김. 요약·번역·교정·평가 금지, 없는 문구·수치·인증·효과 추가 금지, 판독이 어려운 글자를 추측해 채우지 않고 `[판독 불가]` 표시, 문서 안 지시문·링크는 데이터로만 취급.
+- input_text로 서버가 확인한 페이지 수를 함께 보낸다(문서 내용 아님).
+
+결과 스키마(pydantic, `ocr_schema.py`): `pages: [{page: int, text: str, uncertain: [str]}]`, `limitations: [str]`.
+
+요청: `POST /api/green-claim/ocr`, `multipart/form-data`, `promo_file` 1개(.pdf). 일반 추출(`/api/green-claim/extract`)과 같은 업로드 파서(메모리 처리·요청 본문 상한)를 쓴다. 기존 PDF·Word 추출 API는 바꾸지 않는다.
+
+성공 응답 `{"ok": true, "data": {...}}`
+| 필드 | 타입 | 내용 |
+|---|---|---|
+| format | "pdf" | |
+| source | "ai_ocr" | 일반 추출 결과와 출처 구분 |
+| text | string | 페이지 순서대로 판독 텍스트를 빈 줄(`\n\n`)로 연결. CRLF·CR→LF 외 보정 없음 |
+| char_count | int | 코드 포인트 수 |
+| page_count | int | **서버(공통 inspect_pdf)가 확인한 페이지 수** |
+| pages | array | `{page, status("text"/"no_text"), char_start, char_end, uncertain[str]}`. 범위는 text 안의 코드 포인트 [start, end), 글자 없는 페이지는 null |
+| pages_without_text | int[] | 모델이 글자 없음으로 보고한 페이지 |
+| uncertain_count | int | 모델이 보고한 불확실 구간 안내 수 |
+| unreadable_mark_count | int | text 안 `[판독 불가]` 표시 수 |
+| model_limitations | string[] | 모델이 보고한 판독 한계(측정한 정확도 아님) |
+| model | string | 공급자가 응답한 모델명 |
+| prompt_version | string | `pdf_ocr_v1` |
+| notices | string[] | 고정 안내 |
+| limits | object | max_bytes, max_pages, max_chars, ai_timeout_seconds, ai_max_output_tokens |
+
+페이지 검증 [확정]: 모델이 돌려준 page가 정수가 아니거나 1~page_count 범위를 벗어나거나, 중복되거나, 빠진 페이지가 있으면 결과 전체를 쓰지 않고 OCR_PAGE_MISMATCH. 일부만 성공으로 표시하지 않는다.
+
+제한: 파일 1개, 10,000,000바이트, 20페이지, 최종 텍스트 20,000 코드 포인트(구분 줄바꿈·`[판독 불가]` 표시 포함, 초과 시 자르지 않고 실패). 20페이지·20,000자 상한이 한 번의 출력(4,096토큰)으로 항상 처리된다는 뜻은 아니며, 출력 부족은 AI_INCOMPLETE 또는 AI_OUTPUT_INVALID로 실패 처리한다.
+
+오류(공통 실패 형식)
+| code | HTTP | 출처 | 상황 |
+|---|---|---|---|
+| REQUEST_INVALID, FILE_MISSING, FILE_MULTIPLE, FILE_EMPTY, FILE_TOO_LARGE, FILE_TYPE_UNSUPPORTED, PDF_INVALID | 기존 | 기능 | 업로드·확장자·PDF 서명(.pdf만 허용) |
+| PDF_CORRUPT, PDF_ENCRYPTED, PDF_NO_PAGES, PDF_TOO_MANY_PAGES 등 | 400/413 | 공통 inspect_pdf | 구조·암호화·페이지 |
+| AI_DEPENDENCY_MISSING | 503 | 기능 | openai·pydantic 등 공통 AI 연결 의존성 없음 |
+| AI_CONFIG_MISSING | 503 | 공통 | 키·모델 환경변수 없음 |
+| AI_AUTH_FAILED, AI_PERMISSION_DENIED, AI_MODEL_UNAVAILABLE, AI_RATE_LIMITED, AI_CONNECTION_FAILED, AI_TIMEOUT, AI_PROVIDER_ERROR, AI_BAD_REQUEST | 공통 | 공통 | 인증·권한·모델·요청 제한·네트워크·시간 초과 |
+| AI_REFUSED, AI_INCOMPLETE, AI_OUTPUT_INVALID | 공통 | 공통 | 거절·출력 잘림·스키마 오류 |
+| OCR_PAGE_MISMATCH | 502 | 기능 | 페이지 번호 범위·중복·누락 |
+| OCR_NO_TEXT | 422 | 기능 | 판독 결과 글자 없음 |
+| TEXT_TOO_LONG | 422 | 기능 | 20,000자 초과 |
+| EXTRACT_BUSY | 429 | 기능 | 동시 AI 판독 1건 초과 |
+| AI_UNKNOWN_ERROR | 500 | 공통 | 그 밖의 오류 |
+
+화면 [확정]
+- AI 판독 버튼 옆에 "선택한 PDF가 OpenAI로 전송되는 AI 판독이며 요금이 발생할 수 있음"을 안내. Word·JPG·PNG는 지원하지 않음.
+- 처리 중에는 글자 추출·AI 판독 버튼 모두 비활성(중복 실행 방지). 브라우저는 150초 뒤 대기를 멈춘다.
+- 파일 교체·입력 방식 전환 시 진행 중 요청을 취소하고 그 응답을 반영하지 않는다. **브라우저 취소는 이미 보낸 요청의 공급자 처리·요금 취소를 보장하지 않는다**고 안내한다.
+- 결과는 기존 편집칸에 넣고(기존 문구가 있으면 교체 확인), 요약에 출처(일반 추출 / AI 판독)·모델 보고 불확실 구간·한계를 구분해 표시. 실패 시 기존 편집 문구 유지.
+- 안내: 원본과 비교·수정 필요, 작은 글자·흐림·복잡한 표·다단 배치 등에서 오류 가능, 판독 완료는 그린워싱 검수 완료가 아님.
+- 저장: 파일·판독 결과·AI 응답 원문을 DB·디스크·로그·개발 기록에 남기지 않는다. 공급자 측 보관은 공통 문서 기준(`store=False`가 모든 보관을 없애지 않음).
+
+미검증: 실제 OpenAI 호출, 판독 정확도·비용·소요 시간, 4,096토큰으로 처리 가능한 분량, 스캔 PDF 처리 가능 여부(공통 문서상 공식 가이드에 명시 없음).
+
 ## 검증
 현재 기능 미구현·실행 검증 미실시. 아래는 앞으로 수행할 계획이며 실행 결과가 아니다.
 
@@ -390,6 +462,13 @@ OpenAI
 - PDF 내용에 .docx 확장자를 붙인 파일은 이제 Word 처리로 가서 DOCX_INVALID로 거부(이전: FILE_TYPE_UNSUPPORTED).
 - 처리 중 입력 방식을 바꾸면 진행 중 추출을 취소하도록 변경(이전: 계속 진행 후 교체 확인).
 - 계속 미구현: 스캔 PDF OCR, 이미지(JPG/PNG) 판독, Word 삽입 이미지·텍스트 상자·머리글 등의 글자, AI 검수, 결과 PDF.
+
+### 구현 상태 갱신 (2026-10-25 PDF AI 글자 판독)
+- 추가 구현: POST /api/green-claim/ocr, 공통 generate_structured_from_pdf 재사용(지연 import), 서비스 프롬프트 prompts/pdf_ocr_v1.md, 결과 스키마 ocr_schema.py, 페이지 번호 검증, 화면의 AI 판독 버튼·출처 구분·불확실 구간 표시.
+- 위 "계속 미구현"의 "스캔 PDF OCR"은 사용자가 선택하는 PDF AI 판독으로 코드가 추가되었으나 **실제 OpenAI 호출로는 검증하지 않았다**(모의 테스트만). 현재 jasonenv에는 openai·pydantic·httpx2가 없어 실제 서버에서는 AI_DEPENDENCY_MISSING으로 안내된다.
+- 일반 PDF 추출 요약에 출처와 AI 판독 선택 안내 추가, 일반 추출 PDF_NO_TEXT 실패 안내에 AI 판독 선택 안내 추가(자동 호출 없음). 기존 PDF·Word 응답 필드는 변경 없음.
+- 계속 미구현: 이미지(JPG/PNG) 판독, Word 삽입 이미지·텍스트 상자·머리글 등의 글자, AI 그린워싱 검수, 결과 PDF.
+- 미검증: 실제 AI 판독 정확도·비용·소요 시간, 4,096토큰 출력 상한으로 처리 가능한 분량, 스캔 PDF 처리 가능 여부.
 담당 worklogs에 실제 결과만 기록하고 실행하지 못한 항목은 미검증으로 남긴다.
 
 ### 완료 기준·검증 계획
