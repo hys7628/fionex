@@ -5,3 +5,16 @@
 날짜 / 변경 내용 / 검증 절차 / 기대 / 실제 / 판정 / 미검증
 
 미실행·미확인은 그대로 표시하고 결과를 추정해 작성하지 않습니다.
+
+## 2026-10-25 그린 클레임 명세 구체화 (문서 검증만)
+- 변경 내용: features/green_claim/feature_spec.md 구체화(prompt_log.md DEV-2026_10_25-01)
+- 수행한 검증과 실제 결과
+  - Git 상태: 브랜치 feature/green_claim, 작업 전 변경 없음, HEAD = origin/develop(05ac128). 원격 최신성은 마지막 fetch(2026-10-25 15:43 KST) 이후 미확인. 로컬 develop은 origin/develop보다 4커밋 뒤
+  - 규칙 문서(CLAUDE.md, AGENTS.md, development.md, git_rules.md, recording_rules.md, design_system.md)는 Initial commit 대비 변경 없음을 git diff로 확인
+  - 공통 연결 대조: 담당 유정현, 텍스트 구조화·이미지 생성 구현, OPENAI_MODEL 초기 후보 gpt-5.4-mini, 모델 코드 미고정, 텍스트 timeout 60초, 재시도 0회·자동 모델 전환 없음, 이미지 생성은 판독 기능 아님, PDF·스캔 PDF·이미지 분석 입력 미구현, 실제 호출 확인과 품질·비용·시간 검증 구분 → 전달받은 내용과 로컬 파일 일치
+  - 명세 반영 확인: 최상위 5개 절 유지, 합의 핵심 문구 34개를 grep으로 확인해 모두 존재. 120초는 "확정값 아님" 문맥에만 등장
+  - 삭제된 기존 줄 5개 확인: 내용은 새 절로 옮기거나 확정 내용으로 대체
+  - 범위: git diff --stat 결과 feature_spec.md 외 추적 파일 변경 없음(개인 기록 3개 추가 후 최종 확인은 아래)
+- 판정: 문서 검증 통과(문서 범위 한정)
+- 미실행: 기능 테스트, 서버 실행, OpenAI API 호출, 파일 추출·PDF 생성, CDC·CONAR URL 조회, 브라우저 확인. 기능 미구현이므로 기능 동작은 검증 대상 아님
+- 최종 범위 확인(기록 추가 후): git status 변경 4개(feature_spec.md, prompt_log.md, validation.md, sources.md), 미추적 파일 없음, 개인 기록 파일의 기존 줄 삭제 0건
