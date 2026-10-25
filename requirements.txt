@@ -12,3 +12,6 @@ httpx2==2.16.0
 # pdf_utils가 pypdf 내부 메서드(PdfReader._handle_encryption)를 덮어쓰므로 버전을 바꾸면 tests/test_common/test_pdf.py로 재확인한다.
 pypdf==6.21.2
 # PDF 출력 도구는 기능 개발 단계에서 선정·검증 후 추가한다.
+# [팀 공유 필요] 홍보 스튜디오 PDF 출력(features/promotion_studio/pdf_builder.py, 정은진 2026-10-25). LGPL-3.0.
+# jasonenv 설치 시 defusedxml 0.7.1, fonttools 4.67.0, pillow 13.0.0이 함께 설치됨. 팀 공통 PDF 도구로 확정된 것은 아니다.
+fpdf2==2.8.9
