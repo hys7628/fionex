@@ -297,13 +297,20 @@
     return lang;
   }
 
+  // 수집 경로 상태: ok 정상 / error 실패 / not_configured 설정 필요(KOTRA 인증키 없음)
+  const SOURCE_STATES = {
+    ok: { text: "정상", tone: "badge-success" },
+    error: { text: "실패", tone: "badge-warning" },
+    not_configured: { text: "설정 필요", tone: "badge-info" },
+  };
+
   function renderNewsSources(media) {
     news.sources.replaceChildren.apply(news.sources, Object.keys(NEWS_ORIGINS).map(function (origin) {
       const info = media[origin];
-      const ok = info.status === "ok";
+      const state = SOURCE_STATES[info.status] || SOURCE_STATES.error;
       const li = make("li", "home-news-source");
       li.append(
-        make("span", "badge " + (ok ? "badge-success" : "badge-warning"), NEWS_ORIGINS[origin] + " · " + (ok ? "정상" : "실패")),
+        make("span", "badge " + state.tone, NEWS_ORIGINS[origin] + " · " + state.text),
         make("span", "home-news-source-meta",
           info.fetched_at ? formatKst(info.fetched_at) + " 갱신 · " + info.count + "건" : "수집 기록 없음"));
       return li;
@@ -315,8 +322,9 @@
       return media[origin].status !== "ok";
     }).map(function (origin) {
       const info = media[origin];
-      const notice = make("div", "notice notice-warning");
-      notice.append(make("p", "notice-title", NEWS_ORIGINS[origin] + " 불러오기 실패"));
+      const notConfigured = info.status === "not_configured";
+      const notice = make("div", "notice " + (notConfigured ? "notice-info" : "notice-warning"));
+      notice.append(make("p", "notice-title", NEWS_ORIGINS[origin] + (notConfigured ? " 설정 필요" : " 불러오기 실패")));
       notice.append(make("p", "", info.error.message +
         (info.stale ? " " + formatKst(info.fetched_at) + " 수집분을 계속 표시합니다." : "")));
       if (info.error.retryable) {

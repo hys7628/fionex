@@ -41,6 +41,11 @@ python app.py
 2026-10-25 확인 시 jasonenv에는 python-dotenv 1.1.1이 별도로 설치되어 있었습니다. `.env`는 Git에서 제외됩니다.
 SDK 디버그 로그(`OPENAI_LOG`)는 기록 범위를 검증하지 않았으므로 서비스 실행 시 켜지 않습니다.
 
+### KOTRA 환경변수
+`KOTRA_API_KEY`: 홈 업계 소식의 KOTRA 해외시장뉴스 Open API(공공데이터포털) 인증키. 실제 값은 `.env`에만 둡니다(양식은 `.env.example`).
+값이 없으면 KOTRA 수집만 "설정 필요"로 표시되고 Google News·ABIT 뉴스는 그대로 동작합니다.
+위 OpenAI 환경변수와 같이 앱 코드는 `.env`를 직접 읽지 않으므로, 실행 셸에 설정하거나 python-dotenv가 있는 환경에서 실행해야 반영됩니다.
+
 ### 공통 테스트
 ```
 python -m unittest discover -s tests/test_common -v

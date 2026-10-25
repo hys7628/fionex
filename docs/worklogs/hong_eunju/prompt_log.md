@@ -104,3 +104,15 @@
 - 채택: **v1 유지**. v2가 숫자 탈락 1건 적고 채택 2건 많았으나 버전당 1회 실행이고 차이가 1~2건이며, v2에도 고유명사 왜곡이 있어 few-shot이 낫다는 근거로 보지 않음.
 - 재실행: 미실행(같은 입력 반복 실행으로 편차 확인 필요).
 - 남은 한계: 제목만 보고 만든 요약이라 기사 내용과 다를 수 있음(원문 확인 안내 표시). 서수·숫자 낱말(terceiro, um 등) 번역은 숫자 검증에서 탈락하거나 걸러지지 않음(한국어 숫자 낱말 "두 배" 등은 검사 대상 아님). 고유명사 음역 오류는 코드로 걸러지지 않음. 앱 경로(POST /api/home/news/summaries)의 실제 OpenAI 호출은 미실행(같은 함수·스키마·검증을 실험 스크립트로 실행, 앱 경로는 모의로 확인).
+
+## DEV-HOME-004 KOTRA_API_KEY 확정 반영
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 16:50경 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/home, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: KOTRA 인증키 환경변수명 `KOTRA_API_KEY` 확정. 서버는 이 이름을 읽고, 값은 .env에만 두며 코드·로그·worklog·화면에 출력하지 않음. .env.example에 값 없는 `KOTRA_API_KEY=`, README에 변수명만. 키가 없으면 KOTRA만 "설정 필요", Google News·ABIT는 정상.
+- 변경 파일: features/home/service.py(상태 not_configured 추가·안내 문구·주석), static/home.js(배지 "설정 필요"·notice-info), .env.example(설명 주석 1줄, 빈 줄 정리. `KOTRA_API_KEY=`는 이전 커밋에 이미 있음), README.md(KOTRA 환경변수 절)
+- 구현 판단: 키 없음은 실패가 아니라 설정 문제라 media.kotra.status를 `not_configured`로 분리(error.code `key_missing`, 재시도 버튼 없음). 잘못된 키(HTTP 401/403)는 기존대로 `error`·`access_denied`.
+- 확인 사항: .env의 KOTRA_API_KEY는 값 존재 여부만 확인(값 미출력). 앱은 .env를 직접 읽지 않고 jasonenv에 python-dotenv가 없어, `python app.py`만으로는 .env 값이 반영되지 않음 → README에 실행 셸 설정 또는 python-dotenv 필요로 기록.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: KOTRA 실제 데이터 응답은 여전히 미확인(이번 범위에서 실제 키로 호출하지 않음).

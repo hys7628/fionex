@@ -160,3 +160,15 @@ JS 예외 0. 콘솔 오류: favicon 404(기존), 의도적 실패 요청 1건.
 - 앱 경로(POST /api/home/news/summaries → 실제 OpenAI) 실제 호출: 미실행. 사전 안내한 실험 2회 범위를 넘지 않음. 서버는 OpenAI 키 없이 실행.
 - 같은 입력 반복 실행 편차, 다른 모델, 비용 실측.
 - 요약 사실 정확성의 체계적 평가(30건 원출력을 담당 AI가 눈으로 판독한 소견만 있음).
+
+## 2026-10-25 KOTRA_API_KEY 확정 반영 (DEV-HOME-004)
+변경: features/home/service.py·static/home.js, .env.example, README.md
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| .env.example 값 확인(값 미출력, 길이만) | OPENAI_API_KEY·KOTRA_API_KEY 빈 값 | 길이 0 / 0 | 통과 |
+| 뉴스 서버 검증(DEV-HOME-002 스크립트, 실제 RSS, 서버 프로세스에 키 없음) | kotra `not_configured`·key_missing·재시도 불가·외부 요청 없음, google·abit 정상 | 38/38 통과 | 통과 |
+| 등록되지 않은 키로 KOTRA 실제 호출 | `error`·access_denied(403) | 일치 | 통과 |
+| 홈 모의 테스트 tests/test_home | 18건 OK | OK | 통과 |
+| 브라우저(headless Chrome, 키 없는 테스트 서버 127.0.0.1:5013) | "KOTRA · 설정 필요" 배지·"KOTRA 설정 필요" 안내(재시도 버튼 없음), Google·ABIT 목록 정상 | 20/20 통과, JS 예외 0, 스크린샷 확인 | 통과 |
+비고: 5003 포트는 사용자가 실행한 `python app.py`가 사용 중이라 테스트 서버를 5013에 띄움.
+미검증: .env의 실제 KOTRA 키로 실제 데이터 조회(이번 범위 아님), python-dotenv 설치 환경에서 .env 자동 로딩.

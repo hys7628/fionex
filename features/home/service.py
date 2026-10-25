@@ -128,7 +128,7 @@ ABIT_QUERIES = ("site:abit.org.br when:30d", '"ABIT" têxtil when:30d')
 # KOTRA 해외시장뉴스 Open API(공공데이터포털 15034831). 요청 변수·응답 필드는 포털 Swagger 명세 기준이며,
 # 인증키가 없어 실제 데이터 응답은 아직 확인하지 못했습니다.
 KOTRA_URL = "https://apis.data.go.kr/B410001/kotra_overseasMarketNews/ovseaMrktNews/ovseaMrktNews"
-KOTRA_KEY_ENV = "KOTRA_API_KEY"  # 제안한 이름. .env.example 반영은 공통 합의 후
+KOTRA_KEY_ENV = "KOTRA_API_KEY"  # 확정(2026-10-25). 값은 .env에만 두고 코드·로그·화면에 남기지 않습니다.
 KOTRA_COUNTRY = "브라질"
 KOTRA_LOOKBACK_DAYS = 180
 KOTRA_ROWS = 100
@@ -137,7 +137,7 @@ KOTRA_KEYWORDS = ("섬유", "원사", "원단", "의류", "화섬", "폴리에�
 KOTRA_DATE_FORMATS = ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%Y%m%d", "%Y.%m.%d")
 
 NEWS_ERRORS = {
-    "key_missing": "KOTRA 인증키가 설정되지 않았습니다.",
+    "key_missing": "KOTRA 인증키(KOTRA_API_KEY)가 설정되지 않아 KOTRA 뉴스는 가져오지 않습니다.",
     "access_denied": "요청이 거부되었습니다. 인증·접근 권한을 확인해야 합니다.",
     "timeout": "응답 시간이 초과되었습니다.",
     "fetch_failed": "뉴스를 불러오지 못했습니다.",
@@ -157,6 +157,7 @@ class NewsFetchError(Exception):
 def get_news(refresh=None):
     """{"items": [...최신순], "media": {경로: {status, fetched_at, count, stale[, error]}}}
 
+    status: ok | error | not_configured(KOTRA 인증키 없음, 설정 필요. 다른 경로에는 영향 없음)
     refresh로 지정한 경로는 캐시를 무시하고 다시 가져옵니다. 만료된 경로도 다시 가져옵니다.
     """
     now = monotonic()
@@ -187,15 +188,15 @@ def get_news(refresh=None):
     for medium in NEWS_MEDIA:
         cached = _news_cache.get(medium)
         lists[medium] = cached["items"] if cached else []
+        code = errors.get(medium)
         info = {
-            "status": "error" if medium in errors else "ok",
+            "status": "ok" if code is None else ("not_configured" if code == "key_missing" else "error"),
             "fetched_at": cached["fetched_at"] if cached else None,
             "count": len(lists[medium]),
             # 이번 갱신은 실패했고 이전 수집분을 보여 주는 중
             "stale": medium in errors and cached is not None,
         }
-        if medium in errors:
-            code = errors[medium]
+        if code is not None:
             info["error"] = {"code": code, "message": NEWS_ERRORS[code], "retryable": code != "key_missing"}
         media[medium] = info
     # 이미 만든 AI 요약만 붙입니다(새 요약은 summarize_news에서 따로 요청해 목록 표시를 늦추지 않음).
