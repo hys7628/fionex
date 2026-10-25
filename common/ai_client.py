@@ -1,6 +1,7 @@
 """공통 OpenAI 연결. 서버에서만 호출합니다.
 
 - generate_structured: 텍스트 입력 → 기능 담당자 스키마(Pydantic)로 검증된 결과 (Responses API)
+- generate_structured_from_pdf: PDF 1개(+선택 부가 텍스트) → 스키마 검증 결과 (Responses API, input_file)
 - generate_image: 텍스트 프롬프트 → PNG 이미지 1장 bytes (Images API)
 
 업무 프롬프트·결과 필드·판단 로직은 각 기능에서 정의합니다. 이 모듈은 Flask 응답을 만들지 않고
@@ -22,6 +23,7 @@ import pydantic
 from openai import OpenAI
 
 from common import config
+from common.pdf_utils import PdfInfo, inspect_pdf
 from common.errors import (
     AIAuthError,
     AIBadRequestError,
@@ -66,6 +68,13 @@ class StructuredResult(Generic[T]):
     data: T
     model: str
     usage: Optional[TokenUsage]
+
+
+@dataclass(frozen=True)
+class PdfStructuredResult(StructuredResult[T]):
+    """StructuredResult + pdf: 요청 전에 검사한 PdfInfo(size_bytes, page_count)."""
+
+    pdf: PdfInfo
 
 
 @dataclass(frozen=True)
@@ -167,6 +176,17 @@ def _has_refusal(response):
     return False
 
 
+def _check_structured_args(instructions, schema, max_output_tokens, default_tokens):
+    _require_text(instructions, "instructions")
+    if not (isinstance(schema, type) and issubclass(schema, pydantic.BaseModel)):
+        raise AIInputError(message="AI 결과 스키마는 Pydantic BaseModel 하위 클래스여야 합니다.")
+    if max_output_tokens is None:
+        max_output_tokens = default_tokens
+    if isinstance(max_output_tokens, bool) or not isinstance(max_output_tokens, int) or max_output_tokens <= 0:
+        raise AIInputError(message="max_output_tokens는 1 이상의 정수여야 합니다.")
+    return max_output_tokens
+
+
 def generate_structured(*, instructions, input_text, schema, max_output_tokens=None):
     """텍스트를 schema(Pydantic BaseModel 하위 클래스) 결과로 받습니다.
 
@@ -177,12 +197,7 @@ def generate_structured(*, instructions, input_text, schema, max_output_tokens=N
     """
     _require_text(instructions, "instructions")
     _require_text(input_text, "input_text")
-    if not (isinstance(schema, type) and issubclass(schema, pydantic.BaseModel)):
-        raise AIInputError(message="AI 결과 스키마는 Pydantic BaseModel 하위 클래스여야 합니다.")
-    if max_output_tokens is None:
-        max_output_tokens = config.TEXT_MAX_OUTPUT_TOKENS
-    if isinstance(max_output_tokens, bool) or not isinstance(max_output_tokens, int) or max_output_tokens <= 0:
-        raise AIInputError(message="max_output_tokens는 1 이상의 정수여야 합니다.")
+    max_output_tokens = _check_structured_args(instructions, schema, max_output_tokens, config.TEXT_MAX_OUTPUT_TOKENS)
 
     model = config.get_text_model()
     api_key = _require_settings(config.ENV_OPENAI_MODEL, model)
@@ -198,7 +213,60 @@ def generate_structured(*, instructions, input_text, schema, max_output_tokens=N
             store=config.TEXT_STORE,
         ),
     )
+    return _structured_result(response, schema, model, "text")
 
+
+def generate_structured_from_pdf(*, instructions, pdf_bytes, schema, input_text=None, max_output_tokens=None):
+    """PDF 1개를 schema(Pydantic BaseModel 하위 클래스) 결과로 받습니다. 모델은 OPENAI_MODEL.
+
+    instructions: 기능 담당자가 작성한 신뢰된 지시문. PDF와 input_text는 입력 데이터로만 전달합니다.
+    pdf_bytes: PDF 파일 bytes. common.pdf_utils.inspect_pdf 검사를 통과해야 요청을 보냅니다.
+    input_text: 선택. PDF와 함께 보낼 부가 텍스트(입력 데이터). None이면 보내지 않습니다.
+    max_output_tokens: 생략하면 config.PDF_MAX_OUTPUT_TOKENS.
+    반환: PdfStructuredResult(data, model, usage, pdf=PdfInfo(size_bytes, page_count))
+    오류: AIError 하위 클래스. PDF 검사 실패는 PdfValidationError(PDF_*)이며 API를 호출하지 않습니다.
+
+    PDF는 base64 data URL의 input_file로 요청에 직접 포함합니다(Files API·URL 미사용).
+    공급자에는 원본 파일명 대신 config.PDF_PROVIDER_FILENAME을 보냅니다.
+    """
+    max_output_tokens = _check_structured_args(instructions, schema, max_output_tokens, config.PDF_MAX_OUTPUT_TOKENS)
+    if input_text is not None:
+        _require_text(input_text, "input_text")
+    try:
+        pdf_info = inspect_pdf(pdf_bytes)
+    except AIError as err:
+        logger.warning("AI pdf 입력 거부: code=%s", err.code)
+        raise
+
+    model = config.get_text_model()
+    api_key = _require_settings(config.ENV_OPENAI_MODEL, model)
+
+    content = [{
+        "type": "input_file",
+        "filename": config.PDF_PROVIDER_FILENAME,
+        "file_data": "data:application/pdf;base64," + base64.b64encode(pdf_bytes).decode("ascii"),
+        "detail": config.PDF_DETAIL,
+    }]
+    if input_text is not None:
+        content.append({"type": "input_text", "text": input_text})
+
+    response = _call(
+        api_key, config.PDF_TIMEOUT_SECONDS, config.PDF_MAX_RETRIES, "pdf",
+        lambda client: client.responses.parse(
+            model=model,
+            instructions=instructions,
+            input=[{"role": "user", "content": content}],
+            text_format=schema,
+            max_output_tokens=max_output_tokens,
+            store=config.PDF_STORE,
+        ),
+    )
+    result = _structured_result(response, schema, model, "pdf")
+    return PdfStructuredResult(data=result.data, model=result.model, usage=result.usage, pdf=pdf_info)
+
+
+def _structured_result(response, schema, model, kind):
+    """Responses API 결과 검증. 거절·미완료·실패·스키마 불일치는 오류로 발생합니다."""
     status = getattr(response, "status", None)
     err = None
     if status == "incomplete":
@@ -216,7 +284,7 @@ def generate_structured(*, instructions, input_text, schema, max_output_tokens=N
         if not isinstance(parsed, schema):
             err = AIOutputInvalidError()
     if err is not None:
-        logger.warning("AI text 결과 거부: code=%s", err.code)
+        logger.warning("AI %s 결과 거부: code=%s", kind, err.code)
         raise err
 
     return StructuredResult(data=parsed, model=getattr(response, "model", "") or model, usage=_usage_of(response))

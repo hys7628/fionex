@@ -69,3 +69,50 @@
 - 미검증 유지: 비용, 소요 시간, 스캔 PDF 판독(미구현), 번역 품질, 응답 모델명·사용량, 오류 경로의 실제 공급자 응답(모의 테스트로만 확인), 실제 `.env` 로드 동작
 - 이전 기록(모의 테스트 통과·실제 연결 미검증)은 당시 상태로 유지하며 이 항목으로 후속 보완함
 - 공통 문서 반영(2026-10-25): docs/data_contracts.md, README.md, docs/decisions.md의 "실제 호출 미검증" 표현을 위 결과에 맞게 정정. 실행 검증 아님(문서 수정만, 테스트 재실행 없음)
+
+## 2026-10-25 공통 OpenAI 연결 PDF 입력 지원 (모의 테스트)
+- 변경 내용: common/ai_client.py(generate_structured_from_pdf, PdfStructuredResult, 결과 검증 공통화), common/pdf_utils.py(inspect_pdf), common/errors.py(PDF_* 오류), common/config.py(PDF_* 설정), requirements.txt(pypdf==6.21.2), tests/test_common/test_pdf.py
+- 환경: Conda jasonenv, Python 3.11.17, openai 3.37.0, pydantic 2.14.1, httpx2 2.16.0, pypdf 6.21.2
+
+### Claude가 직접 실행한 검증
+- `python -m pip check` → No broken requirements found.
+- `python -m unittest discover -s tests/test_common -v` → 56개 실행, OK(기존 32 + PDF 24)
+  - inspect_pdf: 정상 3쪽, bytes 아님(None·str·bytearray·memoryview), 빈 파일, 크기 경계(정확히 10 MiB 통과·+1 byte PDF_TOO_LARGE), 크기 초과는 파싱 전 거부, 페이지 경계(20쪽 통과·21쪽 거부), 0쪽, 위장 파일(PNG 서명, 1024바이트 이후 서명), 서명만 있고 구조 없음, 잘린 PDF, 암호화(RC4-40·RC4-128, Encryption.read·verify 미호출 확인), 상한 인자 오류
+  - 로그: 앞 5바이트 표지·"invalid pdf header"·"startxref"가 로그에 없음 + 대조(차단 해제 시 표지가 로그에 나타남)
+  - 대조: 일반 PdfReader는 해제를 시도함(전용 리더 필요성·버전 변경 감지)
+  - generate_structured_from_pdf: 요청 1회, timeout 120·max_retries 0, model=OPENAI_MODEL, store=false, max_output_tokens 4096·재정의, strict json_schema, 미지원 파라미터 미전달, input 1개 user 메시지, input_file(filename document.pdf, detail high, file_data prefix·디코딩 결과=원본, file_id·file_url 없음), input_text 선택 포함·미포함, 지시문은 instructions에만, PdfStructuredResult(pdf=PdfInfo)
+  - PDF 검사 실패 8종·인자 오류·설정 누락에서 클라이언트 미생성(요청 0회)
+  - 거절·incomplete(max_output_tokens·content_filter)·스키마 불일치·비JSON·failed → 오류
+  - 401·429·400·500·시간 초과 → 공통 코드, 요청 1회(재시도·모델/detail 변경 없음)
+  - 오류 메시지·예외 체인·로그에 키·입력·공급자 원문·PDF 표지 미포함
+  - 기존 generate_structured 요청(input 문자열, timeout 60) 유지
+- 대조 실험(스크래치패드): 처음 로그 테스트가 5바이트 누출을 잡지 못함을 확인하고 테스트를 수정(prompt_log DI-08 참고)
+- 판정: 모의 테스트 통과. **실제 PDF·스캔 PDF 판독 성공이나 실제 OpenAI 연결 성공을 뜻하지 않음**
+
+### 미검증
+- 실제 OpenAI 호출(gpt-5.4-mini의 PDF input_file·detail high 수용 여부), 텍스트 PDF·스캔 PDF 판독 품질, 토큰·비용·소요 시간
+- AES 암호화 PDF 검출(테스트 PDF 생성 불가), 악성·과도한 자원 사용 PDF 대응
+- 업로드 라우트의 요청 전체 제한·Werkzeug 임시 파일 동작(라우트 미구현)
+- 이 브랜치에는 tests/test_product_brochure/test_panel.py가 없어 제품소개서 화면 테스트는 0개 실행(해당 파일은 feature/product_brochure에 있음)
+
+## 2026-10-25 후속 검증: PDF 공통 함수 실제 호출 (사용자가 직접 실행한 결과를 전달받음)
+- 실행 주체: 사용자(jasonenv CMD). Claude는 API를 호출하지 않았고 출력을 직접 관측하지 않음. 키·`.env`·문서 원문·로컬 경로는 Claude가 읽거나 기록하지 않음
+- 대상 커밋: a7b940e (feature/openai_common). 실행 시점 작업 트리 변경 없음을 Claude가 git status로 확인 → 설정은 커밋 값(timeout 120초, 재시도 0, max_output_tokens 4096, store=False, detail high, 파일명 document.pdf)으로 판단
+- 입력: 텍스트 PDF 1개, 104,195 bytes, 3쪽(inspect_pdf 통과). 연결 확인용 최소 스키마(product_name, moq_text, moq_is_virtual)
+- 실제 출력(사용자 전달)
+  - 결과: {"product_name":"리젠 T2T (regen T2T)","moq_text":"500 kg / 시연용 가상 값","moq_is_virtual":true}
+  - 모델: gpt-5.4-mini-2026-03-17
+  - 사용량: input 10,239 / output 46 / total 10,285 tokens
+
+### 확인된 것(사용자 보고 기준)
+- gpt-5.4-mini-2026-03-17에서 이번 텍스트 PDF 입력 요청이 처리되고 스키마 검증된 구조화 응답이 반환됨(오류 없음)
+- 제품명·MOQ 값 추출, MOQ의 가상 표시가 별도 필드(true)로 구분되어 반환됨
+- 위 토큰 사용량
+
+### 미검증 유지
+- 추출값이 문서 원문과 일치하는지에 대한 대조(Claude는 문서를 보지 않음)
+- 스캔 PDF 판독
+- 나머지 추출 항목과 전체 문서 정확성, 문서에 없는 값 생성 여부
+- 비용 금액, 소요 시간, detail high/low 차이
+- 제품소개서 화면·분석 라우트 연결(미구현)
+- 이번 결과는 연결 확인용 최소 추출이며 제품소개서 서비스 프롬프트 품질 검증이 아님
