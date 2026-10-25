@@ -85,3 +85,18 @@
 - 서비스 프롬프트 실험: 미실행 / OpenAI 실제 호출: 미실행
 - 담당자 판단: 검토 대기
 - 남은 한계: 실제 PDF·스캔 PDF 호출, detail high 동작, 판독 품질·비용·시간 미검증. 업로드 라우트·화면 연결 미구현
+
+## DI-2026_10_25-09 PDF 공통 함수 실제 호출 결과 기록(텍스트 PDF 1회)
+- 유형: development_instruction
+- 날짜: 2026-10-25 (Asia/Seoul) / 작업자: 유정현 / 범위: 공통 OpenAI 연결(커밋 a7b940e, feature/openai_common)
+- 도구·모델: Claude Code (Opus 5.5). Claude는 OpenAI API를 호출하지 않았고 실행 결과를 직접 관측하지 않음
+- 사용자가 직접 실행한 결과를 전달받음(jasonenv CMD, `generate_structured_from_pdf` 1회)
+  - 응답 모델: gpt-5.4-mini-2026-03-17
+  - PDF: PdfInfo(size_bytes=104195, page_count=3). 텍스트 PDF(사용자 보고). 문서 원문·로컬 경로는 기록하지 않음
+  - 구조화 결과: {"product_name":"리젠 T2T (regen T2T)","moq_text":"500 kg / 시연용 가상 값","moq_is_virtual":true}
+  - 사용량: TokenUsage(input_tokens=10239, output_tokens=46, total_tokens=10285)
+- 요청 성격: 연결 확인용 최소 추출(제품명·MOQ·MOQ 가상 여부 3개 필드 스키마). 지시문·스키마 원문은 전달받지 않음. 제품소개서 서비스 프롬프트가 아님
+- 지시: 위 결과를 기록하고 README·data_contracts·decisions의 "PDF 실제 호출 미검증" 표현을 확인된 범위만 갱신
+- 판단: 해당 모델에서 텍스트 PDF input_file(커밋 기준 detail high, 고정 파일명) 요청이 오류 없이 처리되고 스키마 검증 결과가 반환됨을 사용자 보고로 확인. 추출 2개 항목과 MOQ 가상 표시 구분이 응답에 나타남
+- 서비스 프롬프트 실험: 미실행(이번 호출은 연결 확인용)
+- 남은 한계: 스캔 PDF 판독, 나머지 항목·전체 문서 정확성, 비용 금액, 소요 시간, detail별 차이, 제품소개서 화면·분석 라우트 연결 미검증·미구현

@@ -94,3 +94,25 @@
 - AES 암호화 PDF 검출(테스트 PDF 생성 불가), 악성·과도한 자원 사용 PDF 대응
 - 업로드 라우트의 요청 전체 제한·Werkzeug 임시 파일 동작(라우트 미구현)
 - 이 브랜치에는 tests/test_product_brochure/test_panel.py가 없어 제품소개서 화면 테스트는 0개 실행(해당 파일은 feature/product_brochure에 있음)
+
+## 2026-10-25 후속 검증: PDF 공통 함수 실제 호출 (사용자가 직접 실행한 결과를 전달받음)
+- 실행 주체: 사용자(jasonenv CMD). Claude는 API를 호출하지 않았고 출력을 직접 관측하지 않음. 키·`.env`·문서 원문·로컬 경로는 Claude가 읽거나 기록하지 않음
+- 대상 커밋: a7b940e (feature/openai_common). 실행 시점 작업 트리 변경 없음을 Claude가 git status로 확인 → 설정은 커밋 값(timeout 120초, 재시도 0, max_output_tokens 4096, store=False, detail high, 파일명 document.pdf)으로 판단
+- 입력: 텍스트 PDF 1개, 104,195 bytes, 3쪽(inspect_pdf 통과). 연결 확인용 최소 스키마(product_name, moq_text, moq_is_virtual)
+- 실제 출력(사용자 전달)
+  - 결과: {"product_name":"리젠 T2T (regen T2T)","moq_text":"500 kg / 시연용 가상 값","moq_is_virtual":true}
+  - 모델: gpt-5.4-mini-2026-03-17
+  - 사용량: input 10,239 / output 46 / total 10,285 tokens
+
+### 확인된 것(사용자 보고 기준)
+- gpt-5.4-mini-2026-03-17에서 이번 텍스트 PDF 입력 요청이 처리되고 스키마 검증된 구조화 응답이 반환됨(오류 없음)
+- 제품명·MOQ 값 추출, MOQ의 가상 표시가 별도 필드(true)로 구분되어 반환됨
+- 위 토큰 사용량
+
+### 미검증 유지
+- 추출값이 문서 원문과 일치하는지에 대한 대조(Claude는 문서를 보지 않음)
+- 스캔 PDF 판독
+- 나머지 추출 항목과 전체 문서 정확성, 문서에 없는 값 생성 여부
+- 비용 금액, 소요 시간, detail high/low 차이
+- 제품소개서 화면·분석 라우트 연결(미구현)
+- 이번 결과는 연결 확인용 최소 추출이며 제품소개서 서비스 프롬프트 품질 검증이 아님
