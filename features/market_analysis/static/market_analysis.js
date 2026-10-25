@@ -324,7 +324,7 @@
   }
 
   /* ---------- 근거 자료(뉴스·보고서) ---------- */
-  const ACCESS_TEXT = { full_text: "원문 확보", publisher_summary: "제공기관 요약", snippet: "검색 요약만 · 원문 미확인" };
+  const ACCESS_TEXT = { full_text: "원문 확보", title_only: "제목·메타데이터만 확인" };
   const STATE_TONE = { ok: "success", pending: "info", config: "warning", auth: "danger", rate_limited: "warning",
     unavailable: "danger", bad_response: "danger", rejected: "danger" };
 
@@ -332,7 +332,7 @@
     const box = resultBox.querySelector("[data-ma-news]");
     if (!box || !lastResult) return;
     box.setAttribute("aria-busy", "true");
-    box.innerHTML = '<p class="field-hint"><span class="spinner" aria-hidden="true"></span> 근거 자료(KOTRA·네이버·GDELT)를 불러오는 중입니다. 통계는 위에 먼저 표시했습니다.</p>';
+    box.innerHTML = '<p class="field-hint"><span class="spinner" aria-hidden="true"></span> 근거 자료(KOTRA·GDELT 일반 뉴스)를 불러오는 중입니다. GDELT는 호출 간격 제한이 있어 1분 이상 걸릴 수 있습니다. 통계는 위에 먼저 표시했습니다.</p>';
     try {
       const res = await fetch("/api/market-analysis/news", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -344,7 +344,8 @@
       box.innerHTML = newsHtml(body.data);
     } catch (err) {
       box.innerHTML = '<div class="notice notice-danger" role="alert"><p class="notice-title">근거 자료를 불러오지 못했습니다</p><p>' +
-        esc((err && err.message) || "네트워크 오류입니다.") + '</p></div><button type="button" class="btn btn-secondary" data-ma-news-retry>근거 자료 다시 불러오기</button>';
+        esc((err && err.message) || "네트워크 오류입니다.") + " 통계 결과는 그대로 사용할 수 있습니다.</p></div>" +
+        '<button type="button" class="btn btn-secondary" data-ma-news-retry>근거 자료 다시 불러오기</button>';
     } finally {
       box.setAttribute("aria-busy", "false");
       refreshAiPanel();
@@ -352,30 +353,49 @@
     }
   }
 
+  const WINDOW_TEXT = { ok: "조회됨", partial: "일부 실패", failed: "실패", skipped: "미조회" };
+
+  function coverageText(c) {
+    if (!c) return "";
+    if (!c.windows) return "검색 기간 " + c.searched_from + " ~ " + c.searched_to;
+    return "구간별: " + c.windows.map(function (w) {
+      return w.from + "~" + w.to + " " + (WINDOW_TEXT[w.status] || w.status) + " " + w.count + "건";
+    }).join(", ");
+  }
+
   function newsHtml(n) {
-    let html = '<div class="table-wrap"><table class="table"><caption>출처별 연결 상태 · 수집 기간 ' + esc(n.window.from + " ~ " + n.window.to) +
-      " (" + esc(n.window.note) + ")</caption><thead><tr><th scope=\"col\">출처</th><th scope=\"col\">상태</th><th scope=\"col\" class=\"num\">건수</th><th scope=\"col\">안내</th></tr></thead><tbody>";
+    let html = '<div class="table-wrap"><table class="table"><caption>출처별 연결 상태 · 요청 수집 기간 ' + esc(n.window.from + " ~ " + n.window.to) +
+      " (최근 " + esc(n.window.months) + "개월)</caption><thead><tr><th scope=\"col\">출처</th><th scope=\"col\">상태</th><th scope=\"col\" class=\"num\">건수</th><th scope=\"col\">안내</th></tr></thead><tbody>";
     n.sources.forEach(function (s) {
+      const info = [s.message || s.usage_note || "", coverageText(s.coverage), s.collected_at ? "수집 시각 " + kstTime(s.collected_at) : ""]
+        .filter(Boolean).join(" · ");
       html += "<tr><th scope=\"row\">" + esc(s.label) + "</th><td>" + badge(STATE_TONE[s.state] || "info", s.status_text) + '</td><td class="num">' +
-        s.count + "</td><td>" + esc(s.message || s.usage_note || "") + "</td></tr>";
+        s.count + "</td><td>" + esc(info) + "</td></tr>";
     });
     html += "</tbody></table></div>";
+    (n.window.notes || []).forEach(function (note) {
+      html += '<div class="notice notice-warning"><p class="notice-title">검색 기간 제한</p><p>' + esc(note) + "</p></div>";
+    });
     const failed = n.sources.filter(function (s) { return s.state !== "ok" && s.state !== "pending"; });
     if (failed.length) {
       html += '<div class="notice notice-warning"><p class="notice-title">일부 출처 누락</p><p>' +
         esc(failed.map(function (s) { return s.label + ": " + s.status_text; }).join(" · ")) +
-        ". 확보한 자료만 표시했습니다. 결과가 완전하지 않을 수 있습니다.</p></div>";
+        ". 확보한 자료만 표시했습니다. 결과가 완전하지 않을 수 있습니다. 아래 '근거 자료 다시 불러오기'로 다시 시도할 수 있습니다.</p></div>";
     }
-    html += '<p class="field-hint">관련성 상위 ' + n.items.length + "건 / 중복 제거 후 후보 " + n.candidates + "건. 주제: 브라질 섬유·의류, 폴리에스터 원사, 재생 섬유·T2T, 무역 정책.</p>";
+    html += '<p class="field-hint">관련성 상위 ' + n.items.length + "건 / 중복 제거 후 후보 " + n.candidates +
+      "건. 주제: 브라질 섬유·의류, 폴리에스터 원사·DTY, 재생 섬유·T2T(무역 정책은 보조). 일반 뉴스 출처: The GDELT Project — 제목·메타데이터만 확인했고 본문은 확인하지 않았습니다. GDELT 시각은 처음 발견한 시각이며 게시일이 아닙니다.</p>";
     if (!n.items.length) {
-      html += '<div class="empty-state"><p class="empty-state-title">관련 기사 없음</p><p>연결된 출처에서 조건에 맞는 기사를 찾지 못했습니다. 출처 상태를 확인해 주세요.</p></div>';
+      const anyOk = n.sources.some(function (s) { return s.state === "ok"; });
+      html += '<div class="empty-state"><p class="empty-state-title">' + (anyOk ? "조회 결과 없음" : "기사를 받지 못했습니다") + "</p><p>" +
+        (anyOk ? "연결된 출처에서 조건에 맞는 기사를 찾지 못했습니다." : "모든 출처의 조회가 실패했거나 설정이 필요합니다. 위 상태 표를 확인해 주세요.") + "</p></div>";
     } else {
       html += '<ul class="ma-news">';
       n.items.forEach(function (it) {
+        const date = it.published ? "게시일 " + it.published : (it.seen_at ? "GDELT 최초 발견 " + it.seen_at : "날짜 미확인");
         html += '<li class="ma-news-item"><p class="ma-news-title"><span class="ma-news-id">' + esc(it.id) + "</span> " +
           '<a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' + esc(it.title) + "</a></p>" +
-          '<p class="field-hint">' + esc(it.source_name + " · " + (it.published || "게시일 미확인") + " · 주제: " + it.topics.join(", ")) + " " +
-          badge(it.access === "snippet" ? "warning" : "info", ACCESS_TEXT[it.access] || it.access) +
+          '<p class="field-hint">' + esc([it.source_name, it.language, date, "주제: " + it.topics.join(", ")].filter(Boolean).join(" · ")) + " " +
+          badge(it.access === "title_only" ? "warning" : "info", ACCESS_TEXT[it.access] || it.access) +
           (it.ai_input ? "" : " " + badge("warning", "AI·PDF 본문 미사용 · 이용 범위 확인 필요")) + "</p>" +
           (it.excerpt ? '<p class="ma-news-excerpt">' + esc(it.excerpt) + "</p>" : "") + "</li>";
       });

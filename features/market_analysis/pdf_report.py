@@ -375,19 +375,29 @@ def _news_section(news, W, st):
     out.append(Spacer(1, 4))
     out.append(_table(srows, [34 * mm, 26 * mm, 12 * mm, W - 72 * mm], st))
     w = news.get("window") or {}
-    out.append(_p("수집 기간 %s~%s · 관련성 상위 %d건 / 후보 %d건 · %s" % (
-        w.get("from", "?"), w.get("to", "?"), len(news.get("items") or []), news.get("candidates", 0), w.get("note", "")), st["small"]))
-    rows = [["ID", "제목·발췌", "출처", "게시일", "확보 범위"]]
-    access = {"full_text": "원문 확보(본문 미수록)", "publisher_summary": "제공기관 요약", "snippet": "검색 요약만(원문 미확인)"}
+    out.append(_p("요청 수집 기간 %s~%s(최근 %s개월) · 관련성 상위 %d건 / 중복 제거 후 후보 %d건" % (
+        w.get("from", "?"), w.get("to", "?"), w.get("months", "?"), len(news.get("items") or []), news.get("candidates", 0)), st["small"]))
+    for n in w.get("notes") or []:
+        out.append(_p(n, st["notice"]))
+    for s in news.get("sources") or []:
+        if s.get("stale"):
+            out.append(_p("%s: 새 조회 실패로 %s에 받은 이전 자료를 표시했습니다." % (s["label"], s.get("collected_at") or "?"), st["notice"]))
+    out.append(_p("일반 뉴스 출처: The GDELT Project (https://www.gdeltproject.org/). 일반 뉴스는 제목·메타데이터만 확인했고 기사 본문은 확인하지 않았습니다. "
+                  "GDELT 시각은 GDELT가 기사를 처음 발견한 시각이며 게시일이 아닙니다.", st["small"]))
+    rows = [["ID", "제목·발췌", "매체·출처", "날짜(기준)", "확보 범위"]]
+    access = {"full_text": "원문 확보(본문 미수록)", "title_only": "제목·메타데이터만 확인"}
     for it in news.get("items") or []:
         parts = [Paragraph(escape(it["title"]), st["cell"])]
         if it.get("pdf_text") and it.get("excerpt"):
             parts.append(_p(it["excerpt"], st["small"]))
         parts.append(_link(it["url"], st["small"]))
-        rows.append([it["id"], parts, it["source_name"], it.get("published") or "미확인",
+        date = ("게시일 " + it["published"]) if it.get("published") else (
+            ("GDELT 최초 발견 " + it["seen_at"]) if it.get("seen_at") else "미확인")
+        name = it["source_name"] + ((" · " + it["language"]) if it.get("language") else "")
+        rows.append([it["id"], parts, name, date,
                      access.get(it["access"], it["access"]) + ("" if it.get("pdf_text") else " · 이용 범위 확인 필요")])
     if len(rows) > 1:
-        out.append(_table(rows, [10 * mm, 84 * mm, 32 * mm, 18 * mm, W - 144 * mm], st))
+        out.append(_table(rows, [10 * mm, 76 * mm, 32 * mm, 26 * mm, W - 144 * mm], st))
     else:
         out.append(_p("관련 기사를 확보하지 못했습니다.", st["small"]))
     return out

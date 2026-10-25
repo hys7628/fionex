@@ -121,3 +121,34 @@
 - 테스트 입력: 미정(실제 통계 + 수집 기사 예정)
 - 실제 응답: 없음. 실행 환경에 OPENAI_API_KEY가 없어 실제 호출하지 않음(승인 범위 최대 3회 중 0회 사용)
 - 재실행 결과·담당자 판단: 미실행
+
+## DEV-MA-20261026-01 일반 뉴스 검색 공급자 GDELT 통일
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul, 정확한 시각 미기록)
+- 작업자: 한윤수 / 기능: market_analysis / 브랜치: feature/market_analysis (HEAD af0178d, 미커밋 변경)
+- 모델/설정: Claude Code (claude-opus-5-5). 서비스 AI(OpenAI) 실제 호출 0회
+- 지시 원문(요약): "fionex의 market_analysis에서 일반 뉴스 검색 공급자를 GDELT로 통일해줘. 네이버 뉴스 API 및 NAVER API HUB 사용 계획과 연결을 제거하고, 일반 뉴스 검색에는 GDELT만 사용하도록 수정해줘. … ComexStat 통계, KOTRA·한국무역협회 자료 활용 계획, OpenAI 분석은 유지한다." (붙여 넣은 7개 절 지시문: 6개월 목표·실제 검색 가능 기간 확인, 제목·메타데이터만 확인 표시, 최초 발견 시각≠게시일, 중복 제거·최대 20건, 재시도 최대 2회, 결과 없음과 실패 구분, 캐시, 모의·실제 호출 구분, 유료 테스트 금지, 비밀값 출력 금지, Git 작업 금지)
+- 조사로 확인한 사실: GDELT 공식 안내는 "최근 3개월"이지만 실제 호출에서 약 120일 전 구간도 결과가 나옴. 첫 시도는 대부분 429. 응답에 게시일 필드 없음. 이용 조건은 GDELT 표기·링크 필요(sources.md)
+- 발견 문제와 대응:
+  - 처음에는 공식 안내대로 최근 89일만 검색하도록 구현 → 실측 결과와 맞지 않고 6개월 요청을 임의로 줄이는 셈이라, 6개월을 92일 구간 2개로 나눠 조회하고 90일 초과 구간은 '보장 안 됨', 실패·시간 상한 구간은 '조회하지 못한 기간'으로 표시하도록 변경
+  - 섬유 검색어에도 무관 기사(식당·배우·지진)가 반환됨 → 제목의 제품·산업 주제 + 브라질 관련 조건을 모두 만족해야 선정. '브라질' 단어만으로는 선정하지 않음
+  - GDELT 근거는 제목뿐이라 AI가 원인·인증·공급 조건을 지어낼 위험 → 서비스 프롬프트 v2 신규(v1 보존), title_only 규칙과 날짜 기준(date_basis) 전달
+- 변경 파일: features/market_analysis/(news_sources.py, analysis.py, pdf_report.py, static/market_analysis.js, feature_spec.md 수정, prompts/market_analysis_draft_v2.md·market_analysis_review_v2.md 신규), tests/test_market_analysis/(test_phase2.py, README.md), 공통: .env.example(NAVER_* 2줄과 안내 주석 삭제)
+- 제거한 네이버 항목: fetch_naver, NAVER_* 상수·검색어, USAGE의 naver, 네이버 테스트, 화면 문구, .env.example의 NAVER_CLIENT_ID·NAVER_CLIENT_SECRET, 명세의 네이버 계획(과거 기록은 이력으로 유지)
+- 검증: validation.md 2026-10-26 항목(모의 82개·공통 56개 통과, GDELT 실제 호출 결과)
+- 보안: .env.example 작업 사본에 사용자가 넣은 실제 키 값이 있음을 확인(값은 출력·기록하지 않음). 커밋에는 실제 값을 넣지 않음. 키 교체 여부는 사용자 판단
+- 담당자 판단: 미확인
+- 남은 한계: 5~6개월 전 구간 실제 결과 미확인, 429 빈도로 수집 시간이 길 수 있음, 앱 화면에서 실제 GDELT 기사로 E2E 미실행, KOTRA 실제 기사·OpenAI 실제 분석 미검증
+
+## SPE-MA-20261026-01 시장 분석 AI 프롬프트 v2 (미실행)
+- 유형: service_prompt_experiment
+- 프롬프트: features/market_analysis/prompts/market_analysis_draft_v2.md, market_analysis_review_v2.md (v2, v1 기반)
+- 변경 이유: 일반 뉴스가 GDELT 제목·메타데이터만이므로 제목에서 원인·인증·공급 조건·수치를 만들지 않고 "보도가 있다" 수준으로 제한, GDELT 최초 발견 시각을 게시일로 쓰지 않음
+- 실제 응답: 없음(OPENAI_API_KEY 미설정, 비용 기준 확인 전 유료 테스트 금지 지시)
+- 재실행 결과·담당자 판단: 미실행
+
+## PLN-MA-20261026-01 기획 보조 역할 안내 붙여 넣기
+- 유형: planning_instruction
+- 날짜: 2026-10-26
+- 지시 원문(요약): "앞으로 너는 팀 프로젝트 ‘fionex’의 기획과 Claude Code용 개발 프롬프트 작성을 도와줘. … 우선 저장소 문서를 읽고 … 정리해줘. 아직 코드를 작성하거나 개발 실행 프롬프트를 만들지는 마." + "추가_1 : 지금까지의 내용을 바탕으로 prompt_log.md 최신화해줘" + "추가_2 : 추가_1까지 완료하고 나면 commit 한 번 해줘."
+- 처리: 로컬 저장소 문서 기준으로 정리 보고(GitHub 원격은 열지 않음), 기록 갱신 후 사용자 요청에 따라 커밋

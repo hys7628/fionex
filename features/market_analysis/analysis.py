@@ -20,8 +20,9 @@ from common import ai_client, config
 from common.errors import AIConfigError, AIError
 
 PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
-DRAFT_PROMPT = "market_analysis_draft_v1.md"
-REVIEW_PROMPT = "market_analysis_review_v1.md"
+# v2(2026-10-26): 일반 뉴스를 GDELT(제목·메타데이터만)로 통일하며 title_only·최초 발견 시각 규칙 추가. v1은 미실행으로 보존.
+DRAFT_PROMPT = "market_analysis_draft_v2.md"
+REVIEW_PROMPT = "market_analysis_review_v2.md"
 MAX_OUTPUT_TOKENS = 4096
 TIME_BUDGET_SECONDS = 480.0
 MIN_EVIDENCE_FOR_NO_WIDEN = 5
@@ -122,7 +123,8 @@ def build_pack(stats, news_items):
     facts = build_facts(stats)
     allowed = [it for it in news_items if it.get("ai_input")]
     excluded = [it for it in news_items if not it.get("ai_input")]
-    evidence = [{"id": it["id"], "title": it["title"], "source": it["source_name"], "published": it["published"],
+    evidence = [{"id": it["id"], "title": it["title"], "source": it["source_name"], "outlet": it.get("outlet"),
+                 "language": it.get("language"), "date": evidence_date(it)[0], "date_basis": evidence_date(it)[1],
                  "access": it["access"], "summary": it.get("excerpt") or ""} for it in allowed]
     q = stats["query"]
     pack = {
@@ -134,6 +136,7 @@ def build_pack(stats, news_items):
                 "평균 수입단가는 FOB 기준이며 견적·판매가·도착가격이 아니다.",
                 "공급국은 ComexStat 기준 원산지(origin) 국가다.",
                 "사용 범위가 확인되지 않은 기사 %d건(KOTRA 등)은 AI 입력에서 제외했다." % len(excluded),
+                "일반 뉴스는 GDELT 검색 결과의 제목·메타데이터만 있고 본문은 확인하지 않았다(access=title_only).",
             ],
         },
         "facts": [{"id": "S1", "items": facts}],
@@ -143,9 +146,20 @@ def build_pack(stats, news_items):
     sources = {"S1": {"name": src["name"], "url": src["url"],
                       "date": "자료 갱신 %s · 최신 월 %s" % (src.get("data_updated") or "?", src.get("latest_month") or "?")}}
     for it in allowed:
-        sources[it["id"]] = {"name": it["source_name"], "url": it["url"], "date": it["published"] or "게시일 미확인",
+        date, basis = evidence_date(it)
+        sources[it["id"]] = {"name": it["source_name"], "url": it["url"],
+                             "date": ("%s %s" % (basis, date)) if date else "게시일 미확인",
                              "title": it["title"], "access": it["access"]}
     return pack, sources, len(excluded)
+
+
+def evidence_date(it):
+    """(날짜 문자열, 기준). 게시일이 있으면 게시일, 없으면 GDELT 최초 발견 시각(게시일 아님)."""
+    if it.get("published"):
+        return it["published"], "게시일"
+    if it.get("seen_at"):
+        return it["seen_at"], "GDELT 최초 발견 시각"
+    return None, "날짜 미확인"
 
 
 # ---------- 코드 검사 ----------
@@ -170,7 +184,7 @@ def allowed_numbers(pack):
         for line in f["items"]:
             nums |= _numbers(line)
     for e in pack["evidence"]:
-        nums |= _numbers(e["title"]) | _numbers(e["summary"]) | _numbers(e.get("published") or "")
+        nums |= _numbers(e["title"]) | _numbers(e["summary"]) | _numbers(e.get("date") or "")
     nums |= _numbers(pack["context"]["period"]) | _numbers(pack["context"]["product"])
     return nums
 

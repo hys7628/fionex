@@ -22,3 +22,5 @@
 | OpenAI gpt-5.4-mini 모델 페이지 | OpenAI | https://developers.openai.com/api/docs/models/gpt-5.4-mini | 2026-10-25(검색 결과 요약) | 단가 $0.75/$4.50 per 1M 토큰(비용 추정용) | — |
 | Noto Sans KR | Google Fonts(Adobe·Google) | https://github.com/google/fonts/tree/main/ofl/notosanskr | 2026-10-25 | PDF 글꼴(가변 → 400·700 정적 인스턴스) | SIL OFL 1.1 |
 | ReportLab 5.1.0 | ReportLab Inc.(PyPI) | https://pypi.org/project/reportlab/5.1.0/ | 2026-10-25 | PDF 출력 | BSD |
+| GDELT 이용 조건(About) | GDELT Project | https://www.gdeltproject.org/about.html | 2026-10-26 | 상업 포함 무료, 사용 시 GDELT 표기·링크 필요. 기사 본문 저작권 언급 없음 → 본문 미수집 | GDELT 이용 조건 |
+| GDELT DOC 2.0 API 실제 응답 | GDELT Project(실측) | https://api.gdeltproject.org/api/v2/doc/doc | 2026-10-26 | artlist 필드 확인, 약 120일 전 구간 결과 있음, 429 안내 "one every 5 seconds" | GDELT 이용 조건 |
