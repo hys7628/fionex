@@ -339,3 +339,39 @@ KOTRA·OpenAI·수출입은행 호출 없음. 공개 데이터(Google News RSS·
 - 실제 사용자 브라우저(Edge·Safari·모바일)의 다운로드 동작과 같은 페이지 반복 다운로드.
 - 실제 AI 요약이 들어간 실제 데이터 PDF(키 없는 서버라 요약 없음. 가상 데이터로 표시 형식만 확인).
 - 인쇄(흑백) 출력물 확인, 화면낭독기, Adobe Reader 등 다른 PDF 뷰어(PyMuPDF·Chrome 다운로드만 확인).
+- (정정, DEV-HOME-009) "같은 페이지 두 번째 PDF 미저장"은 같은 분 같은 파일명을 검증 환경이 덮어쓴 것으로 확인됨(아래 항목).
+
+## 2026-10-25 Home 통합 검증·명세 정리 (DEV-HOME-009)
+변경: features/home/feature_spec.md, tests/test_home/test_holidays_news.py(신규). 기능 코드 변경 없음.
+
+### 서버 테스트 (모두 FLASK_SKIP_DOTENV=1, OPENAI·KOTRA·KOREAEXIM 환경변수 제거, 외부 요청 없음)
+| 명령 | 결과 |
+|---|---|
+| `python -m unittest tests.test_home.test_holidays_news` | 9 OK (신규: 뉴스 수집·정규화·중복 제거·정렬, 캐시·refresh, 실패 분리·stale, KOTRA 키 없음, 전체 실패, 공휴일 캐시·대체 자료·none, 라우트 400) |
+| `python -m unittest tests.test_home.test_news_summary` | 18 OK |
+| `python -m unittest tests.test_home.test_fx` | 15 OK |
+| `python -m unittest tests.test_home.test_fairs` | 9 OK |
+| `python -m unittest tests.test_home.test_report` | 9 OK |
+| `python -m unittest discover -s tests/test_home` | 60 OK |
+| `python -m unittest discover -s tests/test_common` | 32 OK |
+실패 0. 실제 네트워크를 쓰는 기존 임시 스크립트(공휴일 19·뉴스 38)는 이번에 실행하지 않음(같은 검사를 모의 테스트로 대체).
+
+### 브라우저 통합 (headless Chrome, 외부 요청 없는 fixture 서버 정상 5013·실패 5014, 16/16 통과)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| 정상 모드 전체 | 바이어 시간·공휴일 출처, 환율 3값(1,405.20 KRW·5.0377 BRL·278.94 KRW), 뉴스 3경로 정상(KOTRA 포함), 전시회 3건·확인 상태 | 일치 | 통과 |
+| AI 요약 | Google·ABIT 해당 항목만 "AI 요약", 빈 값·KOTRA 없음 | 일치 | 통과 |
+| 도시 마나우스 | 브라질 시각 = 상파울루 - 60분, PDF 안내 도시 변경, 새로고침 없음, 작성 중 표시 없음 | 일치 | 통과 |
+| PDF 2회(실제 마우스 클릭, 간격 2초·6초 각 1회 실행) | 두 응답 200 application/pdf, 새 Blob 2개, 버튼 재활성 | 일치. Chrome 두 번 begin→completed(46,627~46,628B). `allow`는 같은 이름 파일 1개, `allowAndName`은 PDF 2개(%PDF) | 통과 |
+| 탭 이동 후 복귀 | 도시·뉴스 4건·환율·전시회·PDF 상태 유지 | 일치 | 통과 |
+| 다른 4개 탭 | 표시 | 일치 | 통과 |
+| 1440/1024/390px | 카드 5개 겹침 없음, 가로 스크롤 없음(전체 화면 캡처 육안 확인) | 일치(1차 실행은 기대 카드 수를 6으로 잘못 적어 실패 → 기대값 수정) | 통과 |
+| 실패 모드 | Google 실패 안내·재시도, KOTRA 설정 필요, AI 요약 실패 안내, USD/KRW 확인 불가·BRL/KRW 계산 불가, USD/BRL·전시회·ABIT 유지, PDF 생성·다운로드 요청 | 일치 | 통과 |
+JS 예외 0. 콘솔 오류 favicon 404(기존)만. fixture 서버가 막은 외부 요청 0건.
+
+### 문서 정합성
+- feature_spec ↔ 코드 자동 대조: Home API 6개(GET fairs·fx·holidays·news·report/daily.pdf, POST news/summaries), 오류 코드 전부, 상수 12개 일치.
+- 환경변수: 코드(OPENAI_API_KEY·OPENAI_MODEL·KOTRA_API_KEY·KOREAEXIM_API_KEY) = .env.example = README. .env.example 2번째 줄 설명 문구만 현재 동작과 다름.
+
+### 미검증
+실제 사용자 브라우저(Chrome·Edge·Safari·모바일)에서의 반복 다운로드 파일명 처리, 화면낭독기, 실제 키 기반 USD/KRW, 앱 경로 실제 AI 요약.

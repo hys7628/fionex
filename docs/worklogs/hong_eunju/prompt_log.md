@@ -207,3 +207,18 @@
 - 검증: validation.md 2026-10-25 일일 브리핑 항목.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 헤드리스 Chrome에서 같은 페이지 두 번째 이후 다운로드가 디스크에 저장되지 않음(앱은 Blob 다운로드 요청까지 확인, 원인 미확정 — Chrome 다중 다운로드 정책 추정). 실제 사용자 브라우저 확인 필요. docs/decisions.md의 "홈 보고서 고정/동적 미정"과 feature_spec PDF 섹션은 미갱신(팀 문서).
+  - (정정 2026-10-25, DEV-HOME-009) 위 원인은 통합 검증에서 다시 확인함: 두 다운로드 모두 Chrome `completed`, 같은 분 같은 파일명을 검증 환경(`allow`)이 덮어쓴 것. GUID 저장에서는 두 파일 모두 저장. "Chrome 다중 다운로드 정책 추정"은 근거가 없었음.
+
+## DEV-HOME-009 Home 통합 검증·명세 정리
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 18:20~18:45경 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/home, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 실제 호출 없음
+- 지시 요약: 새 기능 없이 Home 전체 통합 검증, feature_spec 섹션 1~5를 현재 구현 기준으로 정리, docs/decisions.md의 Home 관련 항목은 수정 없이 비교·제안 보고, 환경변수 문서 정합성, PDF 반복 다운로드 원인 분석·수동 검증 절차. 실제 OpenAI·KOTRA·수출입은행 호출 금지(FLASK_SKIP_DOTENV=1·mock), 공개 데이터도 가능하면 mock. Git 작업 금지.
+- 변경 파일: features/home/feature_spec.md(전면 정리: 목적/범위·공통 조건·환경변수·테스트, `## 1. 바이어 시간`~`## 5. 브라질 섬유 전시회`, 기존 `## 4. 환율`은 유지하고 통합 검증 한 줄 추가, 빈 "구현 전 작성"·오래된 "검증" 절 제거), tests/test_home/test_holidays_news.py(신규 모의 테스트: 공휴일·뉴스 수집 — 실제 네트워크 스크립트에만 있던 검사를 외부 요청 없이 반복 가능하게). 기능 코드 변경 없음.
+- 검증 방법: 저장소 밖 fixture 서버(뉴스·공휴일·환율·OpenAI 전송을 가짜 응답으로 바꾸고 urlopen 차단)를 정상·실패 두 모드로 띄워 headless Chrome 통합 검증. 다운로드 이벤트(Browser.downloadWillBegin/downloadProgress) 기록.
+- 확인한 사실(PDF 반복 다운로드): 매번 새 Blob URL, `<a download>` 클릭, 60초 뒤 revoke, 두 요청 모두 200 application/pdf·같은 크기 Blob, Chrome 두 번 모두 begin→completed. `allow` 저장에서는 같은 분 같은 파일명이라 파일 1개만 남고, `allowAndName`(GUID)에서는 2개 모두 저장 → 앱 문제 아님, 검증 환경 덮어쓰기. 실제 브라우저의 같은 이름 처리는 미확인.
+- 명세·코드 자동 대조: Flask에 등록된 Home API 6개, 오류 코드 전부, 상수 12개 일치.
+- 발견 사항(수정하지 않고 보고): PDF 파일명이 분 단위라 같은 분 반복 다운로드 시 이름이 같아짐(초 단위 추가는 선택 사항). .env.example 2번째 줄 "앱은 .env 파일을 자동으로 읽지 않는다"가 현재 동작과 다름(공통 파일). docs/decisions.md Home 관련 항목 갱신 필요(공통 파일, 보고서 참고).
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 사용자 브라우저(Chrome·Edge·Safari·모바일) 수동 확인, 화면낭독기, 실제 키 기반 USD/KRW·앱 경로 AI 요약 실제 호출.
