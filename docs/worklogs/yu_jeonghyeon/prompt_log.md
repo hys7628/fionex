@@ -101,3 +101,45 @@
 - 상태 로직(Review)·이벤트 처리 변경 없음. 공통 파일·패키지 변경 없음. 테스트 추가 없음
 - 서비스 프롬프트 실험: 해당 없음 / OpenAI 호출: 없음
 - 남은 한계: 실제 배치·반응형은 브라우저 미확인
+
+## DI-2026_10_25-08 공통 OpenAI 연결 PDF 입력 지원 추가
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 08:10 (Asia/Seoul) / 작업자: 유정현 / 범위: 공통(common/ai_client.py 등), 브랜치 feature/openai_common
+- 도구·모델: Claude Code (Opus 5.5). 서비스 모델(OpenAI) 호출 없음
+- ID 메모: 이 브랜치 기록에는 DI-02~05만 있으나 feature/product_brochure에 DI-01·06·07이 있어 중복을 피해 08 사용
+- 사전 확인
+  - 1차: HEAD 2d9f4bc, 로컬 develop 05ac128이 HEAD의 조상이 아님(내용은 동일) → 지시대로 수정하지 않고 보고, 사용자 선택으로 중단
+  - 2차(사용자가 GitHub Desktop에서 develop 병합 후): HEAD 05ac128 = develop, develop이 HEAD의 조상, 작업 트리 깨끗, 병합 중 아님. 원격 정보는 마지막 fetch 기준. stash@{0} 미조작
+  - develop에 다른 팀원의 공통 구현 없음(중복 구현 없음)
+- 지시 요약: 기존 텍스트·이미지 함수 유지, PDF 구조화 함수와 PDF 검사(파일 1개·10 MiB·20쪽, 빈 파일·크기·서명·구조·암호화·0쪽·페이지 초과) 추가. base64 data URL input_file 직접 포함, 고정 파일명, Files API·URL 미사용, timeout 120초·재시도 0·max_output_tokens 4096·store=False, detail은 공식 지원 확인 시 high. 실제 API 호출·라우트 구현 금지
+- 확인한 근거(2026-10-25 조회)
+  - file-inputs 가이드: input_file의 file_data(data:application/pdf;base64,…)·filename, detail auto/low/high·기본 auto·"GPT-5.6 이후 auto=high, 이전 모델 low", PDF 페이지 이미지에만 영향, 비전 지원 모델(gpt-4o 이후 등)은 텍스트+페이지 이미지, 파일당 50 MB 미만·요청 합계 50 MB, 페이지 상한·스캔 PDF 처리 명시 없음
+  - gpt-5.4-mini 모델 페이지: 입력 text·image, 기능 file_uploads. PDF·detail 명시 없음 → 간접 판단, 실제 계정 호출 미확인
+  - SDK openai 3.37.0 ResponseInputFileParam: file_data·file_id·file_url·filename·detail
+  - pypdf: PyPI 6.21.2, BSD-3-Clause, requires_python >=3.9, Python 3.11 분류자, 3.11에서 필수 의존성 없음
+- 이전 보고 대조: detail 기본값·5.6 미만 low 설명은 일치. 이전 근거 URL(pdf-files)과 이번 file-inputs 가이드 내용 일치. "gpt-5.4-mini PDF 지원 미확인"은 모델 페이지 기준 여전히 명시 없음
+- 설치: jasonenv에 pypdf==6.21.2만 추가(pip freeze 전후 비교에서 pypdf 한 줄만 추가), pip check 정상
+- 발견 사항
+  - pypdf 6.21.2 PdfReader는 암호화 PDF에 빈 비밀번호로 자동 해제를 시도(_reader.py _handle_encryption) → 해제 전 멈추는 전용 리더 사용(내부 메서드 의존, 버전 고정)
+  - pypdf는 헤더 오류 시 "invalid pdf header: b'<앞 5바이트>'"를 경고 로그에 남김 → pypdf 로거 전파 차단(전역 영향 문서화)
+  - 처음 작성한 로그 누출 테스트는 전체 비밀 문자열만 찾아 5바이트 누출을 잡지 못함을 대조 실험으로 발견 → 5바이트 표지·경고 문구 검사로 수정하고 차단 해제 시 누출을 확인하는 대조 테스트 추가
+  - AES 암호화 테스트 PDF는 cryptography 없이 생성 불가 → RC4만 테스트
+- 변경: common/ai_client.py, common/config.py, common/pdf_utils.py, common/errors.py, requirements.txt, docs/data_contracts.md, docs/decisions.md, README.md, tests/test_common/test_pdf.py(신규). .env.example은 새 환경변수가 없어 변경 없음
+- 서비스 프롬프트 실험: 미실행 / OpenAI 실제 호출: 미실행
+- 담당자 판단: 검토 대기
+- 남은 한계: 실제 PDF·스캔 PDF 호출, detail high 동작, 판독 품질·비용·시간 미검증. 업로드 라우트·화면 연결 미구현
+
+## DI-2026_10_25-09 PDF 공통 함수 실제 호출 결과 기록(텍스트 PDF 1회)
+- 유형: development_instruction
+- 날짜: 2026-10-25 (Asia/Seoul) / 작업자: 유정현 / 범위: 공통 OpenAI 연결(커밋 a7b940e, feature/openai_common)
+- 도구·모델: Claude Code (Opus 5.5). Claude는 OpenAI API를 호출하지 않았고 실행 결과를 직접 관측하지 않음
+- 사용자가 직접 실행한 결과를 전달받음(jasonenv CMD, `generate_structured_from_pdf` 1회)
+  - 응답 모델: gpt-5.4-mini-2026-03-17
+  - PDF: PdfInfo(size_bytes=104195, page_count=3). 텍스트 PDF(사용자 보고). 문서 원문·로컬 경로는 기록하지 않음
+  - 구조화 결과: {"product_name":"리젠 T2T (regen T2T)","moq_text":"500 kg / 시연용 가상 값","moq_is_virtual":true}
+  - 사용량: TokenUsage(input_tokens=10239, output_tokens=46, total_tokens=10285)
+- 요청 성격: 연결 확인용 최소 추출(제품명·MOQ·MOQ 가상 여부 3개 필드 스키마). 지시문·스키마 원문은 전달받지 않음. 제품소개서 서비스 프롬프트가 아님
+- 지시: 위 결과를 기록하고 README·data_contracts·decisions의 "PDF 실제 호출 미검증" 표현을 확인된 범위만 갱신
+- 판단: 해당 모델에서 텍스트 PDF input_file(커밋 기준 detail high, 고정 파일명) 요청이 오류 없이 처리되고 스키마 검증 결과가 반환됨을 사용자 보고로 확인. 추출 2개 항목과 MOQ 가상 표시 구분이 응답에 나타남
+- 서비스 프롬프트 실험: 미실행(이번 호출은 연결 확인용)
+- 남은 한계: 스캔 PDF 판독, 나머지 항목·전체 문서 정확성, 비용 금액, 소요 시간, detail별 차이, 제품소개서 화면·분석 라우트 연결 미검증·미구현
