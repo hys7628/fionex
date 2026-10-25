@@ -3,4 +3,4 @@
 
 | 파일 | 용도 | 작성일 | 상태 |
 |---|---|---|---|
-| pdf_ocr_v1.md | 스캔 PDF AI 글자 판독(파일 전체를 instructions로 전송, 결과 스키마 ocr_schema.OcrResult) | 2026-10-25 | 작성만. 실제 모델 실험 미실행 |
+| pdf_ocr_v1.md | 스캔 PDF AI 글자 판독(파일 전체를 instructions로 전송, 결과 스키마 ocr_schema.OcrResult) | 2026-10-25 | 사용자 실행으로 가상 스캔 PDF 1페이지 판독 성공 1건 확인. 다른 문서의 정확도·비용·시간은 미검증 |
