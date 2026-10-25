@@ -22,10 +22,10 @@
   const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
   // 카드 맨 위 큰 상태 문구. 색과 문구를 함께 바꿉니다(색만으로 구분하지 않음).
   const STATUS = {
-    holiday: { text: "오늘은 공휴일", tone: "home-status-danger" },
-    weekend: { text: "지금은 주말", tone: "home-status-warning" },
+    holiday: { text: "공휴일", tone: "home-status-danger" },
+    weekend: { text: "주말", tone: "home-status-warning" },
     work: { text: "지금 연락 가능", tone: "home-status-success" },
-    off: { text: "지금은 업무시간 외", tone: "home-status-warning" },
+    off: { text: "업무시간 외", tone: "home-status-warning" },
   };
 
   const citySelect = panel.querySelector("#home-city");
@@ -285,7 +285,8 @@
     more: panel.querySelector("#home-news-more"),
   };
   // 매체 필터·더 보기는 이미 받은 목록을 화면에서만 거릅니다(추가 요청 없음).
-  const NEWS_PAGE_SIZE = 8;
+  // Home은 요약 화면이라 기본 3건만 보이고(전시회 카드와 높이 균형), '업계 소식 더 보기'로 이미 받은 목록을 펼칩니다.
+  const NEWS_PAGE_SIZE = 3;
   const newsView = { origin: "all", topic: "all", expanded: false };
   // 주제 태그 순서(서버 service.NEWS_TOPIC_ORDER + "기타")와 같게 둡니다. 태그는 서버가 붙여 보냅니다.
   const NEWS_TOPICS = ["원사", "원단", "규제·무역", "리사이클·ESG", "패션·리테일", "기타"];
@@ -398,7 +399,7 @@
     });
     news.filterEmpty.hidden = items.length === 0 || matched > 0;
     news.moreRow.hidden = matched <= NEWS_PAGE_SIZE;
-    news.more.textContent = newsView.expanded ? "처음 " + NEWS_PAGE_SIZE + "건만 보기" : "더 보기 (" + (matched - NEWS_PAGE_SIZE) + "건)";
+    news.more.textContent = newsView.expanded ? "처음 " + NEWS_PAGE_SIZE + "건만 보기" : "업계 소식 더 보기 (" + (matched - NEWS_PAGE_SIZE) + "건)";
     news.more.setAttribute("aria-expanded", String(newsView.expanded));
   }
 
@@ -635,40 +636,33 @@
     return direction + " " + Math.abs(pct).toFixed(2) + "%";
   }
 
-  // 타일: 통화쌍 → 큰 숫자 + 옆에 작은 단위 → 전일 대비 → 고시일(+작은 직전 고시일) → 가장 작은 회색 출처.
-  // lines 항목은 문자열 또는 [본문, 작은 보조 글]. 값이 없으면 숫자 자리에 "확인 불가"/"계산 불가"만 둡니다.
-  function fxTile(pair, value, unit, lines, source) {
+  // Home 요약 타일: 통화쌍 → 큰 숫자(+작은 단위) → 전일 대비 → 가장 작은 회색 한 줄(고시일 · 출처).
+  // 값이 없으면 숫자 자리에 "확인 불가"/"계산 불가"만 둡니다.
+  function fxTile(pair, value, unit, line, meta) {
     const li = make("li", "home-fx-tile");
     li.append(make("p", "home-fx-pair", pair));
     const valueLine = make("p", "home-fx-value");
     valueLine.append(make("span", "home-fx-number" + (unit ? "" : " home-fx-number-none"), value));
     if (unit) valueLine.append(make("span", "home-fx-unit", unit));
     li.append(valueLine);
-    lines.forEach(function (line) {
-      const p = make("p", "home-fx-line", Array.isArray(line) ? line[0] : line);
-      if (Array.isArray(line)) p.append(make("span", "home-fx-aside", " " + line[1]));
-      li.append(p);
-    });
-    li.append(make("p", "home-fx-source", source));
+    li.append(make("p", "home-fx-line", line));
+    li.append(make("p", "home-fx-source", meta));
     return li;
   }
 
   function fxSourceTile(name, quote, info) {
     if (info.status !== "ok") {
-      return fxTile(info.pair, "확인 불가", "", [info.error.message], info.source_name);
+      return fxTile(info.pair, "확인 불가", "", info.error.message, info.source_name);
     }
-    // 고시일 줄 옆에 작게 직전 고시일(전일 대비 기준)을 붙입니다.
-    const date = info.previous ? [info.date + " 고시", "(직전 " + shortDate(info.previous.date, info.date) + ")"] : info.date + " 고시";
-    return fxTile(info.pair, formatRate(info.rate, FX_DIGITS[name]), quote, [fxChangeText(info), date], info.source_name);
-  }
-
-  // 같은 해면 MM-DD, 다르면 전체 날짜
-  function shortDate(value, reference) {
-    return value.slice(0, 4) === reference.slice(0, 4) ? value.slice(5) : value;
+    // 직전 고시일(전일 대비 기준)은 title로만 둡니다(Home 요약에서는 숨김).
+    const tile = fxTile(info.pair, formatRate(info.rate, FX_DIGITS[name]), quote, fxChangeText(info),
+      info.date + " 고시 · " + info.source_name);
+    if (info.previous) tile.title = "전일 대비: 직전 고시일 " + info.previous.date + " 대비";
+    return tile;
   }
 
   function derivedDateText(derived) {
-    if (derived.usd_krw_date === derived.usd_brl_date) return [derived.usd_krw_date + " 고시", "(두 환율 동일)"];
+    if (derived.usd_krw_date === derived.usd_brl_date) return derived.usd_krw_date + " 고시(두 환율 동일)";
     return "KRW " + derived.usd_krw_date + " · BRL " + derived.usd_brl_date + " 고시";
   }
 
@@ -679,8 +673,8 @@
       fxSourceTile("usd_brl", "BRL", data.usd_brl),
       derived
         ? fxTile("BRL/KRW", formatRate(derived.rate, FX_DIGITS.brl_krw), "KRW",
-          ["USD 경유 계산값", derivedDateText(derived)], "USD/KRW ÷ USD/BRL")
-        : fxTile("BRL/KRW", "계산 불가", "", ["USD/KRW와 USD/BRL이 모두 있어야 USD 경유로 계산합니다."], "USD 경유 계산값")
+          "USD 경유 계산값", derivedDateText(derived) + " · 공식 고시 아님")
+        : fxTile("BRL/KRW", "계산 불가", "", "USD/KRW와 USD/BRL이 모두 있어야 계산", "USD 경유 계산값")
     );
     fxEl.list.hidden = false;
 
@@ -768,6 +762,7 @@
     empty: panel.querySelector("#home-fairs-empty"),
     notices: panel.querySelector("#home-fairs-notices"),
     hint: panel.querySelector("#home-fairs-hint"),
+    foot: panel.querySelector("#home-fairs-foot"),
   };
   // D-day 칸: 다가오는 행사는 기본 글자색, 오늘·진행 중만 상태 색
   const FAIR_DAY_TONES = { upcoming: "", today: " home-fair-dday-today", ongoing: " home-fair-dday-ongoing" };
@@ -838,6 +833,7 @@
       fairsEl.notices.append(notice);
     }
     if (data.data_checked_at) {
+      fairsEl.foot.textContent = "자료 확인일 " + data.data_checked_at + " · 방문 전 출처에서 다시 확인하세요.";
       fairsEl.hint.textContent = "담당자가 출처를 확인해 넣은 자료입니다(자동 수집 아님, 자료 확인일 " + data.data_checked_at +
         "). 일정은 바뀔 수 있으니 방문 전 출처에서 다시 확인하세요. D-day는 서울 날짜 기준입니다.";
     }

@@ -41,13 +41,14 @@
   align-items: stretch;
 }
 
+/* 요약 대시보드 비율: 바이어 시간 40 · 환율 60, 업계 소식 60 · 전시회 40 */
 @media (min-width: 1100px) {
   .feature-home .home-status-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   }
 
   .feature-home .home-content-grid {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   }
 }
 
@@ -201,6 +202,13 @@
   font-size: var(--font-size-xs);
 }
 
+/* Home 요약에서 숨기는 바이어 정보(계산·DOM은 유지): 서울 시각, 다음 연락 가능(KST), 정상일 때의 공휴일 자료 출처 줄.
+   공휴일 자료 조회 실패·대체 자료 안내(notice)는 계속 보입니다. */
+.feature-home .home-buyer-extra,
+.feature-home #home-holiday-source.field-hint {
+  display: none;
+}
+
 .feature-home .home-time-sub-line {
   flex-basis: 100%;
   font-size: var(--font-size-xs);
@@ -219,11 +227,12 @@
 
 /* 같은 행 카드가 늘어날 때 마지막 줄(도시 선택·환율 안내)이 카드 아래에 붙도록 본문을 채웁니다(빈 칸 추가 없음). */
 .feature-home #home-buyer-time .home-card-body,
-.feature-home #home-fx .home-card-body {
+.feature-home #home-fairs .home-card-body {
   flex: 1;
 }
 
-.feature-home #home-fx .home-card-foot {
+/* 같은 행 뉴스 카드에 맞춰 늘어날 때 전시회 안내 줄이 카드 아래에 붙습니다(빈 칸 요소 없음). */
+.feature-home #home-fairs-foot {
   margin-top: auto;
 }
 
@@ -240,9 +249,9 @@
 .feature-home .home-fx-tile {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 2px;
   min-width: 0;
-  padding: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   background: var(--color-surface-muted);
 }
@@ -304,20 +313,21 @@
 .feature-home .home-news-filter {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
+/* Home 요약: 필터는 작게(매체·주제 각 한 줄 목표), 클릭 영역은 28px 이상 유지 */
 .feature-home .home-news-tab {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  min-height: 32px;
-  padding: var(--space-1) var(--space-3);
+  gap: var(--space-1);
+  min-height: 28px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   background: var(--color-surface-muted);
   color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
 }
@@ -618,7 +628,7 @@
 
 /* ---------- 업계 소식: 필터 줄 이름(매체·주제) ---------- */
 .feature-home .home-news-filter-label {
-  flex: 0 0 2.25rem;
+  flex: 0 0 2rem;
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
