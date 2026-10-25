@@ -143,3 +143,27 @@
 - 판단: 해당 모델에서 텍스트 PDF input_file(커밋 기준 detail high, 고정 파일명) 요청이 오류 없이 처리되고 스키마 검증 결과가 반환됨을 사용자 보고로 확인. 추출 2개 항목과 MOQ 가상 표시 구분이 응답에 나타남
 - 서비스 프롬프트 실험: 미실행(이번 호출은 연결 확인용)
 - 남은 한계: 스캔 PDF 판독, 나머지 항목·전체 문서 정확성, 비용 금액, 소요 시간, detail별 차이, 제품소개서 화면·분석 라우트 연결 미검증·미구현
+
+## DI-2026_10_25-10 제품소개서 PDF 분석 서버(스키마·서비스 프롬프트·API·모의 테스트)
+- 유형: development_instruction(코딩 도구 지시). 서비스 프롬프트 brochure_extract_v1은 작성만 했고 service_prompt_experiment는 미실행
+- 날짜/시간: 2026-10-25 10:40 (Asia/Seoul) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure
+- 도구·모델: Claude Code (Opus 5.5). 서비스 모델(OpenAI) 호출 없음
+- 사전 확인: HEAD f39a65e(develop 9e2066c 병합 완료), develop이 HEAD의 조상, 작업 트리 깨끗, 병합 중 아님. 마지막 fetch 기준 origin보다 앞섬(push 전). stash@{0} 미조작. 공통 inspect_pdf·generate_structured_from_pdf·오류 클래스·Blueprint 등록을 실제 파일로 다시 읽음
+- 지시 요약: PDF 1개 → 8개 항목(key·value·status·evidence·marked_virtual·note)+PDF 정보·모델명·multiple_products·검토 사항. POST /api/product-brochure/analyze, multipart source_file 1개, 10 MiB·20쪽 공통 설정 재사용, request.files 전 요청 전체 제한, 파일은 상한+1바이트만 읽기, 413도 JSON, Werkzeug 임시 파일 확인·정리. 후처리(근거 없는 found 강등, 범위 밖 페이지, 상태 모순, 가상 표시 보존). HTML·CSS·JS·공통 파일·app.py·패키지 변경 금지
+- 서비스 프롬프트(features/product_brochure/prompts/brochure_extract_v1.md) 설계 이유와 할루시네이션 제어
+  - 업무 지시는 instructions로만 전달, PDF는 입력 데이터(문서 속 명령 무시 명시)
+  - 외부 지식·추측 금지, 특히 인증·수치·공급 조건은 PDF 내용만 사용
+  - 상태 3단계(found/unclear/not_found)와 found의 근거 필수, 없는 정보는 null
+  - 가상·시연 표시 보존(marked_virtual), 다른 제품 정보 이동·복수 제품 병합 금지, 귀속 불명확은 unclear
+  - 번역·문구 생성 없음(추출 단계와 생성 단계 분리)
+  - 프롬프트만으로 사실 정확성을 보장하지 않으므로 서버 후처리와 사람 확인(confirmed=false)을 함께 둠
+- 서버 후처리: 빈 값·유효 근거 없는 found → unclear(ai_status 보존), not_found+값 → unclear, 범위 밖 페이지 표시, 페이지 null은 유효 근거 아님, 중복 key는 후보 값 보존 후 unclear, 누락 key는 unclear로 채움, check="not_checked", 가상 표시 유지
+- 실제 실패와 수정
+  - 처음 구현에서 request.max_form_memory_size=16 KiB를 지정 → 500 KB 이상 정상 PDF까지 413(UPLOAD_TOO_LARGE)으로 거부됨(테스트 4건 실패)
+  - 원인 확인: Werkzeug 문서 문구("파일 파트는 더 클 수 있음")와 달리 3.1.9 MultipartDecoder.receive_data가 파트 종류와 무관하게 수신 버퍼 크기를 이 값과 비교(sansio/multipart.py). 별도 실험으로 재현
+  - 수정: max_form_memory_size 재정의 제거(기본 500 KB 유지), 요청 전체 max_content_length와 max_form_parts만 적용. 재실행 후 통과
+- Werkzeug 임시 파일: 기본 stream factory가 SpooledTemporaryFile(500 KB)을 사용해 큰 업로드가 OS 임시 파일로 넘어감을 소스와 테스트로 확인 → finally에서 request.close(), 테스트로 닫힘 확인
+- 변경: features/product_brochure/routes.py, service.py, prompts/brochure_extract_v1.md(신규), feature_spec.md(§12·§13·§16·§17 후속·§18), tests/test_product_brochure/test_analyze_api.py(신규)
+- 서비스 프롬프트 실험: 미실행(실제 PDF로 v1 실행·결과 대조 없음) / OpenAI 실제 호출: 없음
+- 담당자 판단: 검토 대기
+- 남은 한계: 화면 연결 미구현, 실제 텍스트·스캔 PDF 추출 품질·할루시네이션 발생률·비용·시간 미검증, 근거 원문 대조 미구현

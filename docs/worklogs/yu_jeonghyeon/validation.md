@@ -178,3 +178,30 @@
 - 비용 금액, 소요 시간, detail high/low 차이
 - 제품소개서 화면·분석 라우트 연결(미구현)
 - 이번 결과는 연결 확인용 최소 추출이며 제품소개서 서비스 프롬프트 품질 검증이 아님
+
+## 2026-10-25 제품소개서 PDF 분석 서버 (모의 테스트)
+- 변경 내용: features/product_brochure/routes.py(분석 API), service.py(스키마·후처리·업로드 오류), prompts/brochure_extract_v1.md, tests/test_product_brochure/test_analyze_api.py
+- 환경: Conda jasonenv, Python 3.11.17, Flask 3.1.2, Werkzeug 3.1.9, openai 3.37.0, pydantic 2.14.1, httpx2 2.16.0, pypdf 6.21.2
+
+### Claude가 직접 실행한 검증
+- 1차 `python -m unittest discover -s tests/test_product_brochure` → 45개 중 4개 실패(500 KB 이상 정상 업로드가 413). 원인: max_form_memory_size 16 KiB 지정(prompt_log DI-10). 수정 후 재실행
+- 최종 `python -m unittest discover -s tests/test_product_brochure` → 45개 실행, OK(기존 화면 12 + 분석 33)
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK(공통 회귀 없음)
+- 확인 항목(모의 전송 MockTransport, 라우트→서비스→공통 함수 전체 경로, 가짜 키·가상 PDF)
+  - 정상 multipart → 200, 8개 항목 고정 순서, confirmed false, check not_checked, extraction_status unconfirmed, source·model·prompt_version, MOQ 값·found·가상 true
+  - 공급자 요청 1회, instructions = 프롬프트 v1 파일, input_file 파일명 document.pdf·detail high·store false, 원본 파일명이 요청·응답에 없음
+  - 정확히 10 MiB 통과, 10 MiB+1·+1000 bytes는 PDF_TOO_LARGE(413), 파일 스트림은 상한+1바이트로만 읽음(전체 읽기 없음), 요청 전체 상한 초과 UPLOAD_TOO_LARGE(413), 파트 수 초과 413
+  - 파일 누락·빈 파일명·중복 파일·다른 파일 필드·빈 파일·위장(PNG)·손상·암호화(RC4)·0쪽·21쪽 → 각 코드, 외부 요청 0회
+  - 키가 없어도 잘못된 PDF는 PDF_* 우선, 정상 PDF는 AI_CONFIG_MISSING(503)
+  - 401·429·500·시간 초과·거절·incomplete·비JSON·알 수 없는 key → 기존 JSON 오류 형식, 요청 1회(기능 재시도 없음), 예기치 않은 예외 → AI_UNKNOWN_ERROR(500)
+  - 후처리: 근거 없음·공백 발췌·빈 값 found 강등, 범위 밖 페이지(0·9) 표시와 유효 근거 유무에 따른 상태, 페이지 null, not_found+값 모순, 누락 key 채움, 중복 key 후보 보존, 가상 표시 유지(강등·미제공 포함), 복수 제품 서버·AI 검토 사항, 긴 발췌 자르기
+  - 700 KB 업로드가 SpooledTemporaryFile에서 디스크 임시 파일로 넘어가고(_rolled True) 요청 후 닫힘
+  - 오류 응답·로그에 가짜 키·문서 표지·공급자 원문·원본 파일명(경로) 없음
+  - 화면 key와 스키마 key 일치, 프롬프트 파일 규칙 문구, GET / 200·앱 전역 MAX_CONTENT_LENGTH 변경 없음·GET 분석 경로 405
+- 판정: 모의 테스트 통과. **실제 PDF 추출 품질·스캔 판독·실제 OpenAI 연결 성공을 뜻하지 않음**
+
+### 미검증
+- 서비스 프롬프트 v1의 실제 실행(텍스트·스캔 더미 PDF), 추출 정확성, 할루시네이션 발생 여부, 비용·소요 시간
+- 근거 발췌의 원문 대조(미구현)
+- 실제 브라우저·개발 서버에서의 업로드, 413 시 연결 끊김 여부, 프로세스 비정상 종료 시 임시 파일 정리
+- 화면과 분석 API 연결(미구현)

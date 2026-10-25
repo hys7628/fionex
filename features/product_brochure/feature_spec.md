@@ -1,7 +1,8 @@
 # 제품소개서
 담당: 유정현
 상태: 기능 방향 합의(2026-10-25), 첫 버전 설계안 작성, 상세 명세 작성 중.
-첫 화면(PDF 선택 + 결과 확인·수정, 개발용 예시)만 구현(§17). **PDF 분석·카탈로그 생성·PDF 출력은 미구현.**
+첫 화면(PDF 선택 + 결과 확인·수정, 개발용 예시) 구현(§17). PDF 분석 서버 API·추출 스키마·서비스 프롬프트 v1 구현, 모의 테스트만 수행(§18).
+**화면과 분석 API 연결, 실제 PDF·스캔 PDF 추출 품질 검증, 카탈로그 생성·PDF 출력은 미구현·미검증.**
 
 표기 구분
 - **[확정]** 담당자 합의 내용(2026-10-25). 공통 문서(docs/decisions.md) 반영은 공통 담당과 별도 조율.
@@ -154,17 +155,18 @@
 ## 12. 공통 구현 의존
 | 대상 | 현재 상태 | 필요 |
 |---|---|---|
-| common/ai_client.py | 텍스트 구조화(`generate_structured`)·이미지 1장 생성(`generate_image`) 구현(develop 병합, docs/data_contracts.md) | **PDF·스캔 PDF 입력 전달은 미구현**(공통 후속 작업) |
-| common/pdf_utils.py | 스텁 | 입력 PDF 검사(빈 파일·손상·암호화)와 출력 PDF 생성 중 공통 부분 |
-| common/file_utils.py | 스텁 | 업로드 검사·임시 디렉터리 정리 |
-| common/errors.py | 공통 AI 오류(`AIError`, `to_dict()`) 구현 | 업로드·PDF 오류 코드는 미정 |
-| common/config.py | 키·텍스트/이미지 모델 환경변수, 호출 기본값 | PDF 입력 제한값은 미정 |
+| common/ai_client.py | 텍스트 구조화·이미지 생성·**PDF 구조화(`generate_structured_from_pdf`)** 구현(develop 병합) | 분석 서비스가 사용 중(§18) |
+| common/pdf_utils.py | `inspect_pdf`(10 MiB·20쪽, 서명·구조·암호화·페이지 검사) 구현 | 출력 PDF 생성은 미정 |
+| common/file_utils.py | 스텁 | 사용하지 않음(업로드 검사는 기능 라우트에서 수행) |
+| common/errors.py | 공통 AI 오류·PDF 검사 오류(`PDF_*`) 구현 | 업로드 오류는 기능 전용 코드(`UPLOAD_*`, §18) |
+| common/config.py | 키·모델 환경변수, 호출 기본값, `PDF_*` 설정 | — |
 | static/js/app_shell.js, leave_guard.js | 구현됨 | `AppShell.work` 상태 API 사용 |
-| requirements.txt | Flask, openai 3.37.0, pydantic, httpx2 | PDF 라이브러리 선정 후 추가 |
+| requirements.txt | Flask, openai 3.37.0, pydantic, httpx2, pypdf 6.21.2 | PDF 출력 도구 선정 후 추가 |
 
-## 13. 엔드포인트 [미정]
+## 13. 엔드포인트
 - 접두어는 `/api/product-brochure`(docs/data_contracts.md).
-- [제안] 분석·생성·PDF 출력을 별도 요청으로 둔다. 구체적인 경로, 요청·응답 스키마, 필드·타입·상한은 [미정].
+- [확정, 구현] 분석: `POST /api/product-brochure/analyze`(§18).
+- [제안] 생성·PDF 출력은 별도 요청으로 둔다. 경로·스키마는 [미정].
 
 ## 14. 자료 출처
 - [확정] 실제 보유 자료 없음. 추후 한국어 더미 제품 자료 제작.
@@ -188,7 +190,8 @@
 
 ## 16. 검증 현황
 - 첫 화면: 렌더링·정적 규칙 테스트(tests/test_product_brochure)와 상태 로직 점검만 수행. **브라우저 동작은 미확인**(§17 수동 확인 절차).
-- PDF 분석·OpenAI 호출(기능 연결)·카탈로그 생성·PDF 출력: 미구현·미검증.
+- PDF 분석 서버(§18): 모의 테스트(tests/test_product_brochure/test_analyze_api.py)만 수행. 실제 OpenAI 호출로 서비스 프롬프트 v1을 실행한 품질 실험은 미실행.
+- 화면과 분석 API 연결·카탈로그 생성·PDF 출력: 미구현·미검증.
 - 결과는 docs/worklogs/yu_jeonghyeon/validation.md에 기록한다.
 
 ## 17. 첫 화면 구현 (2026-10-25)
@@ -228,3 +231,69 @@ PDF 선택
 - 사용자 입력은 `textContent`·`value`로만 표시(HTML 해석 없음).
 
 후속 [미정 유지]: 분석 API 경로·요청/응답 스키마, 모델, 파일 상한, 추출 항목 목록 확정, 근거 위치 표시 방식, 미확인 항목이 있을 때 생성 허용 여부.
+(2026-10-25 갱신: 분석 API 경로·스키마·파일 상한·추출 항목 8개는 §18로 구현. 모델·근거 표시 방식·생성 허용 여부는 미정 유지.)
+
+## 18. PDF 분석 서버 (2026-10-25, 모의 테스트만)
+범위 [확정, 담당자 지시]: 추출 스키마·서비스 프롬프트·분석 서비스·API·모의 테스트. 화면 연결·실제 유료 호출 없음.
+결과는 사용자가 확인하기 전의 AI 추출 초안이며 확정 제품 정보가 아니다.
+
+요청
+- `POST /api/product-brochure/analyze`, `multipart/form-data`, 파일 필드 `source_file` 정확히 1개. 다른 파일 필드는 거부, 텍스트 필드는 사용하지 않음.
+- 파일 상한 10 MiB·20쪽은 공통 `config.PDF_MAX_BYTES`·`PDF_MAX_PAGES`와 `inspect_pdf` 재사용. 확장자·MIME은 판단에 쓰지 않음.
+- `request.files`를 읽기 전에 이 요청에만 `max_content_length` = 10 MiB + 64 KiB(multipart 여유), `max_form_parts` = 8 적용.
+  파일 스트림은 10 MiB + 1바이트까지만 읽고 초과하면 `PDF_TOO_LARGE`. 앱 전역 설정·다른 탭 오류 처리는 바꾸지 않음.
+- `max_form_memory_size`는 기본값(500 KB) 유지: Werkzeug 3.1.9는 파트 종류와 무관하게 수신 버퍼에 이 값을 적용해, 작게 잡으면 파일도 413이 됨(실측).
+- 업로드 저장: 영구 저장·Files API 업로드 없음. **Werkzeug는 500 KB를 넘는 파일 부분을 OS 임시 파일(SpooledTemporaryFile)로 받는다(테스트로 확인).**
+  라우트 `finally`에서 `request.close()`로 닫고 Flask도 요청 종료 시 닫는다. 프로세스 비정상 종료 시 임시 파일 정리는 미검증.
+- 원본 파일명은 응답·로그·공급자 요청에 넣지 않음(공급자에는 공통 고정 이름 `document.pdf`).
+
+성공 응답 `{"ok": true, "data": {...}}`
+```json
+{
+  "extraction_status": "unconfirmed",
+  "prompt_version": "brochure_extract_v1",
+  "source": {"size_bytes": 0, "page_count": 0},
+  "model": "응답 모델명",
+  "fields": [
+    {"key": "moq", "label": "MOQ", "value": "500 kg", "status": "found|unclear|not_found", "ai_status": "found|…|null",
+     "evidence": [{"page": 2, "quote": "짧은 발췌", "page_in_range": true, "check": "not_checked"}],
+     "marked_virtual": true, "note": null, "server_notes": [], "confirmed": false}
+  ],
+  "multiple_products": false,
+  "review_notes": [{"source": "server|ai", "message": "…"}]
+}
+```
+- `fields`는 항상 8개, 순서 고정: product_name, description, yarn_spec, carbon_reduction, certification, moq, sample, lead_time(화면 key와 동일).
+- 중복 key는 첫 항목에 후보 값(`candidates`)·근거를 모아 unclear, 누락 key는 value null·unclear·`ai_status` null로 채움. 알 수 없는 key는 스키마 검증 실패(`AI_OUTPUT_INVALID`).
+- `confirmed`는 항상 false. found도 사용자 확인 완료가 아니다.
+- `evidence`의 페이지·발췌는 **AI가 제시한 근거**이며 원문 자동 대조를 하지 않는다(`check: "not_checked"`). 검증된 근거로 표시하지 않는다.
+
+서버 후처리
+- found인데 값이 비었거나, 페이지 범위 안(1~page_count)이고 발췌가 있는 근거가 하나도 없으면 unclear로 낮춤(`ai_status`에 원래 상태 보존).
+- not_found인데 값이 있으면 unclear. 범위 밖 페이지는 `page_in_range: false` + 검토 사항. 페이지 null은 유효 근거로 보지 않음.
+- `marked_virtual`은 제거하지 않음(강등되어도 유지, 미제공+가상 동시 가능). `multiple_products`가 true면 서버 검토 사항 추가.
+- 값·설명 2000자, 발췌 300자를 넘으면 자르고 검토 사항 추가. 근거가 있어도 사실 정확성을 보장하지 않는다.
+
+서비스 프롬프트: `prompts/brochure_extract_v1.md`(instructions로 전달). PDF 속 명령 무시, 외부 지식·추측 금지, 없는 정보 not_found·null,
+불명확·충돌·귀속 불명확은 unclear, 가상 표시 보존, 다른 제품 정보 이동·복수 제품 병합 금지, 번역·문구 생성 없음. 실제 품질 실험은 미실행.
+
+오류 `{"ok": false, "error": {"code", "message"}}`
+| code | HTTP | 경우 |
+|---|---|---|
+| `UPLOAD_TOO_LARGE` | 413 | 요청 전체 상한 또는 파트 수 초과 |
+| `UPLOAD_FILE_MISSING` | 400 | `source_file` 없음 |
+| `UPLOAD_FILENAME_MISSING` | 400 | 파일명이 빈 파트(파일 미선택) |
+| `UPLOAD_MULTIPLE_FILES` | 400 | `source_file` 2개 이상 |
+| `UPLOAD_UNEXPECTED_FIELD` | 400 | 다른 파일 필드 |
+| `PDF_*` | 400/413 | 공통 PDF 검사(빈 파일·크기·서명·손상·암호화·0쪽·페이지 초과) |
+| `AI_*` | 공통 계약 | 설정 누락·인증·호출 제한·시간 초과·거절·미완료·출력 오류 등(docs/data_contracts.md) |
+| `AI_UNKNOWN_ERROR` | 500 | 예기치 않은 서버 오류(로그에는 예외 형식명만) |
+- PDF 검사는 키·모델 설정 확인보다 먼저 수행(키가 없어도 잘못된 PDF는 `PDF_*`). 입력 검사 실패 시 OpenAI 요청 0회. 기능에서 추가 재시도 없음.
+
+화면 연결 시 주의 [후속]
+- `fetch` + `FormData`(필드 `source_file`)로 보내고, 응답의 `fields`를 기존 Review 상태로 옮긴다: `provided` = status found·값 있음, `virtual` = `marked_virtual`, `confirmed` = false.
+- 출처는 "PDF 분석(AI 추출, 사용자 미확인)"으로 표시해 개발용 예시와 구분. 발췌·페이지는 "AI 제시 근거"로 표시.
+- 분석 중 중복 클릭 방지, 실패 시 기존 파일·검토 내용 유지, 수정 내용이 있으면 덮어쓰기 전 확인. 결과는 `setDraft`로 보호(`setResult` 아님).
+- 413 응답은 브라우저·서버 환경에 따라 본문 전송 중 연결이 끊겨 JSON을 받지 못할 수 있음(미검증). 화면에서도 크기를 먼저 안내.
+
+미검증: 실제 OpenAI 호출로 프롬프트 v1 실행, 텍스트·스캔 PDF 추출 정확성, 할루시네이션 실제 발생률, 비용·소요 시간, 브라우저 업로드 동작.
