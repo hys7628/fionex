@@ -196,18 +196,19 @@
   function renderSource(years) {
     const entries = years.map(function (y) { return holidayYears.get(y); });
     if (entries.some(function (e) { return e.loading; })) {
-      setClass(el.source, "field-hint");
+      setClass(el.source, "field-hint home-time-sub-line");
       setText(el.source, "공휴일 정보 확인 중");
     } else if (entries.some(function (e) { return e.source === "none"; })) {
-      setClass(el.source, "notice notice-warning");
+      setClass(el.source, "notice notice-warning home-time-sub-line");
       setText(el.source, "공휴일 정보 확인 불가: 공휴일 없이 주말·업무시간만 판단합니다.");
     } else if (entries.some(function (e) { return e.source === "fallback"; })) {
-      setClass(el.source, "notice notice-warning");
+      setClass(el.source, "notice notice-warning home-time-sub-line");
       setText(el.source, "공휴일 정보: 대체 자료 사용(BrasilAPI 조회 실패)");
     } else {
-      const fetched = entries[0].fetchedAt ? " · 조회 " + formatDayTime(partsIn(new Date(entries[0].fetchedAt), SEOUL_TZ)) + " KST" : "";
-      setClass(el.source, "field-hint");
-      setText(el.source, "공휴일 정보: BrasilAPI 국가 공휴일" + fetched);
+      const fetched = entries[0].fetchedAt ? " · " + formatDayTime(partsIn(new Date(entries[0].fetchedAt), SEOUL_TZ)) + " 조회" : "";
+      // 출처 이름은 짧게(전체 안내는 출처 및 유의사항)
+      setClass(el.source, "field-hint home-time-sub-line");
+      setText(el.source, "BrasilAPI" + fetched);
     }
   }
 
@@ -582,29 +583,40 @@
     return direction + " " + Math.abs(pct).toFixed(2) + "%";
   }
 
-  // 타일: 통화쌍 → 큰 숫자(+단위) → 보조 줄(전일 대비·고시일) → 작은 회색 출처.
-  // 값이 없으면 숫자 자리에 "확인 불가"/"계산 불가"만 둡니다.
-  function fxTile(pair, value, unit, lines, sources) {
+  // 타일: 통화쌍 → 큰 숫자 + 옆에 작은 단위 → 전일 대비 → 고시일(+작은 직전 고시일) → 가장 작은 회색 출처.
+  // lines 항목은 문자열 또는 [본문, 작은 보조 글]. 값이 없으면 숫자 자리에 "확인 불가"/"계산 불가"만 둡니다.
+  function fxTile(pair, value, unit, lines, source) {
     const li = make("li", "home-fx-tile");
     li.append(make("p", "home-fx-pair", pair));
-    li.append(make("p", "home-fx-number" + (unit ? "" : " home-fx-number-none"), value));
-    if (unit) li.append(make("p", "home-fx-unit", unit));
-    lines.forEach(function (text) { li.append(make("p", "home-fx-line", text)); });
-    sources.forEach(function (text) { li.append(make("p", "home-fx-source", text)); });
+    const valueLine = make("p", "home-fx-value");
+    valueLine.append(make("span", "home-fx-number" + (unit ? "" : " home-fx-number-none"), value));
+    if (unit) valueLine.append(make("span", "home-fx-unit", unit));
+    li.append(valueLine);
+    lines.forEach(function (line) {
+      const p = make("p", "home-fx-line", Array.isArray(line) ? line[0] : line);
+      if (Array.isArray(line)) p.append(make("span", "home-fx-aside", " " + line[1]));
+      li.append(p);
+    });
+    li.append(make("p", "home-fx-source", source));
     return li;
   }
 
   function fxSourceTile(name, quote, info) {
     if (info.status !== "ok") {
-      return fxTile(info.pair, "확인 불가", "", [info.error.message], [info.source_name]);
+      return fxTile(info.pair, "확인 불가", "", [info.error.message], info.source_name);
     }
-    const previous = info.previous ? ["직전 " + info.previous.date + " 대비"] : [];
-    return fxTile(info.pair, formatRate(info.rate, FX_DIGITS[name]), quote + " / 1 USD",
-      [fxChangeText(info), info.date + " 고시"], previous.concat(info.source_name));
+    // 고시일 줄 옆에 작게 직전 고시일(전일 대비 기준)을 붙입니다.
+    const date = info.previous ? [info.date + " 고시", "(직전 " + shortDate(info.previous.date, info.date) + ")"] : info.date + " 고시";
+    return fxTile(info.pair, formatRate(info.rate, FX_DIGITS[name]), quote, [fxChangeText(info), date], info.source_name);
+  }
+
+  // 같은 해면 MM-DD, 다르면 전체 날짜
+  function shortDate(value, reference) {
+    return value.slice(0, 4) === reference.slice(0, 4) ? value.slice(5) : value;
   }
 
   function derivedDateText(derived) {
-    if (derived.usd_krw_date === derived.usd_brl_date) return derived.usd_krw_date + " 고시 (두 환율 동일)";
+    if (derived.usd_krw_date === derived.usd_brl_date) return [derived.usd_krw_date + " 고시", "(두 환율 동일)"];
     return "KRW " + derived.usd_krw_date + " · BRL " + derived.usd_brl_date + " 고시";
   }
 
@@ -614,9 +626,9 @@
       fxSourceTile("usd_krw", "KRW", data.usd_krw),
       fxSourceTile("usd_brl", "BRL", data.usd_brl),
       derived
-        ? fxTile("BRL/KRW", formatRate(derived.rate, FX_DIGITS.brl_krw), "KRW / 1 BRL",
-          ["USD 경유 계산값", derivedDateText(derived)], ["USD/KRW ÷ USD/BRL · 공식 고시 환율 아님"])
-        : fxTile("BRL/KRW", "계산 불가", "", ["USD/KRW와 USD/BRL이 모두 있어야 USD 경유로 계산합니다."], ["USD 경유 계산값"])
+        ? fxTile("BRL/KRW", formatRate(derived.rate, FX_DIGITS.brl_krw), "KRW",
+          ["USD 경유 계산값", derivedDateText(derived)], "USD/KRW ÷ USD/BRL")
+        : fxTile("BRL/KRW", "계산 불가", "", ["USD/KRW와 USD/BRL이 모두 있어야 USD 경유로 계산합니다."], "USD 경유 계산값")
     );
     fxEl.list.hidden = false;
 
@@ -735,11 +747,9 @@
     when.append(period);
     if (fair.city) when.append(make("span", "", " · " + fair.city));
     main.append(when);
-    if (!fair.verified) {
-      const state = make("p");
-      state.append(make("span", "badge badge-warning", "확인 필요"));
-      main.append(state);
-    }
+    // [확인 필요] [상세 정보]를 한 줄에. 펼치면 상세 내용이 그 아래에 나옵니다.
+    const tags = make("div", "home-fair-tags");
+    if (!fair.verified) tags.append(make("span", "badge badge-warning", "확인 필요"));
 
     // 장소·분야·확인 상태·메모·출처는 지우지 않고 접기 영역으로 옮깁니다.
     const details = make("details", "home-fair-details");
@@ -758,7 +768,8 @@
     link.rel = "noopener noreferrer";
     link.append(make("span", "visually-hidden", " (새 탭에서 열기)"));
     details.append(link);
-    main.append(details);
+    tags.append(details);
+    main.append(tags);
     li.append(main);
     return li;
   }

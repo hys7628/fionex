@@ -1,14 +1,15 @@
-{# 홈 작업 영역. 제목·설명은 base.html 공통 머리글이 표시합니다. 꾸민 데이터를 넣지 않습니다.
-   배치: 도구줄(일일 브리핑 PDF) → 1행 지금 상태(바이어 시간 1/3 · 환율 2/3) → 2행(업계 소식 2/3 · 전시회 1/3)
+{# 홈 작업 영역. 꾸민 데이터를 넣지 않습니다.
+   base.html 공통 머리글(홈 제목·설명)은 Home에서만 home.css로 화면에서 숨깁니다(h1은 화면낭독기·탭 전환 초점용으로 남김).
+   배치: 일일 브리핑 바 → 1행 지금 상태(바이어 시간 1fr · 환율 2fr) → 2행(업계 소식 2fr · 전시회 1fr)
    → 출처 및 유의사항(접기). 1100px 미만은 같은 순서로 세로로 쌓입니다. #}
 <div class="home-layout">
   {# 일일 브리핑 PDF: /api/home/report/daily.pdf?city=기준 도시. 서버가 그 시점의 홈 데이터를 모아 메모리에서 만들고
-     fetch → Blob → AppShell.work.downloadBlob으로 내려받습니다. 서버에 저장하지 않습니다. #}
+     fetch → Blob → AppShell.work.downloadBlob으로 내려받습니다. 서버에 저장하지 않습니다(안내는 출처 및 유의사항). #}
   <section class="home-toolbar" aria-labelledby="home-report-title" id="home-report">
     <div class="home-toolbar-row" id="home-report-body" aria-busy="false">
       <div class="home-toolbar-text">
         <h2 class="home-toolbar-title" id="home-report-title">일일 브리핑</h2>
-        <p class="home-toolbar-hint" id="home-report-hint">바이어 시간·환율·뉴스·전시회를 A4 PDF로 · 기준 도시 <span id="home-report-city">상파울루</span> · 서버에 저장하지 않음</p>
+        <p class="home-toolbar-hint" id="home-report-hint">바이어 시간·환율·뉴스·전시회를 PDF로 정리<span class="visually-hidden"> · 기준 도시 <span id="home-report-city">상파울루</span></span></p>
       </div>
       <div class="home-toolbar-actions">
         <p class="home-news-loading" id="home-report-loading" hidden><span class="spinner" aria-hidden="true"></span>PDF를 만드는 중</p>
@@ -19,7 +20,7 @@
     <div class="stack" id="home-report-notices"></div>
   </section>
 
-  <div class="home-row home-row-now">
+  <div class="home-status-grid">
     {# 바이어 시간: 시각·상태 계산은 home.js(Intl.DateTimeFormat), 공휴일은 /api/home/holidays.
        도시 선택은 보기 설정이라 작성 중 감지에서 제외합니다(data-work-ignore). #}
     <article class="card" aria-labelledby="home-buyer-title" id="home-buyer-time">
@@ -29,27 +30,29 @@
           <p class="card-description">바이어의 현재 연락 가능 상태입니다.</p>
         </div>
       </div>
-      <div class="stack">
+      <div class="home-card-body">
         <p class="home-status" id="home-status" aria-live="polite">확인 중</p>
 
+        {# 이름 | 값 두 열. 보조 정보(도시명·현지 시각·공휴일 자료)는 값 아래 작은 회색 글씨 #}
         <dl class="home-time-list">
-          <div class="home-time-row">
+          <div class="home-time-pair">
             <dt>브라질 현지</dt>
             <dd><span class="home-time-value" id="home-brazil-time">-</span>
               <span class="home-time-sub" id="home-brazil-city">상파울루</span></dd>
           </div>
-          <div class="home-time-row">
+          <div class="home-time-pair">
             <dt>서울</dt>
             <dd><span class="home-time-value" id="home-seoul-time">-</span></dd>
           </div>
-          <div class="home-time-row" id="home-next-row" hidden>
+          <div class="home-time-pair" id="home-next-row" hidden>
             <dt>다음 연락 가능</dt>
             <dd><span class="home-time-value" id="home-next-start">-</span>
-              <span class="home-time-sub" id="home-next-local"></span></dd>
+              <span class="home-time-sub home-time-sub-line" id="home-next-local"></span></dd>
           </div>
-          <div class="home-time-row">
+          <div class="home-time-pair">
             <dt>공휴일</dt>
-            <dd id="home-holiday">확인 중</dd>
+            <dd><span id="home-holiday">확인 중</span>
+              <span class="field-hint home-time-sub-line" id="home-holiday-source" role="status">공휴일 정보 확인 중</span></dd>
           </div>
         </dl>
 
@@ -62,8 +65,6 @@
             <option value="America/Rio_Branco">히우브랑쿠</option>
           </select>
         </div>
-        <p class="field-hint" id="home-hours-hint">업무시간 현지 09:00~18:00(가정값)</p>
-        <p class="field-hint" id="home-holiday-source" role="status">공휴일 정보 확인 중</p>
       </div>
     </article>
 
@@ -76,15 +77,16 @@
           <p class="card-description">USD·BRL 기준 주요 환율을 확인합니다.</p>
         </div>
       </div>
-      <div class="stack" id="home-fx-body" aria-busy="true">
+      <div class="home-card-body" id="home-fx-body" aria-busy="true">
         <p class="home-news-loading" id="home-fx-loading"><span class="spinner" aria-hidden="true"></span>환율을 불러오는 중</p>
         <ul class="home-fx-tiles" id="home-fx-list" aria-label="환율 목록" tabindex="-1" hidden></ul>
         <div class="stack" id="home-fx-notices"></div>
+        <p class="home-card-foot">BRL/KRW는 USD 경유 계산값(공식 고시 환율 아님) · 주말·공휴일에는 최근 고시일 값</p>
       </div>
     </article>
   </div>
 
-  <div class="home-row home-row-feed">
+  <div class="home-content-grid">
     {# 업계 소식: /api/home/news. 매체 필터는 이미 받은 목록을 화면에서만 거릅니다(추가 요청 없음).
        수집 경로(KOTRA·Google News·ABIT)별 상태·건수와 재시도는 home.js가 그립니다.
        Google News·ABIT 포르투갈어 제목의 AI 한 줄 요약은 목록을 먼저 보여 준 뒤 /api/home/news/summaries로 채웁니다.
@@ -96,7 +98,7 @@
           <p class="card-description">브라질 섬유·의류 관련 최신 소식입니다.</p>
         </div>
       </div>
-      <div class="stack" id="home-news-body" aria-busy="true">
+      <div class="home-card-body" id="home-news-body" aria-busy="true">
         <div class="home-news-filter" id="home-news-filter" role="group" aria-label="매체별 보기" hidden></div>
         <details class="home-news-status">
           <summary>수집 현황</summary>
@@ -129,7 +131,7 @@
           <p class="card-description">다가오는 브라질 섬유 전시회 일정입니다.</p>
         </div>
       </div>
-      <div class="stack" id="home-fairs-body" aria-busy="true">
+      <div class="home-card-body" id="home-fairs-body" aria-busy="true">
         <p class="home-news-loading" id="home-fairs-loading"><span class="spinner" aria-hidden="true"></span>전시회 일정을 불러오는 중</p>
         <ul class="home-fair-list" id="home-fairs-list" aria-label="전시회 목록" tabindex="-1" hidden></ul>
         <div class="empty-state" id="home-fairs-empty" hidden>
@@ -148,7 +150,7 @@
       <section aria-labelledby="home-notes-buyer">
         <h3 class="home-notes-title" id="home-notes-buyer">바이어 시간</h3>
         <ul>
-          <li>기준: 현지 09:00~18:00 (가정, 확정되지 않은 업무시간) · 점심시간 미반영 · 브라질 국가 공휴일만 반영(주·시 공휴일 제외)</li>
+          <li id="home-hours-hint">기준: 현지 09:00~18:00 (가정, 확정되지 않은 업무시간) · 점심시간 미반영 · 브라질 국가 공휴일만 반영(주·시 공휴일 제외)</li>
           <li>공휴일: BrasilAPI 국가 공휴일. 조회에 실패하면 대체 자료를 쓰거나 공휴일 없이 주말·업무시간만 판단합니다(카드에 표시).</li>
           <li>상태와 다음 연락 가능 시각은 위 가정값으로 계산한 안내이며 실제 바이어 일정과 다를 수 있습니다.</li>
         </ul>
@@ -180,7 +182,8 @@
       <section aria-labelledby="home-notes-report">
         <h3 class="home-notes-title" id="home-notes-report">일일 브리핑 PDF</h3>
         <ul>
-          <li>누른 시점의 데이터로 만듭니다. 바이어 시간은 카드에서 고른 기준 도시 기준입니다. PDF는 서버에 저장하지 않습니다.</li>
+          <li>바이어 시간·환율·최신 뉴스·다가오는 전시회를 A4 PDF 한 부로 묶습니다. 누른 시점의 데이터로 만들며, 바이어 시간은 카드에서 고른 기준 도시 기준입니다.</li>
+          <li>PDF는 서버에 저장하지 않습니다.</li>
         </ul>
       </section>
     </div>
