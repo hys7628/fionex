@@ -1,9 +1,10 @@
 """홍보 스튜디오 routes. 화면 패널은 공통 shell(templates/base.html)이 포함합니다.
 
-API는 기능 개발 단계에서 /api/promotion-studio 접두어로 추가합니다(docs/data_contracts.md).
+API 접두어 /api/promotion-studio (docs/data_contracts.md). 요청·응답 형식은 feature_spec.md 10장.
 """
-from flask import Blueprint
+from flask import Blueprint, jsonify, request
 
+from common.errors import AIError
 from features.promotion_studio import service
 
 bp = Blueprint(
@@ -42,3 +43,18 @@ def _promotion_studio_context():
             "defaults": service.DEFAULTS,
         }
     }
+
+
+@bp.post("/api/promotion-studio/storyboard")
+def create_storyboard():
+    """콘티 입력 폼(multipart) → 텍스트 콘티. 입력 오류는 AI를 호출하기 전에 400으로 돌려줍니다."""
+    cleaned, errors = service.validate_input(request.form, request.files)
+    if errors:
+        return jsonify({"ok": False, "error": {
+            "code": "INVALID_INPUT", "message": "입력 내용을 확인하세요.", "fields": errors,
+        }}), 400
+    try:
+        data = service.generate_storyboard(cleaned)
+    except AIError as err:
+        return jsonify({"ok": False, "error": err.to_dict()}), err.http_status
+    return jsonify({"ok": True, "data": data})

@@ -1,9 +1,19 @@
 """홍보 스튜디오 service.
 
-현재 구현: 콘티 입력 검증(validate_input). 화면(panel.html·promotion_studio.js)과 같은 제한값(LIMITS)을 사용합니다.
-콘티 생성 API가 추가되면 요청 처리 전에 이 함수를 호출합니다. 파일은 크기·형식만 확인하고 저장하지 않습니다.
+현재 구현
+- validate_input: 콘티 입력 검증. 화면(panel.html·promotion_studio.js)과 같은 제한값(LIMITS)을 사용합니다.
+  파일은 크기·형식만 확인하고 저장하지 않습니다.
+- generate_storyboard: 검증된 입력 → 텍스트 콘티(포르투갈어 + 한국어 검토본). 공통 ai_client로 서버에서 호출합니다.
+  보조 문서·사진·로고 내용은 아직 생성에 쓰지 않습니다(문서 추출·이미지 단계 미구현).
 """
+import json
 import os
+from pathlib import Path
+
+from pydantic import BaseModel
+
+from common.ai_client import generate_structured
+from common.errors import AIOutputInvalidError
 
 # 입력 선택지. 값은 요청 필드 값, 문구는 화면 표시용입니다.
 AUDIENCES = (("buyer", "바이어용"), ("consumer", "소비자용"))
@@ -269,3 +279,108 @@ def validate_input(form, files):
     cleaned["logo_scope"] = _choice(form, "logo_scope", _values(LOGO_SCOPES), errors) if logos else None
 
     return cleaned, errors.items
+
+
+# ---------- 텍스트 콘티 생성 ----------
+PROMPT_VERSION = "storyboard_generate_v1"
+_PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.md"
+# 장면 1개당 두 언어 6개 문장. 추론 토큰을 포함한 출력 상한이며 금액 한도가 아닙니다.
+_OUTPUT_TOKENS_BASE = 2000
+_OUTPUT_TOKENS_PER_SCENE = 700
+
+
+class StoryboardScene(BaseModel):
+    scene_number: int
+    duration_seconds: int
+    visual_pt: str
+    visual_ko: str
+    camera_pt: str
+    camera_ko: str
+    subtitle_pt: str
+    subtitle_ko: str
+    narration_pt: str
+    narration_ko: str
+
+
+class Storyboard(BaseModel):
+    title_pt: str
+    title_ko: str
+    scenes: list[StoryboardScene]
+    review_notes: list[str]
+
+
+def _label(options, value, other_text):
+    return other_text if value == "other" else dict(options)[value]
+
+
+def _model_input(cleaned):
+    """모델에 보낼 입력 데이터(JSON). 파일명·파일 내용은 보내지 않습니다."""
+    return json.dumps({
+        "audience": cleaned["audience"],
+        "product_description": cleaned["description"],
+        "purposes": [_label(PURPOSES, p, cleaned["purpose_other"]) for p in cleaned["purposes"]],
+        "tone": _label(TONES, cleaned["tone"], cleaned["tone_other"]),
+        "image_style": _label(IMAGE_STYLES, cleaned["image_style"], cleaned["image_style_other"]),
+        "cta": cleaned["cta"],
+        "duration_seconds": cleaned["duration"],
+        "scene_count": cleaned["scene_count"],
+        "aspect_ratio": cleaned["aspect_ratio"],
+    }, ensure_ascii=False)
+
+
+def _notices(cleaned):
+    """생성에 반영하지 않은 입력을 사용자에게 알립니다."""
+    notices = []
+    if cleaned["documents"]:
+        notices.append("보조 문서 내용은 아직 콘티 생성에 반영하지 않습니다. 제품 설명에 입력한 내용만 사용했습니다.")
+    if cleaned["photos"] or cleaned["logo"]:
+        notices.append("제품 사진·로고는 이미지 생성·PDF 단계에서 사용할 예정이며, 이번 텍스트 콘티에는 반영하지 않았습니다.")
+    return notices
+
+
+def generate_storyboard(cleaned):
+    """validate_input을 통과한 입력으로 텍스트 콘티를 생성합니다.
+
+    반환: 화면 표시용 dict. 장면 시작·종료 시간은 모델이 낸 장면 길이로 코드에서 계산합니다.
+    오류: common.errors.AIError 하위 클래스. 장면 수가 요청과 다르거나 길이가 1초 미만이면 AIOutputInvalidError.
+    장면 길이 합계가 영상 길이와 다르면 결과는 돌려주되 timing.ok=False로 표시합니다(자동 보정하지 않음).
+    """
+    scene_count = cleaned["scene_count"]
+    result = generate_structured(
+        instructions=_PROMPT_PATH.read_text(encoding="utf-8"),
+        input_text=_model_input(cleaned),
+        schema=Storyboard,
+        max_output_tokens=_OUTPUT_TOKENS_BASE + _OUTPUT_TOKENS_PER_SCENE * scene_count,
+    )
+    board = result.data
+    if len(board.scenes) != scene_count:
+        raise AIOutputInvalidError(message="생성된 장면 수가 선택한 장면 수와 달라 결과를 표시하지 않았습니다. 다시 시도하세요.")
+    if any(scene.duration_seconds < 1 for scene in board.scenes):
+        raise AIOutputInvalidError(message="장면 길이가 올바르지 않은 결과가 생성되어 표시하지 않았습니다. 다시 시도하세요.")
+
+    scenes = []
+    start = 0
+    # 장면 번호는 모델 값 대신 순서대로 다시 매깁니다.
+    for number, scene in enumerate(board.scenes, start=1):
+        end = start + scene.duration_seconds
+        item = scene.model_dump(exclude={"scene_number"})
+        item.update(number=number, start_seconds=start, end_seconds=end)
+        scenes.append(item)
+        start = end
+
+    return {
+        "title_pt": board.title_pt,
+        "title_ko": board.title_ko,
+        "scenes": scenes,
+        "review_notes": board.review_notes,
+        "notices": _notices(cleaned),
+        "timing": {"total_seconds": start, "expected_seconds": cleaned["duration"], "ok": start == cleaned["duration"]},
+        "conditions": {
+            "audience": dict(AUDIENCES)[cleaned["audience"]],
+            "duration": cleaned["duration"],
+            "scene_count": scene_count,
+            "aspect_ratio": cleaned["aspect_ratio"],
+        },
+        "model": result.model,
+        "prompt_version": PROMPT_VERSION,
+    }

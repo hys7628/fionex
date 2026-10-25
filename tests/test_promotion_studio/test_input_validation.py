@@ -284,8 +284,8 @@ class PanelRenderTest(unittest.TestCase):
         self.assertIn('value="photo" checked', self.html)
         self.assertIn('value="180"', self.html)
 
-    def test_generate_button_still_disabled(self):
-        self.assertIn('class="btn btn-primary" disabled aria-describedby="promotion_studio-pending"', self.html)
+    def test_generate_button_enabled(self):
+        self.assertIn('<button type="submit" class="btn btn-primary" aria-describedby="promotion_studio-generate-hint" data-ps-submit>', self.html)
 
 
 if __name__ == "__main__":

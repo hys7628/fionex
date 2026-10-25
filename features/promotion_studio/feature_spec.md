@@ -5,7 +5,7 @@
 - 기능 경로: `features/promotion_studio/`
 - 개인 기록: `docs/worklogs/jeong_eunjin/`
 - 정리일: 2026-10-25 (Asia/Seoul)
-- 상태: 사용자 요구사항 구체화 완료 / 기술 설계 일부 미정 / 2단계(입력 폼·검증) 구현·검증 완료, 3단계 이후 미구현
+- 상태: 사용자 요구사항 구체화 완료 / 기술 설계 일부 미정 / 2단계(입력 폼·검증) 구현·검증 완료 / 4단계 중 텍스트 콘티 생성·표시 구현(모의 검증 + 실제 호출 1회, 프롬프트 개선 필요) / 3단계·편집·이미지·PDF 미구현
 - 근거: 첨부된 기존 명세, 앞서 조회한 develop 문서, 이후 단계별 사용자 답변. 이 파일은 저장소에 반영되지 않은 상세 초안이다. 개발 전 최신 develop 및 로컬 변경을 다시 확인한다.
 
 ## 1. 목적과 범위
@@ -184,7 +184,21 @@ Flask 요청 전체 크기 상한(`MAX_CONTENT_LENGTH`)은 app.py 공통 설정�
 
 ## 10. API·데이터 계약: 구현 전 확정
 
-현재 확정된 구체 엔드포인트·요청/응답 스키마는 없다. 기존 초안의 접두어 `/api/promotion-studio`를 기준으로 최신 `docs/data_contracts.md`를 확인한다.
+기존 초안의 접두어 `/api/promotion-studio`를 기준으로 최신 `docs/data_contracts.md`를 확인한다.
+
+### 구현: 텍스트 콘티 생성 (2026-10-25)
+
+`POST /api/promotion-studio/storyboard` — multipart/form-data, 필드는 입력 폼과 같다(3장).
+
+- 처리: `service.validate_input` → 오류가 있으면 AI를 호출하지 않고 400 → `service.generate_storyboard` → 공통 `generate_structured`(OPENAI_MODEL, 공통 timeout 60초·재시도 0).
+- 프롬프트: `prompts/storyboard_generate_v1.md`. 모델 입력은 대상·제품 설명·목적·톤·스타일·CTA·길이·장면 수·비율 JSON이며 파일명·파일 내용은 보내지 않는다.
+- 출력 상한: max_output_tokens = 2000 + 700 × 장면 수(추론 포함, 금액 한도 아님).
+- 성공 200: `{"ok": true, "data": {title_pt, title_ko, scenes[{number, start_seconds, end_seconds, duration_seconds, visual_pt/ko, camera_pt/ko, subtitle_pt/ko, narration_pt/ko}], review_notes[], notices[], timing{total_seconds, expected_seconds, ok}, conditions{audience, duration, scene_count, aspect_ratio}, model, prompt_version}}`
+- 시작·종료 시간은 모델이 낸 장면 길이로 코드가 계산하고 번호는 순서대로 다시 매긴다. 장면 수가 다르거나 길이가 1초 미만이면 결과를 버리고 `AI_OUTPUT_INVALID`(502)를 돌려준다. 합계가 영상 길이와 다르면 결과는 보여 주되 `timing.ok=false`로 경고하며 자동 보정하지 않는다.
+- 실패: 입력 오류 400 `{"code": "INVALID_INPUT", "message", "fields": [{field, message}]}`, AI 오류는 `AIError.to_dict()`와 `http_status`(설정 누락 503, 시간 초과 504 등).
+- 화면: 생성 중 버튼 비활성·취소 버튼·`aria-busy`. 브라우저는 최대 대기 시간이 지나면 기다리기를 멈춘다(서버 요청은 계속되어 과금될 수 있음을 안내). 실패·취소 시 입력과 기존 결과를 유지한다. 결과 뒤 입력을 바꾸면 "입력 조건이 바뀌었습니다"를 표시한다.
+- 아직 반영하지 않음: 보조 문서·사진·로고 내용(업로드하면 안내 문구 표시), 제목 직접 수정·장면 편집, 이미지, PDF.
+- 한계: 서버 쪽 대기 시간은 공통 TEXT_TIMEOUT_SECONDS(60초)라 사용자가 입력한 최대 대기 시간(30~600초)을 서버 요청에 적용하지 못한다. 장면이 많을 때 60초를 넘길 수 있다. 서비스 주 모델 `gpt-6.1-sol` 지정도 공통 ai_client 확장이 필요하다. 두 가지 모두 공통 담당과 조율할 대상이다.
 
 필요 작업 단위: 문서 분석/OCR, 콘티 생성, 전체·선택 수정, 번역 갱신, 장면 추가, 사진 연결, 이미지 생성·재생성, PDF·이미지·ZIP 출력. 작업별 요청 필드·타입·상한·응답·오류·취소·시간 제한을 구현 전에 정의한다.
 
@@ -248,3 +262,5 @@ Flask 요청 전체 크기 상한(`MAX_CONTENT_LENGTH`)은 app.py 공통 설정�
 이번 작업은 요구사항 정리와 문서 갱신이다. 앱 코드 수정, API 실행, 성능·비용 측정, 실제 PDF/이미지 생성 검증, Git 변경은 수행하지 않았다. 저장소 반영 여부와 로컬 구현 상태는 개발 시작 시 별도로 확인한다.
 
 2026-10-25 추가: 13장 2단계(입력 폼·검증·탭 상태 연결)를 구현했다. 서버 검증 단위 테스트(tests/test_promotion_studio)와 Chrome headless 화면 동작 확인을 수행했다. 콘티 생성 버튼은 '준비 중'으로 비활성 상태다. AI 호출·문서 추출·OCR은 아직 구현하지 않았다. 공통 ai_client 확장(기능별 모델 지정·참조 이미지) 요청은 AI 단계 시작 시 작성하기로 했다.
+
+2026-10-25 추가: 텍스트 콘티 생성 API와 결과 표시를 구현했다(10장 "구현: 텍스트 콘티 생성"). 기존 공통 `generate_structured`를 그대로 썼고 공통 파일은 수정하지 않았다. AI 호출을 가짜 함수로 바꾼 단위 테스트와 Chrome headless 화면 확인만 했다. 같은 날 담당자 키 설정 후 가상 입력으로 실제 1회 호출했다(EXP-PS-2026_10_25-01: gpt-5.4-mini-2026-03-17, 6장면 30초, 8.7초, 2,531 토큰). 형식·시간 합계·CTA 공란은 충족했고, 힌디어 단어 혼입과 review_notes 언어 오류가 있어 프롬프트 v2가 필요하다. 생성 품질·번역 의미·비용 금액은 미검증이다.

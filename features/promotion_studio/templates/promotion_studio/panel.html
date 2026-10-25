@@ -190,23 +190,41 @@
       </div>
 
       <div class="btn-row">
-        <button type="submit" class="btn btn-primary" disabled aria-describedby="promotion_studio-pending">콘티 생성</button>
-        <span class="field-hint" id="promotion_studio-pending">준비 중: 콘티 생성 기능은 다음 개발 단계에서 연결합니다.</span>
+        <button type="submit" class="btn btn-primary" aria-describedby="promotion_studio-generate-hint" data-ps-submit>콘티 생성</button>
+        <button type="button" class="btn btn-secondary" data-ps-cancel hidden>취소</button>
+        <span class="field-hint" id="promotion_studio-generate-hint">
+          제품 설명으로 텍스트 콘티를 만듭니다. 보조 문서·사진은 아직 반영하지 않으며, 이미지 생성은 다음 단계입니다.
+        </span>
       </div>
     </div>
   </form>
 
-  <section class="card" aria-labelledby="promotion_studio-result-title">
+  <section class="card" aria-labelledby="promotion_studio-result-title" data-ps-result-card>
     <div class="card-header">
       <div>
         <h2 class="card-title" id="promotion_studio-result-title">콘티 결과</h2>
         <p class="card-description">장면별 구성과 포르투갈어·한국어 문구를 표시합니다.</p>
       </div>
-      <button type="button" class="btn btn-secondary" disabled>PDF 다운로드</button>
+      <div class="ps-download">
+        <button type="button" class="btn btn-secondary" disabled aria-describedby="promotion_studio-pdf-pending">PDF 다운로드</button>
+        <span class="field-hint" id="promotion_studio-pdf-pending">준비 중</span>
+      </div>
     </div>
-    <div class="empty-state">
+    <div class="notice notice-info" data-ps-busy role="status" hidden>
+      <p class="ps-busy-line"><span class="spinner" aria-hidden="true"></span> 콘티를 생성하고 있습니다. 장면 수에 따라 1분 이상 걸릴 수 있습니다.</p>
+    </div>
+    <div class="notice notice-danger" data-ps-error-box role="alert" hidden>
+      <p class="notice-title">콘티를 만들지 못했습니다</p>
+      <p data-ps-error-text></p>
+    </div>
+    <div class="notice notice-warning" data-ps-stale role="status" hidden>
+      <p class="notice-title">입력 조건이 바뀌었습니다</p>
+      <p>아래 결과는 이전 조건으로 만든 것입니다. 바뀐 조건을 반영하려면 다시 생성하세요.</p>
+    </div>
+    <div class="empty-state" data-ps-empty>
       <p class="empty-state-title">아직 결과가 없습니다</p>
-      <p>콘티 생성 기능이 개발되면 결과가 이곳에 표시됩니다.</p>
+      <p>콘티 조건을 입력하고 콘티 생성을 누르면 결과가 이곳에 표시됩니다.</p>
     </div>
+    <div class="stack" data-ps-result hidden></div>
   </section>
 </div>

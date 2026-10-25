@@ -1,5 +1,5 @@
 // 홍보 스튜디오 탭 스크립트. 이 탭 패널 내부만 다룹니다. 공통 API 사용법: docs/design_system.md
-// 현재 구현: 콘티 입력 검증(서버 service.validate_input과 같은 규칙). 콘티 생성은 다음 단계에서 연결합니다.
+// 현재 구현: 콘티 입력 검증(서버 service.validate_input과 같은 규칙), 텍스트 콘티 생성 요청과 결과 표시.
 (function () {
   "use strict";
 
@@ -159,7 +159,7 @@
     const names = Object.keys(byField);
     if (!names.length) {
       summary.className = "notice notice-success";
-      summaryText.textContent = "콘티 생성에 필요한 입력이 준비되었습니다. 콘티 생성 기능은 준비 중입니다.";
+      summaryText.textContent = "콘티 생성에 필요한 입력이 준비되었습니다.";
     } else {
       summary.className = "notice notice-info";
       summaryText.textContent = "확인할 항목 " + names.length + "개: " + names.map(function (n) { return LABELS[n]; }).join(", ");
@@ -210,6 +210,7 @@
   form.addEventListener("input", function (event) {
     if (event.target.dataset.psCount) syncCounter(event.target.dataset.psCount);
     render();
+    syncStale();
   });
   form.addEventListener("change", function (event) {
     const name = event.target.name;
@@ -218,6 +219,7 @@
       checkSignatures(files(name)).then(syncAll);
     }
     syncAll();
+    syncStale();
   });
   form.addEventListener("focusout", function (event) {
     if (event.target.name && event.target.type !== "file") {
@@ -227,7 +229,214 @@
   });
   form.addEventListener("reset", function () {
     touched.clear();
-    setTimeout(syncAll, 0);
+    setTimeout(function () { syncAll(); syncStale(); }, 0);
+  });
+
+  // ---------- 콘티 생성 ----------
+  const API_URL = "/api/promotion-studio/storyboard";
+  const submitBtn = form.querySelector("[data-ps-submit]");
+  const cancelBtn = form.querySelector("[data-ps-cancel]");
+  const resultCard = panel.querySelector("[data-ps-result-card]");
+  const busyBox = panel.querySelector("[data-ps-busy]");
+  const errorBox = panel.querySelector("[data-ps-error-box]");
+  const errorText = panel.querySelector("[data-ps-error-text]");
+  const staleBox = panel.querySelector("[data-ps-stale]");
+  const emptyBox = panel.querySelector("[data-ps-empty]");
+  const resultBox = panel.querySelector("[data-ps-result]");
+
+  let controller = null;       // 진행 중 요청. 동시에 하나만 보냅니다.
+  let requestSeq = 0;          // 취소·시간 초과 뒤 늦게 온 응답을 버리기 위한 번호
+  let resultSignature = null;  // 현재 결과를 만든 입력 조건
+
+  // 입력 조건 비교용 문자열. 파일은 이름·크기만 비교합니다(내용을 읽지 않음).
+  function formSignature() {
+    return JSON.stringify(Array.from(new FormData(form).entries()).map(function (pair) {
+      const v = pair[1];
+      return [pair[0], typeof v === "string" ? v : v.name + ":" + v.size];
+    }));
+  }
+
+  function syncStale() {
+    staleBox.hidden = resultSignature === null || resultSignature === formSignature();
+  }
+
+  function setBusy(on) {
+    submitBtn.disabled = on;
+    cancelBtn.hidden = !on;
+    busyBox.hidden = !on;
+    if (on) resultCard.setAttribute("aria-busy", "true");
+    else resultCard.removeAttribute("aria-busy");
+  }
+
+  function showError(message) {
+    errorText.textContent = message;
+    errorBox.hidden = false;
+  }
+
+  // 모델 출력은 textContent로만 넣습니다(HTML로 해석하지 않음).
+  function node(tag, className, value) {
+    const n = document.createElement(tag);
+    if (className) n.className = className;
+    if (value !== undefined) n.textContent = value;
+    return n;
+  }
+
+  function clock(sec) { return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0"); }
+
+  const SCENE_ROWS = [
+    ["화면 설명", "visual"],
+    ["카메라 구도·움직임", "camera"],
+    ["자막", "subtitle"],
+    ["내레이션", "narration"],
+  ];
+
+  function sceneCard(scene) {
+    const article = node("article", "ps-scene");
+    const head = node("div", "ps-scene-head");
+    head.append(
+      node("h3", "ps-scene-title", "장면 " + scene.number),
+      node("span", "badge badge-info",
+        clock(scene.start_seconds) + "–" + clock(scene.end_seconds) + " · " + scene.duration_seconds + "초")
+    );
+    const table = node("table", "table ps-scene-table");
+    table.append(node("caption", "visually-hidden", "장면 " + scene.number + " 구성"));
+    const headRow = node("tr");
+    ["항목", "포르투갈어", "한국어 검토본"].forEach(function (t) {
+      const th = node("th", "", t);
+      th.scope = "col";
+      headRow.append(th);
+    });
+    const thead = node("thead");
+    thead.append(headRow);
+    const tbody = node("tbody");
+    SCENE_ROWS.forEach(function (row) {
+      const tr = node("tr");
+      const th = node("th", "", row[0]);
+      th.scope = "row";
+      tr.append(th, node("td", "", scene[row[1] + "_pt"] || "없음"), node("td", "", scene[row[1] + "_ko"] || "없음"));
+      tbody.append(tr);
+    });
+    table.append(thead, tbody);
+    const wrap = node("div", "table-wrap");
+    wrap.append(table);
+    article.append(head, wrap, node("p", "field-hint", "이미지: 아직 생성하지 않았습니다(이미지 생성은 다음 단계)."));
+    return article;
+  }
+
+  function renderResult(data) {
+    const parts = [];
+
+    const header = node("div", "ps-result-head");
+    header.append(node("p", "ps-result-title", data.title_pt), node("p", "field-hint", "한국어 검토본: " + data.title_ko));
+    const meta = node("div", "ps-choices");
+    const c = data.conditions;
+    [c.audience, c.duration + "초", "장면 " + c.scene_count + "개", c.aspect_ratio].forEach(function (t) {
+      meta.append(node("span", "badge badge-info", t));
+    });
+    header.append(meta);
+    parts.push(header);
+
+    if (!data.timing.ok) {
+      const warn = node("div", "notice notice-warning");
+      warn.append(node("p", "notice-title", "장면 시간 합계 확인 필요"),
+        node("p", "", "장면 길이 합계가 " + data.timing.total_seconds + "초로, 선택한 영상 길이 " +
+          data.timing.expected_seconds + "초와 다릅니다. 다시 생성하세요."));
+      parts.push(warn);
+    }
+    data.notices.forEach(function (msg) {
+      const info = node("div", "notice notice-info");
+      info.append(node("p", "", msg));
+      parts.push(info);
+    });
+
+    data.scenes.forEach(function (scene) { parts.push(sceneCard(scene)); });
+
+    const review = node("div", "notice notice-warning");
+    review.append(node("p", "notice-title", "확인 필요 사항"));
+    if (data.review_notes.length) {
+      const ul = node("ul", "ps-review-list");
+      data.review_notes.forEach(function (t) { ul.append(node("li", "", t)); });
+      review.append(ul);
+    } else {
+      review.append(node("p", "", "AI가 표시한 항목은 없습니다. 수치·인증·친환경 주장은 근거 자료로 직접 확인하세요."));
+    }
+    parts.push(review);
+    parts.push(node("p", "field-hint",
+      "AI 생성 결과이며 사실 확인의 근거가 아닙니다. 번역 의미와 제품 정보는 담당자가 검토하세요. (" +
+      data.model + " · " + data.prompt_version + ")"));
+
+    resultBox.replaceChildren.apply(resultBox, parts);
+    resultBox.hidden = false;
+    emptyBox.hidden = true;
+  }
+
+  function focusFirstError() {
+    const box = Array.from(panel.querySelectorAll("[data-ps-error]")).find(function (b) { return !b.hidden; });
+    if (!box) return;
+    const name = box.dataset.psError;
+    const control = form.querySelector("#" + FEATURE_ID + "-" + name) ||
+      form.querySelector('[name="' + name + '"]:not(:disabled)');
+    if (control) control.focus();
+  }
+
+  async function generate() {
+    const seq = ++requestSeq;
+    const waitSeconds = Number(text("max_wait_seconds"));
+    const signature = formSignature();
+    let abortReason = null;
+    controller = new AbortController();
+    const timer = setTimeout(function () { abortReason = "timeout"; controller.abort(); }, waitSeconds * 1000);
+    cancelBtn.onclick = function () { abortReason = "cancel"; controller.abort(); };
+
+    errorBox.hidden = true;
+    setBusy(true);
+    try {
+      const res = await fetch(API_URL, { method: "POST", body: new FormData(form), signal: controller.signal });
+      let body = null;
+      try { body = await res.json(); } catch (e) { body = null; }
+      if (seq !== requestSeq) return;
+      if (!body || typeof body.ok !== "boolean") {
+        showError("서버 응답을 확인하지 못했습니다. 잠시 후 다시 시도하세요.");
+      } else if (!body.ok) {
+        const fields = body.error.fields || [];
+        fields.forEach(function (f) { touched.add(f.field); });
+        if (fields.length) render();
+        showError([body.error.message].concat(fields.map(function (f) { return f.message; })).join(" "));
+      } else {
+        renderResult(body.data);
+        resultSignature = signature;
+        syncStale();
+        AppShell.work.setResult(FEATURE_ID, true);
+      }
+    } catch (err) {
+      if (seq !== requestSeq) return;
+      if (abortReason === "timeout") {
+        showError("최대 대기 시간(" + waitSeconds + "초)을 넘겨 기다리기를 멈췄습니다. 다시 시도하세요. " +
+          "이미 보낸 요청은 서버에서 완료되거나 과금될 수 있습니다.");
+      } else if (abortReason === "cancel") {
+        showError("생성을 취소했습니다. 입력과 기존 결과는 그대로입니다. 이미 보낸 요청은 서버에서 완료되거나 과금될 수 있습니다.");
+      } else {
+        showError("서버에 연결하지 못했습니다. 앱 서버가 실행 중인지 확인한 뒤 다시 시도하세요.");
+      }
+    } finally {
+      clearTimeout(timer);
+      if (seq === requestSeq) {
+        controller = null;
+        setBusy(false);
+      }
+    }
+  }
+
+  form.addEventListener("submit", function () {
+    // 기본 제출(페이지 이동)은 공통 shell이 막습니다.
+    if (controller) return;
+    Object.keys(LABELS).forEach(function (name) { touched.add(name); });
+    render();
+    if (validate().length) {
+      focusFirstError();
+      return;
+    }
+    generate();
   });
 
   syncAll();
