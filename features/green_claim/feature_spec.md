@@ -598,6 +598,99 @@ Pillow 역할 [구현]
 
 검증 계획: 실제 저장 기준 정상 로드, CDC·CONAR 및 법률·자율규제 구분, 기준 ID 중복·필드 누락·잘못된 타입·빈 기준·손상 JSON·파일 없음·미지원 스키마·잘못된 해시·근거 파일 누락·조항/문장 불일치(임시 복사본으로), 다른 작업 디렉터리에서 로드, 기존 md 파일 미변경, 공식 조회 시각과 작성 시각 구분, 이용 허가·최신성 미확인 상태 보존, 기존 기능·공통 회귀. 자료 구조·대응 검증은 법률 검토나 검수 품질 검증이 아니다.
 
+### 기준 자료 변경 확인과 갱신 관리 (2026-10-26 구현 전 작성)
+범위: 기준 묶음 생성 도구 정식화, 지정 공식 출처의 대상 조항 변경 확인, 확인 상태·사용 기준 정보 관리, 검토된 후보만 교체하는 내부 처리, 실패 시 마지막 정상 기준 유지. 내부 함수와 개발용 실행 도구(`python -m features.green_claim.criteria_admin`)까지만 제공하며 사용자 API·화면은 만들지 않는다. AI 검수·자동 번역·자동 법률 해석·검토 안 된 조항 자동 적용·결과 화면/PDF·백그라운드 스케줄러·서버 시작 시 자동 조회는 범위 밖.
+
+역할 분리
+| 모듈 | 역할 | 네트워크 |
+|---|---|---|
+| `criteria_build.py` | 저장 자료(md 4개 + `sources_meta.json`) → 기준 묶음(schema 2)을 **후보 위치**에 생성 후 로더 검증 | 없음 |
+| `criteria_check.py` | 지정 공식 출처를 제한 안에서 조회, 대상 조항 비교, 출처별 상태 반환·확인 상태 기록 | 있음(개발자가 실행할 때만) |
+| `criteria_store.py` | 잠금, 확인 상태 파일, 후보 작업 폴더 준비, 검토 기록 확인, 버전 디렉터리 활성화·되돌리기 | 없음 |
+| `criteria_loader.py` | 활성 기준 결정(포인터) + 기존 검증. schema 1(기존)·2(신규) 지원 | 없음 |
+| `criteria_admin.py` | 위 기능을 부르는 개발용 명령(build·validate·check·status·prepare·activate·rollback·unlock) | check만 |
+
+저장 위치
+- `data/brazil_claim_criteria/`: 기본(base) 기준. 기존 md 4개 + 기존 묶음(schema 1) + 새 `sources_meta.json`(자료 메타데이터 입력). 기존 md·묶음 파일은 수정하지 않는다.
+- `data/criteria_versions/<버전 ID>/`: 검토·검증 후 활성화한 기준(md·메타·묶음 일체). 만든 뒤 바꾸지 않는다. Git에 올릴 대상.
+- `data/criteria_state/active.json`: 활성 버전 포인터(`active`, `previous`, `activated_at`, `review`). **없으면 base를 쓴다**(현재 상태). Git에 올릴 대상.
+- `data/criteria_state/check_state.json`(마지막 확인 결과), `criteria.lock`(잠금): 실행 상태라 Git 제외(폴더 내 .gitignore).
+- `data/criteria_work/`: 후보·감지 기록 작업 폴더. Git 제외.
+- 사용자 홍보물·문구·AI 응답·개인정보는 이 위치들에 저장하지 않는다.
+
+시각의 의미
+- `sources[].retrieved_at`: 활성 기준의 원문을 공식 출처에서 **확보한 시각**(현재 2026-10-25).
+- `bundle_created_at`: 묶음 파일을 만든 시각(내용 식별·해시에 포함하지 않음, schema 2).
+- 확인 상태의 `attempted_at`: 이번 조회 시도 시각. `last_success_at`: 대상 조항을 실제로 읽어 **비교를 끝낸** 마지막 시각(변경 없음·변경 감지 모두 해당, 없으면 null).
+- 서버 응답 날짜(`Last-Modified` 등)는 참고로만 기록하며 공식 개정일·시행일로 쓰지 않는다.
+
+묶음 생성 (schema 2)
+- 입력: 기준 폴더의 `cdc_l8078_excerpt.md`·`conar_excerpt.md`·`review_criteria_ko.md`·`source_register.md`·`sources_meta.json`. 웹 조회와 분리.
+- `sources_meta.json`: 자료별 법적 성격·URL·역할·발췌 파일·보조 발췌(CDC-118)·대조 자료·공식 판·날짜·사용권 메모. 이름·기관·버전 단서·조회 시각은 `source_register.md` 행에서 읽는다.
+- 기준 ID·순서는 원문 발췌 파일의 구간 순서 그대로. 텍스트는 md 칸 그대로(새 번역·해석 없음).
+- `content_hash`(schema 2) = `content_hash`·`bundle_created_at`을 뺀 묶음(정렬 키 UTF-8 JSON)의 SHA-256 → 같은 입력·같은 `bundle_version`이면 같은 해시. schema 1(기존 활성 묶음)은 기존 규칙(작성 시각 포함)을 그대로 검증.
+- 출력은 지정한 후보 폴더에만 쓰고(임시 파일 → 교체), 생성 직후 로더 검증. 원본 누락·불일치면 실패(부분 결과 없음). 활성 기준을 덮어쓰지 않는다.
+
+공식 출처 확인
+| 자료 | URL(source_register.md) | 자동 확인 | 이유 |
+|---|---|---|---|
+| SRC-CDC | https://www.planalto.gov.br/ccivil_03/leis/l8078compilado.htm | 개발자 실행 시 허용 | 법령 텍스트(Lei 9.610 Art. 8º IV 기록). robots.txt를 먼저 확인하고 금지면 보류. Planalto 사이트 이용약관은 미확인(기록 유지) |
+| SRC-CONAR-WEB | https://www.conar.org.br/codigos | **보류(이용 조건)** | 약관상 AI 시스템 입력 목적 자동 수집은 사전 명시 허가 필요, AI 이용 허가 미확인. 코드에는 비교 기능이 있으나 정책으로 꺼 둠. 담당자 결정은 허가가 아님 |
+| SRC-CONAR-PDF | conar.wpenginepowered.com의 PDF | **보류** | 다른 호스트(공식 페이지가 연결)·대조용 자료·PDF 조항 단위 비교 검증 안 됨·CONAR 이용 조건 |
+- 사용자 입력 URL을 받지 않는다. 출처 목록은 코드의 고정 정책뿐이다.
+- 네트워크 초기 제한(이번 단계, 공통 설정 아님): 표준 라이브러리 urllib, TLS 인증서 검증 유지(기본 SSL 컨텍스트), 요청당 10초(연결·읽기 대기 + 누적 경과 확인), 확인 전체 30초, 출처별 최대 2요청(robots.txt·리다이렉트 포함), 내려받기 1건 최대 5,000,000바이트(Content-Length 확인 + 읽으면서 누적 확인), 자동 재시도 없음, 리다이렉트는 같은 호스트의 https만 따라가고 다른 호스트는 거부. 소켓 단위 대기라 정확한 상한을 보장하지는 않는다.
+- 접근 실패·제한 초과·오류 페이지는 "변경 없음"이 아니라 실패로 반환한다.
+
+변경 판별
+- 본문 추출: HTML → 텍스트(script·style 제외, 블록 태그 줄바꿈, 공백 정규화). 문자셋은 응답 헤더 → 없으면 출처 설정값(CDC windows-1252, CONAR UTF-8)으로 **엄격 디코딩**(깨지면 실패).
+- 페이지 확인: 출처 식별 문구(CDC "LEI Nº 8.078, DE 11 DE SETEMBRO DE 1990", CONAR "Código Brasileiro de Autorregulamentação Publicitária")가 없으면 오류·로그인·다른 페이지로 보고 실패.
+- 대상 조항 비교(조항 단위 전체 비교, 2026-10-26 같은 작업 중 보완)
+  - 보완 경위: 처음 설계한 "발췌 각 줄이 본문에 순서대로 있는지" 방식은 기존 문구를 남긴 채 문장·조건이 추가되면 변경을 놓칠 수 있어 아래 방식으로 바꿨다(커밋 전).
+  - 조항 단위: 발췌를 조항 시작 줄로 나눈다(CDC `Art. N`, CONAR `Artigo N`, 부속서 U `N. 제목`·`I.`/`II.`). 첫 조항 앞의 절 제목 등은 `_context` 단위.
+  - 본문의 같은 조항 찾기: 시작 줄이 **정확히 1개**여야 한다(부속서 U 항목은 `ANEXO "U"` 범위 안에서만). 끝은 다음 조항·절(SEÇÃO)·장(CAPÍTULO)·편(TÍTULO)·부속서(ANEXO)·부속서 항목 제목 줄 직전.
+  - 정규화: HTML 태그·script/style 제거, 공백·줄바꿈 압축(NBSP 포함), Unicode NFC만. 글자·숫자·부정어·조건·문장부호는 지우지 않는다. CONAR는 발췌 때 덧붙인 목록 기호 a.~h.만 떼어 원문 표기와 맞춘다. 메뉴·머리말·바닥글은 조항 범위 밖이라 영향 없다.
+  - 비교 범위 정보 `comparison_units.json`(기준 폴더): 2026-10-25 공식 확보본에서 각 발췌 단위가 조항 전체와 같으면 `full`, 조항 일부만 담았으면 `partial`, 경계를 못 찾으면 `unbounded`. 원문 텍스트는 담지 않는다. 현재 partial: CDC Art. 3(§2 미발췌)·Art. 6(일부 inciso만)·Art. 60(일부 §만), CONAR Artigo 27(일부 §만)·부속서 U 서문(`_context`). 나머지 33개 단위는 full.
+  - 단위 결과: full이고 조항 전체 텍스트가 같음 → 변경 없음 / full인데 다름(추가·삭제·순서·숫자·부정어·조건·문장부호 차이) → 변경 감지 / partial → 발췌 문장이 그 조항 안에 순서대로 있으면 **부분 확인**, 아니면 변경 감지(조항 전체가 발췌와 똑같아져 확보 당시 있던 발췌 밖 문장이 사라진 경우도 변경 감지) / 시작 줄 없음 → 조항 없음(변경 감지) / 시작 줄 여러 개·범위 못 찾음 → 경계 식별 불가(부분 확인, 발췌 문장도 없으면 변경 감지). 비교 범위 정보가 없거나 손상되면 모든 단위를 부분 확인으로만 다룬다.
+  - 기준 결과: 조항 없음·변경 > 경계 식별 불가 > 부분 확인 > 변경 없음. 모든 기준의 조항 시작을 하나도 못 찾으면 본문 추출 실패(변경으로 단정하지 않음).
+  - 한계: partial 단위의 발췌 밖 부분(예: Art. 6의 새 inciso 추가)은 변경을 구분할 수 없어 "부분 확인"으로만 표시한다. 조항 경계는 제목 줄 형식에 의존하므로 공식 페이지 구조가 바뀌면 경계 식별 불가가 될 수 있다. 대상 외 조항·새 조항 추가·공식 개정일·시행일은 확인하지 않는다. 발췌를 고친 후보는 검토자가 확보본으로 비교 범위 정보를 다시 판정해야 한다(`criteria_check.measure_coverage`).
+- 비교 기준: 활성 기준의 원문 발췌와 비교 범위 정보(같은 출처·같은 웹 HTML 형식의 2026-10-25 확보본 기준). 발췌가 없는 자료는 "비교 기준 부족"(첫 조회를 변경 없음으로 처리하지 않음).
+- HTTP 200·ETag·Last-Modified·전체 HTML 해시만으로 개정·최신을 판단하지 않는다. 페이지 전체 해시는 참고로만 기록.
+
+출처별 상태(`status`)
+| 값 | 뜻 |
+|---|---|
+| `no_change_found` | 모든 대상 조항 **전체**를 읽고 비교해 변경을 발견하지 못함(대상 외 조항·공식 개정 여부 보장 아님) |
+| `partial_checked` | 읽고 비교했으나 일부 조항은 발췌가 조항 일부이거나 경계를 못 찾아 부분 확인만 함(조항 전체 변경 없음 아님) |
+| `change_detected` | 대상 조항 변경 감지, 검토 필요 |
+| `failed` | 조회·본문 추출·비교 실패(`reason_code`: timeout, too_large, too_many_requests, redirect_refused, http_error, not_html, decode_error, page_unrecognized, extraction_failed, robots_disallowed→보류로 분류, network_error, deadline) |
+| `deferred` | 이용 조건 등으로 조회 보류 |
+| `baseline_missing` | 비교 기준 부족 |
+각 출처 결과: 상태·이유, 이번 시도 시각·성공 여부·요청 수·HTTP 상태, 마지막 성공 확인 시각, 확인한 기준 ID·확인 못 한 기준 ID·변경 기준 ID, 서버 응답 날짜(참고).
+
+전체 결과(`check_sources()` / `criteria_status()`)
+- `overall`: `no_change_found`(모든 대상 출처 비교 완료·변경 없음), `partial`(일부 보류·실패·기준 부족), `change_pending_review`(감지된 변경이 아직 반영 안 됨), `not_ready`(활성 기준 로드 실패), `busy`(다른 확인·교체 진행 중).
+- `criteria_usable`: 활성 기준을 쓸 수 있는지. 실패해도 기존 정상 기준이 있으면 true + 경고, 없으면 false(준비 불가).
+- 활성 기준 정보: 버전 위치(base/버전 ID)·`bundle_version`·`content_hash`·자료별 확보 시각. 경고 목록, 미반영 변경 목록.
+- 일부 출처만 성공하거나 부분 확인이 있으면 전체 최신 확인 완료로 합치지 않는다. 이번 정책상 CONAR가 보류이고 CDC도 partial 단위가 있어 전체는 최대 `partial`이다. 출처 결과에 `checked_criteria`(조항 전체 비교 완료)·`partially_checked_criteria`·`unverifiable_criteria`·`changed_criteria`와 단위별 비교 결과를 함께 돌려준다.
+- `criteria_status()`는 네트워크 없이 활성 기준 + 마지막 확인 상태를 돌려준다(향후 검수 실행이 호출할 경계). 검수 결과에는 `bundle_version`·`content_hash`·경고를 함께 남긴다(검수 미구현).
+
+변경 감지 후 처리
+- 감지 내용(출처, 시각, 변경 기준 ID, 비교 요약, CDC는 정규화 본문 사본)을 `data/criteria_work/detected/`에 후보 자료로 남기고 확인 상태에 "미반영 변경"으로 기록한다. 활성 기준·md는 바꾸지 않는다.
+- 기존 번역·검토 지침을 새 원문에 자동으로 붙이지 않는다. 새 조항의 번역·해석은 사람이 검토해 후보 md에 작성한다(이번 작업에서는 작성하지 않음).
+- 검토 절차(개발용): `prepare`로 활성 기준을 후보 폴더에 복사 → 사람이 md(원문 발췌·번역·지침·출처 행·`sources_meta.json`)를 고침 → `build` → `validate` → 후보 폴더에 검토 기록 `review.json` 작성(`reviewed_by`, `reviewed_at`, `scope`, `translation_reviewed: true`, `guidance_reviewed: true`) → `activate`. 검토 기록은 사용자 요청 필드가 아니며, 파일이 있다는 것은 작성자의 진술일 뿐 검토 품질을 증명하지 않는다.
+- 변경 없음·실패 시 기준 파일을 다시 쓰지 않는다(확인 상태 파일만 갱신).
+
+교체·복구·동시 실행
+- 활성화: 잠금 → 후보 로더 검증 + 검토 기록 확인 → `criteria_versions/<ID>.partial`에 복사 → 복사본 다시 검증 → 디렉터리 이름 변경 → `active.json`을 임시 파일 작성 후 `os.replace`로 교체(포인터 교체만 원자적). 중간 실패 시 포인터는 그대로라 기존 활성 기준 유지, `.partial`은 다음 실행에서 정리. 활성 버전 디렉터리는 바꾸지 않으므로 묶음과 근거 파일이 섞이지 않는다.
+- 되돌리기: `previous` 버전을 검증한 뒤 포인터를 교체. base로도 되돌릴 수 있다.
+- 포인터가 손상되었거나 가리키는 폴더가 없으면 로더는 base로 몰래 돌아가지 않고 실패한다(사람이 `rollback`·포인터 확인).
+- 잠금: `criteria_state/criteria.lock`을 배타 생성(O_EXCL). 최대 5초 대기 후 `busy`. 잠금 내용(시각)이 600초보다 오래되면 남은 잠금으로 보고 제거 후 1회 재시도. 프로세스가 중단되면 잠금이 600초까지 남을 수 있고 `unlock` 명령으로 지울 수 있다. 같은 컴퓨터·같은 폴더의 프로세스 사이만 대상이며, 네트워크 드라이브·여러 서버 간 동시성은 보장하지 않는다. 로더 읽기는 잠그지 않는다(포인터 교체가 원자적이라 읽는 쪽은 이전 또는 새 버전 중 하나를 본다).
+- 확인 상태 파일도 임시 파일 작성 후 `os.replace`.
+
+오류: 기존 `CriteriaError` 코드 + `CRITERIA_POINTER_INVALID`(포인터 손상·폴더 없음), `CRITERIA_BUSY`(잠금), `CRITERIA_REVIEW_MISSING`(검토 기록 없음·미승인), `CRITERIA_BUILD_FAILED`(원본 누락·불일치로 생성 실패), `CRITERIA_ACTIVATION_FAILED`(복사·이름 변경·포인터 교체 실패). 사용자용 문장은 고정, 경로·예외 원문 없음.
+
+검증 계획: 같은 입력 안정 생성, base 재생성과 기존 활성 묶음 내용 일치, 후보 검증·교체·되돌리기, 누락·손상·해시·대응 실패, 검토 전 활성화 거부, 가상 HTTP로 변경 없음·조항 변경·메뉴만 변경·비교 기준 부족·일부 출처 성공·오류/로그인/빈 응답·조항 누락·시간·크기·요청 수·리다이렉트 제한, 동시 실행·잠금 정리, 기존 기준 보존·기준 없음 중단, 2026-10-25 저장 사본으로 실제 페이지 구조 비교(네트워크 없음), 기존 회귀. 실제 공식 사이트 조회는 이번에 하지 않는다(CONAR 보류, Planalto 이용약관 미확인).
+
 ## 검증
 현재 기능 미구현·실행 검증 미실시. 아래는 앞으로 수행할 계획이며 실행 결과가 아니다.
 
@@ -642,6 +735,13 @@ Pillow 역할 [구현]
 - 기준 수: CDC 9개(법률), CONAR 15개(광고 자율규제). CDC-118(시행 조항) 발췌는 검토 기준 항목이 없어 기준으로 만들지 않고 CDC 자료의 보조 발췌(`supporting_excerpt_ids`)로 연결.
 - 기존 md 자료(원문 발췌·번역·출처 목록)는 수정하지 않았다. 공식 사이트는 다시 조회하지 않았다(저장된 기준 사용, 최신성 재확인 미실행).
 - CONAR AI 이용 허가는 계속 미확인. 검수 기능 연결·공식 재조회·갱신·교체는 미구현.
+
+### 구현 상태 갱신 (2026-10-26 기준 변경 확인과 갱신 관리)
+- 추가 구현: criteria_build.py(schema 2 묶음 생성), criteria_check.py(공식 출처 확인·변경 판별·criteria_status), criteria_store.py(잠금·확인 상태·후보·검토 기록·활성화·되돌리기), criteria_admin.py(개발용 명령), criteria_loader.py 포인터·schema 2 지원, sources_meta.json, 테스트. 위 "기준 자료 변경 확인과 갱신 관리" 계약 기준.
+- 활성 기준은 그대로 base(schema 1, 2026-10-26.1)다. 활성화한 버전·포인터는 없다. 기존 md·묶음 파일은 바꾸지 않았다.
+- 자동 확인 정책: CDC만 개발자 실행 시 조회 가능, CONAR 웹·PDF는 보류. 실제 공식 사이트 조회는 이번에 하지 않았다(가상 응답과 2026-10-25 저장 사본으로만 확인).
+- 보완(커밋 전): 줄 포함 방식 → 조항 단위 전체 비교 + `comparison_units.json`(비교 범위 정보, 기준 폴더에 새 파일). 2026-10-25 저장 사본 기준 결과: CDC 6개 기준 조항 전체 비교·3개 부분 확인(Art. 3·6·60), CONAR 13개 조항 전체 비교·2개 부분 확인(Artigo 27·부속서 U 서문).
+- 미구현: 검수 기능 연결(criteria_status 호출·결과에 버전·해시 기록), 새 조항 번역·해석, 실제 기준 갱신, PDF 출처 확인.
 
 ### 완료 기준·검증 계획
 - 직접 입력과 파일 업로드의 각 흐름.

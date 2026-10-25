@@ -94,3 +94,17 @@
 | 한국어 비공식 번역·검토 지침 | 같은 폴더 review_criteria_ko.md | 2026-10-25 작성(개발 도구 비공식 번역, pontuais 정정 반영본) | 번역·지침·한계 칸, 미수정 |
 | 출처 목록·사용권 | 같은 폴더 source_register.md | 2026-10-25 기록(CONAR 이용약관 16:34:00 확인, AI 이용 허가 미확인) | 자료 정보·대조, 미수정 |
 - 구조화 파일의 retrieved_at은 위 원래 조회 시각이며, bundle_created_at(2026-10-26 00:35:43)은 구조화 파일 작성 시각이다.
+
+## 2026-10-26 기준 변경 확인 기능의 자료 사용 (DEV-2026_10_26-02)
+- 실제 조회: 없음. Planalto·CONAR 공식 사이트에 이번 작업에서 접속하지 않았다(조회 보류 이유는 prompt_log 같은 ID 참고).
+- 기존 자료 재사용
+| 자료 | 위치 | 원래 조회 | 이번 사용 |
+|---|---|---|---|
+| 출처 URL·조회 시각 | features/green_claim/data/brazil_claim_criteria/source_register.md | 2026-10-25 16:31:44(CDC)·16:31:51(CONAR 웹)·16:33:58(CONAR PDF)·16:34:00(CONAR 약관) | 확인 대상 URL·정책 근거, 미수정 |
+| 기존 기준 묶음 sources | 같은 폴더 criteria_bundle.json | 2026-10-26 00:35:43 작성 | sources_meta.json으로 값 그대로 옮김, 묶음 미수정 |
+| 공식 페이지 사본 | 저장소 밖 세션 임시 폴더 C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/010a049a-1a72-42db-bb4c-cb26f412c3b5/scratchpad/src/cdc.htm, conar_codigos.html | 2026-10-25 16:31 무렵 내려받은 사본(source_register.md의 조회와 같은 사본) | 비교 기능을 실제 페이지 구조로 확인(네트워크 없음). 저장소에 넣지 않음. CONAR 사본은 개발 도구가 다시 읽었음 |
+- 이번 결과의 "변경 없음"은 위 2026-10-25 사본 기준이며, 현재 공식 페이지의 최신성을 확인한 것이 아니다.
+
+## 2026-10-26 후속: 조항 비교 범위 판정 자료 (DEV-2026_10_26-02 후속)
+- 실제 조회: 없음.
+- 재사용: 저장소 밖 세션 임시 폴더의 2026-10-25 공식 페이지 사본(cdc.htm 16:31 무렵 SRC-CDC 확보본, conar_codigos.html SRC-CONAR-WEB 확보본)을 comparison_units.json 판정과 비교 확인에만 사용. 사본 원문은 저장소에 넣지 않았고 comparison_units.json에는 단위 이름과 범위 표시만 있다.

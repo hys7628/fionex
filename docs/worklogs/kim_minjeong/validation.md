@@ -336,3 +336,38 @@
 - 회귀: 이미지 판독 32, 스캔 PDF 판독 14, PDF 추출 17, Word 추출 18, 공통 tests/test_common 56 통과(외부 요청 없음). 화면·기존 판독 코드는 바꾸지 않아 브라우저 회귀는 실행하지 않음
 - 원문 대조 범위: 구조화 파일이 기존 md 자료와 같은지(문자 단위)만 확인. md 자료와 공식 원문의 일치는 2026-10-25 기록(웹·PDF 대조) 그대로이며 이번에 공식 원문을 다시 대조하지 않음
 - 미실행·미검증: 공식 출처 최신성 재확인, 번역의 사람·법률 전문가 검토, CDC·CONAR의 B2B 적용 해석, 검수 기능에서의 실제 사용, CONAR 이용 허가
+
+## 2026-10-26 기준 변경 확인과 갱신 관리 확인 (DEV-2026_10_26-02)
+- 환경: jasonenv C:/Users/user/miniforge3/envs/jasonenv/python.exe, Python 3.11.17, 표준 라이브러리만. 패키지 설치 없음. OpenAI·공식 사이트 실제 조회 0회. 사용자 서버 호출·종료 없음(작업 중 5003 포트 대기 없음)
+- 구분 A. 실제 실행(네트워크 없음)
+  - 묶음 생성: base 저장 자료로 메모리 생성한 criteria 24개·sources 3개가 기존 활성 묶음과 같음. 작성 시각만 다르게 두 번 생성해도 content_hash 같음
+  - 실제 페이지 구조 비교: 2026-10-25에 내려받아 저장소 밖에 둔 공식 페이지 사본(Planalto CDC HTML 170,672바이트, CONAR codigos HTML 1,086,725바이트)을 가짜 응답으로 넣어 확인(임시 data 폴더 사용)
+    - CDC 9개·CONAR 15개 기준 모두 no_change_found(robots.txt는 가짜 404). CONAR는 내부 테스트 경계에서만 정책을 켬
+    - 같은 CDC 사본에서 "É proibida"→"É permitida" 1단어 변경 → CDC-37만 changed, 메뉴·스타일·공백 추가 → 변경 없음, Art. 38 본문 교체 → CDC-38 missing
+  - 개발 명령 status(실제 data, 네트워크 없음): overall partial, 활성 base(2026-10-26.1, schema 1), CDC 확인 기록 없음, CONAR 웹·PDF 보류. 실행 후 상태 파일 생성 없음
+  - 실제 기준 보존: 기본 기준 md 4개·묶음의 Git 객체 해시가 인덱스와 동일, criteria_state·criteria_work에는 .gitignore만 있음
+- 구분 B. 자동 테스트(모두 가상 HTTP 응답·임시 폴더, 실제 소켓 생성 차단)
+  - tests/test_criteria_update.py 22개 통과(건너뜀 0)
+    - 생성: 같은 입력 안정 해시·기존 활성 내용과 동일·base 미변경, md 누락·검토 구간 누락·메타 손상·출처 행 누락 → CRITERIA_BUILD_FAILED이고 묶음 파일 남지 않음, 후보 이름만 허용(../·경로·.partial 거부)
+    - 교체: 검토 기록 없음·translation_reviewed false·문자열 "yes"·빈 검토자 → 활성화 거부·포인터 없음, 정상 검토 후 활성화(이전=base)·이미 활성 거부·되돌리기·다시 되돌리기, 검토한 내용 변경은 활성화 후에만 반영, os.rename 실패 → ACTIVATION_FAILED·포인터 그대로·부분 폴더 없음, 후보 묶음 조작 → 해시 불일치로 거부, 포인터 손상·경로 이탈·없는 버전·필드 없음 → POINTER_INVALID(base로 몰래 돌아가지 않음)·status not_ready, 기준 없음 → 확인 not_ready·요청 0
+    - 잠금: 보유 중 두 번째 잠금 BUSY, 잠금 중 확인 → overall busy·요청 0, 오래된 잠금 정리 후 획득, 예외 시 잠금 삭제, 활성화·확인 동시 실행 후 활성 버전 정상·잠금·부분 폴더 없음
+    - 확인: CDC 변경 없음(요청 2: robots·본문, 마지막 성공 시각 기록, 기준 파일 재작성 없음), CONAR 이용 조건 보류·PDF 보류 → overall partial, 메뉴·서식 변경 → 변경 없음, 조항 문장 변경 → change_detected·감지 기록·미반영 변경·같은 내용 중복 기록 없음·자동 반영 없음·다음 정상 확인에도 미반영 경고 유지·검토 후 활성화하면 해소, 조항 누락 → missing, 대상 조항 전무 → extraction_failed, 500·로그인 화면·빈 응답·PDF 형식·잘못된 인코딩 → failed(마지막 성공 시각 유지, 기존 기준 사용 경고), 문자셋 선언 없는 windows-1252 페이지 정상, 시간 초과·Content-Length 초과·본문 5,000,001바이트·같은 호스트 리다이렉트로 요청 3회 필요 → too_many_requests(실제 요청 2회)·robots 끈 정책에서 같은 호스트 리다이렉트 정상·다른 호스트·http 리다이렉트 거부(그 주소로 요청 안 함)·전체 시간 초과·요청 timeout 10초 이하, robots 금지 → deferred·robots 503 → failed, 일부 출처만 성공 → partial, 저장 발췌 없는 자료 → baseline_missing, 정책 호스트와 다른 URL → url_not_allowed, 확인 전 상태, 기본 HTTPS 처리기 인증서 검증(CERT_REQUIRED·hostname 확인)·리다이렉트 자동 추적 끔
+    - 개발 명령: 경로 형태 후보 이름 거부(오류에 경로 없음), status는 실제 data를 읽기만 함
+  - 기존 로더 테스트 14개 통과(지원 스키마 변경으로 미지원 예시 1줄 수정)
+- 구분 C. 회귀: 이미지 판독 32, 스캔 PDF 판독 14, PDF 추출 17, Word 추출 18, 공통 tests/test_common 56 통과. 화면·판독 코드 미변경이라 브라우저 회귀는 실행하지 않음
+- 미실행·미검증: 실제 공식 사이트 조회(Planalto 이용약관 미확인, CONAR 이용 허가 미확인), 실제 네트워크 시간·TLS·리다이렉트 동작, 실제 기준 갱신·활성화(활성 기준은 base 그대로), 다른 컴퓨터·네트워크 드라이브의 동시 실행, 대상 외 조항·공식 개정일 확인, 법률 전문가 검토, 검수 품질
+
+## 2026-10-26 후속: 조항 단위 전체 비교 확인 (DEV-2026_10_26-02 후속)
+- 위 갱신 관리 확인 기록은 보존. 그 기록의 "변경 판별은 저장 발췌 문장 포함 여부만 봄", "2026-10-25 사본에서 CDC 9·CONAR 15 모두 no_change_found"는 보완 전 방식의 결과다
+- 환경 동일(jasonenv Python 3.11.17, 표준 라이브러리, 네트워크·OpenAI 0회, 서버 호출 없음)
+- 구분 A. 실제 실행(네트워크 없음, 2026-10-25 저장 사본을 가짜 응답으로 사용, 임시 data 폴더)
+  - 원본 사본: CDC partial_checked(조항 전체 비교 6개, 부분 확인 3개: CDC-02-03·06·60), CONAR(내부 테스트 경계에서만 정책 켬) partial_checked(조항 전체 13개, 부분 확인 2개: CONAR-27·U-PRE), 변경 0
+  - 사본 변형: Art. 38 같은 줄 끝 문장 추가 → CDC-38 변경, Art. 37 뒤 새 문단 추가 → CDC-37 변경(둘 다 보완 전 방식으로는 변경 없음), 메뉴·공백만 변경 → 변경 없음, Art. 6 새 inciso 추가 → 부분 확인(partial 단위 한계)
+  - comparison_units.json 생성: 단위 full 33·partial 5·unbounded 0, 모든 발췌 단위가 확보본 조항 안에 순서대로 있음
+  - 기존 md 4개·활성 묶음 Git 인덱스와 동일, criteria_state·criteria_work에는 .gitignore만
+- 구분 B. 자동 테스트(가상 HTTP, 실제 소켓 차단): tests/test_criteria_update.py 28개 통과
+  - 추가: 중간 문단 추가·끝 문단 추가·같은 줄 문장 추가·예외 조건 추가·숫자 변경(2009→2010)·부정어 추가·문장 삭제·순서 변경 → 모두 change_detected·해당 기준만, 메뉴·HTML 서식·줄바꿈·NBSP·공백만 변경 → no_change_found(9개 조항 전체 비교), 같은 조항 번호 시작 줄 중복 → 경계 식별 불가로 partial_checked(변경 없음 아님), 부속서 U 제목 없음 → 항목 경계 식별 불가(다른 조항은 정상 비교)
+  - 비교 범위: partial 단위에 발췌 밖 inciso 추가 → partial_checked(변경 없음 아님)·경고, partial 단위의 발췌 문장 변경 → 변경, partial 단위가 발췌와 똑같아짐(발췌 밖 문장 사라짐) → 변경, 비교 범위 파일 없음 → 모든 기준 부분 확인·경고, 실제 comparison_units.json 단위가 활성 기준 발췌 단위와 일치하고 partial은 5개뿐·값은 범위 표시뿐
+  - 기존 22개(생성·교체·잠금·조회 제한 등)는 가상 페이지 기준 비교 범위로 그대로 통과
+- 구분 C. 회귀: 로더 14, 이미지 판독 32, 스캔 PDF 판독 14, PDF 추출 17, Word 추출 18, 공통 56 통과
+- 미실행·미검증: 실제 공식 사이트 조회, partial 단위의 발췌 밖 변경 감지, 공식 페이지 구조 변경 시 경계 식별, 대상 외 조항·새 조항·공식 개정일·시행일, 법률 전문가 검토

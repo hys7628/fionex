@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "note": "조항 단위 비교 범위. 각 기준 발췌를 2026-10-25 공식 확보본과 비교해, 발췌가 그 조항 전체와 같으면 full, 조항의 일부만 담았으면 partial, 조항 경계를 찾지 못하면 unbounded로 기록했다. 원문 텍스트는 담지 않는다. full 단위만 조항 전체 비교가 가능하고 나머지는 부분 확인으로만 다룬다.",
+  "reference": {
+    "SRC-CDC": {
+      "retrieved_at": "2026-10-25T16:31:44+09:00",
+      "basis": "source_register.md SRC-CDC 확보본(저장소 밖 사본)"
+    },
+    "SRC-CONAR-WEB": {
+      "retrieved_at": "2026-10-25T16:31:51+09:00",
+      "basis": "source_register.md SRC-CONAR-WEB 확보본(저장소 밖 사본)"
+    }
+  },
+  "unit_label_note": "_context는 첫 조항 앞의 절 제목 등. Art. N·Artigo N은 조항, Anexo U N.은 부속서 U 항목",
+  "coverage": {
+    "CDC-02-03": {
+      "Art. 2": "full",
+      "Art. 3": "partial"
+    },
+    "CDC-06": {
+      "Art. 6": "partial"
+    },
+    "CDC-29": {
+      "_context": "full",
+      "Art. 29": "full"
+    },
+    "CDC-30-31": {
+      "_context": "full",
+      "Art. 30": "full",
+      "Art. 31": "full"
+    },
+    "CDC-36": {
+      "_context": "full",
+      "Art. 36": "full"
+    },
+    "CDC-37": {
+      "Art. 37": "full"
+    },
+    "CDC-38": {
+      "Art. 38": "full"
+    },
+    "CDC-60": {
+      "Art. 60": "partial"
+    },
+    "CDC-66-69": {
+      "Art. 66": "full",
+      "Art. 67": "full",
+      "Art. 69": "full"
+    },
+    "CONAR-08-18": {
+      "_context": "full",
+      "Artigo 8": "full",
+      "Artigo 17": "full",
+      "Artigo 18": "full"
+    },
+    "CONAR-27": {
+      "_context": "full",
+      "Artigo 27": "partial"
+    },
+    "CONAR-36": {
+      "_context": "full",
+      "Artigo 36": "full"
+    },
+    "CONAR-36A": {
+      "Artigo 36-A": "full"
+    },
+    "CONAR-36B": {
+      "Artigo 36-B": "full"
+    },
+    "CONAR-U-PRE": {
+      "_context": "partial",
+      "Anexo U I.": "full"
+    },
+    "CONAR-U-1": {
+      "Anexo U II.": "full",
+      "Anexo U 1.": "full"
+    },
+    "CONAR-U-2": {
+      "Anexo U 2.": "full"
+    },
+    "CONAR-U-3": {
+      "Anexo U 3.": "full"
+    },
+    "CONAR-U-4": {
+      "Anexo U 4.": "full"
+    },
+    "CONAR-U-5": {
+      "Anexo U 5.": "full"
+    },
+    "CONAR-U-6": {
+      "Anexo U 6.": "full"
+    },
+    "CONAR-U-7": {
+      "Anexo U 7.": "full"
+    },
+    "CONAR-U-8": {
+      "Anexo U 8.": "full"
+    },
+    "CONAR-U-9": {
+      "Anexo U 9.": "full"
+    }
+  }
+}

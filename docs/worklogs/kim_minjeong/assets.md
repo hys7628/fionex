@@ -73,3 +73,16 @@
 |---|---|---|---|---|---|
 | 2026-10-26 | 구조화 기준 묶음 JSON(CDC·CONAR 원문 발췌·비공식 번역·검토 지침 포함) | features/green_claim/data/brazil_claim_criteria/criteria_bundle.json | 저장소 밖 생성 스크립트(scratchpad/tools/build_criteria_bundle.py)가 기존 md 칸을 그대로 옮김 | validation DEV-2026_10_26-01 | CDC는 법령 텍스트 저장(법률 검토 없음). **CONAR 발췌 포함, AI 이용 허가 미확인**(source_register.md). 번역은 비공식 |
 | 2026-10-26 | 묶음 생성 스크립트 | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/010a049a-1a72-42db-bb4c-cb26f412c3b5/scratchpad/tools/build_criteria_bundle.py | 직접 작성 | 같음 | 저장소에 넣지 않음. 갱신 기능에서 정식화 필요 |
+
+## 2026-10-26 기준 갱신 관리 자료 (DEV-2026_10_26-02)
+| 날짜 | 종류 | 경로 | 생성 도구 | 관련 기록 | 사용권·검토 상태 |
+|---|---|---|---|---|---|
+| 2026-10-26 | 묶음 생성 입력(자료 메타데이터 JSON) | features/green_claim/data/brazil_claim_criteria/sources_meta.json | 기존 criteria_bundle.json의 sources 값을 스크립트로 그대로 옮김 | validation DEV-2026_10_26-02 | CONAR 자료의 AI 이용 허가 미확인 메모 포함(기존 기록 유지) |
+| 2026-10-26 | 실행 상태·작업 폴더 Git 제외 설정 | features/green_claim/data/criteria_state/.gitignore, data/criteria_work/.gitignore | 직접 작성 | 같음 | 사용자 자료 저장 없음 |
+| 2026-10-26 | 실제 페이지 구조 비교 스크립트 | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/010a049a-1a72-42db-bb4c-cb26f412c3b5/scratchpad/tools/check_real_copies.py | 직접 작성 | 같음 | 2026-10-25 공식 페이지 사본 사용(네트워크 없음). 저장소에 넣지 않음 |
+- 이번 작업에서 활성화한 기준 버전(criteria_versions/)·포인터(active.json)는 없다.
+
+## 2026-10-26 후속: 조항 비교 범위 정보 (DEV-2026_10_26-02 후속)
+| 날짜 | 종류 | 경로 | 생성 도구 | 관련 기록 | 사용권·검토 상태 |
+|---|---|---|---|---|---|
+| 2026-10-26 | 조항 단위 비교 범위 JSON(단위 이름·full/partial/unbounded만, 원문 없음) | features/green_claim/data/brazil_claim_criteria/comparison_units.json | 저장소 밖 스크립트(scratchpad/tools/make_comparison_units.py)가 criteria_check.measure_coverage로 2026-10-25 사본 판정 | validation DEV-2026_10_26-02 후속 | CONAR 조항 이름 포함(원문 텍스트 없음). CONAR AI 이용 허가 미확인 유지 |

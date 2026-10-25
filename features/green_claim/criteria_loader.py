@@ -1,7 +1,9 @@
 """그린 클레임 검수 기준 자료 로더(feature_spec.md "검수 기준 자료 로더").
 
-- 저장된 CDC·CONAR 기준 묶음(data/brazil_claim_criteria/criteria_bundle.json)을 읽고 검증해 돌려줍니다.
-- 이 모듈 위치 기준의 고정 경로만 읽습니다. 사용자 입력 경로를 받지 않습니다(테스트용 _load_from은 내부 전용).
+- 활성 기준 묶음을 읽고 검증해 돌려줍니다. 활성 위치는 data/criteria_state/active.json 포인터가 정하며,
+  포인터가 없으면 기본 기준(data/brazil_claim_criteria/)을 씁니다(feature_spec.md "기준 자료 변경 확인과 갱신 관리").
+- 이 모듈 위치 기준의 고정 경로만 읽습니다. 사용자 입력 경로를 받지 않습니다(테스트용 _load_from·_load_active는 내부 전용).
+- schema 1(기존 묶음)과 schema 2(criteria_build가 만드는 묶음, 내용 해시에서 작성 시각 제외)를 지원합니다.
 - 기준마다 원문 발췌(cdc_l8078_excerpt.md·conar_excerpt.md)와 검토 정리(review_criteria_ko.md)의 해당 구간을 다시 읽어
   JSON 값과 같은지 확인하고, 출처는 source_register.md의 같은 ID 행과 대조합니다.
 - 공식 사이트에 접속하지 않습니다. 반환 값은 "저장된 기준 사용, 최신성 재확인 미실행" 상태입니다.
@@ -16,11 +18,19 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-DATA_DIR = Path(__file__).resolve().parent / "data" / "brazil_claim_criteria"
+DATA_ROOT = Path(__file__).resolve().parent / "data"
+BASE_DIR_NAME = "brazil_claim_criteria"
+DATA_DIR = DATA_ROOT / BASE_DIR_NAME          # 기본(base) 기준
+VERSIONS_DIR_NAME = "criteria_versions"       # 활성화한 기준 버전들
+STATE_DIR_NAME = "criteria_state"
+POINTER_FILE = "active.json"
+BASE_VERSION = "base"
 BUNDLE_FILE = "criteria_bundle.json"
 REGISTER_FILE = "source_register.md"
 REVIEW_FILE = "review_criteria_ko.md"
-SUPPORTED_SCHEMA_VERSIONS = (1,)
+SOURCES_META_FILE = "sources_meta.json"
+SUPPORTED_SCHEMA_VERSIONS = (1, 2)
+VERSION_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$")
 LEGAL_NATURES = ("law", "advertising_self_regulation")
 FRESHNESS_STORED_ONLY = "stored_only"
 
@@ -32,6 +42,11 @@ ERRORS = {
     "CRITERIA_HASH_MISMATCH": "검수 기준 자료의 내용 확인값이 맞지 않습니다. 자료가 바뀌었을 수 있습니다.",
     "CRITERIA_EVIDENCE_MISSING": "검수 기준의 근거 자료 파일이나 해당 조항을 찾지 못했습니다.",
     "CRITERIA_EVIDENCE_MISMATCH": "검수 기준과 근거 자료의 내용이 서로 맞지 않습니다.",
+    "CRITERIA_POINTER_INVALID": "활성 검수 기준 위치 정보가 손상되었거나 가리키는 기준이 없습니다. 기준 관리 상태를 확인해 주세요.",
+    "CRITERIA_BUSY": "다른 기준 확인·교체 작업이 진행 중입니다. 잠시 후 다시 시도해 주세요.",
+    "CRITERIA_REVIEW_MISSING": "검토 기록이 없거나 번역·지침 검토가 끝나지 않은 후보라 활성화하지 않았습니다.",
+    "CRITERIA_BUILD_FAILED": "기준 묶음을 만들지 못했습니다. 원본 자료의 누락·불일치를 확인해 주세요.",
+    "CRITERIA_ACTIVATION_FAILED": "기준 교체를 마치지 못했습니다. 기존 활성 기준을 그대로 사용합니다.",
 }
 
 # review_criteria_ko.md의 칸 이름 → 기준 필드. CDC는 "### ID", CONAR 상세 기준은 "#### ID" 구간.
@@ -81,8 +96,52 @@ class CriteriaError(Exception):
 
 
 def load_criteria():
-    """저장된 기준 묶음을 검증해 돌려줍니다. 실패하면 CriteriaError."""
-    return _load_from(DATA_DIR)
+    """활성 기준 묶음을 검증해 돌려줍니다. 실패하면 CriteriaError."""
+    return _load_active(DATA_ROOT)
+
+
+def read_pointer(root):
+    """내부: 활성 포인터 dict 또는 None(파일 없음 = base). 손상되면 CRITERIA_POINTER_INVALID."""
+    path = Path(root) / STATE_DIR_NAME / POINTER_FILE
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        raise CriteriaError("CRITERIA_POINTER_INVALID", "read") from None
+    try:
+        pointer = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        raise CriteriaError("CRITERIA_POINTER_INVALID", "json") from None
+    if not isinstance(pointer, dict) or not isinstance(pointer.get("active"), str):
+        raise CriteriaError("CRITERIA_POINTER_INVALID", "active")
+    return pointer
+
+
+def version_directory(root, version):
+    """내부: 버전 이름(base 또는 버전 ID) → 폴더. 형식이 틀리면 CRITERIA_POINTER_INVALID."""
+    if version == BASE_VERSION:
+        return Path(root) / BASE_DIR_NAME
+    if not isinstance(version, str) or not VERSION_ID.match(version) or version.endswith(".partial"):
+        raise CriteriaError("CRITERIA_POINTER_INVALID", "version id")
+    return Path(root) / VERSIONS_DIR_NAME / version
+
+
+def _load_active(root):
+    """내부·테스트 전용: root(data 폴더)의 포인터가 가리키는 활성 기준을 검증합니다.
+    포인터가 손상되었거나 폴더가 없으면 base로 몰래 돌아가지 않고 실패합니다."""
+    try:
+        pointer = read_pointer(root)
+        version = BASE_VERSION if pointer is None else pointer["active"]
+        directory = version_directory(root, version)
+        if not directory.is_dir():
+            raise CriteriaError("CRITERIA_POINTER_INVALID", "missing directory")
+    except CriteriaError as err:
+        logger.warning("검수 기준 자료 로드 실패: code=%s", err.code)
+        raise
+    result = _load_from(directory)
+    result["active_version"] = version
+    return result
 
 
 def _load_from(directory):
@@ -113,8 +172,10 @@ def text_sha256(text):
 
 
 def bundle_hash(bundle):
-    """content_hash를 뺀 묶음 전체(정렬 키·UTF-8 JSON)의 SHA-256."""
-    body = {key: value for key, value in bundle.items() if key != "content_hash"}
+    """내용 해시(정렬 키·UTF-8 JSON의 SHA-256). schema 1: content_hash를 뺀 묶음 전체.
+    schema 2: 작성 시각(bundle_created_at)도 빼서 같은 입력이면 같은 해시가 되게 함."""
+    excluded = {"content_hash"} if bundle.get("schema_version") == 1 else {"content_hash", "bundle_created_at"}
+    body = {key: value for key, value in bundle.items() if key not in excluded}
     canonical = json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -186,6 +247,46 @@ def review_sections(text):
         else:
             raise CriteriaError("CRITERIA_EVIDENCE_MISMATCH", "unexpected review line")
     return {key: (value["heading"], value["title"], value["fields"]) for key, value in sections.items()}
+
+
+def register_time_iso(value):
+    """source_register.md의 조회 시각 칸("YYYY-MM-DD HH:MM:SS", Asia/Seoul) → ISO 문자열. 형식이 다르면 None."""
+    match = re.fullmatch(r"(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})", value)
+    return f"{match.group(1)}T{match.group(2)}+09:00" if match else None
+
+
+def sources_from_meta(meta, rows):
+    """sources_meta.json + source_register.md 행 → 묶음의 sources 목록(schema 2 생성·검증 공용).
+    이름·기관·조회 시각·버전 단서는 출처 목록 행(열: ID|자료|기관|구분|URL|조회 시각|결과|버전·날짜 단서|…)에서 그대로 읽습니다."""
+    if not isinstance(meta, dict) or meta.get("schema_version") != 1 or not isinstance(meta.get("sources"), list):
+        raise CriteriaError("CRITERIA_INVALID", "sources_meta")
+    sources = []
+    for index, item in enumerate(meta["sources"]):
+        where = f"sources_meta[{index}]"
+        source_id = _field(item, "id", str, where)
+        row = rows.get(source_id)
+        if row is None:
+            raise CriteriaError("CRITERIA_EVIDENCE_MISSING", source_id)
+        cells = [cell.strip() for cell in row.split("|")]
+        retrieved = register_time_iso(cells[6]) if len(cells) > 8 else None
+        if retrieved is None:
+            raise CriteriaError("CRITERIA_EVIDENCE_MISMATCH", f"{source_id} register row")
+        sources.append({
+            "id": source_id,
+            "title": cells[2],
+            "authority": cells[3],
+            "legal_nature": _field(item, "legal_nature", str, where),
+            "url": _field(item, "url", str, where),
+            "retrieved_at": retrieved,
+            "version_clue": cells[8],
+            "official_edition": _field(item, "official_edition", str, where, nullable=True),
+            "dates": _field(item, "dates", dict, where),
+            "role": _field(item, "role", str, where),
+            "excerpt_file": _field(item, "excerpt_file", str, where, nullable=True),
+            "supporting_excerpt_ids": _field(item, "supporting_excerpt_ids", list, where),
+            "usage_rights": _field(item, "usage_rights", dict, where),
+        })
+    return sources
 
 
 def register_rows(text):
@@ -268,12 +369,20 @@ def _load(directory):
         texts[name] = _read_text(directory, name)
         if text_sha256(texts[name]) != digest:
             raise CriteriaError("CRITERIA_EVIDENCE_MISMATCH", name)
-    for name in (REGISTER_FILE, REVIEW_FILE):
+    required = (REGISTER_FILE, REVIEW_FILE) + ((SOURCES_META_FILE,) if version >= 2 else ())
+    for name in required:
         if name not in texts:
             raise CriteriaError("CRITERIA_INVALID", f"evidence_files missing {name}")
 
-    # 자료(출처)
+    # 자료(출처). schema 2는 sources가 sources_meta.json + 출처 목록 행으로 다시 만든 값과 같아야 함
     rows = register_rows(texts[REGISTER_FILE])
+    if version >= 2:
+        try:
+            meta = json.loads(texts[SOURCES_META_FILE])
+        except ValueError:
+            raise CriteriaError("CRITERIA_EVIDENCE_MISMATCH", SOURCES_META_FILE) from None
+        if sources_from_meta(meta, rows) != bundle.get("sources"):
+            raise CriteriaError("CRITERIA_EVIDENCE_MISMATCH", "sources vs sources_meta")
     sources = {}
     source_list = _field(bundle, "sources", list, "bundle")
     if not source_list:

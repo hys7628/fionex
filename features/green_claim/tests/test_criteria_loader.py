@@ -141,7 +141,7 @@ class BrokenBundleTest(unittest.TestCase):
         self.assertCode("CRITERIA_INVALID_JSON")
         (self.dir / cl.BUNDLE_FILE).write_text("[]", encoding="utf-8")
         self.assertCode("CRITERIA_INVALID_JSON")
-        for version in (2, 0, True, "1", None):
+        for version in (3, 0, True, "1", None):  # 1·2만 지원(2는 criteria_build가 만드는 형식)
             with self.subTest(version=version):
                 self.bundle["schema_version"] = version
                 self.save()
