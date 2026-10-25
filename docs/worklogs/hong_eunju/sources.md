@@ -59,4 +59,12 @@
 - Tecnotêxtil Brasil 2027 (주최 표기: Febratex Group / FCEM) — 공식 사이트 뉴스 https://tecnotextilbrasil.com.br/brasil-fashion-designers-e-uma-das-novidades-da-tecnotextil-brasil-2027/ ("Americana, de 27 a 30 de abril de 2027", 2026-09-16 게시), 장소 https://tecnotextilbrasil.com.br/a-feira/ ("A Fidam (Feira Industrial de Americana) é a sede"). verified true.
 - Febratex Summit 2027 — 공식 사이트 https://febratexsummit.com.br/ ("24 – 26 / Agosto / 2027 – Blumenau – SC", "Parque Vila Germânica", "transformação digital e sustentável na indústria da moda", "Da matéria-prima ao varejo"). verified true.
 - Inspiramais — 공식 사이트 https://www.inspiramais.com.br/o-salao (머리글 "26 e 27 de janeiro | 2027 | Centro de Eventos FIERGS | Porto Alegre/RS", "Salão de Design, Inovação e Sustentabilidade de materiais … calçados, confecção, móveis e bijuterias"). 홈 https://www.inspiramais.com.br/ 프로그램은 "26 e 27 de janeiro de 2026" → 연도 불일치로 verified false.
+- (아래 '수출입은행 인증키 발급 절차' 항목 참고)
 - 제외 확인: Inspiramais 'O Salão' 프로그램 "3 e 4 de agosto de 2027 … Pro Magno"(머리글 '07 e 08 de julho'와 충돌), Febratex https://febratex.com.br/ "22 e 25 de agosto de 2028"(지난 행사 문구와 혼재).
+
+## 한국수출입은행 Open API 인증키 발급 절차
+- 기관: 한국수출입은행 / 공공데이터포털(목록 등록)
+- URL: 인증키 발급신청 https://www.koreaexim.go.kr/ir/HPHKIR020M01?apino=2&viewtype=O · 나의 인증키 발급내역 https://www.koreaexim.go.kr/ir/HPHKIR021M01 · Open API 제공목록 https://www.koreaexim.go.kr/ir/HPHKIR019M01 · 공공데이터포털 https://www.data.go.kr/data/3068846/openapi.do (API 유형 LINK, 자동승인 표기, 무료)
+- 조회일: 2026-10-25
+- 적용 범위: README·feature_spec의 KOREAEXIM_API_KEY 발급 안내. 신청서 입력 항목·인코딩/디코딩 키 구분은 본인 인증 이후 화면이라 미확인
+- 사용권: 수출입은행 개인정보 수집 동의(실명인증정보·성명·이메일, 2년 보유) 필요

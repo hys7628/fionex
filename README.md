@@ -51,6 +51,13 @@ SDK 디버그 로그(`OPENAI_LOG`)는 기록 범위를 검증하지 않았으므
 값이 없으면 KOTRA 수집만 "설정 필요"로 표시되고 Google News·ABIT 뉴스는 그대로 동작합니다.
 `.env`에 넣으면 위 ".env 로딩" 방식으로 반영됩니다.
 
+### 한국수출입은행 환경변수
+`KOREAEXIM_API_KEY`: 홈 환율 카드의 USD/KRW(한국수출입은행 현재환율 API, 매매기준율) 조회용 인증키.
+- 실제 값은 `.env`에만 저장합니다. `.env.example`에는 빈 값(`KOREAEXIM_API_KEY=`)만 둡니다.
+- 키는 한국수출입은행 홈페이지(Open API › 현재환율 API › 인증키 발급신청)에서 사람이 직접 발급받습니다.
+- 값이 없으면 USD/KRW만 "설정 필요"로 표시되고 외부 요청을 하지 않습니다.
+- USD/BRL은 인증키 없이 BCB PTAX에서 계속 조회됩니다. BRL/KRW는 USD/KRW가 없으면 계산하지 않습니다.
+
 ### 공통 테스트
 ```
 python -m unittest discover -s tests/test_common -v

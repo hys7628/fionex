@@ -278,3 +278,19 @@ JS 예외 0. 콘솔 오류: favicon 404(기존), 의도적 503 1건.
 
 ### 미검증
 - 실제 사용자 브라우저·기기, 화면낭독기. 일정 자체의 정확성은 출처 문구 기준이며 주최사 문의 등 추가 확인은 하지 않음.
+
+## 2026-10-25 KOREAEXIM_API_KEY 확정·환율 명세 (DEV-HOME-007)
+변경: features/home/fx.py(주석), .env.example, README.md, features/home/feature_spec.md
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| .env 키 존재(이름만) | — | KOREAEXIM_API_KEY 없음 → 실제 USD/KRW 호출 미실행 | 미실행 |
+| .env.example | `KOREAEXIM_API_KEY=` 빈 값, CRLF 유지 | 추가됨, CRLF 12/LF 0 | 통과 |
+| README | 변수명·용도·.env 저장·키 없을 때 동작 안내 | 추가됨 | 통과 |
+| 코드 변수명 | fx.EXIM_KEY_ENV == KOREAEXIM_API_KEY | 일치 | 통과 |
+| 명세·코드 자동 대조(모의 응답, 외부 요청 없음) | endpoint·변수명·URL·캐시 3600/300·역조회 7·상태·오류 코드·refresh·응답 필드 | 10개 항목 모두 일치 | 통과 |
+| 키 없음 응답 | usd_krw not_configured, brl_krw null | 일치 | 통과 |
+| tests/test_home(42) · tests/test_common | OK | OK / OK | 통과 |
+| 앱 import·GET / (FLASK_SKIP_DOTENV=1) | 200 | 200 | 통과 |
+| diff 키 검사 | 실제 키 없음 | 0건(README의 빈 값 안내 문구만 패턴에 걸림) | 통과 |
+외부 호출: 수출입은행·공공데이터포털 공식 페이지 조회만. 환율 API·KOTRA·OpenAI 호출 없음.
+미검증: 실제 키 기반 USD/KRW 응답 전체(키 발급 후 확인 필요).

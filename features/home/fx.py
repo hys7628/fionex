@@ -29,7 +29,7 @@ SOURCES = ("usd_krw", "usd_brl")
 
 # 한국수출입은행 현재환율 API(개발명세 2026-10-25 확인). 비영업일·영업일 11시 이전에는 null 반환.
 EXIM_URL = "https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON"
-EXIM_KEY_ENV = "KOREAEXIM_API_KEY"  # 제안한 이름(미확정). .env.example·README 반영은 공통 합의 후
+EXIM_KEY_ENV = "KOREAEXIM_API_KEY"  # 확정(2026-10-25). 값은 .env에만 두고 코드·로그·화면에 남기지 않습니다.
 EXIM_RESULT_ERRORS = {2: "invalid_response", 3: "access_denied", 4: "rate_limited"}  # RESULT 1 = 성공
 
 # BCB PTAX OData(공식 명세 2026-10-25 확인). 날짜 MM-DD-YYYY, cotacaoVenda = 달러 매도 PTAX(BRL/USD).
