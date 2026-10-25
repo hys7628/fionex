@@ -288,3 +288,24 @@
 - 이미지 로딩 실패 시 대체 안내의 실제 표시(코드·정적 검사만)
 - 이미지 사용권 조건·생성 설정(미확인), 색 대비 실측, pt-BR 검수, 인쇄·PDF 일치, 약 5.9 MB 이미지 로딩 시간
 
+## 2026-10-25 pt-BR 카탈로그 문구 생성 서버 (모의 테스트)
+- 변경 내용: generation.py, prompts/brochure_generate_v1.md, routes.py(generate), test_generate_api.py
+- 환경: Conda jasonenv Python 3.11.17, Flask 3.1.2, openai 3.37.0, pydantic 2.14.1. 실제 OpenAI 호출 없음(MockTransport)
+
+### Claude가 직접 실행한 검증
+- `python -m unittest discover -s tests/test_product_brochure -p test_generate_api.py` → 14개 실행, OK(첫 실행)
+  - 정상: 4쪽 구조(page 1~4), 제품명 입력 표기 보존, used_keys·excluded(empty·unconfirmed)·input_meta, 서버 고정 안내, 소개 문구 가상 전파(+고정 안내), 3·4쪽 출처·가상·고정 가상 안내, 모델 입력에 사용 항목만·메타데이터·제외 항목 없음, 지시문 = 프롬프트 파일, 요청 1회
+  - 선택 항목 전부 없음 → 3·4쪽 items 빈 목록·empty true·빈 상태 문구, 모델 입력 details/supply_keys 빈 목록
+  - review_flags: 입력에 없는 숫자·평가 어휘(new_number·claim_term), 수치 변경(number_not_preserved) 표시만 하고 성공 응답
+  - 입력 오류(외부 호출 0회): 제품명·설명 비어 있음/공백/미확인, 중복·누락·알 수 없는 key, "true"·1·"false"·숫자 value·null value·잘못된 origin, 추가 최상위·항목 필드(필드명이 오류 메시지에 반사되지 않음), 잘못된 JSON·Content-Type·배열 본문·fields 없음, 8개 항목별 길이 초과(경계값은 허용), 본문 32 KiB 초과 413
+  - 출력 오류(요청 1회, 재시도 없음): 제외된 key 참조·빈 source_keys·미제공 3쪽 항목 추가·3쪽 누락·4쪽 중복/누락·다른 쪽 항목·tagline 초과·문단 0/3개·빈 값·라벨 초과 → GENERATE_OUTPUT_INVALID 502, 거절 422·미완료·비JSON·스키마 밖 key → 공통 AI_* 코드
+  - 429·키 없음(503, 요청 0회), 오류 응답·로그에 입력 표지·공급자 원문·가짜 키 없음
+  - 프롬프트 규칙 문구와 출력 상한 숫자가 서버 상수와 일치
+- `python -m unittest discover -s tests/test_product_brochure` → 66개 실행, OK(분석 API·화면·시안·Node 로직 회귀 없음)
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+
+### 미검증
+- 서비스 프롬프트 brochure_generate_v1 실제 실행(실험 미실행): pt-BR 문구 품질·번역 의미·문체, 수치·단위 보존, 근거 없는 주장 발생 여부, 비용·소요 시간
+- review_flags 오탐·미탐 비율(단순 숫자·어휘 검사)
+- 화면 연결(미구현), 생성 결과의 브라우저 표시
+

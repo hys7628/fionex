@@ -1,6 +1,8 @@
 """제품소개서 routes. 화면 패널은 공통 shell(templates/base.html)이 포함합니다.
 
-API: POST /api/product-brochure/analyze (docs/data_contracts.md 접두어 규칙)
+API(docs/data_contracts.md 접두어 규칙):
+- POST /api/product-brochure/analyze  PDF 분석(추출)
+- POST /api/product-brochure/generate  확인된 항목 → pt-BR 카탈로그 문구 초안
 """
 import logging
 
@@ -9,7 +11,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 from common import config
 from common.errors import AIError, PdfTooLargeError
-from features.product_brochure import service
+from features.product_brochure import generation, service
 
 logger = logging.getLogger(__name__)
 
@@ -86,3 +88,28 @@ def analyze():
         # Werkzeug는 500 KB를 넘는 파일 부분을 임시 파일(SpooledTemporaryFile)로 받을 수 있습니다.
         # 요청 종료 시 Flask도 request.close()를 호출하지만, 여기서 먼저 닫아 임시 파일을 정리합니다.
         request.close()
+
+
+@bp.post("/api/product-brochure/generate")
+def generate():
+    # 본문을 읽기 전에 이 요청에만 크기 제한을 적용합니다(다른 탭·앱 설정에는 영향 없음).
+    request.max_content_length = generation.MAX_REQUEST_BYTES
+    try:
+        if not request.is_json:
+            raise generation.GenerateInvalidJsonError()
+        try:
+            payload = request.get_json(silent=True)  # 잘못된 JSON은 None
+        except RequestEntityTooLarge:
+            raise generation.GenerateRequestTooLargeError() from None
+        data = generation.generate_catalog(payload)
+        return jsonify({"ok": True, "data": data})
+    except AIError as err:
+        # 입력 값·생성 결과는 로그에 남기지 않습니다.
+        logger.warning("product_brochure generate 실패: code=%s", err.code)
+        return _error(err)
+    except RequestEntityTooLarge:
+        logger.warning("product_brochure generate 실패: code=%s", generation.GenerateRequestTooLargeError.code)
+        return _error(generation.GenerateRequestTooLargeError())
+    except Exception as exc:
+        logger.error("product_brochure generate 예기치 않은 오류: type=%s", type(exc).__name__)
+        return _error(AIError())

@@ -250,3 +250,23 @@
 - 변경: templates/product_brochure/catalog_preview.html, static/product_brochure.css(시안 섹션 교체), static/product_brochure.js(이미지 실패·로드 처리), feature_spec.md(§20 1차 표기 정리·§20-2), tests/test_product_brochure/test_panel.py(CSS 패턴 전제 검사를 이미지 요구 검사로 교체), docs/worklogs/yu_jeonghyeon/assets.md(이미지 2개)
 - 담당자 판단: 사용자 시각 검토 대기
 - 남은 한계: 시각 검증 미실행, 이미지 사용권 조건·생성 설정 미확인, pt-BR 번역 검수 전, 인쇄·PDF 일치 미검증
+
+## DI-2026_10_25-15 pt-BR 카탈로그 문구 생성 서버(스키마·서비스 프롬프트·API·모의 테스트)
+- 유형: development_instruction(코딩 도구 지시). 서비스 프롬프트 brochure_generate_v1은 작성만 했고 **service_prompt_experiment는 미실행(OpenAI 실제 호출 없음)**
+- 날짜/시간: 2026-10-25 12:04 (Asia/Seoul) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure
+- 도구·모델: Claude Code (Opus 5.5)
+- 사전 확인: HEAD cfdb8c4, 작업 트리 깨끗, 병합 중 아님, develop이 HEAD의 조상. stash@{0} 미조작. 공통 generate_structured(instructions·input_text 문자열·schema, timeout 60초·재시도 0), 기존 service.py(FIELD_KEYS·FieldKey), routes.py(analyze만 존재), 화면 상태(userAdded·userModified·source)를 실제 파일로 확인
+- 지시 요약: 확인·적용된 8개 항목(JSON) → 4페이지용 구조화 pt-BR 문구. 필수 제품명·설명 confirmed, 미확인·빈 선택 항목 제외, 엄격한 형·key 검증, 길이·본문 한도, 출처·가상 보존·전파, 서버 고정 안내, 출력 상한·key 검증, 빈 페이지 상태, 재시도 없음. HTML·CSS·JS·이미지·공통 파일 변경 금지
+- 설계 이유
+  - 입력 8개 key 전부 필수: 화면이 항상 8개를 가지므로 누락을 모호하게 두지 않음
+  - pydantic strict + extra forbid: "true" 문자열 등 느슨한 변환과 원문·지시문 등 추가 필드 차단. 오류 메시지 위치에서 클라이언트가 보낸 필드명은 "?"로 바꿔 반사 방지
+  - 모델 입력에는 사용 항목의 key·라벨·값만. 확인·가상·출처는 서버가 다루므로 모델에 맡기지 않음
+  - 제품명은 AI가 만들지 않고 입력 그대로, 가상 표시는 source_keys의 입력 virtual로 서버 계산·전파, 비공식·가상 안내는 서버 고정 문구
+  - 3·4쪽은 사용한 key 집합과 정확히 같아야 함(미제공 항목 추가·중복·누락·다른 쪽 항목 거부), 빈 경우 서버가 빈 상태 문구 제공
+  - 출력 상한은 프롬프트와 같은 값으로 서버가 검증하고 위반 시 실패(자르지 않음)
+  - 숫자·평가 어휘는 review_flags로 표시만(번역 시 1,000/1.000 등 표기 차이로 오탐 가능해 거부 기준으로 쓰지 않음). 정확성 보장 아님
+- 할루시네이션 제어: 프롬프트(입력 외 정보·인증·수치·가격·원산지·평가 표현 금지, 입력 속 지시 무시, 짧게) + 입력 축소(사용 항목만) + 출력 key 집합 검증 + 제품명 서버 고정 + 서버 계산 가상 표시 + review_flags + 사람 검토 상태(draft_needs_review)
+- 실제 실패와 수정: 이번 작업 중 테스트 실패 없음(신규 14개 첫 실행 통과)
+- 변경: features/product_brochure/generation.py(신규), prompts/brochure_generate_v1.md(신규), routes.py(generate 라우트), feature_spec.md(§13 메모·§21), tests/test_product_brochure/test_generate_api.py(신규)
+- 담당자 판단: 검토 대기
+- 남은 한계: 화면 연결·문구 수정 UI 미구현, 실제 생성 품질·번역 의미·수치 보존 실제 비율·비용·시간 미검증, 무저장 구조라 확인 이력 서버 인증 불가

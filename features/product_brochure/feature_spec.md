@@ -168,6 +168,7 @@
 - 접두어는 `/api/product-brochure`(docs/data_contracts.md).
 - [확정, 구현] 분석: `POST /api/product-brochure/analyze`(§18).
 - [제안] 생성·PDF 출력은 별도 요청으로 둔다. 경로·스키마는 [미정].
+  (2026-10-25: 문구 생성 `POST /api/product-brochure/generate` 구현, §21. PDF 출력은 [미정·미구현])
 
 ## 14. 자료 출처
 - [확정] 실제 보유 자료 없음. 추후 한국어 더미 제품 자료 제작.
@@ -367,3 +368,73 @@ PDF 선택
 - 제작 안내(예시 문구 여부, 미제공 항목 처리, 연락처 표시 조건, 크롭 사실, 인쇄 일치 미검증)는 대화상자의 "시안 제작 메모"(`<details>`)로 이동. 가상·비공식 안내는 문서 안에 유지.
 - 실제 생성 시 3쪽 상세 항목은 사용자 확인 값이 있을 때만 추가하고 없으면 상태 안내만 둔다 [제안].
 - 검증: 이미지 정적 URL 200·image/png·PNG 서명, 렌더링 HTML의 4쪽·안내·이미지 src/alt·대체 안내·제작 안내 미포함, JS 문법, 기존 테스트 회귀. **시각 검증(이미지 로딩 후 넓은·좁은 화면, 넘침, 크롭 품질)은 브라우저 도구가 없어 미실행.**
+
+## 21. pt-BR 카탈로그 문구 생성 서버 (2026-10-25, 모의 테스트만)
+범위 [확정, 담당자 지시]: 입력·출력 스키마, 서비스 프롬프트 `prompts/brochure_generate_v1.md`, `POST /api/product-brochure/generate`, 모의 테스트.
+**미구현**: 화면 연결, 생성 문구 수정 UI, 이미지 생성, PDF 출력. PDF 원본 재전송·분석 재실행 없음. 공통 `generate_structured` 재사용(timeout 60초·재시도 0·store=False, 추가 재시도 없음).
+코드: `features/product_brochure/generation.py`, 라우트 `routes.py`.
+
+요청(`Content-Type: application/json`, 본문 전체 ≤ 32 KiB)
+```json
+{"fields": [
+  {"key": "product_name", "value": "regen T2T (teste)", "confirmed": true, "virtual": false, "origin": "extracted"},
+  {"key": "description", "value": "…", "confirmed": true, "virtual": false, "origin": "extracted"},
+  {"key": "yarn_spec", "value": "75D/36F", "confirmed": true, "virtual": true, "origin": "user_added"},
+  {"key": "carbon_reduction", "value": "", "confirmed": false, "virtual": false, "origin": "extracted"},
+  {"key": "certification", "value": "GRS (가상)", "confirmed": false, "virtual": false, "origin": "extracted"},
+  {"key": "moq", "value": "500 kg", "confirmed": true, "virtual": true, "origin": "extracted"},
+  {"key": "sample", "value": "1 kg", "confirmed": true, "virtual": true, "origin": "user_modified"},
+  {"key": "lead_time", "value": "30일", "confirmed": true, "virtual": true, "origin": "extracted"}
+]}
+```
+- `fields`는 8개 key가 각각 정확히 1번(누락 `GENERATE_MISSING_KEY`, 중복 `GENERATE_DUPLICATE_KEY`). 알 수 없는 key·필드, 다른 최상위 필드(원문 PDF·발췌·지시문·모델명 등) 거부.
+- 형은 엄격: `value` 문자열, `confirmed`·`virtual` boolean(`"true"`·`1` 등 변환 없음), `origin`은 `extracted`(문서 추출)·`user_modified`·`user_added`. 위반은 `GENERATE_INVALID_INPUT`(오류 메시지에는 구조 위치만, 클라이언트가 보낸 필드명·값은 넣지 않음).
+- 필수: product_name·description이 공백이 아니고 `confirmed: true`. 아니면 `GENERATE_REQUIRED_MISSING`(AI 호출 없음).
+- 선택 6개: `confirmed: true`이면서 값이 있을 때만 사용. 미확인·빈 항목은 모델에 보내지 않고 `excluded`(reason `unconfirmed`/`empty`)로 반환.
+- 길이 한도(구현 한도, 넘으면 자르지 않고 `GENERATE_FIELD_TOO_LONG`): product_name 120자, description 1500자, yarn_spec·certification·carbon_reduction 300자, moq·sample·lead_time 200자.
+  근거: 제품명은 한 줄, 설명은 소개 문단 1~2개 분량, 규격·공급 조건은 한 항목 표기로 충분하다는 보수적 추정. 본문 32 KiB는 위 한도의 UTF-8 최대(약 12 KiB)와 JSON 여유를 합친 값. 실사용 후 조정.
+- 잘못된 JSON·Content-Type은 `GENERATE_INVALID_JSON`(400), 본문 초과는 `GENERATE_REQUEST_TOO_LARGE`(413). 요청별 제한만 적용하며 앱 전역 설정·다른 기능에 영향 없음.
+- 한계: 서버는 저장하지 않으므로 이전 분석 결과와 대조할 수 없다. `confirmed`·`virtual`·`origin`은 형식만 검증해 그대로 보존하며, **서버가 사용자 확인 이력을 인증하지 않는다**. 사용자 확인은 사실 검증·공식 사양 인증이 아니다.
+
+모델 입력: 사용 항목의 `key`·한국어 라벨·값과 `details_keys`·`supply_keys`만 JSON 데이터로 전달(확인·가상·출처 메타데이터, 제외 항목은 보내지 않음). 값 안의 지시는 따르지 않도록 프롬프트에 명시.
+
+응답 `{"ok": true, "data": {...}}`
+```json
+{
+  "status": "draft_needs_review", "language": "pt-BR", "prompt_version": "brochure_generate_v1", "model": "응답 모델명",
+  "notices": {"unofficial": "Material demonstrativo — não é um catálogo oficial.", "fictitious": "Condições fictícias para demonstração."},
+  "pages": {
+    "cover": {"page": 1,
+      "product_name": {"text": "regen T2T (teste)", "source_keys": ["product_name"], "virtual": false, "origins": {"product_name": "extracted"}, "review_flags": []},
+      "tagline": {"text": "…", "source_keys": ["product_name", "description"], "virtual": false, "origins": {…}, "review_flags": []}},
+    "intro": {"page": 2, "paragraphs": [{"text": "…", "source_keys": ["description", "moq"], "virtual": true,
+      "origins": {…}, "review_flags": [], "fictitious_notice": "Inclui informações fictícias para demonstração."}]},
+    "details": {"page": 3, "items": [{"key": "yarn_spec", "label": "Especificação do fio", "value": "75D/36F", "source_keys": ["yarn_spec"],
+      "virtual": true, "origin": "user_added", "review_flags": [], "fictitious_notice": "Condições fictícias para demonstração."}],
+      "empty": false, "empty_message": null},
+    "supply": {"page": 4, "items": [{"key": "moq", "label": "Pedido mínimo (MOQ)", "value": "500 kg", …}, …], "empty": false, "empty_message": null}
+  },
+  "used_keys": ["product_name", "description", "yarn_spec", "moq", "sample", "lead_time"],
+  "excluded": [{"key": "carbon_reduction", "reason": "empty"}, {"key": "certification", "reason": "unconfirmed"}],
+  "input_meta": {"moq": {"confirmed": true, "virtual": true, "origin": "extracted"}, …}
+}
+```
+- 제품명은 AI가 만들지 않고 입력 표기 그대로. AI는 tagline·소개 문단·3/4쪽 라벨·값 번역만 생성(순수 텍스트, HTML·CSS 없음).
+- 3·4쪽에 쓸 항목이 없으면 `items: []`, `empty: true`, `empty_message`("Informações técnicas a confirmar." / "Condições de fornecimento a confirmar."). 고정 템플릿이 빈 상태를 표시하며 AI가 내용을 늘리지 않음.
+- 가상 여부는 AI 판단이 아니라 연결된 입력의 `virtual`로 서버가 계산(소개 문구도 하나라도 가상 입력을 쓰면 `virtual: true` + 고정 안내). 비공식·가상 안내 문구는 서버 고정값.
+- `source_keys`는 추적 정보이며 내용의 사실 정확성을 보증하지 않는다.
+
+출력 상한(프롬프트와 서버 검증 동일, 위반 시 잘라서 성공 처리하지 않고 `GENERATE_OUTPUT_INVALID` 502)
+- tagline 140자, 소개 문단 1~2개·각 600자, 3쪽·4쪽 라벨 40자, 3쪽 값 300자, 4쪽 값 200자, 빈 문자열 불가.
+- 3쪽은 사용한 details key만 각 1번(미제공 항목 추가·중복·누락·다른 쪽 항목 거부), 4쪽도 같음. `source_keys`는 비어 있지 않고 사용한 key만.
+- 사용자 검토 표시(`review_flags`, 거부하지 않음): `new_number`(입력에 없는 숫자), `number_not_preserved`(입력 수치가 출력에 안 보임), `claim_term`(sustentável·ecológico·certificado·alto desempenho 등 평가 표현).
+  단순 숫자·어휘 검사이며 번역 의미·사실 정확성·단위 보존을 보장하지 않는다.
+
+오류: 공통 계약 `{"ok": false, "error": {"code", "message"}}`. 위 `GENERATE_*` + 공통 `AI_*`(설정 누락·인증·호출 제한·시간 초과·거절·미완료·출력 형식). 로그에는 오류 code만(입력 값·생성 결과 미기록).
+
+화면 연결 시 주의 [후속]
+- "확인 내용 적용" 시점의 항목으로 요청. 화면 상태 → `origin`: `userAdded` → `user_added`, `userModified` → `user_modified`, 그 외 `extracted`.
+- **개발용 예시 데이터는 문서 추출이 아니므로 `extracted`로 보내지 않는다**(예시로는 생성하지 않거나 별도 정책 필요 [미정]).
+- 생성 결과는 재요청 비용이 있어 `setDraft`로 보호, PDF 다운로드 전까지 `setResult`는 [미정]. `review_flags`와 가상 안내를 화면에 표시.
+
+미검증: 실제 OpenAI 호출로 프롬프트 v1 실행(서비스 프롬프트 실험 미실행), pt-BR 문구 품질·번역 의미, 수치·단위 보존 실제 비율, 할루시네이션 발생 여부, 비용·소요 시간.
