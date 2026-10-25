@@ -15,3 +15,6 @@ pypdf==6.21.2
 # 설치 시 pillow, charset-normalizer가 함께 설치된다. 글꼴은 features/market_analysis/fonts(Noto Sans KR, OFL).
 # 공통 PDF 입력 검사(pypdf)와는 별개 기능이다.
 reportlab==5.1.0
+# .env 자동 로드(Flask app.run·flask run이 설치돼 있으면 실행 위치에서 상위 방향으로 찾은 .env를 읽음, 이미 설정된 환경변수 우선).
+# 2026-10-26 담당자(한윤수) 추가. BSD-3-Clause, Python 3.11 지원. 앱 코드는 .env를 직접 읽지 않는다.
+python-dotenv==1.2.4
