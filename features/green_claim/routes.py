@@ -1,16 +1,16 @@
 """그린 클레임 체크 routes. 화면 패널은 공통 shell(templates/base.html)이 포함합니다.
 
 API는 /api/green-claim 접두어를 사용합니다(docs/data_contracts.md). 요청·응답만 다루고 처리는 service.py(일반 추출)·
-ocr_service.py(AI 판독)·review_service.py(문구 검수)가 합니다.
+ocr_service.py(AI 판독)·review_service.py(문구 검수)·report_service.py(검수 결과 PDF)가 합니다.
 """
 import io
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.formparser import FormDataParser
 
 from common.errors import AIError
-from features.green_claim import ocr_service, review_service, service
+from features.green_claim import ocr_service, report_service, review_service, service
 
 bp = Blueprint(
     "green_claim",
@@ -86,6 +86,33 @@ def review_text():
     except Exception:
         # 예외 원문·경로·문구를 응답·로그에 넣지 않고 공통 기본 오류의 고정 문장만 돌려줍니다.
         return _fail(AIError())
+
+
+@bp.post("/api/green-claim/report")
+def review_report():
+    """화면이 보관한 마지막 유효 검수 결과 → PDF 보고서(attachment). 검수·공식 확인을 다시 하지 않습니다(report_service)."""
+    if request.mimetype != "application/json":
+        return _error("REPORT_JSON_INVALID")
+    if request.content_length is not None and request.content_length > report_service.MAX_REQUEST_BYTES:
+        return _error("REPORT_REQUEST_TOO_LARGE")
+    request.max_content_length = report_service.MAX_REQUEST_BYTES
+    try:
+        raw = request.get_data(cache=False)
+    except RequestEntityTooLarge:
+        return _error("REPORT_REQUEST_TOO_LARGE")
+    try:
+        pdf = report_service.build_report(raw)
+    except service.ExtractError as err:
+        return _fail(err)
+    except Exception:
+        # 예외 원문·경로·문구를 응답·로그에 넣지 않습니다.
+        return _error("REPORT_FAILED")
+    response = Response(pdf, status=200, mimetype="application/pdf")
+    response.headers["Content-Disposition"] = f'attachment; filename="{report_service.REPORT_FILENAME}"'
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 def _handle_upload(process):

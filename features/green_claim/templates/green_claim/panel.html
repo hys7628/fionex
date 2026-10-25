@@ -1,5 +1,5 @@
 {# 그린 클레임 체크 작업 영역. 문구 직접 입력 + 일반 PDF·Word(.docx) 글자 추출 + PDF·이미지(JPG·JPEG·PNG) AI 글자 판독(사용자 선택)·확인·수정
-   + 그린워싱 표현 위험 검수 실행·결과 표시(feature_spec.md "검수 실행·결과 화면"). 결과 PDF는 아직 연결되지 않았습니다.
+   + 그린워싱 표현 위험 검수 실행·결과 표시(feature_spec.md "검수 실행·결과 화면") + 검수 결과 PDF 보고서 다운로드("검수 결과 PDF 다운로드").
    검수 결과는 제공 근거 범위의 표현 스크리닝이며 법적 적합성 보장이 아닙니다(docs/data_contracts.md). #}
 <div class="workspace">
   <form class="card" aria-labelledby="green_claim-input-title" autocomplete="off" novalidate>
@@ -132,10 +132,11 @@
         <p class="card-description">문구별 검토 의견·관련 브라질 기준·수정 방향입니다. 표현 위험 스크리닝이며 적법성·사실·인증을 보장하지 않습니다.</p>
       </div>
       <div class="green-claim-header-action">
-        <button type="button" class="btn btn-secondary" disabled aria-describedby="green_claim-pdf-pending">PDF 다운로드</button>
-        <span class="field-hint" id="green_claim-pdf-pending">PDF 다운로드 연결 준비 중</span>
+        <button type="button" class="btn btn-secondary" id="green_claim-pdf" disabled aria-describedby="green_claim-pdf-pending">PDF 다운로드</button>
+        <span class="field-hint green-claim-extract-status" id="green_claim-pdf-pending" role="status">검수 결과가 있을 때 내려받을 수 있습니다.</span>
       </div>
     </div>
+    <div id="green_claim-pdf-message" aria-live="polite"></div>
     <div class="empty-state" id="green_claim-review-empty">
       <p class="empty-state-title">아직 결과가 없습니다</p>
       <p>문구를 확인한 뒤 '검수 실행'을 누르면 결과가 이곳에 표시됩니다.</p>

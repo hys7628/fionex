@@ -123,3 +123,15 @@
 |---|---|---|
 | 검수 응답 계약 | features/green_claim/review_service.py run_review_request, criteria_check.py 상태값, service.py 오류 문장 | 2026-10-26 로컬 코드 읽기 전용 확인. 화면 표시 값의 출처(공식 링크·조항·발췌·번역)는 서버가 기준 묶음에서 붙인 값이며 화면은 새 출처를 만들지 않음 |
 | 공통 화면 규칙 | docs/design_system.md, static/js/app_shell.js·leave_guard.js | 읽기 전용 확인(수정 없음) |
+
+## 2026-10-26 검수 결과 PDF 도구·글꼴 출처 (DEV-2026_10_26-05)
+| 자료 | 위치 | 조회일 | 확인 내용 | 적용 |
+|---|---|---|---|---|
+| ReportLab PyPI JSON | https://pypi.org/pypi/reportlab/5.1.0/json | 2026-10-26 | 5.1.0, 업로드 2026-10-22, requires_python <4,>=3.9, 분류자 Python 3.11, 라이선스 "BSD license(license.txt), Copyright (c) 2000-2025 ReportLab Inc.", 필수 의존성 pillow>=9.0.0·charset-normalizer(그 밖은 extra) | 설치·requirements.txt |
+| ReportLab 릴리스 목록 | https://pypi.org/project/reportlab/#history | 2026-10-26 | 5.1.0(2026-10-22)·5.0.1(2026-08-20)·5.0.0(2026-06-18) 등 | 버전 선택(최신 안정판). 5.x 변경 내역 문서는 docs.reportlab.com이 403이라 확인하지 못함 |
+| charset-normalizer PyPI JSON | https://pypi.org/pypi/charset-normalizer/3.5.2/json | 2026-10-26 | 3.5.2, requires_python >=3.7, MIT, 의존성 없음 | 필수 하위 의존성 기록 |
+| 나눔고딕(Google Fonts 공식 저장소) | https://github.com/google/fonts/tree/main/ofl/nanumgothic (main e7db6ca603fd4862010383ff17ffd6cc4ffac1c0) | 2026-10-26 | METADATA.pb: OFL, Copyright 2010 NHN Corporation, 디자인 Sandoll. OFL.txt(SIL OFL 1.1) | fonts/에 원본 그대로 보관 |
+| IBM Plex Sans KR(Google Fonts 공식 저장소) | https://github.com/google/fonts/tree/main/ofl/ibmplexsanskr | 2026-10-26 | OFL, 정적 TTF. 포르투갈어 악센트 없음 확인 | 사용 안 함 |
+| Noto Sans KR(Google Fonts 공식 저장소) | https://github.com/google/fonts/tree/main/ofl/notosanskr | 2026-10-26 | NotoSansKR[wght].ttf 가변 글꼴 1개만 | 사용 안 함 |
+| Bitstream Vera | 설치된 reportlab 5.1.0의 reportlab/fonts/Vera.ttf·VeraBd.ttf·bitstream-vera-license.txt | 2026-10-26 | 라이선스: 복제·배포 허용, 다른 소프트웨어와 묶음 배포·판매 가능, 글꼴만 단독 판매 불가, 수정 시 이름 변경 | 라틴 문자 글꼴(저장소에 복사하지 않음) |
+- 실제 검수·기준 갱신·유료 API 호출 없음. 공식 기준(CDC·CONAR) 사이트 조회 없음.

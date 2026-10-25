@@ -93,3 +93,19 @@
 | 2026-10-26 | 모의 결과 화면 캡처(1440px·390px) | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/c1b73469-0709-47ec-9be6-9389670902ea/scratchpad/review_desktop_1440.png, review_mobile_390.png | 헤드리스 Chrome CDP 캡처 | validation DEV-2026_10_26-04 | 가상 문구·가짜 응답 화면(실제 검수 결과 아님). 저장소에 넣지 않음 |
 | 2026-10-26 | 검수 화면 확인 스크립트·외부 통신 차단 서버 실행 파일 | 같은 폴더 tools/cdp_check_review_flow.mjs, net_guard.py, real_server.py | 직접 작성 | 같음 | 저장소에 넣지 않음 |
 | 2026-10-26 | 회귀 스크립트·모의 판독 서버 복사본 | 같은 폴더 tools/cdp_check_{green_claim,pdf_flow,word_flow,ocr_flow,image_flow}.mjs, mock_ocr_server.py, mock_image_ocr_server.py (원본: 세션 010a049a… scratchpad/tools, 원본은 수정하지 않음) | 복사 후 검수 버튼 기대값·차단 장치만 수정 | 같음 | 공개·가상 fixture만 사용(같은 원본 세션 fixtures 복사) |
+
+## 2026-10-26 검수 결과 PDF 글꼴·견본 (DEV-2026_10_26-05)
+| 날짜 | 종류 | 경로 | 생성 도구 | 관련 기록 | 사용권·검토 상태 |
+|---|---|---|---|---|---|
+| 2026-10-26 | 글꼴 나눔고딕 Regular·Bold(3.020) | features/green_claim/fonts/NanumGothic-Regular.ttf, NanumGothic-Bold.ttf | Google Fonts 공식 저장소 원본 그대로(SHA-256은 fonts/README.md) | sources DEV-2026_10_26-05 | SIL OFL 1.1, fsType 0(임베딩 허용), 라이선스 원문 fonts/NanumGothic-OFL.txt |
+| 2026-10-26 | 글꼴 출처·해시 안내 | features/green_claim/fonts/README.md | 직접 작성 | 같음 | - |
+| 2026-10-26 | 라틴 글꼴 Bitstream Vera | 설치된 reportlab 패키지 안(reportlab/fonts) | reportlab 5.1.0 포함 | 같음 | Bitstream Vera 라이선스(묶음 재배포 허용). 저장소에 복사하지 않음 |
+| 2026-10-26 | 가상 보고서 PDF 견본(혼합 7쪽·항목 0개 3쪽·긴 보고서 109쪽·브라우저 다운로드본) | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/c1b73469-0709-47ec-9be6-9389670902ea/scratchpad/report_pdfs/ | report_service.build_report(가짜 AI로 만든 가상 검수 결과) | validation DEV-2026_10_26-05 | 실제 검수 결과 아님. 저장소에 넣지 않음 |
+| 2026-10-26 | 렌더링 캡처 | 같은 폴더 report_shots/(sample_mixed_p001~p007, sample_empty_p001~p003, sample_long 일부 쪽) | Chrome 헤드리스 PDF 뷰어 | 같음 | 가상 결과 화면 |
+| 2026-10-26 | 검증 스크립트 | 같은 폴더 tools/cdp_check_report_flow.mjs, cdp_render_pdf_pages.mjs, make_report_samples.py, make_review_fixtures.py, review_fixtures.json(가상 검수 응답) | 직접 작성 | 같음 | 저장소에 넣지 않음 |
+- 비교용으로 내려받은 IBM Plex Sans KR·나눔고딕 원본은 같은 임시 폴더 font_dl_plexkr/·font_dl_nanum/에만 있음(저장소 미포함).
+
+## 2026-10-26 후속: 긴 보고서 전 쪽 캡처 (DEV-2026_10_26-05 후속)
+| 날짜 | 종류 | 경로 | 생성 도구 | 관련 기록 | 사용권·검토 상태 |
+|---|---|---|---|---|---|
+| 2026-10-26 | 긴 보고서 109쪽 캡처·2×2 모음 28장 | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/c1b73469-0709-47ec-9be6-9389670902ea/scratchpad/report_shots_long/ | Chrome 헤드리스 PDF 뷰어, Pillow로 모음 | validation DEV-2026_10_26-05 후속 | 가상 결과 화면, 저장소에 넣지 않음 |

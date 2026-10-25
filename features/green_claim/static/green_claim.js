@@ -564,11 +564,22 @@
   const itemsEl = byId("green_claim-review-items");
   const criteriaEl = byId("green_claim-review-criteria");
 
+  // 검수 결과 PDF: 서버 생성 최대 30초 + 여유(feature_spec.md "검수 결과 PDF 다운로드")
+  const REPORT_URL = "/api/green-claim/report";
+  const REPORT_TIMEOUT_MS = 45000;
+  const REPORT_FILENAME = "green_claim_review_report.pdf";
+  const pdfButton = byId("green_claim-pdf");
+  const pdfHint = byId("green_claim-pdf-pending");
+  const pdfMessageEl = byId("green_claim-pdf-message");
+
   let reviewSeq = 0;            // 가장 최근 검수 요청 번호. 다른 번호의 응답은 반영하지 않습니다.
   let reviewController = null;
   let reviewRunning = null;     // 진행 중 요청 정보 {seq, mode, text}
-  let reviewResult = null;      // 마지막 성공 결과 {data, mode, at}
+  let reviewResult = null;      // 마지막 성공 결과 {data, mode, at, displayedAt}
   let reviewStale = false;      // 마지막 성공 결과가 현재 입력의 결과가 아닌지(한 번 true면 되돌리지 않음)
+  let pdfSeq = 0;               // 가장 최근 PDF 요청 번호. 다른 번호의 응답은 반영하지 않습니다.
+  let pdfController = null;
+  let pdfRunning = false;
 
   function currentMode() {
     const checked = modeRadios.find(function (r) { return r.checked; });
@@ -593,7 +604,7 @@
   }
 
   function setReviewBusy(on) {
-    reviewButton.disabled = on;
+    reviewButton.disabled = on || pdfRunning;
     resultCard.setAttribute("aria-busy", on ? "true" : "false");
     reviewStatusEl.replaceChildren();
     if (on) {
@@ -601,9 +612,40 @@
       spinner.setAttribute("aria-hidden", "true");
       reviewStatusEl.append(spinner, REVIEW_BUSY_TEXT);
     }
+    updatePdfState();
   }
 
-  // 결과 유효 여부를 화면·공통 작업 상태에 반영합니다(PDF가 없어 다운로드 요청 상태는 만들지 않음).
+  function showPdfMessage(type, title, text) {
+    pdfMessageEl.replaceChildren();
+    if (!title) return;
+    const box = el("div", "notice notice-" + type);
+    box.setAttribute("role", type === "danger" ? "alert" : "status");
+    box.append(el("p", "notice-title", title));
+    if (text) box.append(el("p", null, text));
+    pdfMessageEl.append(box);
+  }
+
+  // PDF 버튼은 현재 입력에 대한 유효 결과가 있고 검수·다운로드가 진행 중이 아닐 때만 활성
+  function updatePdfState() {
+    const valid = !!reviewResult && !reviewStale;
+    pdfButton.disabled = !valid || !!reviewRunning || pdfRunning;
+    pdfHint.replaceChildren();
+    if (pdfRunning) {
+      const spinner = el("span", "spinner");
+      spinner.setAttribute("aria-hidden", "true");
+      pdfHint.append(spinner, " PDF 보고서를 만드는 중입니다. 최대 30초 걸릴 수 있습니다.");
+    } else if (!reviewResult) {
+      pdfHint.textContent = "검수 결과가 있을 때 내려받을 수 있습니다.";
+    } else if (reviewStale) {
+      pdfHint.textContent = "입력이 바뀌어 다시 검수해야 내려받을 수 있습니다.";
+    } else if (reviewRunning) {
+      pdfHint.textContent = "검수 중에는 내려받을 수 없습니다.";
+    } else {
+      pdfHint.textContent = "현재 결과를 PDF 보고서로 내려받습니다(다시 검수하지 않음).";
+    }
+  }
+
+  // 결과 유효 여부를 화면·공통 작업 상태에 반영합니다. 다운로드 요청 상태는 PDF 다운로드 때만 AppShell이 바꿉니다.
   function syncResultState() {
     const valid = !!reviewResult && !reviewStale;
     staleEl.hidden = !(reviewResult && reviewStale);
@@ -612,6 +654,18 @@
         + " · " + (reviewResult.mode === "file" ? "파일 추출·판독 문구" : "직접 입력 문구");
     resultLabelEl.dataset.state = reviewStale ? "stale" : "valid";
     AppShell.work.setResult(FEATURE_ID, valid);
+    showPdfMessage(null);  // 이전 결과에 대한 다운로드 안내를 새 상태에 남기지 않음
+    updatePdfState();
+  }
+
+  function cancelPdf(title) {
+    pdfSeq += 1;
+    if (pdfController) pdfController.abort();
+    pdfController = null;
+    pdfRunning = false;
+    reviewButton.disabled = !!reviewRunning;
+    updatePdfState();
+    showPdfMessage("info", title, "파일 저장을 요청하지 않았습니다. 다시 검수한 뒤 내려받아 주세요.");
   }
 
   function cancelReview(title) {
@@ -637,6 +691,8 @@
     if (reviewResult && !reviewStale && affects(reviewResult.mode)) {
       reviewStale = true;
       syncResultState();
+      // 다운로드 중 결과가 무효가 되면 늦은 응답으로 파일 저장을 요청하지 않음
+      if (pdfRunning) cancelPdf("입력이 바뀌어 PDF 다운로드를 취소했습니다");
     }
   }
 
@@ -931,10 +987,18 @@
     sourceBox.hidden = false;
   }
 
-  function nowLabel() {
-    const d = new Date();
-    const pad = function (n) { return String(n).padStart(2, "0"); };
+  const pad = function (n) { return String(n).padStart(2, "0"); };
+
+  function nowLabel(d) {
     return pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  }
+
+  // 이 컴퓨터 시계·시간대 기준 ISO 8601(예: 2026-10-26T10:00:05+09:00). PDF에는 "서버 확인 아님"으로 표시됩니다.
+  function localIso(d) {
+    const offset = -d.getTimezoneOffset();
+    const abs = Math.abs(offset);
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + nowLabel(d)
+      + (offset >= 0 ? "+" : "-") + pad(Math.floor(abs / 60)) + ":" + pad(abs % 60);
   }
 
   async function runReview() {
@@ -979,7 +1043,8 @@
       } else if (!looksLikeResult(body.data)) {
         showReviewMessage("danger", "결과 표시 오류", "검수 결과 형식을 표시할 수 없습니다. 다시 실행해 주세요." + previous);
       } else {
-        reviewResult = { data: body.data, mode: mode, at: nowLabel() };
+        const received = new Date();
+        reviewResult = { data: body.data, mode: mode, at: nowLabel(received), displayedAt: localIso(received) };
         reviewStale = false;
         renderReview(body.data);
         syncResultState();
@@ -1002,6 +1067,70 @@
   }
 
   reviewButton.addEventListener("click", runReview);
+
+  /* ---------- 검수 결과 PDF 다운로드: 화면에 있는 마지막 유효 결과를 보냄(검수 API를 다시 부르지 않음) ---------- */
+  async function startsWithPdf(blob) {
+    const head = new Uint8Array(await blob.slice(0, 5).arrayBuffer());
+    return blob.size > 0 && String.fromCharCode.apply(null, Array.from(head)) === "%PDF-";
+  }
+
+  async function downloadPdf() {
+    if (pdfRunning || reviewRunning || !reviewResult || reviewStale) return;  // 중복 실행·무효 결과 차단
+    const target = reviewResult;
+    const seq = ++pdfSeq;
+    pdfController = new AbortController();
+    const localController = pdfController;
+    let timedOut = false;
+    const timer = setTimeout(function () { timedOut = true; localController.abort(); }, REPORT_TIMEOUT_MS);
+    pdfRunning = true;
+    reviewButton.disabled = true;
+    showPdfMessage(null);
+    updatePdfState();
+    const retry = " 검수 결과와 입력은 그대로이며 다시 시도할 수 있습니다.";
+    try {
+      const res = await fetch(REPORT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ review: target.data, input_mode: target.mode, displayed_at: target.displayedAt }),
+        signal: localController.signal,
+      });
+      const type = res.headers.get("Content-Type") || "";
+      if (res.ok && type.indexOf("application/pdf") === 0) {
+        const blob = await res.blob();
+        const isPdf = await startsWithPdf(blob);
+        if (seq !== pdfSeq || reviewResult !== target || reviewStale) return;  // 취소됐거나 그사이 결과가 바뀜
+        if (!isPdf) {
+          showPdfMessage("danger", "PDF 다운로드에 실패했습니다", "받은 파일이 PDF 형식이 아닙니다." + retry);
+          return;
+        }
+        // 브라우저에 저장을 요청한 시점까지만 확인할 수 있습니다(실제 저장 완료는 확인 불가).
+        AppShell.work.downloadBlob(FEATURE_ID, blob, REPORT_FILENAME);
+        showPdfMessage("success", "브라우저에 PDF 다운로드를 요청했습니다",
+          "실제 저장 여부는 브라우저의 다운로드 목록에서 확인해 주세요. 검수 결과는 화면에 그대로 있습니다.");
+      } else {
+        let body = null;
+        try { body = await res.json(); } catch (err) { body = null; }
+        if (seq !== pdfSeq) return;
+        const message = body && body.ok === false && body.error ? body.error.message : "서버 응답을 읽지 못했습니다.";
+        showPdfMessage("danger", "PDF 다운로드에 실패했습니다", message + retry);
+      }
+    } catch (err) {
+      if (seq !== pdfSeq) return;
+      showPdfMessage("danger", "PDF 다운로드에 실패했습니다",
+        (timedOut ? "응답이 45초 안에 오지 않아 기다림을 멈췄습니다." : "서버에 연결하지 못했습니다.") + retry);
+    } finally {
+      clearTimeout(timer);
+      if (seq === pdfSeq) {
+        pdfRunning = false;
+        pdfController = null;
+        reviewButton.disabled = !!reviewRunning;
+        updatePdfState();
+      }
+    }
+  }
+
+  pdfButton.addEventListener("click", downloadPdf);
+  updatePdfState();
 
   // 입력 작성 상태와 이탈 경고는 공통 shell의 자동 감지와 setResult가 처리합니다(중복 구현 없음).
   // 탭 재방문 시 추출·판독·검수를 다시 실행하지 않고 결과를 무효화하지 않습니다.

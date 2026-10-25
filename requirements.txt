@@ -18,3 +18,7 @@ python-docx==1.2.0
 # 그린 클레임 이미지(JPG·JPEG·PNG) AI 판독의 실제 디코딩 검사·판독용 사본(투명 합성·EXIF 방향·메타데이터 제거) 생성(features/green_claim).
 # 담당자 승인 후 jasonenv에 설치, pip check 정상(2026-10-25). 필수 하위 의존성 없음. MIT-CMU. 실제 OpenAI 판독은 미검증.
 pillow==13.0.0
+# 그린 클레임 검수 결과 PDF 보고서 생성(features/green_claim report_worker.py). 담당자 승인 후 jasonenv(Python 3.11.17)에 설치, pip check 정상(2026-10-26). BSD.
+# 필수 하위 의존성 charset-normalizer 3.5.2(MIT)가 함께 설치되었다. pillow는 기존 13.0.0 유지(reportlab 요구 pillow>=9.0.0).
+# 라틴 문자는 reportlab에 포함된 Bitstream Vera, 한글은 features/green_claim/fonts의 나눔고딕(OFL)을 쓴다(시스템 글꼴 불필요).
+reportlab==5.1.0
