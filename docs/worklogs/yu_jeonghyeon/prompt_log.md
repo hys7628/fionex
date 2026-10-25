@@ -167,3 +167,47 @@
 - 서비스 프롬프트 실험: 미실행(실제 PDF로 v1 실행·결과 대조 없음) / OpenAI 실제 호출: 없음
 - 담당자 판단: 검토 대기
 - 남은 한계: 화면 연결 미구현, 실제 텍스트·스캔 PDF 추출 품질·할루시네이션 발생률·비용·시간 미검증, 근거 원문 대조 미구현
+
+## DI-2026_10_25-11 제품소개서 화면과 PDF 분석 API 연결
+- 유형: development_instruction / 서비스 프롬프트 실험: 미실행(OpenAI 호출 없음)
+- 날짜/시간: 2026-10-25 10:55 (Asia/Seoul) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure
+- 도구·모델: Claude Code (Opus 5.5)
+- 사전 확인: HEAD 0800d51, 작업 트리 깨끗, 병합 중 아님, develop이 HEAD의 조상. stash@{0} 미조작. panel.html·JS·CSS·분석 API 응답 스키마·AppShell.work(app_shell.js) 실제 코드를 다시 읽음
+- 지시 요약: PDF 선택 → 분석 요청 → 결과 확인·수정 연결. 10 MiB 화면 검사, 유효 PDF일 때만 분석 버튼, FormData source_file 1개 POST, 교체 확인·취소 시 요청 없음, 진행 중 조작 잠금·aria-busy·중복 방지·오래된 응답 무시, draft 보호(setResult 미사용), 실패 종류별 안전한 안내, 응답 전체 검사 후 한 번에 교체, 상태 매핑(confirmed false·marked_virtual·provided·unclear 보존·not_found 구분), 근거·note·server_notes·candidates·review_notes 표시(textContent). 서버 계약·공통 파일 변경 금지
+- 설계 판단과 변경 이유
+  - 기존 "사용자 추가" 판정(!provided)은 unclear 값 수정을 "사용자 추가"로 잘못 표시 → 자료 값 유무(sourceValue) 기준으로 변경. 예시 데이터에서는 결과 동일(로직 점검으로 확인)
+  - AppShell 입력 자동 감지는 disabled 입력을 건너뜀(app_shell.js panelHasInput) → 분석 중에는 setDraft(true)로 보호하고 끝난 뒤 recheckInputs
+  - 분석 결과는 재요청 비용이 있어 수정 전에도 draft로 보호, 예시는 기존대로 수정 시에만
+  - candidates가 있으면 값 칸을 비워 단일 확정값처럼 보이지 않게 함
+  - 요청 실행기·응답 검사·실패 분류를 DOM 없는 Review 객체로 분리해 Node로 점검
+  - 서버 JSON 오류 message는 고정 문장이지만, code 형식(PDF_|AI_|UPLOAD_)·길이 조건을 만족할 때만 표시하고 나머지는 일반 안내. 비JSON 본문은 읽지 않음
+- 실제 실패와 수정
+  - 정적 테스트가 JS 주석의 "Content-Type" 단어에 걸려 실패 → 헤더 지정 형태(`Content-Type:`)만 검사하도록 수정
+  - CSS에 존재하지 않는 토큰 --font-weight-semibold를 썼다가 tokens.css 확인 후 --font-weight-medium으로 수정
+- 기록 표현 정정: 직전 작업(DI-10)의 Claude 완료 보고에 "응답·오류·로그에 문서 내용 비노출"처럼 범위를 넓힌 표현이 있었음. 정상 응답에는 추출값·근거 발췌가 들어가는 것이 맞고, 테스트가 확인한 범위는 "오류 응답·로그의 키·문서 표지·공급자 원문·원본 파일명 비노출"과 "성공 요청·응답의 원본 파일명 비포함"임. validation.md의 DI-10 기록 문장은 이 범위와 일치하여 수정하지 않음
+- 변경: panel.html, static/product_brochure.js, static/product_brochure.css, feature_spec.md(머리말·§16·§17·§18·§19), tests/test_product_brochure/test_panel.py(갱신), review_logic_check.js·test_review_logic.py(신규)
+- 담당자 판단: 검토 대기
+- 남은 한계: 브라우저 동작 미확인, 실제 서버·OpenAI 종단 동작 미확인, 추출 품질 미검증
+
+## SPE-2026_10_25-01 제품소개서 서비스 프롬프트 brochure_extract_v1 첫 실제 실행(화면)
+- 유형: service_prompt_experiment
+- 날짜: 2026-10-25 (Asia/Seoul, 실행 시각은 전달받지 못함) / 작업자: 유정현 / 기능: 제품소개서
+- 실행 주체: 사용자(실제 브라우저, 제품소개서 화면 → POST /api/product-brochure/analyze). **Claude는 실행·관측하지 않았고 사용자 보고를 전달받아 기록함**
+- 이력: DI-2026_10_25-10·11에 기록한 "서비스 프롬프트 실험 미실행"은 당시 상태로 보존하며, 이 항목이 후속 첫 실제 실행임
+- 모델/설정: 응답 모델명·사용량은 전달받지 못함(미확인). 코드 기준 설정은 OPENAI_MODEL, PDF timeout 120초, 재시도 0, max_output_tokens 4096, store=False, detail high(실행 시점 작업 트리 기준, 환경변수 값은 미확인)
+- 프롬프트 경로·버전: features/product_brochure/prompts/brochure_extract_v1.md(변경 없음)
+- 테스트 입력: 더미 PDF(사용자 제작 시연용 가상 자료로 보고됨). 파일·경로·원문은 기록하지 않음. 텍스트/스캔 여부는 전달받지 못함(미확인)
+- 실제 응답: 결과 원문은 기록하지 않음. 사용자 보고 요약만 기록
+  - 분석 결과가 화면에 표시됨
+  - MOQ·샘플·납기에 가상 정보 표시와 AI 제시 근거가 표시됨
+- 발견 문제: 보고된 범위에서는 없음
+- 변경 이유·제어 방법·재실행: 해당 없음(첫 실행, 프롬프트 변경 없음)
+- 담당자 판단: 연결 확인 수준. 품질 판단 전
+- 남은 한계: 8개 항목 전체 정확성(원문 대조), 문서에 없는 값 생성 여부, 스캔 PDF, 비용·소요 시간은 미검증
+
+## DI-2026_10_25-12 제품소개서 화면 브라우저 확인 결과 기록
+- 유형: development_instruction / 날짜: 2026-10-25 11:05 (Asia/Seoul) / 작업자: 유정현
+- 도구·모델: Claude Code (Opus 5.5). 서비스 코드 수정·API 재호출·테스트 재실행 없음
+- 사전 확인: 브랜치 feature/product_brochure, HEAD 0800d51, 병합 중 아님. DI-11 화면 연결 변경은 미커밋 상태로 보존
+- 지시: 사용자가 실제 브라우저에서 확인한 결과를 후속 검증으로 기록(Claude 미관측 명시), 서비스 프롬프트 첫 실제 실행을 SPE-2026_10_25-01로 기록, 확인되지 않은 범위는 미검증 유지
+- 변경: docs/worklogs/yu_jeonghyeon/prompt_log.md, validation.md

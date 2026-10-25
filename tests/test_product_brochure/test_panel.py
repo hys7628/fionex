@@ -76,14 +76,20 @@ class PanelRenderTests(unittest.TestCase):
         self.assertEqual(files[0]["id"], "product_brochure-file")
         self.assertNotIn("multiple", files[0])
         self.assertIn(".pdf", files[0]["accept"])
-        self.assertIn("스캔 PDF도 향후 분석 대상", self.text)
-        self.assertIn("용량·페이지 상한은 아직 정하지 않았습니다", self.text)
+        self.assertIn("최대 10 MiB·20쪽", self.text)
+        self.assertIn("스캔 PDF", self.text)
+        self.assertIn("판독 품질은 아직 확인하지 않았습니다", self.text)
 
-    def test_analyze_disabled_with_pending_notice(self):
+    def test_analyze_disabled_until_valid_file(self):
+        # 이전: "항상 비활성". 현재: 처음에는 비활성이고 유효한 PDF를 선택해야 JS가 활성화(자동 분석 없음)
         submit = self.find("button", type="submit")
         self.assertEqual(len(submit), 1)
         self.assertIn("disabled", submit[0])
-        self.assertIn("PDF 분석 연결 준비 중", self.text)
+        self.assertIn("data-analyze", submit[0])
+        self.assertIn("10 MiB 이하의 PDF를 선택하면 분석할 수 있습니다.", self.text)
+        alerts = [a for t, a in self.parser.elements if "data-analyze-error" in a]
+        self.assertEqual(len(alerts), 1)
+        self.assertIn("hidden", alerts[0])
 
     def test_example_button_is_plain_button(self):
         btn = [a for t, a in self.parser.elements if t == "button" and "data-load-example" in a]
@@ -98,6 +104,17 @@ class PanelRenderTests(unittest.TestCase):
         self.assertIn("개발용 예시입니다. 업로드한 PDF의 분석 결과가 아닙니다.", self.text)
         sections = [a for t, a in self.parser.elements if t == "section" and "data-work-ignore" in a]
         self.assertEqual(len(sections), 1)
+        self.assertIn("aria-busy", sections[0])
+
+    def test_source_notices_are_separate(self):
+        example = [a for t, a in self.parser.elements if "data-source-example" in a]
+        analysis = [a for t, a in self.parser.elements if "data-source-analysis" in a]
+        self.assertEqual((len(example), len(analysis)), (1, 1))
+        self.assertIn("hidden", example[0])
+        self.assertIn("hidden", analysis[0])
+        self.assertIn("PDF 분석(AI 추출) 결과입니다. 사용자 확인 전에는 확정 정보가 아닙니다.", self.text)
+        self.assertIn("원문 대조 미실시", self.text)
+        self.assertIn("원문 대조·사실 검증·인증 완료를 뜻하지 않습니다", self.text)
 
     def test_catalog_and_download_disabled(self):
         for label in ("카탈로그 생성", "PDF 다운로드"):
@@ -111,10 +128,21 @@ class PanelRenderTests(unittest.TestCase):
 
 
 class StaticRuleTests(unittest.TestCase):
-    def test_no_network_or_browser_storage(self):
-        for pattern in (r"\bfetch\s*\(", r"XMLHttpRequest", r"sendBeacon", r"localStorage", r"sessionStorage",
-                        r"indexedDB", r"FileReader", r"\.arrayBuffer\s*\(", r"\.text\s*\("):
+    def test_only_analyze_request_and_no_browser_storage(self):
+        # 이전: "네트워크 요청 없음". 현재: 분석 API 1곳만 요청, 파일 내용을 브라우저에서 읽거나 저장하지 않음
+        self.assertEqual(len(re.findall(r"\bfetch\s*\(", JS)), 1)
+        self.assertIn('fetch(Review.ANALYZE_URL, {', JS)
+        self.assertIn('ANALYZE_URL = "/api/product-brochure/analyze"', JS)
+        self.assertIn('method: "POST"', JS)
+        self.assertEqual(len(re.findall(r'\.append\("source_file"', JS)), 1)
+        # multipart 경계는 브라우저가 설정: 요청 헤더에 Content-Type을 지정하지 않음
+        self.assertIsNone(re.search(r"""["']?Content-Type["']?\s*:""", JS, re.I))
+        for pattern in (r"XMLHttpRequest", r"sendBeacon", r"localStorage", r"sessionStorage", r"indexedDB",
+                        r"FileReader", r"\.arrayBuffer\s*\(", r"\.text\s*\(", r"setInterval"):
             self.assertIsNone(re.search(pattern, JS), pattern)
+        # 분석 요청은 form submit(사용자 클릭) 한 곳에서만 시작(자동 분석·자동 재시도 없음)
+        self.assertEqual(len(re.findall(r"analyzer\.run\(", JS)), 1)
+        self.assertNotIn("AppShell.onShow", JS)  # 탭 재진입 시 재요청·초기화 없음
 
     def test_no_html_injection_sinks(self):
         for pattern in (r"innerHTML", r"outerHTML", r"insertAdjacentHTML", r"document\.write"):

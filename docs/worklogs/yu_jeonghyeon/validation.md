@@ -205,3 +205,51 @@
 - 근거 발췌의 원문 대조(미구현)
 - 실제 브라우저·개발 서버에서의 업로드, 413 시 연결 끊김 여부, 프로세스 비정상 종료 시 임시 파일 정리
 - 화면과 분석 API 연결(미구현)
+
+## 2026-10-25 제품소개서 화면 ↔ PDF 분석 API 연결
+- 변경 내용: panel.html, product_brochure.js, product_brochure.css, test_panel.py(갱신), review_logic_check.js·test_review_logic.py(신규)
+- 환경: Conda jasonenv Python 3.11.17, Node v24.20.0(로직 점검용, 프로젝트 의존성 아님)
+
+### Claude가 직접 실행한 검증
+- `node --check product_brochure.js` → 문법 오류 없음
+- `node tests/test_product_brochure/review_logic_check.js` → 13개 점검 통과
+  - 파일 크기 경계(10 MiB 통과·+1 byte too_large)·빈 파일·확장자·미선택
+  - 성공 응답 → 8개 항목 고정 순서, confirmed false, marked_virtual 보존(미제공+가상 포함, 해제 불가), provided = found+값, unclear 값 보존·사용자 추가 아님, not_found 구분, 범위 밖 페이지 표시값, candidates 시 값 비움
+  - unclear 수정 → 사용자 수정·확인 해제, not_found 입력 → 사용자 추가
+  - 잘못된 성공 응답(7개·중복 key·알 수 없는 key·잘못된 status·confirmed true·page 형식·extraction_status 누락·review_notes 형식) 거부
+  - 실패 구분(네트워크·시간 초과·413·비JSON·안전한 서버 오류·안전하지 않은 서버 오류·형식 오류·비2xx 성공 형식)
+  - 요청 실행기: 정상 1회·진행 on/off, 중복 요청 무시, 교체 확인 취소 시 요청 0회·진행 상태 변화 없음, 승인 후 실패 시 성공 콜백 없음, 잘못된 파일 요청 없음, 예외 → 네트워크 실패·자동 재시도 없음·재요청 가능, 오래된 응답 무시
+  - AI 문자열(`<img …>`)이 상태에 문자열 그대로 보관됨(렌더링은 textContent, 정적 검사)
+  - 기존 예시 동작(가상 고정·수정 시 확인 해제·사용자 추가)
+- `python -m unittest discover -s tests/test_product_brochure` → 47개 실행, OK(분석 API 33, 화면·정적 13, Node 래퍼 1)
+  - 1차 실행에서 정적 테스트 1건 실패(주석의 "Content-Type" 단어) → 테스트 수정 후 통과
+  - 갱신한 정적 검사: fetch 1곳·분석 URL·POST·source_file append 1곳·Content-Type 헤더 미지정·analyzer.run 1곳(사용자 submit)·AppShell.onShow 미사용·브라우저 저장소/파일 읽기/XHR/sendBeacon/setInterval 없음·HTML 삽입 없음·setResult 없음
+  - 화면: 분석 버튼 처음 비활성·data-analyze, 오류 영역 hidden, 출처 안내 2종 분리·원문 대조 미실시 문구, 검토 카드 aria-busy
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+- 참고: 테스트 중 ResourceWarning은 werkzeug 테스트 클라이언트가 multipart 요청 본문을 만들 때 쓰는 클라이언트 쪽 임시 파일에서 발생(tracemalloc으로 출처 확인). 서버 라우트의 업로드 정리 확인은 기존 테스트 범위 그대로
+
+### 미검증(브라우저 미실행, 브라우저 도구 없음)
+- 실제 브라우저에서 파일 선택·버튼 활성화·진행 표시·조작 잠금·확인 대화상자·오류 안내·결과 렌더링·후보·근거 표시·탭 이동 후 유지·새로고침 경고
+- DOM 연결 코드(send·syncControls·renderField 등) 자체의 실행. Node 점검은 DOM 없는 로직만 다룸
+- 실제 서버·OpenAI와의 종단 동작, 413 시 연결 끊김 안내, 반응형·키보드·화면낭독기
+- 서비스 프롬프트 v1의 추출 품질(실험 미실행)
+
+## 2026-10-25 후속 검증: 제품소개서 화면 실제 브라우저 확인 (사용자 직접 확인 결과를 전달받음)
+- 실행 주체: 사용자(실제 브라우저). **Claude는 브라우저에서 직접 검증하거나 관측하지 않았고 전달받은 내용을 그대로 기록함**
+- 대상: DI-2026_10_25-11 화면 연결(미커밋 작업 트리 상태), 서비스 프롬프트 brochure_extract_v1(SPE-2026_10_25-01)
+- 입력: 더미 PDF(시연용 가상 자료로 보고됨). 파일·원문·결과 원문은 기록하지 않음
+
+### 확인됨(사용자 보고 기준)
+- 더미 PDF 분석 후 결과가 화면에 표시됨(화면 → 분석 API → 공통 PDF 함수 → 응답 표시 경로가 실제로 동작)
+- MOQ·샘플·납기에 "가상 정보" 표시와 AI 제시 근거가 표시됨
+- MOQ의 사용자 확인을 체크한 뒤 값을 수정하면 확인 체크가 해제됨
+- 다른 탭으로 이동했다 돌아와도 분석 결과와 수정값이 유지됨
+
+### 미검증 유지
+- 8개 항목 전체의 정확성(원문 대조), 문서에 없는 값 생성 여부, 근거 페이지·발췌의 정확성
+- 스캔 PDF 판독
+- 오류 화면(네트워크·413·서버 오류·잘못된 응답), 교체 확인 대화상자, 파일 교체 취소 시 복원
+- 분석 중 조작 잠금·진행 표시·중복 요청 방지의 브라우저 동작
+- 응답 모델명·사용량, 비용 금액, 소요 시간
+- 새로고침 경고(분석 결과 상태), 반응형·키보드·화면낭독기
+- 이전 기록(브라우저 미확인, 서비스 프롬프트 실험 미실행)은 당시 상태로 보존하며 이 항목으로 후속 보완함
