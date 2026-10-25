@@ -43,3 +43,13 @@
 | Werkzeug 3.1.9 소스 | jasonenv site-packages/werkzeug/formparser.py, sansio/multipart.py, wsgi.py | 2026-10-25 17:38~17:48 | default_stream_factory가 500KB 초과 시 SpooledTemporaryFile, FormDataParser(stream_factory, max_content_length, max_form_memory_size, max_form_parts), max_form_memory_size가 수신 버퍼에도 적용 | 설치본 소스 직접 확인 |
 | Flask 3.1.2 소스 | jasonenv site-packages/flask/wrappers.py | 2026-10-25 17:38 무렵 | Request.max_content_length 요청별 설정 가능(이번에는 FormDataParser로 처리) | 설치본 소스 직접 확인 |
 - 사용권: pypdf 라이선스는 이번에 확인하지 않음(미확인)
+
+## 2026-10-25 Word 추출 구현 참고 (DEV-2026_10_25-06)
+| 자료 | 위치 | 확인 시각(KST) | 확인 내용 | 상태 |
+|---|---|---|---|---|
+| python-docx 1.2.0 | PyPI JSON API https://pypi.org/pypi/python-docx/1.2.0/json, pip --dry-run --report | 2026-10-25 19:59 | Requires-Python >=3.9, requires lxml>=3.1.0·typing_extensions>=4.9.0, MIT, 2025-06-16 업로드, yanked 아님 | 직접 조회 |
+| lxml 6.1.3 | https://pypi.org/pypi/lxml/6.1.3/json | 2026-10-25 19:59 | Requires-Python >=3.8, BSD-3-Clause, cp311 win_amd64 wheel, 2026-09-02 업로드, yanked 아님 | 직접 조회 |
+| typing_extensions 4.16.0 | https://pypi.org/pypi/typing_extensions/4.16.0/json | 2026-10-25 19:59 | Requires-Python >=3.9, PSF-2.0, 2026-07-02 업로드, yanked 아님 | 직접 조회 |
+| python-docx 1.2.0 설치본 소스 | jasonenv site-packages/docx (oxml/parser.py, document.py, blkcntnr.py, table.py, text/paragraph.py, oxml/text/paragraph.py) | 2026-10-25 20:00 무렵 | XMLParser(resolve_entities=False), iter_inner_content 문서 순서·감싸인 요소 제외, Paragraph.text = w:r·w:hyperlink, row.cells가 병합 셀 반복, _Cell.iter_inner_content | 설치본 직접 확인 |
+| 공통 PDF 연결(develop 병합분) | common/pdf_utils.py, common/config.py, docs/data_contracts.md | 2026-10-25 19:45 무렵 | inspect_pdf 순서·상한(10 MiB, 20쪽), 하위 클래스 암호 해제 차단, pypdf 로거 전파 차단 | 로컬 파일 읽기 전용 |
+- 사용권: python-docx·lxml·typing_extensions 라이선스는 PyPI 메타데이터 표기만 확인(라이선스 원문 검토 안 함)

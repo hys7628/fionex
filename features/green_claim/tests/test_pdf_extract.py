@@ -227,8 +227,9 @@ class RouteTest(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(body["ok"])
         data = body["data"]
-        self.assertEqual(set(data), {"text", "char_count", "page_count", "pages", "pages_without_text",
+        self.assertEqual(set(data), {"format", "text", "char_count", "page_count", "pages", "pages_without_text",
                                      "all_pages_have_text", "notices", "limits"})
+        self.assertEqual(data["format"], "pdf")
         self.assertIn(PT, data["text"])
         self.assertEqual(data["page_count"], 2)
         self.assertEqual(data["pages_without_text"], [2])
@@ -244,7 +245,9 @@ class RouteTest(unittest.TestCase):
 
     def test_type_checks(self):
         pdf = make_pdf([["x"]])
-        self.assertError(self.post([("promo_file", "a.docx", pdf)]), "FILE_TYPE_UNSUPPORTED", 415)
+        self.assertError(self.post([("promo_file", "a.doc", pdf)]), "FILE_TYPE_UNSUPPORTED", 415)
+        # 2026-10-25 Word 추가 후: .docx 확장자는 Word 처리로 가며 PDF 내용이면 Word 구조 아님으로 거부
+        self.assertError(self.post([("promo_file", "a.docx", pdf)]), "DOCX_INVALID", 422)
         self.assertError(self.post([("promo_file", "a", pdf)]), "FILE_TYPE_UNSUPPORTED", 415)
         self.assertError(self.post([("promo_file", "fake.pdf", b"hello, this is text")]), "PDF_INVALID", 422)
         self.assertError(self.post([("promo_file", "d.pdf", b"%PDF-1.7\n" + b"\x00" * 300)]), "PDF_DAMAGED", 422)

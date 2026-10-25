@@ -73,7 +73,7 @@ def extract_text():
         data = upload.stream.read()
         filename = upload.filename or ""
         try:
-            result = service.extract_pdf(filename, data)
+            result = service.extract_file(filename, data)  # .pdf / .docx 분기
         except service.ExtractError as err:
             return jsonify({"ok": False, "error": err.to_dict()}), err.http_status
         return jsonify({"ok": True, "data": result})

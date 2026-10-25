@@ -1,5 +1,5 @@
 // 그린 클레임 체크 탭 스크립트. 이 탭 패널 내부만 다룹니다. 공통 API 사용법: docs/design_system.md
-// 현재 단계: 문구 직접 입력 + 일반 PDF 글자 추출·확인·수정. AI 검수·스캔 PDF OCR·결과 PDF는 아직 연결하지 않습니다.
+// 현재 단계: 문구 직접 입력 + 일반 PDF·Word(.docx) 글자 추출·확인·수정. AI 검수·스캔 PDF OCR·결과 PDF는 아직 연결하지 않습니다.
 (function () {
   "use strict";
 
@@ -130,12 +130,17 @@
     modePanels.forEach(function (el) { el.hidden = el.dataset.modePanel !== mode; });
   }
   modeRadios.forEach(function (radio) {
-    radio.addEventListener("change", function () { if (radio.checked) showMode(radio.value); });
+    radio.addEventListener("change", function () {
+      if (!radio.checked) return;
+      // 처리 중 입력 방식을 바꾸면 진행 중 추출을 취소하고 그 응답을 반영하지 않습니다(문구는 그대로).
+      if (busy) cancelExtraction("입력 방식을 바꿔 진행 중인 추출을 취소했습니다");
+      showMode(radio.value);
+    });
   });
   const checkedMode = modeRadios.find(function (r) { return r.checked; });
   showMode(checkedMode ? checkedMode.value : "text");
 
-  /* ---------- 일반 PDF 글자 추출 ---------- */
+  /* ---------- 일반 PDF·Word(.docx) 글자 추출 ---------- */
   const fileSection = byId("green_claim-file-section");
   const fileInput = byId("green_claim-file");
   const fileError = byId("green_claim-file-error");
@@ -149,6 +154,9 @@
   const summaryTitle = byId("green_claim-extract-summary-title");
   const summaryText = byId("green_claim-extract-summary-text");
   const noticeList = byId("green_claim-extract-notices");
+  const detectedBox = byId("green_claim-extract-detected-box");
+  const detectedList = byId("green_claim-extract-detected");
+  const pagesLabel = byId("green_claim-extract-pages-label");
   const pageList = byId("green_claim-extract-pages");
   const editedNote = byId("green_claim-extracted-edited");
 
@@ -203,27 +211,34 @@
   }
 
   function checkFile(file) {
-    if (!file) return "PDF 파일을 선택해 주세요.";
-    if (file.size === 0) return "빈 파일입니다. 내용이 있는 PDF를 선택해 주세요.";
+    if (!file) return "PDF 또는 Word(.docx) 파일을 선택해 주세요.";
+    if (file.size === 0) return "빈 파일입니다. 내용이 있는 파일을 선택해 주세요.";
     if (file.size > MAX_FILE_BYTES) return "파일이 10,000,000바이트(약 10MB)를 넘습니다. 문서를 나누거나 용량을 줄여 주세요.";
-    if (!file.name.toLowerCase().endsWith(".pdf")) return "현재는 PDF(.pdf) 파일만 지원합니다. Word·이미지 파일은 준비 중입니다.";
+    const name = file.name.toLowerCase();
+    if (!name.endsWith(".pdf") && !name.endsWith(".docx")) {
+      return "현재는 일반 PDF(.pdf)와 Word(.docx) 파일만 지원합니다. .doc·.docm 등 다른 형식과 이미지 파일은 지원하지 않습니다.";
+    }
     return "";
   }
 
-  // 처리 중 파일을 바꾸면 진행 중 요청을 취소하고 그 응답은 반영하지 않습니다. 기존 문구는 지우지 않습니다.
+  // 진행 중 요청을 취소하고 그 응답은 반영하지 않습니다(요청 번호를 올림). 기존 문구는 지우지 않습니다.
+  function cancelExtraction(title) {
+    requestSeq += 1;
+    if (controller) controller.abort();
+    setBusy(false);
+    clearPending();
+    showMessage("info", title, "아래 문구는 바뀌지 않았습니다. 필요하면 '글자 추출'을 다시 눌러 주세요.");
+  }
+
   fileInput.addEventListener("change", function () {
     const canceled = busy;
-    if (canceled) {
-      requestSeq += 1;
-      if (controller) controller.abort();
-      setBusy(false);
-    }
+    if (canceled) cancelExtraction("파일을 바꿔 이전 추출을 취소했습니다");
     clearPending();
     const file = fileInput.files[0];
     const problem = file ? checkFile(file) : "";
     setFileError(problem);
     if (canceled) {
-      showMessage("info", "파일을 바꿔 이전 추출을 취소했습니다", "아래 문구는 바뀌지 않았습니다. 새 파일로 '글자 추출'을 다시 눌러 주세요.");
+      // 취소 안내를 유지합니다.
     } else if (file && !problem && appliedText !== null) {
       showMessage("info", "새 파일을 선택했습니다", "글자 추출을 실행해 확인하기 전까지 아래 문구는 이전 파일에서 추출·수정한 내용입니다.");
     } else {
@@ -231,23 +246,58 @@
     }
   });
 
+  function addItem(list, text) {
+    const li = document.createElement("li");
+    li.textContent = text;
+    list.appendChild(li);
+  }
+
+  function charRange(start, end) {
+    return numberFormat.format(start + 1) + "~" + numberFormat.format(end) + "번째 글자";
+  }
+
+  // 요약은 텍스트로만 만듭니다. PDF는 페이지 기준, Word는 본문 블록(문단·표·행) 기준입니다.
   function renderSummary(data) {
+    summaryTitle.textContent = "글자 추출 완료 (AI 검수는 아직 실행되지 않음)";
+    noticeList.replaceChildren();
+    data.notices.forEach(function (notice) { addItem(noticeList, notice); });
+    detectedList.replaceChildren();
+    pageList.replaceChildren();
+    if (data.format === "docx") renderDocxSummary(data);
+    else renderPdfSummary(data);
+    detectedBox.hidden = detectedList.children.length === 0;
+    summaryBox.hidden = false;
+  }
+
+  function renderDocxSummary(data) {
+    summaryBox.className = "notice " + (data.detected_unsupported.length ? "notice-warning" : "notice-info");
+    let text = "Word 본문 블록 " + data.block_count + "개(문단 " + data.paragraph_count + "개·표 " + data.table_count
+      + "개) 중 " + data.blocks.length + "개 블록에서 텍스트를 읽었습니다. "
+      + numberFormat.format(data.char_count) + "자를 아래 입력칸에 넣었습니다.";
+    if (data.empty_block_count) text += " 내용이 없는 블록 " + data.empty_block_count + "개는 넣지 않았습니다.";
+    summaryText.textContent = text;
+    data.detected_unsupported.forEach(function (item) { addItem(detectedList, item.label); });
+    pagesLabel.textContent = "블록별 추출 범위";
+    data.blocks.forEach(function (block) {
+      const name = block.type === "table" ? "표 " + block.number : "문단 " + block.number;
+      addItem(pageList, "블록 " + block.block + " · " + name + ": " + charRange(block.char_start, block.char_end));
+      (block.rows || []).forEach(function (row) {
+        addItem(pageList, "블록 " + block.block + " · " + name + " · " + row.row + "행: "
+          + charRange(row.char_start, row.char_end));
+      });
+    });
+  }
+
+  function renderPdfSummary(data) {
     const readPages = data.page_count - data.pages_without_text.length;
     summaryBox.className = "notice " + (data.all_pages_have_text ? "notice-info" : "notice-warning");
-    summaryTitle.textContent = "글자 추출 완료 (AI 검수는 아직 실행되지 않음)";
     let text = "전체 " + data.page_count + "페이지 중 " + readPages + "페이지에서 텍스트를 읽었습니다. "
       + numberFormat.format(data.char_count) + "자를 아래 입력칸에 넣었습니다.";
     if (data.pages_without_text.length) {
       text += " 텍스트를 추출하지 못한 페이지: " + data.pages_without_text.join(", ") + ".";
     }
     summaryText.textContent = text;
-    noticeList.replaceChildren();
-    data.notices.forEach(function (notice) {
-      const li = document.createElement("li");
-      li.textContent = notice;
-      noticeList.appendChild(li);
-    });
-    pageList.replaceChildren();
+    pagesLabel.textContent = "페이지별 추출 범위";
     data.pages.forEach(function (page) {
       const li = document.createElement("li");
       if (page.status === "text") {
@@ -260,7 +310,6 @@
       }
       pageList.appendChild(li);
     });
-    summaryBox.hidden = false;
   }
 
   function applyResult(data) {

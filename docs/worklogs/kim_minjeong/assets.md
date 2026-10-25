@@ -33,3 +33,10 @@
 | 2026-10-25 | 가상 테스트 PDF 12개(3개 언어, 일부 텍스트 없음, 텍스트 없음, 20/21페이지, 20,000자 초과, 암호화, 손상, 가짜 PDF, .docx, 10,000,000/10,000,001바이트) | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/010a049a-1a72-42db-bb4c-cb26f412c3b5/scratchpad/fixtures/ | Chrome 헤드리스 printToPDF, pypdf, 표준 라이브러리 | validation DEV-2026_10_25-05 | 직접 만든 가상 문구. 실제 홍보물 아님. 저장소에 넣지 않음(임시 파일이라 사라질 수 있음) |
 | 2026-10-25 | 화면 캡처 PNG(1440 전체, 390 모바일) | C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/010a049a-1a72-42db-bb4c-cb26f412c3b5/scratchpad/green_claim_pdf_desktop_1440.png, green_claim_pdf_mobile_390.png | Chrome 헤드리스 CDP | 같음 | 자체 화면, 가상 입력. 저장소에 넣지 않음 |
 - 저장소 안 테스트 자료는 features/green_claim/tests/test_pdf_extract.py가 실행 중에 메모리에서 만드는 가상 PDF뿐(파일로 저장하지 않음)
+
+## 2026-10-25 Word 추출 테스트 자료·캡처 (DEV-2026_10_25-06)
+| 날짜 | 종류 | 경로 | 생성 도구 | 관련 기록 | 사용권·검토 상태 |
+|---|---|---|---|---|---|
+| 2026-10-25 | 가상 Word 테스트 자료 12개(다국어·병합·중첩·링크, 미지원 요소, 이미지만, 20,000자 초과, docm형, 다른 ZIP, 손상, .doc, 항목 1,001, 해제 초과, 10,000,000/10,000,001바이트) | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/010a049a-1a72-42db-bb4c-cb26f412c3b5/scratchpad/fixtures/ (word_*.docx, legacy.doc) | python-docx, zipfile | validation DEV-2026_10_25-06 | 직접 만든 가상 문구. 실제 홍보물 아님. 저장소에 넣지 않음(임시) |
+| 2026-10-25 | 화면 캡처 PNG(1440 전체) | C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/010a049a-1a72-42db-bb4c-cb26f412c3b5/scratchpad/green_claim_word_desktop_1440.png | Chrome 헤드리스 CDP | 같음 | 자체 화면, 가상 입력. 저장소에 넣지 않음 |
+- 저장소 안 테스트 자료는 features/green_claim/tests/test_docx_extract.py가 실행 중에 메모리에서 만드는 가상 문서뿐

@@ -178,3 +178,45 @@
   - 지금 코드 결함으로 보이지 않음. 이미 화면에 "원본과 비교해 확인", "읽는 순서가 다를 수 있음" 안내와 수정 기능이 있음
   - 안내 문구에 공백·합자 차이 가능성을 추가할지, layout 모드·합자 표시 방식 검토를 할지는 담당자 결정 필요. 공백 일괄 삭제·NFKC·번호 재배치 같은 자동 보정은 원문 의미를 바꿀 수 있어 하지 않음
 - 한계: 해당 PDF·추출본을 직접 보지 않아 원인을 확정하지 못함
+
+## DEV-2026_10_25-06 Word 홍보물 텍스트 추출 추가
+- 유형: development_instruction (서비스 프롬프트 실험 아님, 기능 전체 완성 아님)
+- 날짜/시간: 2026-10-25 19:40~20:16 (Asia/Seoul)
+- 작업자: 김민정 / 기능: green_claim / 브랜치: feature/green_claim (HEAD eeece71 = origin/feature/green_claim, 담당자가 develop 9e2066c를 병합한 상태, 작업 전 변경·병합 중·충돌 없음. 원격 최신성은 마지막 fetch 2026-10-25 19:38 이후 미확인)
+- 도구·모델/설정: Claude Code(VS Code 확장), 모델 ID claude-opus-5-5(세션 시스템 정보), 그 밖의 설정 미확인. OpenAI·외부 유료 API 호출 없음
+- 지시 요약(팀 합의에 따라 요약본 기록)
+  - Word(.docx) 선택 → 글자 추출 → 본문·표 문구 확인·수정. 직접 입력·일반 PDF 유지. OCR·이미지·Word 속 이미지 글자·AI·결과 PDF 제외
+  - 승인 공통 변경: python-docx와 필수 하위 의존성 설치, requirements.txt에 python-docx와 설명만 추가(기존 항목·pypdf 버전 변경 금지)
+  - 문단·표를 문서 순서대로, 병합 셀 반복 없이, 중첩 표 지원 여부 명시, 하이퍼링크 글자 확인, 자동 보정 없음
+  - 제한: 파일 1개·10,000,000바이트·30초·ZIP 항목 1,000개·압축 해제 50,000,000바이트·20,000자. 실제 읽기 중에도 제한 적용
+  - 처리 중 파일 교체·입력 방식 전환 시 오래된 응답 반영 금지
+- 작업 전 확인한 공통 변경(develop 병합분, 읽기 전용): common/pdf_utils.py(inspect_pdf, 하위 클래스로 pypdf 암호 해제 차단), ai_client PDF 입력, config PDF_*, data_contracts·decisions·README. 담당 PDF 코드와 합치거나 교체하지 않음
+  - 차이 보고(변경 안 함): 공통 PDF 상한 10 MiB(10,485,760) vs green_claim 10,000,000바이트, 손상 코드 PDF_CORRUPT(400) vs PDF_DAMAGED(422)
+  - 공통 문서상 pypdf는 암호화 PDF에 빈 비밀번호 해제를 시도함 → green_claim PDF worker에서 AES 암호화 PDF는 cryptography 미설치 시 PDF_DAMAGED로 안내될 가능성(미검증, 이번 범위 밖)
+  - 병합으로 requirements.txt의 green_claim pypdf 주석 2줄이 공통 PDF 설명으로 바뀐 상태(담당자 병합 결과, 수정하지 않음)
+- 변경 이유: 명세 1단계 파일 입력 중 Word(.docx)를 지원하기 위함
+- 실제 결과
+  - python-docx 1.2.0 설치, 필수 하위 의존성 lxml 6.1.3·typing_extensions 4.16.0 신규 설치, 기존 패키지 버전 변경 없음(pypdf 6.21.2 유지), pip check 정상
+  - requirements.txt 끝에 3줄 추가(주석 2줄 + python-docx==1.2.0), 기존 내용 바이트 동일
+  - feature_spec.md: "Word(.docx) 텍스트 추출" 계약을 구현 전에 추가, 구현 후 "구현 상태 갱신 (Word 추출)" 추가
+  - docx_worker.py(신규): ZIP 검사(항목 수·선언 크기·실제 압축 해제량·항목 암호화), [Content_Types] 주 문서 형식 확인, 미지원 요소 감지, 문단·표 순서 추출(tc 단위로 병합 셀 1회, 중첩 표 재귀), 20,000자 초과 시 조기 중단
+  - service.py: run_worker에 target·options 추가(PDF 기본값 유지), validate_docx_upload(ZIP·OLE 서명, EncryptedPackage), build_docx_result, extract_docx, extract_file(확장자 분기), DOCX 오류 코드 7개, 파일 공통 오류 문장 일반화, PDF 결과에 format 추가
+  - routes.py: extract_file 호출로 변경(파서·상한 유지)
+  - panel.html·JS: PDF·Word 선택 안내, Word 블록 기준 요약, 감지 요소·일반 안내 구분, 처리 중 방식 전환 시 취소
+  - tests: test_docx_extract.py(신규 18개), test_pdf_extract.py 기대값 변경(format 필드, PDF 내용 .docx → DOCX_INVALID, FILE_TYPE_UNSUPPORTED 확인은 .doc 사용)
+- 작업 중 발견·수정한 문제: python-docx 요소의 xpath()는 namespaces 인자를 받지 않아 lxml XPath로 평가하도록 수정, 테스트 XML의 VML 네임스페이스 선언 누락 수정, 긴 문서 가상 자료가 20,000자에 못 미쳐 분량 조정, 기록 추가 중 셸 heredoc 구문 오류(기록 미추가 상태 확인 후 다른 방법으로 추가)
+- 한계·남은 사항
+  - 실제 Office 암호화 .docx는 만들 수 없어 EncryptedPackage 판별은 모의 바이트로만 확인
+  - 실제 30초 초과 Word 문서는 만들지 못함(제한 0.05초로 줄인 실제 프로세스 테스트만)
+  - 미지원 요소 감지는 알려진 XML 요소 기준이며 모든 누락을 찾는다고 보장하지 않음. w:ins 등 감싸인 글자는 추출되지 않음(감지 시 안내)
+  - 병합 셀 처리는 python-docx 표 요소 API(tr_lst·tc_lst·vMerge)에 의존(버전 고정)
+  - 공통 회귀 테스트는 jasonenv에 httpx2·openai·pydantic이 없어 import 실패로 실행 불가(승인 범위 밖이라 설치 안 함)
+  - routes.py FEATURE description("보유 증빙의 차이")은 범위 밖이라 그대로
+
+## DEV-2026_10_25-06 후속: Word 추출 사용자 수동 확인 결과 기록
+- 유형: development_instruction (기록 추가만, 코드 변경 없음)
+- 날짜/시간: 2026-10-25 20:23 (Asia/Seoul)
+- 도구·모델/설정: Claude Code, 모델 ID claude-opus-5-5(세션 시스템 정보), 그 밖의 설정 미확인
+- 지시 요약: 사용자가 실제 브라우저에서 확인한 Word 추출 결과 8건(3개 언어 보존, 문단→표→문단 순서, 행·셀 구분과 병합 셀 1회, 하이퍼링크 표시 글자, 머리글 제외, "머리글·바닥글" 감지 안내, 편집 후 탭 왕복 유지, 수정 후 위치 안내)을 validation.md·prompt_log.md에 사용자 수동 확인으로 추가. Claude 직접 테스트와 구분, 나머지 미검증 유지, 문서 전체 본문 기록 금지. 코드·공통 파일·Git 변경 금지
+- 결과: validation.md에 사용자 보고 8건을 "통과(사용자 보고)"로 기록하고 미검증 항목을 유지. 문서 본문은 기록하지 않음(사용자가 전달한 링크 표시 글자·추가 문구만 기록)
+- 한계: 사용자 브라우저 종류·버전·확인 시각과 사용 문서의 출처는 미확인. Claude는 사용자 화면·문서를 직접 보지 않음

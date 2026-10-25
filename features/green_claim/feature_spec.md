@@ -300,6 +300,76 @@ OpenAI
 - 처리 중 파일을 바꾸면 진행 중 요청을 취소하고 이전 응답을 반영하지 않는다.
 - AI 검수·결과 PDF는 계속 비활성. 추출 완료는 검수 완료가 아니다.
 
+### Word(.docx) 텍스트 추출 (2026-10-25 구현 기준)
+범위: 홍보물 파일 업로드 중 **Word(.docx) 본문의 문단과 표**. 스캔 PDF OCR·이미지(JPG/PNG)·Word 삽입 이미지 속 글자는 최종 지원 대상으로 유지하되 이번에는 구현하지 않는다.
+도구: python-docx 1.2.0(팀 협의로 jasonenv 설치·requirements.txt 고정, 필수 하위 의존성 lxml 6.1.3·typing_extensions 4.16.0).
+
+지원
+- 문서 본문의 문단과 표를 문서에 기록된 순서대로 순회한다(문단을 모은 뒤 표를 뒤에 붙이지 않음).
+- 문단 텍스트: python-docx Paragraph.text(일반 글자, 하이퍼링크의 보이는 글자, 탭 `\t`, 줄 바꿈 `\n`).
+- 표: 행마다 한 줄, 셀 사이 ` | `(공백·세로 막대·공백), 셀 안 문단 사이 `\n`. 가로 병합 셀은 한 번만 쓰고, 세로 병합의 이어지는 칸(`vMerge="continue"`)은 빈 칸으로 둔다(같은 내용 반복 없음).
+- 중첩 표: **지원**. 셀 안의 표는 그 셀 위치에 같은 형식(행 줄바꿈, 셀 ` | `)으로 이어 쓴다. 셀 경계가 모호해질 수 있어 감지 시 안내한다. 중첩 표의 행·셀 범위는 따로 제공하지 않는다.
+- 블록 사이 구분: 빈 줄(`\n\n`). 내용이 없는(공백뿐인) 문단·표는 텍스트에 넣지 않고 번호만 센다.
+- 자동 보정 없음: CRLF·CR→LF와 위 구분 문자 외에 공백 보정·유니코드 정규화·요약·번역·교정을 하지 않는다.
+
+제외(추출하지 않음): 머리글·바닥글, 텍스트 상자·도형·SmartArt, 삽입 이미지 속 글자, 메모(주석)·각주·미주, 변경 추적 내용의 완전한 재현, 콘텐츠 컨트롤·필드 등 일부 감싸는 요소 안의 글자, 포함된 개체, 수식.
+- 위 요소 중 문서에서 실제로 감지한 것은 `detected_unsupported`로 따로 알리고, 그 밖에는 일반 한계 안내만 한다. 감지는 알려진 XML 요소·부품 이름 기준이며 모든 누락을 찾는다고 보장하지 않는다.
+- Word는 페이지 수를 신뢰성 있게 계산할 수 없어 페이지를 표시하지 않는다. 문서 통계·페이지 나누기 기호를 페이지 수로 쓰지 않는다. 위치는 본문 블록 번호와 문단·표·행·셀 번호로 표시한다.
+
+이번 처리 제한(초기 운영 제한, 성능·메모리 상한 보장 아님, 추후 조정 가능)
+| 항목 | 값 | 비고 |
+|---|---|---|
+| 파일 수 | 1개 | PDF와 같음 |
+| 파일 크기 | 10,000,000바이트 이하 | PDF와 같음. 브라우저·서버 모두 검사 |
+| 추출 시간 | 작업 전체 30초 | ZIP 검사·XML 파싱·추출을 별도 프로세스에서 실행, 초과 시 종료 |
+| ZIP 내부 항목 | 1,000개 이하 | |
+| 압축 해제 총 크기 | 50,000,000바이트 이하 | ZIP 헤더의 선언 크기와 **실제 압축 해제하며 센 크기** 모두 검사 |
+| 추출 텍스트 | 20,000 Unicode 코드 포인트 이하 | 구분 문자·줄바꿈 포함, 초과 시 자르지 않고 실패 |
+
+형식 판별(확장자·ZIP 서명만 믿지 않음)
+- 확장자 `.pdf`→PDF 처리(기존 유지), `.docx`→Word 처리, 그 밖(`.doc`, `.docm`, `.dotx`, `.rtf`, 이미지 등)→FILE_TYPE_UNSUPPORTED.
+- `.docx` 내용 확인: ZIP 서명(`PK\x03\x04`)이면 ZIP 검사 → `[Content_Types].xml`의 주 문서 형식이 Word 문서(`...wordprocessingml.document.main+xml`)인지 확인. 매크로·서식 파일 형식(docm·dotx·dotm)이면 DOCX_UNSUPPORTED_FORMAT, Word 주 문서가 없으면 DOCX_INVALID.
+- OLE 복합 파일 서명이면서 `EncryptedPackage` 이름이 있으면 DOCX_ENCRYPTED(Office 암호화 문서 형식). 이름이 없으면 암호화를 단정하지 않고 DOCX_UNSUPPORTED_FORMAT(이전 .doc 등일 수 있음). 그 밖의 서명은 DOCX_INVALID.
+- ZIP 항목 단위 암호화 표시가 있으면 DOCX_DAMAGED(Word 암호화와 구분).
+- ZIP을 디스크에 풀지 않는다. XML은 외부 엔티티를 확장하지 않는 파서(python-docx 기본 `resolve_entities=False`, 사전 검사도 같은 설정)로만 읽고, 외부 링크·포함 개체를 가져오거나 실행하지 않는다.
+- 병합 셀 처리는 python-docx의 표 요소(`tr_lst`, `tc_lst`, `vMerge`)를 사용한다. 버전을 바꾸면 테스트로 재확인한다.
+
+요청: 기존과 같은 `POST /api/green-claim/extract`, `multipart/form-data`, `promo_file` 1개. 업로드 파서(메모리 처리, 요청 본문 상한)는 그대로 쓴다.
+
+성공 응답(공통: `{"ok": true, "data": {...}}`)
+- 공통 필드: `format`(`"pdf"` 또는 `"docx"`), `text`, `char_count`, `notices`, `limits`. 범위 인덱스는 text 안의 코드 포인트 [start, end).
+- PDF(`format: "pdf"`): 기존 필드 유지(page_count, pages, pages_without_text, all_pages_have_text). `format` 필드만 추가.
+- Word(`format: "docx"`):
+| 필드 | 타입 | 내용 |
+|---|---|---|
+| block_count | int | 본문 블록(문단·표) 전체 수(내용 없는 블록 포함) |
+| paragraph_count, table_count | int | 본문 문단·표 수 |
+| blocks | array | 내용이 있는 블록만. `{block, type("paragraph"/"table"), number, char_start, char_end}`. 표는 `rows: [{row, char_start, char_end, cells: [{cell, char_start, char_end, merged_continue}]}]` 추가 |
+| empty_block_count | int | 내용이 없어 텍스트에 넣지 않은 블록 수 |
+| nested_table_count | int | 셀 안의 표 수 |
+| detected_unsupported | array | 실제로 감지한 미지원 요소 `{code, label}` |
+| limits | object | max_bytes, max_chars, timeout_seconds, max_zip_entries, max_uncompressed_bytes |
+- Word 응답에는 PDF 페이지 필드를 넣지 않는다.
+
+추가 오류 코드(공통 실패 형식, 고정 안내 문장)
+| code | HTTP | 상황 |
+|---|---|---|
+| FILE_TYPE_UNSUPPORTED | 415 | 확장자가 .pdf·.docx가 아님(안내 문장을 PDF·Word 기준으로 변경, 코드 동일) |
+| DOCX_INVALID | 422 | .docx지만 Word 문서 구조가 아님(다른 ZIP·다른 파일) |
+| DOCX_UNSUPPORTED_FORMAT | 415 | 매크로·서식 Word 형식, 또는 암호화를 확인할 수 없는 OLE 파일(.doc 등) |
+| DOCX_DAMAGED | 422 | ZIP·XML을 읽지 못함(손상, ZIP 항목 암호화 포함) |
+| DOCX_ENCRYPTED | 422 | Office 암호화 문서(EncryptedPackage) |
+| DOCX_ZIP_TOO_MANY_ENTRIES | 422 | ZIP 항목 1,000개 초과 |
+| DOCX_ZIP_TOO_LARGE | 422 | 압축 해제 크기 50,000,000바이트 초과(선언 또는 실제) |
+| DOCX_NO_TEXT | 422 | 본문 문단·표에서 텍스트 없음(지원하지 않는 요소에만 글자가 있을 수 있음 안내) |
+| TEXT_TOO_LONG, EXTRACT_TIMEOUT, EXTRACT_BUSY, EXTRACT_FAILED | 기존 | PDF와 공유. EXTRACT_TIMEOUT 안내 문장은 형식 공통으로 변경 |
+
+화면
+- 파일 모드에서 PDF와 Word(.docx) 선택. 안내: 일반 PDF·Word 지원 / 스캔 PDF·이미지·Word 속 이미지 글자 준비 중. 원본 파일(PDF·Word)은 수정하지 않음.
+- 요약: PDF는 페이지 기준, Word는 본문 블록(문단·표·행) 기준. 실제 감지한 미지원 요소와 일반 한계를 구분해 표시. "글자 추출 완료"는 AI 검수 완료가 아님.
+- 처리 중 파일을 바꾸거나 입력 방식을 바꾸면 진행 중 요청을 취소하고 그 응답을 반영하지 않는다.
+- 새 결과로 편집 문구를 바꾸기 전 확인, 실패 시 기존 문구·선택 파일 유지, 수정 후 위치 안내는 PDF와 같다.
+
 ## 검증
 현재 기능 미구현·실행 검증 미실시. 아래는 앞으로 수행할 계획이며 실행 결과가 아니다.
 
@@ -313,6 +383,13 @@ OpenAI
 - 위 "구현 상태"의 "홍보물 파일 업로드·추출(화면에서 비활성)"은 일반 PDF에 한해 이번에 구현됨. 스캔 PDF OCR·Word·JPG/PNG는 계속 미구현.
 - 구현 세부: 암호화 PDF는 열기 암호 유무와 관계없이 거부. 서버 동시 추출 2건까지. 브라우저는 45초 뒤 대기를 멈춤(서버 30초 제한 + 여유). 실패 안내는 고정 문장.
 - 계속 미구현: AI 검수, 결과 표시, 결과 PDF, 입력 변경 후 재검수 안내, 언어 감지, 서버 측 직접 입력 문구 검사.
+
+### 구현 상태 갱신 (2026-10-25 Word 추출)
+- 추가 구현: Word(.docx) 본문 문단·표 추출(위 "Word(.docx) 텍스트 추출" 계약), 같은 엔드포인트에서 .pdf/.docx 분기, 화면의 PDF·Word 선택과 블록 기준 요약·감지 요소 표시.
+- PDF 응답에 format("pdf") 필드만 추가, 나머지 PDF 필드·동작 유지. 파일 공통 오류 문장(FILE_MISSING·FILE_MULTIPLE·FILE_EMPTY·FILE_TYPE_UNSUPPORTED·EXTRACT_TIMEOUT)을 PDF·Word 공통 표현으로 변경(코드 동일).
+- PDF 내용에 .docx 확장자를 붙인 파일은 이제 Word 처리로 가서 DOCX_INVALID로 거부(이전: FILE_TYPE_UNSUPPORTED).
+- 처리 중 입력 방식을 바꾸면 진행 중 추출을 취소하도록 변경(이전: 계속 진행 후 교체 확인).
+- 계속 미구현: 스캔 PDF OCR, 이미지(JPG/PNG) 판독, Word 삽입 이미지·텍스트 상자·머리글 등의 글자, AI 검수, 결과 PDF.
 담당 worklogs에 실제 결과만 기록하고 실행하지 못한 항목은 미검증으로 남긴다.
 
 ### 완료 기준·검증 계획
