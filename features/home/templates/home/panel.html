@@ -23,31 +23,28 @@
   <div class="home-status-grid">
     {# 바이어 시간: 시각·상태 계산은 home.js(Intl.DateTimeFormat), 공휴일은 /api/home/holidays.
        도시 선택은 보기 설정이라 작성 중 감지에서 제외합니다(data-work-ignore). #}
-    <article class="card" aria-labelledby="home-buyer-title" id="home-buyer-time">
-      <div class="card-header">
-        <div>
-          <h2 class="card-title" id="home-buyer-title">바이어 시간</h2>
-          <p class="card-description">바이어의 현재 연락 가능 상태입니다.</p>
+    {# 1행은 빠르게 훑는 상태 요약: 부제 없이 제목 → 핵심 데이터. 기준 도시 선택은 제목 줄 오른쪽(라벨은 화면낭독용). #}
+    <article class="card home-summary-card" aria-labelledby="home-buyer-title" id="home-buyer-time">
+      <div class="card-header home-summary-head">
+        <h2 class="card-title" id="home-buyer-title">바이어 시간</h2>
+        <div class="home-city-field" data-work-ignore>
+          <label class="visually-hidden" for="home-city">기준 도시</label>
+          <select class="select" id="home-city" aria-describedby="home-hours-hint">
+            <option value="America/Sao_Paulo" selected>상파울루</option>
+            <option value="America/Fortaleza">포르탈레자</option>
+            <option value="America/Manaus">마나우스</option>
+            <option value="America/Rio_Branco">히우브랑쿠</option>
+          </select>
         </div>
       </div>
       <div class="home-card-body">
-        {# 현지 시각이 핵심. 연락 가능 상태는 시각의 색(초록·주황·빨강) + 작은 글자(연락 가능/연락 어려움)로 보이고,
+        {# 현지 시각이 핵심. 연락 가능 상태는 시각의 색(초록·주황·빨강) + 옆의 작은 글자(연락 가능/연락 어려움 · 날짜)로 보이고,
            세부 이유(업무시간·업무시간 외·주말·공휴일)는 화면낭독용 숨은 글로 읽힙니다. 판정 로직은 그대로입니다. #}
         <div class="home-clock" id="home-clock">
-          {# 기준 도시 선택이 도시명을 겸합니다(따로 쓴 도시명은 화면낭독용으로만 남김). #}
-          <div class="home-city-field" data-work-ignore>
-            <label class="field-label" for="home-city">기준 도시</label>
-            <select class="select" id="home-city" aria-describedby="home-hours-hint">
-              <option value="America/Sao_Paulo" selected>상파울루</option>
-              <option value="America/Fortaleza">포르탈레자</option>
-              <option value="America/Manaus">마나우스</option>
-              <option value="America/Rio_Branco">히우브랑쿠</option>
-            </select>
-          </div>
           <p class="visually-hidden"><span id="home-brazil-city">상파울루</span> 현지 시각</p>
           <p class="home-clock-time" id="home-brazil-time">-</p>
           <p class="home-clock-meta" aria-live="polite"><span id="home-status">확인 중</span><span class="visually-hidden" id="home-status-detail"></span>
-            <span class="home-clock-date" id="home-brazil-date"></span></p>
+            <span class="home-clock-date" aria-hidden="true">·</span> <span class="home-clock-date" id="home-brazil-date"></span></p>
         </div>
 
         {# Home은 요약이라 다음 공휴일만 보입니다.
@@ -74,12 +71,9 @@
 
     {# 환율: /api/home/fx. 공식 고시값과 실제 고시일만 표시합니다. 값이 없으면 숫자 자리를 비우고 "확인 불가".
        BRL/KRW는 USD/KRW ÷ USD/BRL로 계산한 값이며 두 값이 모두 있을 때만 표시합니다. 전망·해석 없음. #}
-    <article class="card" aria-labelledby="home-fx-title" id="home-fx">
-      <div class="card-header">
-        <div>
-          <h2 class="card-title" id="home-fx-title">환율</h2>
-          <p class="card-description">USD·BRL 기준 주요 환율을 확인합니다.</p>
-        </div>
+    <article class="card home-summary-card" aria-labelledby="home-fx-title" id="home-fx">
+      <div class="card-header home-summary-head">
+        <h2 class="card-title" id="home-fx-title">환율</h2>
       </div>
       <div class="home-card-body" id="home-fx-body" aria-busy="true">
         <p class="home-news-loading" id="home-fx-loading"><span class="spinner" aria-hidden="true"></span>환율을 불러오는 중</p>
@@ -183,7 +177,7 @@
       <section aria-labelledby="home-notes-fx">
         <h3 class="home-notes-title" id="home-notes-fx">환율</h3>
         <ul>
-          <li>USD/KRW: 한국수출입은행 매매기준율 · USD/BRL: 브라질 중앙은행(BCB) PTAX 매도. 각 타일에 출처를 함께 표시합니다.</li>
+          <li>USD/KRW: 한국수출입은행 매매기준율 · USD/BRL: 브라질 중앙은행(BCB) PTAX 매도. Home 타일에는 출처를 짧게(한국수출입은행 · BCB PTAX), 고시일을 월/일로 표시합니다.</li>
           <li>주말·공휴일에는 최근 고시일 값을 표시하며, 각 값의 고시일을 기준으로 합니다. 전일 대비는 직전 고시일 대비입니다.</li>
           <li>BRL/KRW는 공식 고시 환율이 아니라 USD 경유 계산값(USD/KRW ÷ USD/BRL)입니다. 전망·해석은 제공하지 않습니다.</li>
         </ul>

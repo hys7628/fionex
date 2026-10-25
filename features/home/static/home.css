@@ -718,3 +718,94 @@
   line-height: 1.5;
   word-break: keep-all;
 }
+
+/* ---------- 1행 상태 요약(바이어 시간 · 환율) compact ---------- */
+/* 두 카드만 위아래 여백을 줄입니다(Home 전용 클래스 home-summary-card). 좌우는 공통 .card 값과 같게 두어
+   아래 카드들과 제목 시작선이 맞습니다(데스크톱 24px, 960px 미만 20px). */
+.feature-home .home-summary-card {
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+}
+
+@media (max-width: 959.98px) {
+  .feature-home .home-summary-card {
+    padding: var(--space-4) var(--space-5);
+  }
+}
+
+/* 제목 줄: 왼쪽 제목, 오른쪽 기준 도시 선택(높이는 공통 컨트롤 그대로) */
+.feature-home .home-summary-head {
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.feature-home .home-summary-head .home-city-field {
+  display: block;
+  flex: 0 1 9.5rem;
+  min-width: 0;
+  margin: 0;
+}
+
+/* 바이어: 큰 현지 시각 옆에 작은 '연락 가능/어려움 · 날짜' 한 줄 */
+.feature-home #home-buyer-time .home-card-body {
+  gap: var(--space-2);
+}
+
+.feature-home .home-clock {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-3);
+}
+
+.feature-home .home-clock-meta {
+  gap: 0 var(--space-1);
+}
+
+/* 환율: 회색 상자 대신 얇은 구분선으로 나눈 한 줄 띠. 좁으면 2+1·세로로 줄바꿈 */
+.feature-home .home-fx-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
+  gap: var(--space-2) 0;
+}
+
+.feature-home .home-fx-tile {
+  gap: 0;
+  padding: 0 var(--space-4);
+  border-left: 1px solid var(--color-border);
+  border-radius: 0;
+  background: none;
+}
+
+.feature-home .home-fx-tile:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.feature-home .home-fx-number {
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.feature-home .home-fx-line {
+  margin-top: 2px;
+}
+
+.feature-home .home-fx-source {
+  margin-top: 2px;
+}
+
+@media (max-width: 599.98px) {
+  .feature-home .home-fx-tiles {
+    gap: var(--space-3) var(--space-4);
+  }
+
+  .feature-home .home-fx-tile {
+    padding: 0;
+    border-left: 0;
+  }
+}
+
+/* 짧은 출처(한국수출입은행 등)가 글자 중간에서 끊기지 않게 */
+.feature-home .home-fx-source {
+  word-break: keep-all;
+}

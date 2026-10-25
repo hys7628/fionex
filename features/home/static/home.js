@@ -642,8 +642,16 @@
     return direction + " " + Math.abs(pct).toFixed(2) + "%";
   }
 
-  // Home 요약 타일: 통화쌍 → 큰 숫자(+작은 단위) → 전일 대비 → 가장 작은 회색 한 줄(고시일 · 출처).
+  // Home 요약 타일: 통화쌍 → 큰 숫자(+작은 단위) → 전일 대비 → 가장 작은 회색 한 줄(월/일 고시 · 짧은 출처).
+  // 전체 출처명·고시일·직전 고시일은 타일 title로 두고, 자세한 설명은 '출처 및 유의사항'에 있습니다.
   // 값이 없으면 숫자 자리에 "확인 불가"/"계산 불가"만 둡니다.
+  const FX_SHORT_SOURCES = { koreaexim: "한국수출입은행", bcb_ptax: "BCB PTAX" };
+
+  // 2026-10-23 → 10/23 (Home 표시용, API 값은 그대로)
+  function shortFxDate(value) {
+    const p = value.split("-");
+    return Number(p[1]) + "/" + Number(p[2]);
+  }
   function fxTile(pair, value, unit, line, meta) {
     const li = make("li", "home-fx-tile");
     li.append(make("p", "home-fx-pair", pair));
@@ -660,16 +668,15 @@
     if (info.status !== "ok") {
       return fxTile(info.pair, "확인 불가", "", info.error.message, info.source_name);
     }
-    // 직전 고시일(전일 대비 기준)은 title로만 둡니다(Home 요약에서는 숨김).
     const tile = fxTile(info.pair, formatRate(info.rate, FX_DIGITS[name]), quote, fxChangeText(info),
-      info.date + " 고시 · " + info.source_name);
-    if (info.previous) tile.title = "전일 대비: 직전 고시일 " + info.previous.date + " 대비";
+      shortFxDate(info.date) + " 고시 · " + (FX_SHORT_SOURCES[info.source] || info.source_name));
+    tile.title = info.date + " 고시 · " + info.source_name + (info.previous ? " · 전일 대비: 직전 고시일 " + info.previous.date + " 대비" : "");
     return tile;
   }
 
   function derivedDateText(derived) {
-    if (derived.usd_krw_date === derived.usd_brl_date) return derived.usd_krw_date + " 고시(두 환율 동일)";
-    return "KRW " + derived.usd_krw_date + " · BRL " + derived.usd_brl_date + " 고시";
+    if (derived.usd_krw_date === derived.usd_brl_date) return shortFxDate(derived.usd_krw_date) + " 고시";
+    return "KRW " + shortFxDate(derived.usd_krw_date) + " · BRL " + shortFxDate(derived.usd_brl_date) + " 고시";
   }
 
   function renderFx(data) {
@@ -679,7 +686,7 @@
       fxSourceTile("usd_brl", "BRL", data.usd_brl),
       derived
         ? fxTile("BRL/KRW", formatRate(derived.rate, FX_DIGITS.brl_krw), "KRW",
-          "USD 경유 계산값", derivedDateText(derived) + " · 공식 고시 아님")
+          "USD 경유", derivedDateText(derived))
         : fxTile("BRL/KRW", "계산 불가", "", "USD/KRW와 USD/BRL이 모두 있어야 계산", "USD 경유 계산값")
     );
     fxEl.list.hidden = false;
