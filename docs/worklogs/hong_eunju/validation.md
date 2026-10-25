@@ -172,3 +172,22 @@ JS 예외 0. 콘솔 오류: favicon 404(기존), 의도적 실패 요청 1건.
 | 브라우저(headless Chrome, 키 없는 테스트 서버 127.0.0.1:5013) | "KOTRA · 설정 필요" 배지·"KOTRA 설정 필요" 안내(재시도 버튼 없음), Google·ABIT 목록 정상 | 20/20 통과, JS 예외 0, 스크린샷 확인 | 통과 |
 비고: 5003 포트는 사용자가 실행한 `python app.py`가 사용 중이라 테스트 서버를 5013에 띄움.
 미검증: .env의 실제 KOTRA 키로 실제 데이터 조회(이번 범위 아님), python-dotenv 설치 환경에서 .env 자동 로딩.
+
+## 2026-10-25 로컬 .env 로딩 (DEV-COMMON-001)
+변경: requirements.txt(python-dotenv==1.1.1), README.md, common/config.py(주석). jasonenv에 python-dotenv 1.1.1 설치.
+방법: app.py를 `__main__`으로 실행(= `python app.py`, app.run → flask.cli.load_dotenv)하고 werkzeug run_simple만 막아 환경변수 상태 확인. 값은 출력하지 않음.
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| A. .env 없는 폴더에서 실행 | 오류 없이 app.run 도달, 세 변수 missing | 일치 | 통과 |
+| A. .env 없는 폴더에서 실제 서버(127.0.0.1:5014) | GET / 200 | 200 | 통과 |
+| B. 프로젝트 루트(.env 있음)에서 실행 | OPENAI_API_KEY·OPENAI_MODEL·KOTRA_API_KEY configured | 3개 configured | 통과 |
+| B. 프로젝트 루트에서 실제 서버 단독 실행(5014) | GET / 200 | 200 | 통과 |
+| C. OS 환경변수에 임의 문자열을 먼저 넣고 실행 | .env가 덮어쓰지 않음 | 3개 모두 OS 값 유지 True | 통과 |
+| FLASK_SKIP_DOTENV=1 | 로드 안 함 | 3개 missing | 통과 |
+| 하위 폴더(features)에서 실행 | 상위 방향 탐색으로 로드 | 3개 configured | 통과 |
+| 회귀: tests/test_home·tests/test_common | OK | OK / OK | 통과 |
+| 회귀: 공휴일 서버(DEV-HOME-001)·뉴스 서버(DEV-HOME-002, 실제 RSS) | 통과 | 19/19 · 38/38 | 통과 |
+| 회귀: test client GET / | 200, 탭 패널 5개, 홈 카드 3개, AI 요약 모듈 import | 일치 | 통과 |
+비고: 처음 실제 서버 확인은 bash kill이 Windows python을 종료하지 못해 이전 서버가 남은 채 진행됨 → B만 PowerShell로 단독 재실행해 확인. 테스트 서버는 모두 종료.
+test client·unittest는 app.run을 거치지 않아 .env를 읽지 않음(실제 키로 외부 호출 없음).
+미검증: `flask --app app run` 경로(같은 load_dotenv 함수, 직접 실행 안 함), debug 재시작기 자식 프로세스에서의 값(부모 환경 상속, 직접 확인 안 함), 실제 키로 OpenAI·KOTRA 호출, 다른 팀원 PC.

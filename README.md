@@ -28,23 +28,28 @@ flask --app app run --port 5003
 
 ### OpenAI 환경변수
 `OPENAI_API_KEY`, `OPENAI_MODEL`(텍스트), `OPENAI_IMAGE_MODEL`(이미지). 양식은 `.env.example`(비밀값 없음).
-앱 코드는 `.env`를 직접 읽지 않습니다. 실행 셸에 환경변수를 설정하세요(PowerShell 예):
+
+### .env 로딩
+`.env.example`을 복사해 프로젝트 루트에 `.env`를 만들고 값을 채운 뒤, **프로젝트 루트에서** `python app.py`로 실행합니다.
+앱 코드에 별도 로딩 코드는 없습니다. Flask 3.1.2가 `python app.py`(app.run 시작 시)와 `flask --app app run`(앱 import 전)에서
+requirements.txt의 `python-dotenv`로 실행 위치부터 상위 폴더 방향으로 찾은 `.env`를 읽습니다(2026-10-25 동작 확인).
+- 이미 OS·셸에 설정된 환경변수가 우선이며 `.env`가 덮어쓰지 않습니다.
+- `.env`가 없어도 앱은 실행됩니다(키가 필요한 기능만 "설정 필요"·"사용할 수 없음"으로 표시).
+- `FLASK_SKIP_DOTENV=1`이면 읽지 않습니다. 테스트(unittest)는 `app.run`을 거치지 않으므로 `.env`를 읽지 않습니다.
+- `.env`는 Git에서 제외됩니다. 키 값을 출력·기록하지 마세요.
+
+셸 환경변수로 직접 지정할 수도 있습니다(PowerShell 예, `.env`보다 우선):
 ```
 $env:OPENAI_API_KEY = "<본인 키>"
 $env:OPENAI_MODEL = "gpt-5.4-mini"
-$env:OPENAI_IMAGE_MODEL = "gpt-image-2.5-sunburst"
 python app.py
 ```
-주의: Flask 3.1.2 소스 기준으로, 실행하는 Python에 `python-dotenv`가 있고 `FLASK_SKIP_DOTENV`가 설정되지 않았으면
-`python app.py`(app.run 시작 시)와 `flask --app app run`(앱 import 전) 모두 실행 위치에서 상위 폴더 방향으로 찾은 `.env`를 로드할 수 있습니다
-(이미 설정된 환경변수가 우선). 실제 로딩 동작은 검증하지 않았습니다. requirements.txt에는 python-dotenv가 없지만,
-2026-10-25 확인 시 jasonenv에는 python-dotenv 1.1.1이 별도로 설치되어 있었습니다. `.env`는 Git에서 제외됩니다.
 SDK 디버그 로그(`OPENAI_LOG`)는 기록 범위를 검증하지 않았으므로 서비스 실행 시 켜지 않습니다.
 
 ### KOTRA 환경변수
 `KOTRA_API_KEY`: 홈 업계 소식의 KOTRA 해외시장뉴스 Open API(공공데이터포털) 인증키. 실제 값은 `.env`에만 둡니다(양식은 `.env.example`).
 값이 없으면 KOTRA 수집만 "설정 필요"로 표시되고 Google News·ABIT 뉴스는 그대로 동작합니다.
-위 OpenAI 환경변수와 같이 앱 코드는 `.env`를 직접 읽지 않으므로, 실행 셸에 설정하거나 python-dotenv가 있는 환경에서 실행해야 반영됩니다.
+`.env`에 넣으면 위 ".env 로딩" 방식으로 반영됩니다.
 
 ### 공통 테스트
 ```

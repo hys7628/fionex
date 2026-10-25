@@ -116,3 +116,16 @@
 - 확인 사항: .env의 KOTRA_API_KEY는 값 존재 여부만 확인(값 미출력). 앱은 .env를 직접 읽지 않고 jasonenv에 python-dotenv가 없어, `python app.py`만으로는 .env 값이 반영되지 않음 → README에 실행 셸 설정 또는 python-dotenv 필요로 기록.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: KOTRA 실제 데이터 응답은 여전히 미확인(이번 범위에서 실제 키로 호출하지 않음).
+
+## DEV-COMMON-001 로컬 .env 로딩 점검
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 17:00경 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통 개발환경(브랜치 feature/home, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI·외부 API 호출 없음
+- 지시 요약: `python app.py` 실행 시 .env의 OPENAI_API_KEY·OPENAI_MODEL·KOTRA_API_KEY가 환경변수로 로드되도록 현재 구조 확인 후 최소 변경. 기존 로딩 방식이 있으면 새 방식 추가 금지. OS 환경변수 우선, .env 없어도 실행, 키 값 출력·기록 금지. Home 기능 추가 개발·Git 작업 금지.
+- 확인 결과: 앱 코드에 .env 로딩 코드 없음. Flask 3.1.2 `Flask.run()`이 `flask.cli.load_dotenv()`를 호출(`flask run`도 같은 함수 사용)하며, python-dotenv가 있으면 실행 위치부터 상위 방향으로 .env를 찾고 이미 os.environ에 있는 키는 건너뜀(소스 확인). jasonenv에 python-dotenv 미설치, requirements.txt에도 없음 → 지금까지 .env가 읽히지 않던 원인.
+- 선택: 새 로딩 코드를 추가하지 않고 Flask 기본 동작을 사용. requirements.txt에 `python-dotenv==1.1.1` 추가(README에 기록돼 있던 버전), jasonenv에 설치. load_dotenv(override=False)를 직접 호출하는 방식은 Flask가 이미 같은 동작(기존 값 우선)을 하므로 중복이라 채택하지 않음.
+- 변경 파일: requirements.txt, README.md(.env 로딩 절), common/config.py(모듈 설명 주석만). Home routes/service는 변경 없음.
+- 검증: validation.md 2026-10-25 .env 로딩 항목. 값은 configured/missing·일치 여부만 출력.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 프로젝트 밖 폴더에서 실행하면 .env를 찾지 못함(README에 프로젝트 루트 실행 안내). 다른 팀원 환경에는 `pip install -r requirements.txt` 재실행 필요.
