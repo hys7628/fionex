@@ -108,3 +108,11 @@
 ## 2026-10-26 후속: 조항 비교 범위 판정 자료 (DEV-2026_10_26-02 후속)
 - 실제 조회: 없음.
 - 재사용: 저장소 밖 세션 임시 폴더의 2026-10-25 공식 페이지 사본(cdc.htm 16:31 무렵 SRC-CDC 확보본, conar_codigos.html SRC-CONAR-WEB 확보본)을 comparison_units.json 판정과 비교 확인에만 사용. 사본 원문은 저장소에 넣지 않았고 comparison_units.json에는 단위 이름과 범위 표시만 있다.
+
+## 2026-10-26 문구 검수 서버 재사용 자료 (DEV-2026_10_26-03)
+- 실제 조회: 없음(공식 사이트·OpenAI 모두).
+| 재사용 | 위치 | 확인 상태 |
+|---|---|---|
+| 기준 묶음(활성 base, 2026-10-26.1) | features/green_claim/data/brazil_claim_criteria/ | 원문 확보 2026-10-25, 최신성 재확인 없음, CONAR AI 이용 허가 미확인 |
+| 기준 확인·상태 | criteria_check.check_sources·criteria_status | 2026-10-26 구현, 가짜 응답으로만 확인 |
+| 공통 텍스트 연결 | common/ai_client.py generate_structured, common/config.py TEXT_* | 로컬 코드 읽기 전용 확인: timeout 60초, 재시도 0, 출력 상한 4,096, store=False. 공통 문서상 텍스트 함수 실제 호출은 사용자 실행으로 확인됨, 이 기능의 실제 호출은 미검증 |

@@ -4,4 +4,5 @@
 | 파일 | 용도 | 작성일 | 상태 |
 |---|---|---|---|
 | pdf_ocr_v1.md | 스캔 PDF AI 글자 판독(파일 전체를 instructions로 전송, 결과 스키마 ocr_schema.OcrResult) | 2026-10-25 | 사용자 실행으로 가상 스캔 PDF 1페이지 판독 성공 1건 확인. 다른 문서의 정확도·비용·시간은 미검증 |
+| claim_review_v1.md | 그린워싱 문구 표현 위험 검토(파일 전체를 instructions로 전송, 입력 문구·고정 기준 묶음은 JSON 데이터로 전달, 결과 스키마 review_schema.ReviewResult) | 2026-10-26 | 작성만. 실제 모델 실험 미실행 |
 | image_ocr_v1.md | 홍보 이미지(JPG·JPEG·PNG) AI 글자 판독(파일 전체를 instructions로 전송, 서버가 메타데이터 없는 판독용 사본을 1페이지 PDF에 담아 전달, 결과 스키마 ocr_schema.ImageOcrResult) | 2026-10-25 | 작성만. 실제 모델 실험 미실행(실험 전이라 사본 방식 설명을 같은 버전에서 수정) |

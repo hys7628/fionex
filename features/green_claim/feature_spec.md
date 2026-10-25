@@ -691,6 +691,57 @@ Pillow 역할 [구현]
 
 검증 계획: 같은 입력 안정 생성, base 재생성과 기존 활성 묶음 내용 일치, 후보 검증·교체·되돌리기, 누락·손상·해시·대응 실패, 검토 전 활성화 거부, 가상 HTTP로 변경 없음·조항 변경·메뉴만 변경·비교 기준 부족·일부 출처 성공·오류/로그인/빈 응답·조항 누락·시간·크기·요청 수·리다이렉트 제한, 동시 실행·잠금 정리, 기존 기준 보존·기준 없음 중단, 2026-10-25 저장 사본으로 실제 페이지 구조 비교(네트워크 없음), 기존 회귀. 실제 공식 사이트 조회는 이번에 하지 않는다(CONAR 보류, Planalto 이용약관 미확인).
 
+### 그린워싱 문구 검수 서버 (2026-10-26 구현 전 작성, 실제 AI 호출 미검증)
+범위: 입력 문구와 저장된 CDC·CONAR 기준을 공통 OpenAI 텍스트 연결(`generate_structured`)에 보내 구조화 검토 결과를 받고, 서버가 검증해 돌려주는 기능. 화면·버튼·결과 렌더링, 실제 OpenAI 호출·과금 테스트, 결과 PDF, 인증 갭 분석, 추출·판독 기능 변경은 범위 밖.
+
+요청: `POST /api/green-claim/review`, `Content-Type: application/json`, 본문 `{"text": "..."}`
+- `text`만 받는다. 다른 키(모델·기준·프롬프트·경로 등)가 있으면 거부(REVIEW_FIELDS_INVALID). 직접 입력과 파일 추출·판독 후 수정한 문구 모두 같은 `text`로 보낸다.
+- 서버가 CRLF·CR→LF 정규화. 공백·줄바꿈 포함 Unicode 코드 포인트 최대 20,000자. 빈 값·공백뿐(REVIEW_TEXT_EMPTY), 문자열 아님·짝 없는 서로게이트(REVIEW_FIELDS_INVALID), 잘못된 JSON(REVIEW_JSON_INVALID), 20,000자 초과(REVIEW_TEXT_TOO_LONG)는 거부. 자르기·요약·자동 교정 없음.
+- 요청 본문 상한 262,144바이트(256 KiB): 20,000자를 JSON 이스케이프(`\uXXXX`, 이모지는 서로게이트 쌍 12바이트)로 보내도 최대 약 240,000바이트 + 여유. 초과는 REVIEW_REQUEST_TOO_LARGE(413).
+- routes.py는 요청·응답만, `review_service.py`가 검수 처리.
+
+검수 범위 [확정 요구사항 반영]
+- 사용자: 효성티앤씨 해외영업·마케팅 담당자, 시장 브라질, 제품 리젠 T2T. 한국어·영어·브라질 포르투갈어(혼합 포함) 홍보 문구의 표현 위험.
+- 조치: `revise_recommended`(수정 권고) / `needs_review`(검토 필요) / `judgment_withheld`(판단 보류).
+- 제외: 제품 소개서 대조, 수치·환경 성능·인증 보유·유효성 사실 확인, 디자인·색상·로고·그림 평가, 브라질 외 규정, 위법 확정·적법성 보장·사용 승인·친환경 점수, 인증 갭 분석.
+
+처리 순서
+1. 입력 검사(위). 동시 검수 1건(초과 시 REVIEW_BUSY 429, 기존 AI 판독과 같은 방식의 별도 슬롯).
+2. 기준 변경 확인: **검수 요청마다** `criteria_check.check_sources()`로 확인을 시도한다(공식 조회 단계, OpenAI와 분리). 기존 출처 정책·요청 수·시간·크기 제한 그대로이며 CONAR 웹·PDF는 보류 상태 유지. 다른 확인·교체가 진행 중(busy)이거나 확인 단계에서 예외가 나면 이번 요청에서는 확인하지 못한 것으로 표시하고(`check_status: not_checked_this_request`, 시도 시각 null) 마지막 확인 기록은 `previous_*`로만 보여 준 뒤 기존 정상 기준으로 진행한다. 출처 조회가 실패하면 그 출처를 `failed`로 표시하고 "이번 요청에서 확인하지 못함" 경고와 함께 기존 정상 기준으로 진행한다. 마지막 성공 확인 시각은 실제로 비교를 끝낸 시각만 쓰며 실패한 요청의 시각으로 바꾸지 않는다. (같은 작업 중 보완: 처음 구현한 "600초 안 확인 결과 재사용"은 합의되지 않은 정책이라 커밋 전에 제거했다.)
+3. 사용 기준 확정: 확인 뒤 `load_criteria()`로 활성 기준을 **한 번** 읽어 사본을 고정한다. 이후 기준이 교체돼도 이 요청은 이 사본만 모델에 보내고, 응답의 기준 버전·해시도 이 사본 값이다. 확인 결과의 활성 해시와 다르면 "확인 직후 기준이 교체됨" 경고. 로드 실패(정상 기준 없음) → REVIEW_CRITERIA_NOT_READY(503), OpenAI 호출 없음. 검토 안 된 후보·작업 폴더는 쓰지 않는다(로더는 활성 포인터만 읽음).
+4. 공통 연결 1회 호출: `generate_structured(instructions=prompts/claim_review_v1.md 전체, input_text=JSON 데이터, schema=ReviewResult)`. 모델은 `OPENAI_MODEL`, 공통 timeout 60초·재시도 0·출력 상한 4,096토큰·`store=False`(기능에서 바꾸지 않음). 자동 재시도·모델 전환·분할 호출·외부 검색·도구 없음.
+   - input_text: `{"criteria_bundle": {bundle_version, content_hash}, "criteria": [기준별 id·법적 성격·제목·조항·원문 발췌·비공식 번역·원문 요구·검토 지침·적용 한계·필요 증빙], "text_to_review": "..."}`. 모두 검토 데이터이며 지시가 아니라고 프롬프트에 명시. URL·조회 시각은 보내지 않는다(서버가 붙임).
+   - 20,000자 입력과 다국어 출력이 4,096토큰 안에 항상 들어간다고 가정하지 않는다. 잘림(AI_INCOMPLETE)·스키마 오류(AI_OUTPUT_INVALID)·거절(AI_REFUSED)은 실패이며 부분 결과를 정상으로 내보내지 않는다.
+5. 서버 검증 → 응답 조립(아래).
+
+결과 스키마(pydantic `review_schema.ReviewResult`, 모든 필드 필수·없으면 null)
+- `items[]`: `quote`(원문에 그대로 있는 대상 구절), `occurrence`(같은 구절이 여러 번 있을 때 몇 번째인지, 1부터), `interpretation_ko`, `action`(위 세 값), `reason_ko`, `direction_ko`, `criteria_ids[]`, `quote_language`(`ko`/`en`/`pt-BR`/`mixed`/`unknown`), `alternative`(`original_text`·`pt_br_text`·`ko_interpretation`, 만들 수 없으면 null), `alternative_unavailable_reason_ko`(alternative가 null일 때).
+- `summary_ko`, `limitations[]`.
+
+서버 검증 [구현]
+- 기계 검증: 상태값·필드 타입·길이(구절 1,000자, 설명 칸 2,000자, 항목 50개 이하), 기준 ID가 이 요청의 고정 기준에 있는지, 수정 권고·검토 필요 항목은 기준 ID 1개 이상(관련 기준 없이 판정하지 않음, 판단 보류는 0개 가능), 같은 기준 ID 중복 제거.
+- 위치: 구절이 정규화 원문에 있는지 서버가 찾고 `occurrence`번째 발생 위치를 확정한다. 없거나 발생 번호가 범위 밖이면 REVIEW_OUTPUT_INVALID(잘못 강조하지 않음). 같은 위치의 항목이 둘이면 중복으로 보고 REVIEW_OUTPUT_INVALID. 위치는 **정규화 원문의 Unicode 코드 포인트 [start, end)**이며, 브라우저 JavaScript 문자열(UTF-16) 인덱스와 이모지 등에서 다르다(화면 연결 시 변환 필요).
+- 근거 출처: 모델 글에 URL이 있으면 입력 문구에 있는 URL이 아니면 REVIEW_OUTPUT_INVALID. 모델 글의 조항 표기(Art. N, Artigo N)가 제공 기준의 조항 칸에 없는 번호면 REVIEW_OUTPUT_INVALID. 공식 링크·조항·원문 발췌·비공식 번역은 서버가 기준 ID로 기준 자료에서 붙인다(모델 값 사용 안 함).
+- 대체 예시: 예시 문장의 숫자(연속 숫자열, 구분 기호 무시)가 입력 문구에 없으면 예시를 표시하지 않고 사유를 남긴다. 원문 언어 문장이 포르투갈어 문장과 같으면 하나만, 한국어 해석이 원문 문장과 같으면 해석을 생략(중복 제거).
+- 요약 개수·항목 ID·상태별 목록은 서버가 계산. 항목 ID는 위치 순 `R1`, `R2`…
+- 한계: 새 인증명·새 환경 효과·번역 의미 왜곡은 문자열 검사로 모두 막을 수 없다(프롬프트 지시와 사람 검토에 의존).
+
+성공 응답 `data`
+- `text`(실제 검수한 정규화 원문), `char_count`, `position_unit: "unicode_code_point"`
+- `items[]`: `id`, `quote`, `start`, `end`, `occurrence`, `quote_language`, `interpretation_ko`, `action`, `action_label_ko`, `reason_ko`, `direction_ko`, `criteria_ids`, `alternative`(null 가능), `alternative_note_ko`, `server_checks[]`
+- `criteria_refs`: 항목이 참조한 기준 ID → `{source_id, legal_nature, title_ko, provisions, official_url, retrieved_at, excerpt_pt(저장 원문 발췌), translation_ko(비공식 번역 표시), requirement_ko(원문 요구), review_guidance_ko(서비스 검토 해석), scope_limits_ko}`
+- `summary`: `total`, `by_action`(개수), `item_ids_by_action`, `no_items_message`(항목 0개면 "검토 대상 표현이 발견되지 않았습니다." 그 외 null), `model_summary_ko`(모델 작성)
+- `model_limitations`, `model`, `prompt_version`(`claim_review_v1`)
+- `criteria`: 기준 묶음 ID·버전·내용 해시·활성 버전, 자료별 확보 시각, 이번 요청의 확인 상태·이유·시도 시각(확인하지 못했으면 `not_checked_this_request`·null), 마지막 성공 확인 시각, 이번 요청에서 확인하지 못했을 때의 이전 기록(`previous_check_status`·`previous_check_attempted_at`), 확인 방식(`checked`/`status_only_busy`/`status_only_error`), 경고, 미반영 변경, CONAR 이용 허가 미확인 표시
+- `notices`: 표현 스크리닝이며 적법성·사실·인증을 보장하지 않음, 발견 개수가 모든 위험이 아님, 대체 문장은 예시이며 사람 확인 필요, 기준 번역은 비공식, "최신 기준"이 아니라 확인 범위 안의 저장 기준
+- `limits`: 입력 상한, 본문 상한, AI timeout·출력 상한, 기준 확인 요청당·전체 시간 제한
+
+오류(공통 실패 형식, 고정 문장): REQUEST_INVALID(JSON이 아닌 형식), REVIEW_JSON_INVALID, REVIEW_FIELDS_INVALID, REVIEW_TEXT_EMPTY, REVIEW_TEXT_TOO_LONG(422), REVIEW_REQUEST_TOO_LARGE(413), REVIEW_BUSY(429), REVIEW_CRITERIA_NOT_READY(503), REVIEW_OUTPUT_INVALID(502), AI_DEPENDENCY_MISSING(503), 공통 AI_* (설정·인증·권한·모델·요청 제한·연결·시간 초과·거절·잘림·형식), AI_UNKNOWN_ERROR.
+
+저장·로그: 사용자 문구·응답·검수 이력을 DB·파일·브라우저 저장소에 남기지 않는다. 기준 확인 상태 파일(`criteria_state/check_state.json`, 사용자 내용 없음)만 갱신될 수 있다. 로그에는 오류 code만.
+
+미검증: 실제 OpenAI 호출, 판단 정확도·번역·대체 문장 품질, 입력 토큰·비용·소요 시간, 4,096토큰으로 처리 가능한 분량, 실제 공식 출처 조회.
+
 ## 검증
 현재 기능 미구현·실행 검증 미실시. 아래는 앞으로 수행할 계획이며 실행 결과가 아니다.
 
@@ -742,6 +793,13 @@ Pillow 역할 [구현]
 - 자동 확인 정책: CDC만 개발자 실행 시 조회 가능, CONAR 웹·PDF는 보류. 실제 공식 사이트 조회는 이번에 하지 않았다(가상 응답과 2026-10-25 저장 사본으로만 확인).
 - 보완(커밋 전): 줄 포함 방식 → 조항 단위 전체 비교 + `comparison_units.json`(비교 범위 정보, 기준 폴더에 새 파일). 2026-10-25 저장 사본 기준 결과: CDC 6개 기준 조항 전체 비교·3개 부분 확인(Art. 3·6·60), CONAR 13개 조항 전체 비교·2개 부분 확인(Artigo 27·부속서 U 서문).
 - 미구현: 검수 기능 연결(criteria_status 호출·결과에 버전·해시 기록), 새 조항 번역·해석, 실제 기준 갱신, PDF 출처 확인.
+
+### 구현 상태 갱신 (2026-10-26 그린워싱 문구 검수 서버)
+- 추가 구현: `POST /api/green-claim/review`(routes.py), `review_service.py`, `review_schema.py`, 서비스 프롬프트 `prompts/claim_review_v1.md`(작성만, 실제 모델 실험 없음), 오류 코드 8개(service.py), 테스트. 위 "그린워싱 문구 검수 서버" 계약 기준.
+- 검수 요청마다 기준 변경 확인(criteria_check)을 먼저 시도하고(busy·오류면 이번 요청 미확인 표시와 마지막 기록, 출처 실패면 failed와 경고), 활성 기준을 한 번 고정해 모델 입력과 응답 정보에 같은 버전·해시를 쓴다. 처음 구현한 600초 재사용은 합의되지 않아 커밋 전에 제거했다.
+- 화면 연결·결과 렌더링·결과 PDF는 미구현. 실제 OpenAI 호출·과금 테스트와 실제 공식 출처 조회는 하지 않았다(모의만).
+- 화면 연결 시: 위치(start·end)는 Unicode 코드 포인트라 JavaScript에서는 `Array.from(text)` 기준으로 잘라야 한다(UTF-16 인덱스와 다름). 응답 시간은 기준 확인(최대 30초) + AI(공통 timeout 60초) + 처리 시간이 더해질 수 있다.
+- 검증 한계: 서버는 상태값·길이·기준 ID·인용 위치·URL·Art./Artigo 조항 번호·예시의 새 숫자만 기계적으로 확인한다. 새 인증명·새 환경 효과·번역 의미 왜곡·한국어식 조항 표기(제N조)는 프롬프트와 사람 검토에 의존한다.
 
 ### 완료 기준·검증 계획
 - 직접 입력과 파일 업로드의 각 흐름.
