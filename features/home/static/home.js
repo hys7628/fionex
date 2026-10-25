@@ -487,6 +487,137 @@
     if (!newsLoaded && !newsBusy) loadNews(null);
   }
 
+  /* ---------- 환율 ---------- */
+  // 서버(/api/home/fx)가 소스별로 조회·캐시합니다. 홈을 처음 열 때 한 번 요청하고, 탭을 다시 열 때는 요청하지 않습니다.
+  // 숫자는 서버가 돌려준 공식 고시값만 표시합니다. 값이 없으면 "확인 불가"로 두고 숫자를 채우지 않습니다.
+  const fxEl = {
+    body: panel.querySelector("#home-fx-body"),
+    loading: panel.querySelector("#home-fx-loading"),
+    list: panel.querySelector("#home-fx-list"),
+    notices: panel.querySelector("#home-fx-notices"),
+  };
+  const FX_DIGITS = { usd_krw: 2, usd_brl: 4, brl_krw: 2 };
+  let fxLoaded = false;
+  let fxBusy = false;
+
+  function formatRate(value, digits) {
+    return new Intl.NumberFormat("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
+  }
+
+  // 방향은 기호와 낱말로 함께 표시합니다(색으로만 구분하지 않음).
+  function fxChangeText(info) {
+    if (info.change_pct === null || info.change_pct === undefined || !info.previous) return "전일 대비: 비교 데이터 없음";
+    const pct = info.change_pct;
+    const direction = pct > 0 ? "▲ 상승" : pct < 0 ? "▼ 하락" : "– 변동 없음";
+    return "전일 대비 " + direction + " " + Math.abs(pct).toFixed(2) + "% (직전 고시일 " + info.previous.date + ")";
+  }
+
+  function fxRow(label, value, subs) {
+    const row = make("div", "home-time-row");
+    row.append(make("dt", "", label));
+    const dd = make("dd");
+    dd.append(make("span", "home-time-value", value));
+    subs.forEach(function (text) { dd.append(make("span", "home-time-sub home-fx-sub", text)); });
+    row.append(dd);
+    return row;
+  }
+
+  function fxSourceRow(name, quote, info) {
+    if (info.status !== "ok") {
+      return fxRow(info.pair, "확인 불가", [info.error.message, info.source_name]);
+    }
+    return fxRow(info.pair, "1 USD = " + formatRate(info.rate, FX_DIGITS[name]) + " " + quote,
+      [info.date + " 고시 · " + info.source_name, fxChangeText(info)]);
+  }
+
+  function renderFx(data) {
+    const derived = data.brl_krw;
+    fxEl.list.replaceChildren(
+      fxSourceRow("usd_krw", "KRW", data.usd_krw),
+      fxSourceRow("usd_brl", "BRL", data.usd_brl),
+      derived
+        ? fxRow("BRL/KRW", "1 BRL = " + formatRate(derived.rate, FX_DIGITS.brl_krw) + " KRW",
+          ["USD 경유 계산값(USD/KRW ÷ USD/BRL) · 공식 고시 환율 아님",
+            "USD/KRW " + derived.usd_krw_date + " · USD/BRL " + derived.usd_brl_date + " 고시 기준"])
+        : fxRow("BRL/KRW", "계산 불가", ["USD/KRW와 USD/BRL이 모두 있어야 USD 경유로 계산합니다."])
+    );
+    fxEl.list.hidden = false;
+
+    fxEl.notices.replaceChildren.apply(fxEl.notices, ["usd_krw", "usd_brl"].filter(function (name) {
+      return data[name].status !== "ok";
+    }).map(function (name) {
+      const info = data[name];
+      const notConfigured = info.status === "not_configured";
+      const notice = make("div", "notice " + (notConfigured ? "notice-info" : "notice-warning"));
+      notice.append(make("p", "notice-title", info.pair + (notConfigured ? " 설정 필요" : " 확인 불가")));
+      notice.append(make("p", "", info.error.message));
+      if (info.error.retryable) {
+        const button = make("button", "btn btn-secondary", info.pair + " 다시 시도");
+        button.type = "button";
+        button.dataset.fxRetry = name;
+        const row = make("div", "btn-row");
+        row.append(button);
+        notice.append(row);
+      }
+      return notice;
+    }));
+  }
+
+  function setFxBusy(value) {
+    fxBusy = value;
+    fxEl.body.setAttribute("aria-busy", value ? "true" : "false");
+    fxEl.loading.hidden = !value;
+    fxEl.notices.querySelectorAll("[data-fx-retry]").forEach(function (b) { b.disabled = value; });
+  }
+
+  // 서버 자체에 닿지 못한 경우. 이미 보이는 값은 그대로 둡니다.
+  function showFxRequestError() {
+    const old = fxEl.notices.querySelector("#home-fx-request-error");
+    if (old) old.remove();
+    const notice = make("div", "notice notice-danger");
+    notice.id = "home-fx-request-error";
+    notice.append(make("p", "notice-title", "환율 불러오기 실패"));
+    notice.append(make("p", "", "서버에서 환율을 받지 못했습니다. 잠시 후 다시 시도하세요."));
+    const button = make("button", "btn btn-secondary", "환율 다시 시도");
+    button.type = "button";
+    button.dataset.fxRetry = "";
+    const row = make("div", "btn-row");
+    row.append(button);
+    notice.append(row);
+    fxEl.notices.prepend(notice);
+  }
+
+  async function loadFx(refresh) {
+    if (fxBusy) return;
+    setFxBusy(true);
+    try {
+      const res = await fetch("/api/home/fx" + (refresh ? "?refresh=" + encodeURIComponent(refresh) : ""));
+      const body = await res.json();
+      if (!body.ok) throw new Error(body.error.message);
+      renderFx(body.data);
+      fxLoaded = true;
+    } catch (err) {
+      showFxRequestError();
+    } finally {
+      setFxBusy(false);
+    }
+  }
+
+  fxEl.notices.addEventListener("click", function (event) {
+    const button = event.target.closest("[data-fx-retry]");
+    if (!button || button.disabled) return;
+    const name = button.dataset.fxRetry;
+    loadFx(name || null).then(function () {
+      const again = fxEl.notices.querySelector('[data-fx-retry="' + name + '"]');
+      if (again) again.focus();
+      else if (!fxEl.list.hidden) fxEl.list.focus();
+    });
+  });
+
+  function ensureFx() {
+    if (!fxLoaded && !fxBusy) loadFx(null);
+  }
+
   // 화면에 분 단위까지만 표시하므로 매 분 경계에 한 번 갱신합니다. 홈이 숨겨지면 멈춥니다.
   let timer = null;
 
@@ -511,11 +642,13 @@
   AppShell.onShow(FEATURE_ID, function () {
     forgetUnavailableYears();
     tick();
+    ensureFx();
     ensureNews();
   });
   AppShell.onHide(FEATURE_ID, stop);
   if (AppShell.current() === FEATURE_ID) {
     tick();
+    ensureFx();
     ensureNews();
   }
 })();

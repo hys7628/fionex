@@ -59,3 +59,19 @@ def news_summaries():
     요약 실패는 뉴스 표시에 영향을 주지 않도록 data.status로만 알립니다. 클라이언트가 보낸 문장은 받지 않습니다.
     """
     return jsonify(ok=True, data=service.summarize_news())
+
+
+@bp.get("/api/home/fx")
+def fx():
+    """환율. ?refresh=usd_krw|usd_brl 은 그 소스만 캐시를 무시하고 다시 조회합니다.
+
+    성공 {"ok": true, "data": {usd_krw, usd_brl, brl_krw}}. 소스별 실패는 data.<소스>.status로 알립니다.
+    brl_krw는 두 공식 고시값이 모두 있을 때만 계산한 USD 경유 값이며, 아니면 null입니다.
+    """
+    refresh = request.args.get("refresh")
+    if refresh is not None and refresh not in service.FX_SOURCES:
+        return jsonify(ok=False, error={
+            "code": "invalid_refresh",
+            "message": "refresh는 " + ", ".join(service.FX_SOURCES) + " 중 하나여야 합니다.",
+        }), 400
+    return jsonify(ok=True, data=service.get_fx(refresh))

@@ -191,3 +191,53 @@ JS 예외 0. 콘솔 오류: favicon 404(기존), 의도적 실패 요청 1건.
 비고: 처음 실제 서버 확인은 bash kill이 Windows python을 종료하지 못해 이전 서버가 남은 채 진행됨 → B만 PowerShell로 단독 재실행해 확인. 테스트 서버는 모두 종료.
 test client·unittest는 app.run을 거치지 않아 .env를 읽지 않음(실제 키로 외부 호출 없음).
 미검증: `flask --app app run` 경로(같은 load_dotenv 함수, 직접 실행 안 함), debug 재시작기 자식 프로세스에서의 값(부모 환경 상속, 직접 확인 안 함), 실제 키로 OpenAI·KOTRA 호출, 다른 팀원 PC.
+
+## 2026-10-25 홈 환율 카드 (DEV-HOME-005)
+변경: features/home/fx.py(신규)·service.py·routes.py·panel.html·home.js·home.css, tests/test_home/test_fx.py(신규)
+
+### 공식 명세·실제 응답 확인 (2026-10-25 16:55~17:00 KST)
+- 수출입은행 현재환율 API 개발명세(웹페이지): 요청 `GET https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON?authkey=&searchdate=&data=AP01`, searchdate 20150101·2015-01-01 형식, RESULT 1 성공/2 DATA코드 오류/3 인증코드 오류/4 일일제한횟수 마감, CUR_UNIT 통화코드, DEAL_BAS_R 매매 기준율, "비영업일 또는 영업당일 11시 이전 요청 시 null", 일일 1000회, 기존 www 도메인 2026-04-30 병행 종료.
+- 수출입은행 실제 호출: 키 없음·등록되지 않은 키 → HTTP 200 `[{"result":3, 나머지 null}]`. 실제 키 없음 → **USD/KRW 데이터 응답 미확인**.
+- BCB PTAX: OData $metadata와 문서 페이지 내장 명세 확인. `CotacaoDolarPeriodo(dataInicial, dataFinalCotacao)`, 날짜 'MM-DD-AAAA', cotacaoCompra "Cotação de compra", cotacaoVenda "Cotação de venda"(BRL/USD), dataHoraCotacao. 키 없이 HTTP 200. 10/15~10/25 조회 시 영업일 7건(주말 없음), 10/24(토) 일 조회는 빈 value.
+
+### 실제 외부 호출 (앱 코드 경로)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| /api/home/fx, 수출입은행 키 없음 | usd_krw not_configured(외부 요청 없음), usd_brl ok, brl_krw null | 일치. PTAX 최근 고시 2026-10-23 5.0377, 직전 10-22 5.0383, -0.01%, 1.28s | 통과 |
+| 원본 PTAX와 대조 | 같은 값 | 원본 10-22 5.0383 / 10-23 5.0377, 계산 -0.0119% | 통과 |
+| 등록되지 않은 키(프로세스 안에서만) | usd_krw error access_denied, 재시도 불가, 응답에 키 없음 | 일치 | 통과 |
+
+### 모의 테스트 tests/test_home/test_fx.py (15건, tests/test_home 전체 33건 OK)
+| 사례 | 기대 | 판정 |
+|---|---|---|
+| parse_exim | 쉼표 값 파싱, 빈 목록·null·USD 없음 → 고시 없음, RESULT 2/3/4/기타 → 코드 | 통과 |
+| parse_ptax | 날짜순, 같은 날 마지막 시각, 값 없음·날짜 오류 제외, 형식 오류 거부 | 통과 |
+| 계산 | 1405.2/1400.9 → 0.31%, 1400÷5 = 280, 한쪽 없음 → null | 통과 |
+| 일요일 기준 | 수출입은행 일·토 비어 금(10/23) 사용, 직전 목(10/22), PTAX 기간 1회(10-11~10-25) | 통과 |
+| 7일 안 고시 없음 | 두 소스 no_recent_rate, 숫자 없음 | 통과 |
+| 직전값 없음 | change_pct·previous null | 통과 |
+| 한쪽 실패 / 둘 다 실패 / 예상 밖 예외 | 다른 소스 유지, brl_krw null, 실패 5분 캐시 | 통과 |
+| 캐시 | 재요청 외부 0회, 만료 후 수출입은행은 오늘만 재조회, refresh=usd_brl은 PTAX만 | 통과 |
+| 키 없음 / 인증 오류 로그 | 외부 요청 없음 / 로그·응답에 키 없음 | 통과 |
+| 라우트 | 잘못된 refresh 3종 400 | 통과 |
+
+### 브라우저 (headless Chrome, 테스트 서버 127.0.0.1:5013, 20/20 통과, 수정 후 재실행 2회 20/20)
+실제 서버(PTAX 실제, 수출입은행 키 없음) + 응답 가로채기 가상 값.
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| 실제 서버 | USD/KRW 확인 불가·"설정 필요" 안내(재시도 없음), USD/BRL 실제 PTAX·고시일·전일 대비, BRL/KRW 계산 불가, 바이어 시간·뉴스 동작 | 일치 | 통과 |
+| 정상 | "1 USD = 1,405.20 KRW", "1 USD = 5.0377 BRL", "1 BRL = 278.94 KRW", 고시일·출처, ▲ 상승/▼ 하락, "USD 경유 계산값", "오늘" 표현 없음 | 일치 | 통과 |
+| 비교 데이터 없음 / 변동 없음 | 문구 표시 | 일치 | 통과 |
+| USD/KRW 실패 → 재시도 | 확인 불가·안내·버튼, 요청 중 disabled·aria-busy, refresh=usd_krw 1회, 새로고침 없음, 회복 후 BRL/KRW 표시·초점 목록 | 일치 | 통과 |
+| USD/BRL 실패 / 둘 다 실패 / 서버 요청 실패 | 다른 값 유지 / 숫자 없음·안내 2 / 위험 안내 | 일치 | 통과 |
+| 탭 이동 후 복귀, 다른 4개 탭, 1440/1024/390px | 재요청 0, 표시, 가로 스크롤 없음(1440·390 스크린샷 확인) | 일치 | 통과 |
+JS 예외 0. 콘솔 오류: favicon 404(기존), 의도적 실패 1건.
+주의: 1회차 테스트 서버는 python-dotenv로 .env를 읽어 실제 KOTRA·OpenAI 요약 호출이 발생(prompt_log DEV-HOME-005). 결과: KOTRA ok 2건(상파울루무역관, 제목·날짜·링크 파싱, KOTRA 항목에 요약 없음), 요약 33/41건. 2·3회차는 FLASK_SKIP_DOTENV=1.
+
+### 회귀
+tests/test_common OK, 공휴일 서버 19/19, 뉴스 서버(실제 RSS) 38/38.
+
+### 미검증
+- 수출입은행 실제 키로 USD/KRW 정상 응답·쉼표 형식·11시 이전·비영업일 실제 응답(키 없음).
+- 실제 주말·공휴일 역조회는 PTAX만 실제(일요일 → 금요일). 수출입은행은 모의.
+- 실제 사용자 브라우저·기기, 화면낭독기.

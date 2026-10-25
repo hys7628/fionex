@@ -129,3 +129,26 @@
 - 검증: validation.md 2026-10-25 .env 로딩 항목. 값은 configured/missing·일치 여부만 출력.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 프로젝트 밖 폴더에서 실행하면 .env를 찾지 못함(README에 프로젝트 루트 실행 안내). 다른 팀원 환경에는 `pip install -r requirements.txt` 재실행 필요.
+
+## DEV-HOME-005 홈 환율 카드
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 16:55~17:10경 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/home, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5)
+- 지시 요약: Home `## 4. 환율 (추가 항목)`만 구현. USD/KRW(한국수출입은행 OpenAPI), USD/BRL(BCB PTAX OData), BRL/KRW(USD 경유 계산값), 실제 고시일, 가능 시 전일 대비, 주말·공휴일 최대 7일 역조회, 소스별 독립 실패, 서버 메모리 캐시, 환율 카드 UI. 전망·AI 해석·추천·영구 저장 금지. 엔드포인트·필드·환경변수는 공식 문서와 프로젝트 규칙 확인 후 결정. 공통 파일 수정 전 보고. Git 작업 금지.
+- 지시와 저장소의 차이(담당자 확인 필요): feature_spec.md에 `## 4. 환율` 섹션이 없음(지시 본문 기준 구현). 수출입은행 키 환경변수명 확정 문서 없음 → `KOREAEXIM_API_KEY`를 코드에서만 제안 이름으로 사용, .env.example·README 미수정. .env에 해당 키 없음.
+- 변경 파일: features/home/fx.py(신규), service.py(FX_SOURCES·get_fx 연결), routes.py(GET /api/home/fx), templates/home/panel.html(환율 카드), static/home.js·home.css, tests/test_home/test_fx.py(신규)
+- 구현 판단:
+  - 응답: `{"ok", "data": {usd_krw, usd_brl, brl_krw}}`. 소스 객체는 실패해도 항상 내려주고 status(ok|error|not_configured)·error로 상태를 알림(지시 예시의 `| null` 대신, 화면에 확인 불가 사유를 보이기 위함). brl_krw만 계산 불가 시 null.
+  - USD/KRW: 수출입은행 매매기준율(DEAL_BAS_R). 날짜별 조회라 오늘(서울)부터 하루씩 최대 7일, 직전 고시값은 그 전날부터 최대 7일. 지난 날짜 응답은 날짜별 보관(오늘은 11시 전후 갱신이라 보관 안 함). 쉼표 제거 후 Decimal.
+  - USD/BRL: PTAX 매도(cotacaoVenda, 공식 명세 "Cotação de venda"). 기간 조회 1회(오늘(브라질리아) 기준 14일)로 최근·직전 고시값.
+  - BRL/KRW = USD/KRW ÷ USD/BRL(Decimal, 소수 4자리 반올림, 화면 2자리). 두 값이 모두 정상일 때만.
+  - 전일 대비 ((현재-이전)/이전)×100, 직전 고시값이 있을 때만. 화면은 ▲ 상승/▼ 하락/– 변동 없음 + 숫자.
+  - 실패 정책: 이전 값(stale)을 보여 주지 않고 "확인 불가". 정상 결과 1시간, 실패·설정 필요 결과 5분 캐시. 재시도 버튼은 해당 소스만 refresh.
+  - 인증 오류(RESULT 3)·일일 한도(RESULT 4)는 재시도 버튼 없음. 로그에는 호스트·코드만(키 포함 쿼리 미기록).
+- 발견 문제:
+  - 1440px 3열 카드에서 "1 USD = 1,405.20 KRW"가 줄바꿈 → 환율 값 글자 한 단계·항목 이름 폭 축소.
+  - 브라우저 검증 1회차 테스트 서버에서 키 환경변수를 지웠지만, 이전 작업에서 설치한 python-dotenv로 app.run이 .env를 읽어 **실제 KOTRA 호출 1회분과 실제 OpenAI 요약 batch 호출(요약 33건 생성, 로그상 1회로 판단)이 계획 없이 발생**. 재검증은 FLASK_SKIP_DOTENV=1로 실행해 추가 호출 없음.
+- 검증: validation.md 2026-10-25 환율 항목.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 수출입은행 실제 데이터 응답 미확인(키 없음), 환경변수명 미확정, 수출입은행 11시 이전·비영업일 실제 null 응답 형태 미확인(명세는 null, 관측은 오류 응답만).

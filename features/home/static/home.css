@@ -53,6 +53,20 @@
   font-size: var(--font-size-sm);
 }
 
+/* 환율: 바이어 시간과 같은 항목 목록을 쓰고, 고시일·출처·전일 대비를 값 아래 줄마다 표시합니다. */
+.feature-home .home-fx-sub {
+  flex-basis: 100%;
+}
+
+/* "1 USD = 1,405.20 KRW"가 3열 카드 폭에서 줄바꿈되지 않도록 한 단계 작게 */
+.feature-home #home-fx-list .home-time-value {
+  font-size: var(--font-size-md);
+}
+
+.feature-home #home-fx-list .home-time-row dt {
+  flex-basis: 4.5rem;
+}
+
 /* 업계 소식: 수집 경로별 상태 + 최신순 목록. 목록이 길어 카드 안에서 세로 스크롤합니다. */
 .feature-home .home-news-sources {
   display: flex;

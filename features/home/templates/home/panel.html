@@ -51,6 +51,23 @@
     </div>
   </article>
 
+  {# 환율: /api/home/fx. 공식 고시값과 실제 고시일만 표시합니다. 값이 없으면 숫자 자리를 비우고 "확인 불가".
+     BRL/KRW는 USD/KRW ÷ USD/BRL로 계산한 값이며 두 값이 모두 있을 때만 표시합니다. 전망·해석 없음. #}
+  <article class="card" aria-labelledby="home-fx-title" id="home-fx">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title" id="home-fx-title">환율</h2>
+        <p class="card-description">한국수출입은행과 브라질 중앙은행(BCB)이 고시한 최근 환율입니다.</p>
+      </div>
+    </div>
+    <div class="stack" id="home-fx-body" aria-busy="true">
+      <p class="home-news-loading" id="home-fx-loading"><span class="spinner" aria-hidden="true"></span>환율을 불러오는 중</p>
+      <dl class="home-time-list" id="home-fx-list" aria-label="환율 목록" tabindex="-1" hidden></dl>
+      <div class="stack" id="home-fx-notices"></div>
+      <p class="field-hint">주말·공휴일에는 최근 고시일 값을 표시하며, 각 값 옆의 고시일을 기준으로 합니다. 전일 대비는 직전 고시일 대비입니다. BRL/KRW는 공식 고시 환율이 아니라 USD 경유 계산값입니다.</p>
+    </div>
+  </article>
+
   {# 업계 소식: /api/home/news. 수집 경로(KOTRA·Google News·ABIT)별 상태와 재시도는 home.js가 그립니다.
      Google News·ABIT 포르투갈어 제목의 AI 한 줄 요약은 목록을 먼저 보여 준 뒤 /api/home/news/summaries로 채웁니다.
      외부 제목·매체명·요약은 textContent로만 넣습니다. 본문은 표시하지 않습니다. #}

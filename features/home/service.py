@@ -19,7 +19,11 @@ from pathlib import Path
 from time import monotonic
 from zoneinfo import ZoneInfo
 
-from features.home import news_summary
+from features.home import fx, news_summary
+
+# 환율은 features/home/fx.py에서 처리합니다.
+FX_SOURCES = fx.SOURCES
+get_fx = fx.get_fx
 
 logger = logging.getLogger(__name__)
 
