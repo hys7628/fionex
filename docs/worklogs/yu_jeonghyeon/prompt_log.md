@@ -41,3 +41,20 @@
 - 이번 턴에도 git 확인 명령이 승인 판정 오류로 차단되어 현재 브랜치·변경 상태 미확인
 - 서비스 프롬프트 실험: 미실행 / OpenAI 실제 호출: 미실행
 - 남은 한계: 실제 OpenAI API 호출·모델 접근·품질·비용, 실제 `.env` 로드 동작 미검증
+
+## DI-2026_10_25-04 공통 OpenAI 연결 실제 호출 결과 기록
+- 유형: development_instruction
+- 날짜: 2026-10-25 (Asia/Seoul) / 작업자: 유정현 / 범위: 공통 OpenAI 연결(커밋 879f015)
+- 도구·모델: Claude Code (Opus 5.5). Claude는 OpenAI API를 호출하지 않음
+- 사용자가 직접 실행한 결과를 전달받음
+  - `generate_structured`: `message` 필드에 OK 반환 요청 → OK 출력. 모델명·사용량은 전달받지 못함
+  - `generate_image`: 프롬프트 "A simple blue circle centered on a plain white background, no text.", 1024x1024, low → `Image OK: image/png 1024 1024 bytes: 756767`. 파일 미저장·육안 미확인
+- 지시: 위 결과를 validation.md·prompt_log.md에 후속 검증으로 추가. 기존 미검증 기록 유지, 연결·반환 형식 확인과 업무 품질 검증 구분
+- 판단: 연결·반환 형식은 사용자 보고 기준 확인. 업무 품질·비용·소요 시간·스캔 PDF 판독·번역 품질은 미검증
+- 서비스 프롬프트 실험: 아님(연결 확인용 단순 요청이며 기능 프롬프트 아님)
+- 남은 한계: 사용된 모델 값·응답 모델명·사용량 미확인, 이미지 내용 미확인
+
+## DI-2026_10_25-05 공통 문서 검증 상태 표현 정정
+- 유형: development_instruction / 날짜: 2026-10-25 (Asia/Seoul) / 작업자: 유정현
+- 변경: docs/data_contracts.md(개요·후속 작업), README.md(현재 단계·기술 기준), docs/decisions.md(공통 OpenAI 연결)의 "실제 OpenAI 호출 미검증"을 "사용자 직접 실행 결과로 실제 호출·반환 형식 확인, 업무 품질·비용·소요 시간·응답 모델명·사용량 미검증, PDF·스캔 PDF 입력 미구현"으로 정정
+- 서비스 코드·설정·패키지 변경 없음. API 호출·테스트 재실행 없음

@@ -44,3 +44,28 @@
 - common/config.py 모듈 docstring의 `.env` 설명 수정(실행 로직 변경 없음), README.md의 `.env` 로드 설명을 소스 기준·미검증으로 수정
 - 문서·주석만 바꿔 테스트를 다시 실행하지 않음(사용자 지시)
 - 미검증 유지: 실제 OpenAI API 호출, 모델 접근 권한, 품질, 비용, 실제 `.env` 로드 동작, Git 브랜치·변경 상태(이번 턴 명령 차단으로 미확인)
+
+## 2026-10-25 후속 검증: 실제 OpenAI 호출 (사용자가 직접 실행한 결과를 전달받음)
+- 실행 주체: 사용자(같은 VS Code CMD, jasonenv python). Claude는 API를 호출하지 않았고 출력을 직접 관측하지 않음. 키·`.env`는 Claude가 읽지 않음
+- 대상 커밋: 879f015 (feature/openai_common)
+- 모델·설정: 사용자 환경변수 값은 전달받지 못함(미확인). 코드 기본값은 timeout 60/180초, max_retries 0, max_output_tokens 4096, store=False(텍스트)
+
+### generate_structured
+- 입력: `message` 필드에 OK를 반환하도록 요청(지시문·스키마 원문은 전달받지 않음)
+- 사용자 보고: OK 출력
+- 전달받지 못함: 응답 모델명(`result.model`), 사용량(`result.usage`)
+- 판정(연결·반환 형식): 실제 호출로 구조화 결과가 반환된 것으로 보고됨
+
+### generate_image
+- 프롬프트: `A simple blue circle centered on a plain white background, no text.`
+- 옵션: size 1024x1024, quality low
+- 실제 출력(사용자 전달): `Image OK: image/png 1024 1024 bytes: 756767`
+- 이미지 파일 미저장, 육안 확인 안 함
+- 판정(연결·반환 형식): 실제 호출로 PNG bytes·MIME·요청 크기와 일치하는 가로·세로가 반환되었고 공통 검증(base64·PNG 서명·IHDR·IEND·크기)을 통과한 것으로 보고됨. 크기 756,767 bytes는 상한 16 MiB 이내
+
+### 구분
+- 확인된 것(연결·반환 형식, 사용자 보고 기준): 사용자 환경의 키·모델 설정으로 텍스트·이미지 공통 함수가 오류 없이 반환
+- 미검증(업무 품질): 이미지 내용이 프롬프트와 맞는지(육안 미확인), 구조화 결과의 사실 정확성, 실제 기능 프롬프트·스키마에서의 결과 품질
+- 미검증 유지: 비용, 소요 시간, 스캔 PDF 판독(미구현), 번역 품질, 응답 모델명·사용량, 오류 경로의 실제 공급자 응답(모의 테스트로만 확인), 실제 `.env` 로드 동작
+- 이전 기록(모의 테스트 통과·실제 연결 미검증)은 당시 상태로 유지하며 이 항목으로 후속 보완함
+- 공통 문서 반영(2026-10-25): docs/data_contracts.md, README.md, docs/decisions.md의 "실제 호출 미검증" 표현을 위 결과에 맞게 정정. 실행 검증 아님(문서 수정만, 테스트 재실행 없음)

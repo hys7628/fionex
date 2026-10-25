@@ -18,8 +18,9 @@
 - 기존 텍스트 전용 계획에 사용자 지시로 **공통 이미지 생성 연결**이 추가 요청됨. 어느 탭에서 어떤 이미지를 만드는지는 미정.
 - 첫 구현 범위: 텍스트 → 구조화 결과(Responses API), 텍스트 프롬프트 → PNG 1장(Images API). 공용 HTTP 엔드포인트 없음.
 - 환경변수: `OPENAI_API_KEY`(공통), `OPENAI_MODEL`(텍스트), `OPENAI_IMAGE_MODEL`(이미지). 모델은 코드에 고정하지 않음.
-- 모델 초기 후보: `gpt-5.4-mini`(텍스트), `gpt-image-2.5-sunburst`(이미지). 접근 권한·품질·비용 미검증.
-- SDK: openai 3.37.0(jasonenv 설치, 모의 테스트만 수행). 사용법은 docs/data_contracts.md.
+- 모델 초기 후보: `gpt-5.4-mini`(텍스트), `gpt-image-2.5-sunburst`(이미지). 최종 선정 전.
+- SDK: openai 3.37.0(jasonenv 설치, 모의 테스트 통과). 사용법은 docs/data_contracts.md.
+- 검증 상태: 2026-10-25 사용자 직접 실행 결과를 전달받아 텍스트·이미지 공통 함수의 실제 호출과 반환 형식을 확인. 업무 결과 품질·비용·소요 시간·응답 모델명·사용량은 미검증. PDF·스캔 PDF 입력은 미구현.
 - 제외: PDF·스캔 PDF·이미지 분석 입력, Files API, 이미지 편집·참조 이미지, 영상, 스트리밍, 캐시·DB. 스캔 PDF 분석은 제품소개서 후속 작업.
 
 ## 설계 기준
