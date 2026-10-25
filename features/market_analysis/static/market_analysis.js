@@ -23,9 +23,15 @@
     to: form.elements.to,
   };
 
+  const pdfBtn = panel.querySelector("[data-ma-pdf]");
+  const pdfHint = panel.querySelector("[data-ma-pdf-hint]");
+
   let meta = null;
   let busy = false;
-  let lastResult = null;
+  let lastResult = null;  // 통계(analyze 응답)
+  let lastNews = null;    // 근거 자료(news 응답)
+  let lastAi = null;      // AI 분석(ai 응답)
+  let aiBusy = false;
   let chartMetric = "fob";
 
   /* ---------- 숫자 표시 (계산은 서버 원본 값, 여기서는 반올림 표시만) ---------- */
@@ -192,6 +198,7 @@
     submitBtn.disabled = value;
     refreshBtn.disabled = value;
     resultBox.setAttribute("aria-busy", value ? "true" : "false");
+    updatePdfButton();
   }
 
   async function run(refresh) {
@@ -223,9 +230,13 @@
         throw body.error;
       }
       lastResult = body.data;
+      lastNews = null;
+      lastAi = null;
       renderResult(body.data);
       refreshBtn.hidden = false;
       AppShell.work.setResult(FEATURE_ID, true);
+      updatePdfButton();
+      loadNews(false);
     } catch (err) {
       resultBox.innerHTML = previous;
       showFormError("자료 조회 실패", (err && err.message) || "네트워크 오류로 조회하지 못했습니다. 다시 시도해 주세요.");
@@ -295,7 +306,7 @@
 
     // ③ 공급국
     html += '<section class="ma-section" aria-labelledby="market_analysis-s3"><h3 class="ma-h3" id="market_analysis-s3">③ 공급국 비교</h3>';
-    html += '<p class="field-hint">수입액 기준 순위. 비중의 분모는 같은 품목·기간의 브라질 전체 수입액입니다. 공급국은 ComexStat country 항목 그대로이며 원산국·선적국 구분은 확인하지 않았습니다. 기간 내 공급국 ' + d.suppliers.count + "개국.</p>";
+    html += '<p class="field-hint">수입액 기준 순위. 비중의 분모는 같은 품목·기간의 브라질 전체 수입액입니다. 공급국은 ComexStat 기준 원산지 국가이며 판매 회사의 국가가 아닙니다(MDIC 통계 이용 매뉴얼). 기간 내 공급국 ' + d.suppliers.count + "개국.</p>";
     html += koreaHtml(d.suppliers);
     html += supplierTable(d.suppliers.top, caption + " · 상위 " + d.suppliers.top.length + "개국");
     if (d.suppliers.selected.length) {
@@ -303,14 +314,211 @@
     }
     html += "</section>";
 
-    // ④ AI 분석 (다음 단계)
+    // ④ AI 분석(사용자가 직접 실행하는 유료 호출)
     html += '<section class="ma-section" aria-labelledby="market_analysis-s4"><h3 class="ma-h3" id="market_analysis-s4">④ AI 분석</h3>' +
-      '<div class="empty-state"><p class="empty-state-title">준비 중</p><p>뉴스·보고서 근거를 바탕으로 한 AI 분석은 다음 단계에서 제공합니다. 위 수치는 모두 코드로 계산했습니다.</p></div></section>';
+      '<div data-ma-ai>' + aiIdleHtml() + "</div></section>";
 
     html += sourcesHtml(d);
     resultBox.innerHTML = html;
     drawChart();
   }
+
+  /* ---------- 근거 자료(뉴스·보고서) ---------- */
+  const ACCESS_TEXT = { full_text: "원문 확보", publisher_summary: "제공기관 요약", snippet: "검색 요약만 · 원문 미확인" };
+  const STATE_TONE = { ok: "success", pending: "info", config: "warning", auth: "danger", rate_limited: "warning",
+    unavailable: "danger", bad_response: "danger", rejected: "danger" };
+
+  async function loadNews(refresh) {
+    const box = resultBox.querySelector("[data-ma-news]");
+    if (!box || !lastResult) return;
+    box.setAttribute("aria-busy", "true");
+    box.innerHTML = '<p class="field-hint"><span class="spinner" aria-hidden="true"></span> 근거 자료(KOTRA·네이버·GDELT)를 불러오는 중입니다. 통계는 위에 먼저 표시했습니다.</p>';
+    try {
+      const res = await fetch("/api/market-analysis/news", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bundle_id: lastResult.bundle_id, refresh: !!refresh }),
+      });
+      const body = await res.json();
+      if (!body.ok) throw body.error;
+      lastNews = body.data;
+      box.innerHTML = newsHtml(body.data);
+    } catch (err) {
+      box.innerHTML = '<div class="notice notice-danger" role="alert"><p class="notice-title">근거 자료를 불러오지 못했습니다</p><p>' +
+        esc((err && err.message) || "네트워크 오류입니다.") + '</p></div><button type="button" class="btn btn-secondary" data-ma-news-retry>근거 자료 다시 불러오기</button>';
+    } finally {
+      box.setAttribute("aria-busy", "false");
+      refreshAiPanel();
+      updatePdfButton();
+    }
+  }
+
+  function newsHtml(n) {
+    let html = '<div class="table-wrap"><table class="table"><caption>출처별 연결 상태 · 수집 기간 ' + esc(n.window.from + " ~ " + n.window.to) +
+      " (" + esc(n.window.note) + ")</caption><thead><tr><th scope=\"col\">출처</th><th scope=\"col\">상태</th><th scope=\"col\" class=\"num\">건수</th><th scope=\"col\">안내</th></tr></thead><tbody>";
+    n.sources.forEach(function (s) {
+      html += "<tr><th scope=\"row\">" + esc(s.label) + "</th><td>" + badge(STATE_TONE[s.state] || "info", s.status_text) + '</td><td class="num">' +
+        s.count + "</td><td>" + esc(s.message || s.usage_note || "") + "</td></tr>";
+    });
+    html += "</tbody></table></div>";
+    const failed = n.sources.filter(function (s) { return s.state !== "ok" && s.state !== "pending"; });
+    if (failed.length) {
+      html += '<div class="notice notice-warning"><p class="notice-title">일부 출처 누락</p><p>' +
+        esc(failed.map(function (s) { return s.label + ": " + s.status_text; }).join(" · ")) +
+        ". 확보한 자료만 표시했습니다. 결과가 완전하지 않을 수 있습니다.</p></div>";
+    }
+    html += '<p class="field-hint">관련성 상위 ' + n.items.length + "건 / 중복 제거 후 후보 " + n.candidates + "건. 주제: 브라질 섬유·의류, 폴리에스터 원사, 재생 섬유·T2T, 무역 정책.</p>";
+    if (!n.items.length) {
+      html += '<div class="empty-state"><p class="empty-state-title">관련 기사 없음</p><p>연결된 출처에서 조건에 맞는 기사를 찾지 못했습니다. 출처 상태를 확인해 주세요.</p></div>';
+    } else {
+      html += '<ul class="ma-news">';
+      n.items.forEach(function (it) {
+        html += '<li class="ma-news-item"><p class="ma-news-title"><span class="ma-news-id">' + esc(it.id) + "</span> " +
+          '<a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' + esc(it.title) + "</a></p>" +
+          '<p class="field-hint">' + esc(it.source_name + " · " + (it.published || "게시일 미확인") + " · 주제: " + it.topics.join(", ")) + " " +
+          badge(it.access === "snippet" ? "warning" : "info", ACCESS_TEXT[it.access] || it.access) +
+          (it.ai_input ? "" : " " + badge("warning", "AI·PDF 본문 미사용 · 이용 범위 확인 필요")) + "</p>" +
+          (it.excerpt ? '<p class="ma-news-excerpt">' + esc(it.excerpt) + "</p>" : "") + "</li>";
+      });
+      html += "</ul>";
+    }
+    html += '<button type="button" class="btn btn-ghost" data-ma-news-retry>근거 자료 다시 불러오기</button>';
+    return html;
+  }
+
+  /* ---------- AI 분석 ---------- */
+  function aiIdleHtml() {
+    return '<p class="field-hint">근거 자료를 불러온 뒤 실행할 수 있습니다. 초안 1회와 5차례 검토(자료 적합성 → 수치 정확성 → 원문·공식 출처 → 사실·추정 해석 → 최종 검토)로 OpenAI를 최대 6번 호출하는 유료 기능이며 수 분 걸릴 수 있습니다. ' +
+      "같은 조회 결과로는 한 번만 실행되고, 끝난 결과는 다시 호출하지 않습니다.</p>" +
+      '<button type="button" class="btn btn-primary" data-ma-ai-run disabled>AI 분석 실행</button>';
+  }
+
+  function refreshAiPanel() {
+    const run = resultBox.querySelector("[data-ma-ai-run]");
+    if (run) run.disabled = aiBusy || !lastNews;
+  }
+
+  async function runAi() {
+    const box = resultBox.querySelector("[data-ma-ai]");
+    if (!box || aiBusy || !lastNews) return;
+    aiBusy = true;
+    box.setAttribute("aria-busy", "true");
+    const previous = lastAi ? aiHtml(lastAi) : null;
+    box.innerHTML = '<div class="empty-state"><span class="spinner" aria-hidden="true"></span><p class="empty-state-title">AI 분석 중입니다</p>' +
+      "<p>초안 작성 후 5차례 검토를 차례로 진행합니다. 수 분 걸릴 수 있으니 이 탭을 새로고침하지 마세요.</p></div>";
+    try {
+      const res = await fetch("/api/market-analysis/ai", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bundle_id: lastResult.bundle_id }),
+      });
+      const body = await res.json();
+      if (!body.ok) throw body.error;
+      lastAi = body.data;
+      box.innerHTML = aiHtml(body.data);
+    } catch (err) {
+      box.innerHTML = (previous || "") + '<div class="notice notice-danger" role="alert"><p class="notice-title">AI 분석을 실행하지 못했습니다</p><p>' +
+        esc((err && err.message) || "네트워크 오류입니다.") + "</p></div>" + (previous ? "" : aiIdleHtml());
+    } finally {
+      aiBusy = false;
+      box.setAttribute("aria-busy", "false");
+      refreshAiPanel();
+      updatePdfButton();
+    }
+  }
+
+  const STATUS_TONE = { "사실": "success", "추정": "info", "미확인": "warning" };
+
+  function aiHtml(a) {
+    let html = "";
+    if (!a.has_draft) {
+      const e = a.error || {};
+      return '<div class="notice notice-danger" role="alert"><p class="notice-title">AI 분석을 시작하지 못했습니다</p><p>' +
+        esc(e.message || "알 수 없는 오류입니다.") + " 분석 결과는 만들어지지 않았습니다.</p>" +
+        '<button type="button" class="btn btn-secondary" data-ma-ai-run>다시 실행</button></div>' + usageHtml(a);
+    }
+    if (!a.complete) {
+      const e = a.error || {};
+      html += '<div class="notice notice-warning" role="status"><p class="notice-title">검토 미완료 (' + a.rounds.length + "/" + a.rounds_total + "회 완료)</p><p>" +
+        esc((e.failed_at ? e.failed_at + "에서 멈춤. " : "") + (e.message || "")) + " 아래 표는 마지막으로 끝난 단계의 결과이며 완료된 분석이 아닙니다.</p>" +
+        '<button type="button" class="btn btn-secondary" data-ma-ai-run>이어서 실행</button></div>';
+    } else {
+      html += '<p class="field-hint">' + badge("success", "초안 + 5차례 검토 완료") + (a.reused ? " 이미 끝난 분석 결과를 다시 표시했습니다(추가 호출 없음)." : "") + "</p>";
+    }
+    if (a.rows.length) {
+      html += '<div class="table-wrap"><table class="table"><caption>AI 분석 · 수치는 코드 계산값과 근거 기사에 있는 값만 허용 · 출처는 코드가 ID로 연결</caption><thead><tr>' +
+        '<th scope="col">구분</th><th scope="col">핵심 내용</th><th scope="col">영업·마케팅 시사점</th><th scope="col">사실/추정/미확인</th><th scope="col">출처·기준일</th></tr></thead><tbody>';
+      a.rows.forEach(function (r) {
+        const srcs = r.sources.length ? r.sources.map(function (s) {
+          return '<a href="' + esc(s.url) + '" target="_blank" rel="noopener noreferrer">' + esc(s.id + " " + s.name) + "</a> <span class=\"field-hint\">" + esc(s.date) + "</span>";
+        }).join("<br>") : "출처 없음";
+        html += '<tr><th scope="row">' + esc(r.section) + "</th><td>" + esc(r.content) + "</td><td>" + esc(r.implication) + "</td><td>" +
+          badge(STATUS_TONE[r.status] || "info", r.status) +
+          (r.flags.length ? '<p class="field-hint">확인 필요: ' + esc(r.flags.join("; ")) + "</p>" : "") + "</td><td>" + srcs + "</td></tr>";
+      });
+      html += "</tbody></table></div>";
+    } else {
+      html += '<div class="empty-state"><p class="empty-state-title">표에 남은 행이 없습니다</p><p>근거가 부족해 작성하지 않았습니다.</p></div>';
+    }
+    if (a.gaps.length) html += '<p class="field-hint">근거 부족으로 작성하지 않은 내용: ' + esc(a.gaps.join("; ")) + "</p>";
+    if (a.remaining_findings.length) html += '<div class="notice notice-warning"><p class="notice-title">자동 검사에서 남은 문제</p><p>' + esc(a.remaining_findings.join("; ")) + "</p></div>";
+    if (a.excluded_count) html += '<p class="field-hint">이용 범위가 확인되지 않은 기사 ' + a.excluded_count + "건(KOTRA 등)은 AI 입력에서 제외했습니다.</p>";
+    html += '<details class="ma-details"><summary>5차례 검토 기록 보기</summary><div class="table-wrap"><table class="table"><thead><tr>' +
+      '<th scope="col">회차</th><th scope="col">확인한 항목</th><th scope="col">수정 사항</th><th scope="col">근거</th><th scope="col">미해결</th><th scope="col">코드 검사(전→후)</th><th scope="col">완료</th></tr></thead><tbody>';
+    for (let i = 0; i < a.rounds_total; i++) {
+      const r = a.rounds[i];
+      if (!r) { html += "<tr><th scope=\"row\">" + (i + 1) + '회차</th><td colspan="6">미실행</td></tr>'; continue; }
+      html += '<tr><th scope="row">' + esc(r.number + ". " + r.title) + "</th><td>" + esc(r.checked.join("; ") || "-") + "</td><td>" +
+        esc(r.changes.join("; ") || "수정 없음") + "</td><td>" + esc(r.evidence.join("; ") || "-") + "</td><td>" + esc(r.unresolved.join("; ") || "-") +
+        "</td><td>" + esc(r.code_findings_before.length + "건 → " + r.code_findings_after.length + "건") + "</td><td>" +
+        badge(r.status === "done" ? "success" : "warning", r.status === "done" ? "완료" : "미완료") + "</td></tr>";
+    }
+    html += "</tbody></table></div></details>";
+    return html + usageHtml(a);
+  }
+
+  function usageHtml(a) {
+    const u = a.usage || {};
+    return '<p class="field-hint">' + esc("모델 " + (u.model || "-") + " · 호출 " + (u.calls || 0) + "회 · 입력 " + (u.input_tokens || 0) + " / 출력 " +
+      (u.output_tokens || 0) + " 토큰 · 소요 " + (u.seconds || 0) + "초" + (u.estimated_cost_usd != null ? " · 추정 비용 USD " + u.estimated_cost_usd + " (" + u.cost_basis + ")" : "") +
+      " · 프롬프트 " + a.prompt_versions.draft + " / " + a.prompt_versions.review) + "</p>";
+  }
+
+  /* ---------- PDF ---------- */
+  function updatePdfButton() {
+    const ready = !!lastResult && !busy && !aiBusy;
+    pdfBtn.disabled = !ready;
+    pdfHint.textContent = !lastResult ? "분석 결과가 생기면 화면 내용 그대로 A4 PDF로 받을 수 있습니다."
+      : aiBusy ? "AI 분석이 끝나면 PDF를 받을 수 있습니다."
+      : "현재 화면의 통계" + (lastNews ? "·근거 자료" : "") + (lastAi ? "·AI 분석" : "") + "로 PDF를 만듭니다. 다시 조회하거나 분석하지 않습니다.";
+  }
+
+  pdfBtn.addEventListener("click", async function () {
+    if (pdfBtn.disabled || !lastResult) return;
+    pdfBtn.disabled = true;
+    pdfHint.textContent = "PDF를 만드는 중입니다.";
+    try {
+      const res = await fetch("/api/market-analysis/pdf", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stats: lastResult, news: lastNews, ai: lastAi }),
+      });
+      if (!res.ok) {
+        let msg = "PDF를 만들지 못했습니다.";
+        try { msg = (await res.json()).error.message; } catch (e) { /* 기본 문장 */ }
+        throw new Error(msg);
+      }
+      const q = lastResult.query;
+      AppShell.work.downloadBlob(FEATURE_ID, await res.blob(), "market_analysis_" + q.code + "_" + q.from + "_" + q.to + ".pdf");
+      updatePdfButton();
+      pdfHint.textContent = "다운로드를 요청했습니다. 저장 여부는 브라우저에서 확인해 주세요.";
+    } catch (err) {
+      updatePdfButton();
+      pdfHint.textContent = err.message;
+    }
+  });
+
+  resultBox.addEventListener("click", function (event) {
+    if (event.target.closest("[data-ma-news-retry]")) loadNews(true);
+    if (event.target.closest("[data-ma-ai-run]")) runAi();
+  });
 
   function koreaHtml(sup) {
     const k = sup.korea;
@@ -361,10 +569,7 @@
     html += "<li><strong>" + esc(src.name) + '</strong> · <a href="' + esc(src.url) + '" target="_blank" rel="noopener noreferrer">' + esc(src.url) + "</a><br>" +
       esc("지표: " + src.metrics + " · 자료 갱신일 " + (src.data_updated || "확인 안 됨") + " · 최신 제공 월 " + (src.latest_month || "확인 안 됨") +
         " · 자료 받은 시각 " + kstTime(src.fetched_at) + " · " + cache) + "</li>";
-    d.pending_sources.forEach(function (p) {
-      html += "<li>" + esc(p.name) + " · " + badge("warning", p.status) + "</li>";
-    });
-    return html + "</ul></section>";
+    return html + '</ul><div data-ma-news aria-live="polite"></div></section>';
   }
 
   /* ---------- 그래프 (SVG, 단일 계열 → 범례 없이 제목으로 지표 표시) ---------- */

@@ -9,12 +9,15 @@
 """
 import json
 import re
+import secrets
 import statistics
 import threading
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from features.market_analysis import analysis, news_sources
 from features.market_analysis import comexstat_client as comex
 from features.market_analysis.comexstat_client import ComexStatError
 
@@ -259,31 +262,42 @@ def _sum(values):
 
 
 def _aggregate(rows):
-    """{(월 번호, 국가 원문): [fob, kg]} — 같은 칸이 여러 행이면 합산."""
+    """{(월 번호, 국가 원문): [fob, kg, 짝 fob, 결측 행 수]} — 같은 칸이 여러 행이면 합산.
+
+    짝 fob: 중량도 있는 행의 금액만 더한 값. 금액만 있고 중량이 빠진 행이 단가를 부풀리지 않도록
+    평균 수입단가는 짝 fob ÷ 중량으로 계산합니다. 수입액·수입량 합계는 있는 값을 모두 더합니다.
+    """
     cells = {}
     for r in rows:
         key = (month_index(r["year"], r["month"]), r["country"])
-        cell = cells.setdefault(key, [None, None])
+        cell = cells.setdefault(key, [None, None, None, 0])
         if r["fob"] is not None:
             cell[0] = (cell[0] or 0) + r["fob"]
         if r["kg"] is not None:
             cell[1] = (cell[1] or 0) + r["kg"]
+        if r["fob"] is not None and r["kg"] is not None:
+            cell[2] = (cell[2] or 0) + r["fob"]
+        else:
+            cell[3] += 1
     return cells
 
 
 def _period_totals(cells, start, end, country=None):
-    fob, kg, months = [], [], set()
-    for (idx, name), (f, k) in cells.items():
+    fob, kg, paired, missing, months = [], [], [], 0, set()
+    for (idx, name), (f, k, pf, miss) in cells.items():
         if start <= idx <= end and (country is None or name == country):
             fob.append(f)
             kg.append(k)
+            paired.append(pf)
+            missing += miss
             months.add(idx)
-    return {"fob": _sum(fob), "kg": _sum(kg), "months_with_record": len(months)}
+    return {"fob": _sum(fob), "kg": _sum(kg), "paired_fob": _sum(paired), "missing_rows": missing,
+            "months_with_record": len(months)}
 
 
 def _metric_block(current, prior):
-    price, price_reason = unit_price(current["fob"], current["kg"])
-    prior_price, _ = unit_price(prior["fob"], prior["kg"])
+    price, price_reason = unit_price(current["paired_fob"], current["kg"])
+    prior_price, _ = unit_price(prior["paired_fob"], prior["kg"])
     out = {"fob": current["fob"], "kg": current["kg"], "unit_price": price, "unit_price_reason": price_reason,
            "prior": {"fob": prior["fob"], "kg": prior["kg"], "unit_price": prior_price}}
     out["yoy"] = {}
@@ -312,19 +326,20 @@ def compute(rows, req, code_name=None):
     # 월별 추세
     monthly, month_prices = [], {}
     by_month = {}
-    for (idx, _), (f, k) in cells.items():
-        entry = by_month.setdefault(idx, [[], []])
+    for (idx, _), (f, k, pf, _miss) in cells.items():
+        entry = by_month.setdefault(idx, [[], [], []])
         entry[0].append(f)
         entry[1].append(k)
+        entry[2].append(pf)
     for idx in range(start, end + 1):
         cur = by_month.get(idx)
         pri = by_month.get(idx - 12)
         fob = _sum(cur[0]) if cur else None
         kg = _sum(cur[1]) if cur else None
-        price, price_reason = unit_price(fob, kg) if cur else (None, "기록 없음")
+        price, price_reason = unit_price(_sum(cur[2]), kg) if cur else (None, "기록 없음")
         p_fob = _sum(pri[0]) if pri else None
         p_kg = _sum(pri[1]) if pri else None
-        p_price = unit_price(p_fob, p_kg)[0] if pri else None
+        p_price = unit_price(_sum(pri[2]), p_kg)[0] if pri else None
         item = {"month": month_label(idx), "has_record": cur is not None, "fob": fob, "kg": kg,
                 "unit_price": price, "unit_price_reason": price_reason, "yoy": {}}
         for key, c, p in (("fob", fob, p_fob), ("kg", kg, p_kg), ("unit_price", price, p_price)):
@@ -372,6 +387,12 @@ def compute(rows, req, code_name=None):
     if prior["months_with_record"] and prior_missing:
         notes.append("전년 동기(%s~%s) 중 %d개월은 기록이 없습니다. 전년 대비 증감률 해석에 주의하세요." % (
             month_label(prior_start), month_label(prior_end), prior_missing))
+    if current["missing_rows"]:
+        notes.append("조회 기간에 금액 또는 중량이 빠진 행이 %d건 있습니다. 수입액·수입량 합계에는 있는 값만 더했고, "
+                     "평균 수입단가는 금액과 중량이 모두 있는 행만으로 계산했습니다. 합계가 실제보다 작을 수 있습니다." % current["missing_rows"])
+    if any(c["country"]["code"] == "105" for c in per_country):
+        notes.append("공급국에 브라질(Brasil)이 있습니다. ComexStat 수입 통계는 판매 회사 국가가 아니라 원산지 기준이라, "
+                     "브라질에서 만든 상품이 수리·반송 등으로 다시 들어오면 원산지가 브라질로 기록됩니다(MDIC 통계 이용 매뉴얼).")
     unmapped = sorted({c["country"]["name_pt"] for c in per_country if c["country"]["code"] is None})
     if unmapped:
         notes.append("국가 코드표에 없는 공급국 이름이 있어 원문으로 표시했습니다: %s" % ", ".join(unmapped))
@@ -401,6 +422,7 @@ def compute(rows, req, code_name=None):
         },
         "outlier": {
             "rule": "같은 조회의 단가 중앙값 대비 ½배 미만 또는 2배 초과이면 '확인 필요'로 표시합니다(값은 삭제하지 않음). 단가가 3개 미만이면 판정하지 않습니다.",
+            "country_basis": "공급국은 ComexStat 기준 원산지 국가입니다(판매 회사 국가 아님).",
             "monthly_median": month_median,
             "country_median": country_median,
         },
@@ -458,7 +480,9 @@ def analyze(payload):
         code_name = found or None
 
     result = compute(rows, req, code_name)
-    result["notes"].insert(0, "품목코드 이름과 유효성은 ComexStat 현행 코드표 기준입니다. 과거 기간에 같은 코드가 적용됐는지는 확인하지 않았습니다.")
+    result["notes"].insert(0, "품목코드 이름과 유효성은 ComexStat 현행 코드표 기준입니다. 과거 기간에 같은 코드가 적용됐는지(NCM 개정)는 확인하지 않았습니다.")
+    result["notes"].append("ComexStat은 올해 각 달의 수치를 매월 다시 집계하고, 지난해 수치는 이듬해 2월에 한 번 수정한 뒤 고정합니다(MDIC 통계 이용 매뉴얼). "
+                           "같은 조건이라도 조회 시점에 따라 최근 수치가 달라질 수 있습니다.")
     if latest_error:
         result["notes"].insert(0, "최신 제공 월을 확인하지 못해 종료 월 상한을 검사하지 않았습니다.")
     result["sources"] = [{
@@ -472,10 +496,92 @@ def analyze(payload):
         "cache_status": cache_status,
         "latest_stale": latest_stale,
     }]
-    result["pending_sources"] = [
-        {"name": "KOTRA 해외시장뉴스", "status": "다음 단계에서 연결 예정"},
-        {"name": "한국무역협회(KITA)", "status": "연결 확인 중(공식 API 경로 미확인)"},
-        {"name": "일반 뉴스", "status": "공급자 미정"},
-        {"name": "AI 분석(OpenAI)", "status": "다음 단계에서 연결 예정"},
-    ]
+    result["bundle_id"] = create_bundle(result)
     return result
+
+
+# ---------- 분석 묶음 ----------
+# 한 번의 조회 결과(공개 통계)와 그에 대해 수집한 공개 뉴스, AI 진행 상태를 서버 메모리에 짧게 보관합니다.
+# 뉴스 수집·AI 분석이 화면에 표시된 것과 같은 통계를 쓰게 하고, 같은 묶음의 유료 분석이 중복 실행되지 않게 합니다.
+# 디스크·DB에 쓰지 않으며 서버를 다시 시작하면 사라집니다.
+BUNDLE_TTL_SECONDS = 3 * 3600
+MAX_BUNDLES = 30
+_bundles = {}
+_bundles_lock = threading.Lock()
+
+
+class BundleError(Exception):
+    def __init__(self, code, message, http_status):
+        self.code, self.message, self.http_status = code, message, http_status
+        super().__init__(message)
+
+
+def _monotonic():
+    return time.monotonic()
+
+
+def create_bundle(stats):
+    bid = secrets.token_urlsafe(16)
+    with _bundles_lock:
+        now = _monotonic()
+        for k in [k for k, b in _bundles.items() if now - b["created"] > BUNDLE_TTL_SECONDS]:
+            del _bundles[k]
+        while len(_bundles) >= MAX_BUNDLES:
+            del _bundles[min(_bundles, key=lambda k: _bundles[k]["created"])]
+        _bundles[bid] = {"created": now, "stats": stats, "news": None, "ai": None, "lock": threading.Lock()}
+    return bid
+
+
+def get_bundle(bundle_id):
+    with _bundles_lock:
+        b = _bundles.get(str(bundle_id or ""))
+        if b and _monotonic() - b["created"] > BUNDLE_TTL_SECONDS:
+            del _bundles[bundle_id]
+            b = None
+    if not b:
+        raise BundleError("MA_BUNDLE_EXPIRED", "조회 결과가 만료되었거나 서버가 다시 시작되었습니다. '분석 실행'으로 통계를 다시 조회해 주세요.", 410)
+    return b
+
+
+def clear_bundles():
+    with _bundles_lock:
+        _bundles.clear()
+
+
+def _news_public(collected):
+    return {**{k: v for k, v in collected.items() if k != "items"}, "items": [it.public() for it in collected["items"]]}
+
+
+def collect_news(bundle_id, refresh=False):
+    """조회 묶음에 대한 뉴스 수집. 같은 묶음은 한 번 수집한 결과를 다시 씁니다(refresh=True면 다시 수집)."""
+    b = get_bundle(bundle_id)
+    if b["news"] is not None and not refresh:
+        return b["news"]
+    news = _news_public(news_sources.collect(refresh=refresh))
+    b["news"] = news
+    return news
+
+
+def run_ai(bundle_id):
+    """AI 분석(초안+5차례 검토). 이미 끝난 묶음은 저장된 결과를 돌려주고 다시 호출하지 않습니다.
+    실패·중단된 묶음은 끝난 단계 다음부터 이어서 진행합니다. 같은 묶음이 실행 중이면 409."""
+    b = get_bundle(bundle_id)
+    if b["news"] is None:
+        raise BundleError("MA_NEWS_REQUIRED", "근거 자료를 먼저 불러와 주세요.", 409)
+    if not b["lock"].acquire(blocking=False):
+        raise BundleError("MA_AI_RUNNING", "이 조회의 AI 분석이 이미 진행 중입니다. 끝날 때까지 기다려 주세요.", 409)
+    try:
+        if b["ai"] is not None and b["ai"]["status"] == "complete":
+            return {**b["ai"]["result"], "reused": True}
+        state = b["ai"] or analysis.new_state()
+
+        def widen():
+            news = _news_public(news_sources.collect(widen=True))
+            b["news"] = news
+            return news
+
+        state = analysis.run(state, b["stats"], b["news"], widen_fn=widen)
+        b["ai"] = state
+        return {**state["result"], "reused": False}
+    finally:
+        b["lock"].release()

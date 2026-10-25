@@ -158,3 +158,33 @@
 }
 
 .feature-market_analysis .ma-sources a { color: var(--color-primary-text); word-break: break-all; }
+
+/* 근거 자료 목록 */
+.feature-market_analysis [data-ma-news],
+.feature-market_analysis [data-ma-ai] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.feature-market_analysis .ma-news {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.feature-market_analysis .ma-news-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.feature-market_analysis .ma-news-title { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
+.feature-market_analysis .ma-news-title a { color: var(--color-primary-text); }
+.feature-market_analysis .ma-news-id { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.feature-market_analysis .ma-news-excerpt { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.feature-market_analysis [data-ma-ai] .table td a { color: var(--color-primary-text); }

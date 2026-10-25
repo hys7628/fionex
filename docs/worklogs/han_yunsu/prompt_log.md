@@ -67,3 +67,57 @@
 - 재실행 결과: 수정 후 모의 테스트 35개 통과, 공통 테스트 32개 통과, 헤드리스 Chrome 재캡처에서 숫자 한 줄 표시·콘솔 오류 없음 확인. 상세는 validation.md 2026-10-25 항목
 - 담당자 판단: 미확인 (검토 후 직접 커밋 예정)
 - 남은 한계: KOTRA·KITA·뉴스·AI·PDF 미구현, 공통 문서(README·data_contracts) 미갱신, 한국어 국가명 97개 사람 검토 필요, ComexStat country 항목 의미(원산국/선적국) 미확인, 공식 호출 한도 미확인
+
+## DEV-MA-20261025-03 requirements.txt 설치 (develop 병합 후)
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 (Asia/Seoul, 정확한 시각 미기록)
+- 작업자: 한윤수 / 기능: market_analysis / 브랜치: feature/market_analysis (develop 병합 커밋 b7e718f 이후)
+- 모델/설정: Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 프롬프트 경로·버전: 해당 없음
+- 지시 원문: "requirements.txt 실행해줘. 실행 후 prompt_log.md 기록해줘."
+- 실행: Conda jasonenv(Python 3.11.17)에서 `python -m pip install -r requirements.txt`
+- 실제 결과:
+  - 새로 설치: pypdf 6.21.2 (develop 병합으로 requirements.txt에 추가된 공통 PDF 입력 검사용 패키지, 유정현 담당 공통 작업)
+  - 이미 설치되어 있음: Flask 3.1.2, openai 3.37.0, pydantic 2.14.1, httpx2 2.16.0 (DEV-MA-20261025-02에서 설치)
+- 확인:
+  - 공통 테스트 `python -m unittest discover -s tests/test_common`: 56개 통과
+  - 시장 분석 테스트 `python -m unittest discover -s tests/test_market_analysis`: 35개 통과
+  - `import app` 성공
+- 발견 문제: 없음. 기록 위치는 사용자 확인(한윤수 기록)으로 결정. 다른 조원 기록은 수정하지 않음
+- 담당자 판단: 미확인
+- 남은 한계: 앱 서버 실행·화면 확인과 실제 외부 API 호출은 이번에 하지 않음. requirements.txt 파일은 변경하지 않음
+
+## DEV-MA-20261025-04 시장 분석 2~3단계 구현 (뉴스 수집·AI 분석·PDF)
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 저녁 (Asia/Seoul, 정확한 시각 미기록)
+- 작업자: 한윤수 / 기능: market_analysis / 브랜치: feature/market_analysis (HEAD b7e718f, 미커밋 변경)
+- 모델/설정: Claude Code (claude-opus-5-5). 서비스 AI(OpenAI) 실제 호출 0회
+- 지시 원문(요약): "fionex 프로젝트의 market_analysis 미구현 기능을 이어서 개발해줘 … 자료 수집(KOTRA·KITA·일반 뉴스), OpenAI 분석과 5차례 검토, PDF, 보류 항목과 추가 검증, 완료와 보고" (붙여 넣은 7개 절 지시문 전문)
+- 질문·사용자 답변:
+  - PDF 도구: "합의됨: ReportLab 추가"
+  - KOTRA 키: ".env.example에 kotra api 가져와서 입력해놓으면 되는거야? 만약 그렇다면 KOTRA API 가져오는 법 알려줘." → .env.example에는 값 없이 이름만, 키는 .env/환경변수로 안내
+  - 일반 뉴스: "GDELT이랑 네이버 검색 둘 다 확인. 네이버 API 가져오는 법 알려줘"
+  - OpenAI 유료 검증: "3회까지 허용" (예상: 1회 6호출, gpt-5.4-mini 공식 단가 기준 약 $0.15 이하)
+- 조사로 확인한 사실(출처는 sources.md):
+  - KOTRA 15034831: 포털 페이지 내장 swagger에서 주소·인자(serviceKey, type, numOfRows, pageNo, search1 국가명, search2 제목, search4/7 게시일)·응답 필드(newsBdt 본문, dataType 저작권 정책 등) 확인. 공공누리 제4유형. 키 없이 401/SERVICE_KEY_IS_NULL(20), 가짜 키 SERVICE_KEY_IS_NOT_REGISTERED_ERROR(30) 실측
+  - 네이버 뉴스 검색: 공식 문서로 주소·헤더·인자·필드·일 25,000회 확인. 키 없이 401/errorCode 024 실측
+  - GDELT: 공식 블로그로 주소·인자 확인. 실제 호출 6회 이상 모두 429("one every 5 seconds"), 1회는 200이지만 빈 결과 `{}`(timespan=6months)
+  - KITA: 공공데이터포털 '한국무역협회' 오픈 API 검색 0건, kita.net 첫 화면 API 안내 없음 → 연결 확인 중
+  - ComexStat 정의: MDIC Manual.pdf에서 수입 국가=원산지, Brasil=재수입 등 브라질산, 수정 주기(월·연) 확인. NCM 54023310 개정 이력은 미확인
+- 발견 문제와 대응:
+  - 금액만 있고 중량이 빠진 행이 평균단가를 부풀릴 수 있음 → 짝이 맞는 행만으로 단가 계산, 결측 행 수 안내(테스트 추가)
+  - OpenAI 키가 없을 때 '근거 부족·핵심 요약 0행'으로 잘못 안내 → 초안이 없으면 실패 사유만 표시
+  - 키가 없어도 근거 재수집(GDELT 재시도 포함)으로 1분 이상 대기 → 실제 클라이언트일 때 키·모델 먼저 확인해 즉시 중단
+  - ReportLab이 가변 글꼴을 직접 못 씀 → fontTools(작업용, 프로젝트 의존성 아님)로 400·700 정적 인스턴스 생성
+- 변경 파일: features/market_analysis/(news_sources.py·analysis.py·pdf_report.py 신규, prompts/market_analysis_draft_v1.md·market_analysis_review_v1.md 신규, fonts/ 신규, service.py·routes.py·panel.html·market_analysis.js·.css·feature_spec.md 수정), tests/test_market_analysis/(test_phase2.py 신규, README.md), 공통: requirements.txt(reportlab), .env.example(키 이름 3개), README.md·docs/decisions.md(PDF 출력 도구 문장)
+- 검증: validation.md 2026-10-25 2~3단계 항목
+- 담당자 판단: 미확인
+- 남은 한계: KOTRA·네이버 실제 기사 수신, GDELT 실제 필드, OpenAI 실제 분석 품질·비용·시간 모두 미검증. KITA 미연결. 새로고침 유지 보류
+
+## SPE-MA-20261025-01 시장 분석 AI 프롬프트 v1 (미실행)
+- 유형: service_prompt_experiment
+- 프롬프트: features/market_analysis/prompts/market_analysis_draft_v1.md, market_analysis_review_v1.md (v1)
+- 모델/설정: OPENAI_MODEL(후보 gpt-5.4-mini), max_output_tokens 4096, store=False(공통 설정)
+- 테스트 입력: 미정(실제 통계 + 수집 기사 예정)
+- 실제 응답: 없음. 실행 환경에 OPENAI_API_KEY가 없어 실제 호출하지 않음(승인 범위 최대 3회 중 0회 사용)
+- 재실행 결과·담당자 판단: 미실행
