@@ -21,11 +21,12 @@
   const HOLIDAY_LOOKAHEAD_DAYS = 14;
   const NEXT_START_SEARCH_DAYS = 31;
   const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+  // 카드 맨 위 큰 상태 문구. 색과 문구를 함께 바꿉니다(색만으로 구분하지 않음).
   const STATUS = {
-    holiday: { text: "공휴일", tone: "badge-warning" },
-    weekend: { text: "주말", tone: "badge-warning" },
-    work: { text: "업무시간", tone: "badge-success" },
-    off: { text: "업무시간 외", tone: "badge-info" },
+    holiday: { text: "오늘은 공휴일", tone: "home-status-danger" },
+    weekend: { text: "지금은 주말", tone: "home-status-warning" },
+    work: { text: "지금 연락 가능", tone: "home-status-success" },
+    off: { text: "지금은 업무시간 외", tone: "home-status-warning" },
   };
 
   const citySelect = panel.querySelector("#home-city");
@@ -222,10 +223,10 @@
 
     const status = workStatus(today, local.hour);
     if (holidayYears.get(today.year).loading) {
-      setClass(el.status, "badge");
+      setClass(el.status, "home-status");
       setText(el.status, "확인 중");
     } else {
-      setClass(el.status, "badge " + status.tone);
+      setClass(el.status, "home-status " + status.tone);
       setText(el.status, status.text);
     }
 
@@ -265,7 +266,14 @@
     list: panel.querySelector("#home-news-list"),
     empty: panel.querySelector("#home-news-empty"),
     emptyText: panel.querySelector("#home-news-empty-text"),
+    filter: panel.querySelector("#home-news-filter"),
+    filterEmpty: panel.querySelector("#home-news-filter-empty"),
+    moreRow: panel.querySelector("#home-news-more-row"),
+    more: panel.querySelector("#home-news-more"),
   };
+  // 매체 필터·더 보기는 이미 받은 목록을 화면에서만 거릅니다(추가 요청 없음).
+  const NEWS_PAGE_SIZE = 8;
+  const newsView = { origin: "all", expanded: false };
   let newsLoaded = false;
   let newsBusy = false;
   let summaryBusy = false;
@@ -320,6 +328,62 @@
     }));
   }
 
+  // [전체 N] [KOTRA n] [Google News n] [ABIT n]. 건수는 화면 목록 기준(경로 사이 중복 제외 후).
+  // 실패·설정 필요 경로에는 ⚠와 화면낭독용 문구를 붙입니다. 재시도는 아래 안내의 버튼으로 합니다.
+  function renderNewsFilter(items, media) {
+    const counts = { all: items.length };
+    items.forEach(function (item) { counts[item.origin] = (counts[item.origin] || 0) + 1; });
+    const tabs = [{ key: "all", label: "전체" }].concat(Object.keys(NEWS_ORIGINS).map(function (origin) {
+      return { key: origin, label: NEWS_ORIGINS[origin], status: media[origin].status };
+    }));
+    news.filter.replaceChildren.apply(news.filter, tabs.map(function (tab) {
+      const button = make("button", "home-news-tab");
+      button.type = "button";
+      button.dataset.newsFilter = tab.key;
+      button.setAttribute("aria-pressed", String(newsView.origin === tab.key));
+      button.append(make("span", "", tab.label), make("span", "home-news-tab-count", String(counts[tab.key] || 0)));
+      if (tab.status && tab.status !== "ok") {
+        const label = tab.status === "not_configured" ? "설정 필요" : "수집 실패";
+        button.append(make("span", "home-news-tab-warn", "⚠"));
+        button.lastChild.setAttribute("aria-hidden", "true");
+        button.append(make("span", "visually-hidden", " (" + label + ")"));
+        button.title = tab.label + " " + label;
+      }
+      return button;
+    }));
+    news.filter.hidden = false;
+  }
+
+  function applyNewsView() {
+    const items = Array.prototype.slice.call(news.list.children);
+    let matched = 0;
+    items.forEach(function (li) {
+      const match = newsView.origin === "all" || li.dataset.origin === newsView.origin;
+      li.hidden = !match || (!newsView.expanded && matched >= NEWS_PAGE_SIZE);
+      if (match) matched += 1;
+    });
+    news.filterEmpty.hidden = items.length === 0 || matched > 0;
+    news.moreRow.hidden = matched <= NEWS_PAGE_SIZE;
+    news.more.textContent = newsView.expanded ? "처음 " + NEWS_PAGE_SIZE + "건만 보기" : "더 보기 (" + (matched - NEWS_PAGE_SIZE) + "건)";
+    news.more.setAttribute("aria-expanded", String(newsView.expanded));
+  }
+
+  news.filter.addEventListener("click", function (event) {
+    const button = event.target.closest("[data-news-filter]");
+    if (!button) return;
+    newsView.origin = button.dataset.newsFilter;
+    newsView.expanded = false;
+    news.filter.querySelectorAll("[data-news-filter]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b === button));
+    });
+    applyNewsView();
+  });
+
+  news.more.addEventListener("click", function () {
+    newsView.expanded = !newsView.expanded;
+    applyNewsView();
+  });
+
   function renderNewsNotices(media) {
     news.notices.replaceChildren.apply(news.notices, Object.keys(NEWS_ORIGINS).filter(function (origin) {
       return media[origin].status !== "ok";
@@ -346,6 +410,7 @@
     news.list.replaceChildren.apply(news.list, items.map(function (item) {
       const li = make("li", "home-news-item");
       li.dataset.newsId = item.id;
+      li.dataset.origin = item.origin;
       const link = make("a", "home-news-link", item.title);
       link.href = item.url;
       link.target = "_blank";
@@ -354,7 +419,7 @@
       link.append(make("span", "visually-hidden", " (새 탭에서 원문 열기)"));
 
       const meta = make("p", "home-news-meta");
-      meta.append(make("span", "badge badge-info", NEWS_ORIGINS[item.origin]));
+      meta.append(make("span", "home-label", NEWS_ORIGINS[item.origin]));  // 분류 라벨은 회색(상태 색 아님)
       if (item.media) meta.append(make("span", "", item.media));
       const time = make("time", "", formatNewsDate(item.published_at));
       time.dateTime = item.published_at;
@@ -368,6 +433,8 @@
     }));
     news.list.hidden = items.length === 0;
     news.empty.hidden = items.length > 0;
+    renderNewsFilter(items, media);
+    applyNewsView();
     const allFailed = Object.keys(NEWS_ORIGINS).every(function (origin) { return media[origin].status !== "ok"; });
     news.emptyText.textContent = allFailed
       ? "모든 수집 경로에서 뉴스를 불러오지 못했습니다. 위 안내를 확인한 뒤 다시 시도하세요."
@@ -377,7 +444,7 @@
   // 검증을 통과한 요약만 서버가 보내므로, 받은 항목에만 "AI 요약" 표시를 붙입니다.
   function summaryNode(text) {
     const p = make("p", "home-news-summary");
-    p.append(make("span", "badge badge-info", "AI 요약"));
+    p.append(make("span", "home-label", "AI 요약"));
     const body = make("span", "", text);
     body.lang = "ko";
     p.append(body);
@@ -512,37 +579,44 @@
     if (info.change_pct === null || info.change_pct === undefined || !info.previous) return "전일 대비: 비교 데이터 없음";
     const pct = info.change_pct;
     const direction = pct > 0 ? "▲ 상승" : pct < 0 ? "▼ 하락" : "– 변동 없음";
-    return "전일 대비 " + direction + " " + Math.abs(pct).toFixed(2) + "% (직전 고시일 " + info.previous.date + ")";
+    return direction + " " + Math.abs(pct).toFixed(2) + "%";
   }
 
-  function fxRow(label, value, subs) {
-    const row = make("div", "home-time-row");
-    row.append(make("dt", "", label));
-    const dd = make("dd");
-    dd.append(make("span", "home-time-value", value));
-    subs.forEach(function (text) { dd.append(make("span", "home-time-sub home-fx-sub", text)); });
-    row.append(dd);
-    return row;
+  // 타일: 통화쌍 → 큰 숫자(+단위) → 보조 줄(전일 대비·고시일) → 작은 회색 출처.
+  // 값이 없으면 숫자 자리에 "확인 불가"/"계산 불가"만 둡니다.
+  function fxTile(pair, value, unit, lines, sources) {
+    const li = make("li", "home-fx-tile");
+    li.append(make("p", "home-fx-pair", pair));
+    li.append(make("p", "home-fx-number" + (unit ? "" : " home-fx-number-none"), value));
+    if (unit) li.append(make("p", "home-fx-unit", unit));
+    lines.forEach(function (text) { li.append(make("p", "home-fx-line", text)); });
+    sources.forEach(function (text) { li.append(make("p", "home-fx-source", text)); });
+    return li;
   }
 
-  function fxSourceRow(name, quote, info) {
+  function fxSourceTile(name, quote, info) {
     if (info.status !== "ok") {
-      return fxRow(info.pair, "확인 불가", [info.error.message, info.source_name]);
+      return fxTile(info.pair, "확인 불가", "", [info.error.message], [info.source_name]);
     }
-    return fxRow(info.pair, "1 USD = " + formatRate(info.rate, FX_DIGITS[name]) + " " + quote,
-      [info.date + " 고시 · " + info.source_name, fxChangeText(info)]);
+    const previous = info.previous ? ["직전 " + info.previous.date + " 대비"] : [];
+    return fxTile(info.pair, formatRate(info.rate, FX_DIGITS[name]), quote + " / 1 USD",
+      [fxChangeText(info), info.date + " 고시"], previous.concat(info.source_name));
+  }
+
+  function derivedDateText(derived) {
+    if (derived.usd_krw_date === derived.usd_brl_date) return derived.usd_krw_date + " 고시 (두 환율 동일)";
+    return "KRW " + derived.usd_krw_date + " · BRL " + derived.usd_brl_date + " 고시";
   }
 
   function renderFx(data) {
     const derived = data.brl_krw;
     fxEl.list.replaceChildren(
-      fxSourceRow("usd_krw", "KRW", data.usd_krw),
-      fxSourceRow("usd_brl", "BRL", data.usd_brl),
+      fxSourceTile("usd_krw", "KRW", data.usd_krw),
+      fxSourceTile("usd_brl", "BRL", data.usd_brl),
       derived
-        ? fxRow("BRL/KRW", "1 BRL = " + formatRate(derived.rate, FX_DIGITS.brl_krw) + " KRW",
-          ["USD 경유 계산값(USD/KRW ÷ USD/BRL) · 공식 고시 환율 아님",
-            "USD/KRW " + derived.usd_krw_date + " · USD/BRL " + derived.usd_brl_date + " 고시 기준"])
-        : fxRow("BRL/KRW", "계산 불가", ["USD/KRW와 USD/BRL이 모두 있어야 USD 경유로 계산합니다."])
+        ? fxTile("BRL/KRW", formatRate(derived.rate, FX_DIGITS.brl_krw), "KRW / 1 BRL",
+          ["USD 경유 계산값", derivedDateText(derived)], ["USD/KRW ÷ USD/BRL · 공식 고시 환율 아님"])
+        : fxTile("BRL/KRW", "계산 불가", "", ["USD/KRW와 USD/BRL이 모두 있어야 USD 경유로 계산합니다."], ["USD 경유 계산값"])
     );
     fxEl.list.hidden = false;
 
@@ -631,7 +705,8 @@
     notices: panel.querySelector("#home-fairs-notices"),
     hint: panel.querySelector("#home-fairs-hint"),
   };
-  const FAIR_DAY_TONES = { upcoming: "badge-info", today: "badge-warning", ongoing: "badge-success" };
+  // D-day 칸: 다가오는 행사는 기본 글자색, 오늘·진행 중만 상태 색
+  const FAIR_DAY_TONES = { upcoming: "", today: " home-fair-dday-today", ongoing: " home-fair-dday-ongoing" };
   let fairsLoaded = false;
   let fairsBusy = false;
 
@@ -641,29 +716,50 @@
     return p;
   }
 
+  // 2027-04-27 ~ 2027-04-30 → 2027.04.27–04.30 (해가 다르면 두 날짜 모두 전체)
+  function fairPeriod(start, end) {
+    const dot = function (value) { return value.replace(/-/g, "."); };
+    if (start === end) return dot(start);
+    if (start.slice(0, 4) === end.slice(0, 4)) return dot(start) + "–" + dot(end.slice(5));
+    return dot(start) + "–" + dot(end);
+  }
+
   function fairItem(fair) {
     const li = make("li", "home-fair-item");
-    const head = make("div", "home-fair-head");
-    head.append(make("span", "home-fair-name", fair.name),
-      make("span", "badge " + (FAIR_DAY_TONES[fair.status] || "badge-info"), fair.d_day));
-    li.append(head);
-    li.append(fairLine("기간", fair.start === fair.end ? fair.start : fair.start + " ~ " + fair.end));
-    li.append(fairLine("장소", [fair.city, fair.venue].filter(Boolean).join(" · ")));
-    li.append(fairLine("분야", fair.focus));
+    li.append(make("p", "home-fair-dday" + (FAIR_DAY_TONES[fair.status] || ""), fair.d_day));
+    const main = make("div", "home-fair-main");
+    main.append(make("p", "home-fair-name", fair.name));
+    const when = make("p", "home-fair-when");
+    const period = make("time", "", fairPeriod(fair.start, fair.end));
+    period.dateTime = fair.start;
+    when.append(period);
+    if (fair.city) when.append(make("span", "", " · " + fair.city));
+    main.append(when);
+    if (!fair.verified) {
+      const state = make("p");
+      state.append(make("span", "badge badge-warning", "확인 필요"));
+      main.append(state);
+    }
 
+    // 장소·분야·확인 상태·메모·출처는 지우지 않고 접기 영역으로 옮깁니다.
+    const details = make("details", "home-fair-details");
+    details.append(make("summary", "", "상세 정보"));
+    details.append(fairLine("기간", fair.start === fair.end ? fair.start : fair.start + " ~ " + fair.end));
+    details.append(fairLine("장소", [fair.city, fair.venue].filter(Boolean).join(" · ")));
+    details.append(fairLine("분야", fair.focus));
     const check = make("p", "home-fair-line");
-    check.append(make("span", "badge " + (fair.verified ? "badge-success" : "badge-warning"),
-      fair.verified ? "공식 사이트 확인" : "확인 필요"));
-    check.append(make("span", "home-fair-checked", fair.checked_at + " 확인"));
-    li.append(check);
-    if (fair.note) li.append(make("p", "home-fair-note", fair.note));
-
+    check.append(make("span", "home-fair-label", "확인"),
+      make("span", "", (fair.verified ? "공식 사이트 확인" : "확인 필요") + " · " + fair.checked_at + " 확인"));
+    details.append(check);
+    if (fair.note) details.append(make("p", "home-fair-note", fair.note));
     const link = make("a", "home-fair-link", "출처: " + fair.source);
     link.href = fair.url;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     link.append(make("span", "visually-hidden", " (새 탭에서 열기)"));
-    li.append(link);
+    details.append(link);
+    main.append(details);
+    li.append(main);
     return li;
   }
 
@@ -746,6 +842,9 @@
     city: panel.querySelector("#home-report-city"),
   };
   let reportBusy = false;
+  // 성공 안내는 버튼 옆에 잠깐만 보여 줍니다. 오류 안내는 다시 누를 때까지 그대로 둡니다.
+  const REPORT_STATUS_SECONDS = 4;
+  let reportStatusTimer = null;
 
   function reportFilename(res) {
     const match = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") || "");
@@ -765,6 +864,7 @@
     reportEl.button.disabled = true;
     reportEl.body.setAttribute("aria-busy", "true");
     reportEl.loading.hidden = false;
+    clearTimeout(reportStatusTimer);
     reportEl.status.hidden = true;
     reportEl.notices.replaceChildren();
     try {
@@ -778,8 +878,9 @@
       }
       const blob = await res.blob();
       AppShell.work.downloadBlob(FEATURE_ID, blob, reportFilename(res));
-      reportEl.status.textContent = "다운로드를 요청했습니다. 저장 여부는 브라우저에서 확인하세요.";
+      reportEl.status.textContent = "다운로드를 요청했습니다.";
       reportEl.status.hidden = false;
+      reportStatusTimer = setTimeout(function () { reportEl.status.hidden = true; }, REPORT_STATUS_SECONDS * 1000);
     } catch (err) {
       // 네트워크 오류 원문(브라우저 영어 문구 등)은 보여 주지 않고 서버가 준 고정 문장만 씁니다.
       showReportError(err.fromServer ? err.message : "서버에 연결하지 못했습니다.");
