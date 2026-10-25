@@ -1167,7 +1167,7 @@ class PdfTest(unittest.TestCase):
         self.assertGreaterEqual(len(reader.pages), 3)
         text = "\n".join(p.extract_text() for p in reader.pages)
         for s in ("브라질 시장 분석 보고서", "Coreia do Sul", "ação", "검토 미완료", "연결 확인 중", "미실행", "Índia",
-                  "GDELT 최초 발견", "제목·메타데이터만 확인", "The GDELT Project"):
+                  "GDELT 최초 발견", "The GDELT Project"):
             self.assertIn(s, text)
         self.assertEqual(reader.pages[0].mediabox.width, 595.2756)  # A4 세로
         links = [a.get_object()["/A"]["/URI"] for p in reader.pages for a in (p.get("/Annots") or [])
@@ -1180,7 +1180,9 @@ class PdfTest(unittest.TestCase):
         data = pdf_report.build_pdf(p)
         text = "\n".join(pg.extract_text() for pg in PdfReader(io.BytesIO(data)).pages)
         self.assertNotIn("KOTRA 요약", text)       # pdf_text False → 요약 미수록
-        self.assertIn("이용 범위 확인 필요", text)
+        # 기사 제목 아래 줄의 범위 문구 삭제(2026-10-26). GDELT 출처 설명 문장의 '제목·메타데이터만 확인했고'는 대상 아님
+        for s in ("이용 범위 확인 필요", "· 제목·메타데이터만 확인", "· 제목·언론사 설명만 확인", "· 원문 확보"):
+            self.assertNotIn(s, text)
         self.assertIn("AI 분석을 실행하지 않았습니다", text)
 
     def test_pdf_source_table_without_count_and_article_columns(self):
@@ -1205,6 +1207,14 @@ class PdfTest(unittest.TestCase):
                  if a.get_object().get("/A") and "/URI" in a.get_object()["/A"]]
         self.assertFalse(any("javascript" in str(u) for u in links))
         self.assertIn("https://dream.kotra.or.kr/r1", [str(u) for u in links])
+
+    def test_supplier_price_has_no_check_flag(self):
+        from pypdf import PdfReader
+        p = self.payload(ai=False)
+        for c in p["stats"]["suppliers"]["top"]:
+            c["price_flag"] = "high"  # 데이터에 표시가 있어도 공급국 표에는 출력하지 않음
+        text = "\n".join(pg.extract_text() for pg in PdfReader(io.BytesIO(pdf_report.build_pdf(p))).pages)
+        self.assertNotIn("· 확인 필요", text)
 
     def test_route_pdf_and_errors(self):
         from app import create_app

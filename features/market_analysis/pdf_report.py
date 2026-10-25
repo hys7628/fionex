@@ -320,9 +320,9 @@ def _supplier_table(lst, W, st):
             continue
         if (c.get("country") or {}).get("code") == "190":
             hl.append(len(rows))
-        flag = " · 확인 필요" if c.get("price_flag") else ""
+        # 공급국 단가에는 '확인 필요'를 붙이지 않습니다(화면과 같음, 2026-10-26 담당자 지시). 월별 표의 표시는 유지.
         rows.append([str(c["rank"]), _country(c["country"]), usd(c["fob"]), pct(c["share"]), tons(c["kg"]),
-                     price(c["unit_price"], c.get("unit_price_reason")) + flag, yoy(c["yoy"]["fob"])])
+                     price(c["unit_price"], c.get("unit_price_reason")), yoy(c["yoy"]["fob"])])
     return _table(rows, [11 * mm, 44 * mm, 27 * mm, 14 * mm, 22 * mm, 30 * mm, W - 148 * mm], st,
                   num_cols=(0, 2, 3, 4, 5, 6), highlight=hl)
 
@@ -412,12 +412,11 @@ def _news_section(news, W, st):
 def _article_table(items, W, st):
     """기사 제목 | 원문 URL (화면과 같은 구성). 제목 칸에 ID·AI 번역 제목·출처·날짜를 함께 적습니다."""
     rows = [["기사 제목", "원문 URL"]]
-    access = {"full_text": "원문 확보(본문 미수록)", "description": "제목·언론사 설명만 확인", "title_only": "제목·메타데이터만 확인"}
     for it in items:
         date = ("게시일 " + it["published"]) if it.get("published") else (
             ("GDELT 최초 발견 " + it["seen_at"]) if it.get("seen_at") else "날짜 미확인")
-        meta = " · ".join(filter(None, [it.get("source_name"), date, access.get(it.get("access"), it.get("access")),
-                                        "" if it.get("pdf_text") else "이용 범위 확인 필요"]))
+        # 확보 범위·이용 범위 문구는 넣지 않습니다(화면과 같음, 2026-10-26 담당자 지시).
+        meta = " · ".join(filter(None, [it.get("source_name"), date]))
         title = [_p("%s %s" % (it.get("id") or "", it["title"]), st["cell"])]
         if it.get("title_ko"):
             title.append(_p("AI 번역: " + it["title_ko"], st["cell"]))

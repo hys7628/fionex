@@ -341,7 +341,6 @@
   }
 
   /* ---------- 근거 자료(뉴스·보고서) ---------- */
-  const ACCESS_TEXT = { full_text: "원문 확보", description: "제목·언론사 설명만 확인(본문 미확인)", title_only: "제목·메타데이터만 확인" };
   const STATE_TONE = { ok: "success", pending: "info", config: "warning", auth: "danger", rate_limited: "warning",
     unavailable: "danger", bad_response: "danger", rejected: "danger" };
 
@@ -389,9 +388,9 @@
   function articleMeta(it) {
     const date = it.published ? "게시일 " + it.published + (it.source === "newsdata" ? "(UTC)" : "")
       : (it.seen_at ? "GDELT 최초 발견 " + it.seen_at : "날짜 미확인");
+    // 확보 범위·이용 범위 배지는 표시하지 않습니다(2026-10-26 담당자 지시). 값은 응답(access·ai_input)에 남습니다.
     return '<p class="field-hint">' + esc([it.source_name, date, it.topics && it.topics.length ? "주제: " + it.topics.join(", ") : ""]
-      .filter(Boolean).join(" · ")) + " " + badge(it.access === "title_only" ? "warning" : "info", ACCESS_TEXT[it.access] || it.access) +
-      (it.ai_input ? "" : " " + badge("warning", "AI 입력·PDF 본문 미사용 · 이용 범위 확인 필요")) + "</p>";
+      .filter(Boolean).join(" · ")) + "</p>";
   }
 
   // 기사별 표: 기사 제목 | 원문 URL. 좁은 화면에서는 CSS가 행을 카드로 바꿉니다.
@@ -649,7 +648,7 @@
       const korea = c.country.code === "190" ? " ma-row-korea" : "";
       return '<tr class="' + korea + '"><td class="num">' + c.rank + '</td><th scope="row">' + esc(countryName(c.country)) + "</th>" +
         '<td class="num">' + esc(nUsd(c.fob)) + '</td><td class="num">' + esc(pct(c.share)) + "</td>" +
-        '<td class="num">' + esc(nTons(c.kg)) + '</td><td class="num">' + esc(nPrice(c.unit_price, c.unit_price_reason)) + flagBadge(c.price_flag) + "</td>" +
+        '<td class="num">' + esc(nTons(c.kg)) + '</td><td class="num">' + esc(nPrice(c.unit_price, c.unit_price_reason)) + "</td>" +  // 공급국 단가에는 '확인 필요'를 붙이지 않음(2026-10-26 원자료 대조 후 담당자 지시)
         '<td class="num">' + esc(yoyText(c.yoy.fob)) + '</td><td class="num">' + c.months_with_record + "</td></tr>";
     });
     return '<div class="table-wrap"><table class="table"><caption>' + esc(caption) + "</caption><thead><tr>" +
