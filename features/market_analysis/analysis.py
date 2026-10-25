@@ -313,8 +313,9 @@ def run(state, stats, news, widen_fn=None, generate=None, clock=time.monotonic):
         if sum(1 for it in news["items"] if it.get("ai_input")) < MIN_EVIDENCE_FOR_NO_WIDEN:
             state["widened"] = True
             try:
-                news = widen_fn()
-                state["widen_result"] = "넓은 검색 1회 수행"
+                wider = widen_fn()
+                state["widen_result"] = "넓은 검색 1회 수행" + ("" if wider is not news else "(근거가 늘지 않아 기존 근거로 진행)")
+                news = wider
             except Exception:
                 state["widen_result"] = "넓은 검색 실패(기존 근거로 진행)"
     state["news_used"] = news

@@ -552,6 +552,10 @@ def _news_public(collected):
     return {**{k: v for k, v in collected.items() if k != "items"}, "items": [it.public() for it in collected["items"]]}
 
 
+def _ai_usable(news):
+    return sum(1 for it in news["items"] if it.get("ai_input"))
+
+
 def collect_news(bundle_id, refresh=False):
     """조회 묶음에 대한 뉴스 수집. 같은 묶음은 한 번 수집한 결과를 다시 씁니다(refresh=True면 다시 수집)."""
     b = get_bundle(bundle_id)
@@ -577,8 +581,9 @@ def run_ai(bundle_id):
 
         def widen():
             news = _news_public(news_sources.collect(widen=True))
-            b["news"] = news
-            return news
+            if _ai_usable(news) > _ai_usable(b["news"]):
+                b["news"] = news  # 근거가 늘었을 때만 교체(호출 한도 등으로 줄면 기존 유지)
+            return b["news"]
 
         state = analysis.run(state, b["stats"], b["news"], widen_fn=widen)
         b["ai"] = state

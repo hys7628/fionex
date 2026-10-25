@@ -247,7 +247,8 @@ def fetch_kotra(start, end, collected_at):
     """브라질 해외시장뉴스. start·end: date. 반환 (items, coverage)."""
     key = _kotra_key()
     if not key:
-        raise SourceError("config", "공공데이터포털 서비스키(%s)가 설정되지 않았습니다." % ENV_DATA_GO_KR_KEY)
+        raise SourceError("config", "공공데이터포털 서비스키(%s)가 서버 환경변수에 없습니다. 서버를 실행하는 환경에 설정한 뒤 "
+                                    "서버를 다시 시작해 주세요(.env.example은 양식 파일이라 읽지 않습니다)." % ENV_DATA_GO_KR_KEY)
     # 포털은 인코딩 키·디코딩 키를 함께 발급합니다. 이미 인코딩된 키(%)는 다시 인코딩하지 않습니다.
     key_param = key if "%" in key else urllib.parse.quote(key, safe="")
     out = []
@@ -360,43 +361,51 @@ def fetch_gdelt(start, end, collected_at, queries=None, today=None):
     today = today or end
     queries = list(queries or GDELT_QUERIES)
     out, truncated, windows, last_error, any_ok = [], False, [], None, False
-    started = _monotonic()
+    started, skip_reason = _monotonic(), None
     with _gdelt_lock:
         for w_from, w_to in gdelt_windows(start, end):
             rec = {"from": w_from.isoformat(), "to": w_to.isoformat(), "count": 0, "failed_queries": 0,
                    "skipped_queries": 0, "error": None,
                    "beyond_documented": (today - w_from).days > GDELT_DOCUMENTED_DAYS}
             for q in queries:
-                if _monotonic() - started > GDELT_TIME_BUDGET:
+                if skip_reason is None and _monotonic() - started > GDELT_TIME_BUDGET:
+                    skip_reason = "수집 시간 상한"
+                if skip_reason:
                     rec["skipped_queries"] += 1
                     continue
                 pending = [(datetime(w_from.year, w_from.month, w_from.day),
                             datetime(w_to.year, w_to.month, w_to.day, 23, 59, 59), 0)]
+                seen = set()
                 try:
                     while pending:
                         ws, we, depth = pending.pop(0)
                         arts = _gdelt_call(q, ws, we)
+                        any_ok = True
                         if len(arts) >= GDELT_MAX_RECORDS:
+                            # 상한에 걸린 결과도 먼저 담아 두고 반으로 나눠 다시 조회(나눈 조회가 실패해도 받은 결과는 유지)
                             if depth < GDELT_SPLIT_DEPTH:
                                 mid = ws + (we - ws) / 2
                                 pending += [(ws, mid, depth + 1), (mid + timedelta(seconds=1), we, depth + 1)]
-                                continue
-                            truncated = True
+                            else:
+                                truncated = True
                         for a in arts:
                             item = _gdelt_item(a, collected_at)
-                            if item:
+                            if item and item.url not in seen:
+                                seen.add(item.url)
                                 out.append(item)
                                 rec["count"] += 1
-                    any_ok = True
                 except SourceError as err:
                     rec["failed_queries"] += 1
                     rec["error"] = err.kind
                     last_error = err
+                    if err.kind == "rate_limited":
+                        skip_reason = "호출 한도"  # 재시도 후에도 한도 → 남은 조회로 한도를 더 쓰지 않음
             n = len(queries)
-            rec["status"] = ("ok" if rec["failed_queries"] == 0 and rec["skipped_queries"] == 0
-                             else "failed" if rec["failed_queries"] == n
-                             else "skipped" if rec["skipped_queries"] == n
-                             else "partial")
+            done = n - rec["failed_queries"] - rec["skipped_queries"]
+            rec["status"] = ("ok" if done == n
+                             else "partial" if done or rec["count"]
+                             else "failed" if rec["failed_queries"]
+                             else "skipped")
             windows.append(rec)
     if not any_ok:
         if last_error:
@@ -405,7 +414,7 @@ def fetch_gdelt(start, end, collected_at, queries=None, today=None):
     missing = []
     for w in windows:
         if w["status"] != "ok":
-            reason = {"failed": "조회 실패(%s)" % (w["error"] or "?"), "skipped": "수집 시간 상한으로 조회하지 않음",
+            reason = {"failed": "조회 실패(%s)" % (w["error"] or "?"), "skipped": "%s으로 조회하지 않음" % skip_reason,
                       "partial": "검색어 %d개 중 %d개 실패·%d개 미조회" % (len(queries), w["failed_queries"], w["skipped_queries"])}[w["status"]]
             missing.append({"from": w["from"], "to": w["to"], "reason": reason})
     ok_windows = [w for w in windows if w["status"] in ("ok", "partial")]

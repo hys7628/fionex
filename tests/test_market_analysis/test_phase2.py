@@ -261,6 +261,26 @@ class GdeltTest(NewsBase):
         self.assertTrue(cov["truncated"])  # 앞 절반도 250건 → 일부 누락 가능 표시
         self.assertEqual(len(items), 251)
 
+    def test_rate_limit_stops_remaining_queries(self):
+        with self.assertRaises(news_sources.SourceError) as ctx:
+            self.fetch([(429, b"limit")] * 3, queries=("a", "b", "c"))
+        self.assertEqual(ctx.exception.kind, "rate_limited")
+        items, cov, t = self.fetch([http(200, {"articles": [gdelt_article(1)]})] + [(429, b"limit")] * 3,
+                                   queries=("a", "b", "c"))
+        self.assertEqual((len(t.calls), len(items)), (4, 1))  # 세 번째 검색어는 호출하지 않음
+        self.assertEqual(cov["windows"][0]["status"], "partial")
+        self.assertIn("1개 실패·1개 미조회", cov["missing"][0]["reason"])
+
+    def test_split_failure_keeps_received_results(self):
+        full = {"articles": [gdelt_article(i) for i in range(250)]}
+        limit = (429, b"limit")
+        items, cov, t = self.fetch([limit, http(200, full), limit, limit, http(200, full), limit, limit, limit],
+                                   start=date(2026, 7, 26))
+        self.assertEqual(len(t.calls), 8)  # 2026-10-25 서버 실측과 같은 순서
+        self.assertEqual(len(items), 250)  # 받은 결과를 버리지 않음(URL 중복 제거)
+        self.assertEqual(cov["windows"][0]["status"], "partial")
+        self.assertIn("1개 실패", cov["missing"][0]["reason"])
+
     def test_min_interval_between_calls(self):
         waits = []
         with mock.patch.object(news_sources, "GDELT_MIN_INTERVAL", 6.0), mock.patch.object(news_sources, "_sleep", waits.append):
@@ -570,6 +590,13 @@ class AnalysisTest(unittest.TestCase):
         self.assertTrue(st["result"]["widened"])
 
 
+    def test_widen_with_fewer_items_keeps_original(self):
+        orig = news_for(self.stats, n=2)
+        st = self.run_with(FakeModel(self.good), news=orig, widen_fn=lambda: orig)
+        self.assertIn("기존 근거로 진행", st["result"]["widen_result"])
+        self.assertEqual(st["result"]["evidence_count"], 2)
+
+
 class BundleTest(unittest.TestCase):
     def setUp(self):
         service.clear_bundles()
@@ -609,6 +636,23 @@ class BundleTest(unittest.TestCase):
         with self.assertRaises(service.BundleError) as ctx:
             service.collect_news(self.bid)
         self.assertEqual(ctx.exception.http_status, 410)
+
+    def test_widen_does_not_replace_news_with_fewer(self):
+        good = news_for(make_stats(), n=2)
+        poor = {**good, "items": []}
+        b = service.get_bundle(self.bid)
+        b["news"] = good
+        seen = {}
+
+        def fake_run(state, stats, news, widen_fn=None):
+            seen["got"] = widen_fn()
+            st = analysis.new_state()
+            st["result"] = {}
+            return st
+        with mock.patch.object(service.news_sources, "collect", lambda **kw: poor),                 mock.patch.object(service, "_news_public", lambda n: n), mock.patch.object(service.analysis, "run", fake_run):
+            service.run_ai(self.bid)
+        self.assertIs(seen["got"], good)
+        self.assertIs(service.get_bundle(self.bid)["news"], good)
 
     def test_news_collected_once_per_bundle(self):
         fake = {"window": {}, "items": [], "candidates": 0, "sources": [], "widened": False}

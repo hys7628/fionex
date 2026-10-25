@@ -24,3 +24,14 @@
 | ReportLab 5.1.0 | ReportLab Inc.(PyPI) | https://pypi.org/project/reportlab/5.1.0/ | 2026-10-25 | PDF 출력 | BSD |
 | GDELT 이용 조건(About) | GDELT Project | https://www.gdeltproject.org/about.html | 2026-10-26 | 상업 포함 무료, 사용 시 GDELT 표기·링크 필요. 기사 본문 저작권 언급 없음 → 본문 미수집 | GDELT 이용 조건 |
 | GDELT DOC 2.0 API 실제 응답 | GDELT Project(실측) | https://api.gdeltproject.org/api/v2/doc/doc | 2026-10-26 | artlist 필드 확인, 약 120일 전 구간 결과 있음, 429 안내 "one every 5 seconds" | GDELT 이용 조건 |
+| NewsAPI.org 요금표 | NewsAPI | https://newsapi.org/pricing | 2026-10-26 | 무료 Developer: 일 100회, 개발·테스트 환경 전용, 최근 1개월, 24시간 지연, 전문 미제공 | 상업·운영 불가 |
+| GNews 요금표 | GNews | https://gnews.io/pricing | 2026-10-26 | 무료: 일 100회, 요청당 10건, 비상업 전용, 30일, 본문은 짧은 발췌, 카드 불필요 | 비상업 |
+| NewsData.io 요금표 | NewsData.io | https://newsdata.io/pricing | 2026-10-26 | 무료: 일 200 크레딧(크레딧당 1~10건), 최근 48시간, 12시간 지연, 카드 불필요, "testing & personal projects" | 상업 조건 미기재 |
+| TheNewsAPI 요금표 | TheNewsAPI | https://www.thenewsapi.com/pricing | 2026-10-26 | 무료: 일 100회, 요청당 3건, Historical data 표시 | 상업 조건 미기재 |
+| Currents API 요금표 | Currents | https://currentsapi.services/en/product/price | 2026-10-26 | 무료: 일 250회(초과 시 429), 최근 30일, 제목·부분 접근, 고객용 AI 요약은 기본 미포함, 카드 불필요 | 자체 조건 |
+| mediastack 요금표 | apilayer | https://mediastack.com/pricing | 2026-10-26 | 무료: 월 100회, 비상업, 과거 자료는 유료 | 비상업 |
+| World News API 요금표 | World News API | https://worldnewsapi.com/pricing/ | 2026-10-26 | 무료: 일 50포인트, 초당 1회, 1개월, 백링크 필수, 카드 불필요 | 백링크 조건 |
+| NewsAPI.ai(Event Registry) 요금표 | Event Registry | https://newsapi.ai/plans | 2026-10-26 | 무료: 검색 2,000회(소진형), 전문 제공, 카드 불필요 | 상업 조건 미기재 |
+| Guardian Open Platform 접근 안내 | The Guardian | https://open-platform.theguardian.com/access/ | 2026-10-26 | 개발자 키: 비상업 전용, 초당 1회, 일 500회. 상업은 별도 키 | 비상업 |
+| GDELT DOC 2.0 안내(재확인) | GDELT Project | https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/ | 2026-10-26 | 일·월 호출량 명시 없음, 결과 최대 250건, 기본 최근 3개월. 실제 429 응답 "one every 5 seconds" | 상업 포함 무료, 표기 필요 |
+| Agência Brasil 소개(재사용 정책) | EBC | https://agenciabrasil.ebc.com.br/sobre | 2026-10-26 | 언론사의 보도 목적 재사용은 출처 표기 시 허용, 상업 목적은 licenciamento@ebc.com.br 문의. RSS(feed.xml) 200 확인 | 상업 이용 별도 문의 |
