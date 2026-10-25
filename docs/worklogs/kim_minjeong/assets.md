@@ -47,3 +47,23 @@
 | 2026-10-25 | 모의 서버 스크립트(가짜 판독 함수) | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/010a049a-1a72-42db-bb4c-cb26f412c3b5/scratchpad/tools/mock_ocr_server.py | 직접 작성 | validation DEV-2026_10_25-07 | 가상 응답(MOCK 문구). 실제 판독 아님. 저장소에 넣지 않음 |
 | 2026-10-25 | 화면 캡처 PNG(1440 전체, 모의 판독 결과) | C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/010a049a-1a72-42db-bb4c-cb26f412c3b5/scratchpad/green_claim_ocr_mock_1440.png | Chrome 헤드리스 CDP | 같음 | 모의 결과 화면. 저장소에 넣지 않음 |
 - PDF 자료는 이전 작업에서 만든 가상 PDF(fixtures/) 재사용. 실제 홍보물·스캔 문서 사용 안 함
+
+## 2026-10-25 이미지 AI 판독 검증 자료·캡처 (DEV-2026_10_25-08)
+| 날짜 | 종류 | 경로 | 생성 도구 | 관련 기록 | 사용권·검토 상태 |
+|---|---|---|---|---|---|
+| 2026-10-25 | 가상 이미지(한·영·포 가상 문구 JPG·PNG·팔레트 PNG·RGBA PNG·GIF) | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/010a049a-1a72-42db-bb4c-cb26f412c3b5/scratchpad/fixtures/img/ | .NET System.Drawing | validation DEV-2026_10_25-08 | 직접 만든 가상 문구(실제 홍보물 아님). 저장소에 넣지 않음 |
+| 2026-10-25 | EXIF 방향 1~8 가상 JPEG·PDF | 같은 임시 폴더 fixtures/img/orient/ | 위 JPEG에 EXIF 추가(스크립트) | 같음 | 가상 자료. 저장소에 넣지 않음 |
+| 2026-10-25 | 브라우저 흐름용 가상·손상 이미지 | 같은 임시 폴더 fixtures/img2/ | 스크립트(테스트 생성 함수 재사용) | 같음 | 가상 자료. 저장소에 넣지 않음 |
+| 2026-10-25 | PDF 화면·<img> 대조 캡처 PNG | 같은 임시 폴더 fixtures/img/out/shot_*.png | Chrome 헤드리스 CDP | 같음 | 가상 자료 캡처. 저장소에 넣지 않음 |
+| 2026-10-25 | 화면 캡처 PNG(1440 전체, 모의 이미지 판독 결과) | 같은 임시 폴더 green_claim_image_ocr_mock_1440.png | Chrome 헤드리스 CDP | 같음 | 모의 결과 화면. 저장소에 넣지 않음 |
+| 2026-10-25 | 모의 서버·검증 스크립트 | 같은 임시 폴더 tools/mock_image_ocr_server.py, cdp_check_image_flow.mjs 등 | 직접 작성 | 같음 | 가짜 판독 함수(실제 판독 아님). 저장소에 넣지 않음 |
+- 저장소 테스트(tests/test_image_ocr.py)는 가상 이미지를 메모리에서 생성하며 파일 자료를 추가하지 않음
+
+## 2026-10-25 이미지 판독 보완 자료·캡처 (DEV-2026_10_25-08 후속)
+| 날짜 | 종류 | 경로 | 생성 도구 | 관련 기록 | 사용권·검토 상태 |
+|---|---|---|---|---|---|
+| 2026-10-25 | 투명 배경 가상 문구 PNG(검정·흰색·반투명 빨강 글자) | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/010a049a-1a72-42db-bb4c-cb26f412c3b5/scratchpad/fixtures/img/alpha_*.png | Pillow(맑은 고딕 시스템 글꼴로 그림) | validation DEV-2026_10_25-08 후속 | 직접 만든 가상 문구. 글꼴은 로컬 렌더링에만 사용. 저장소에 넣지 않음 |
+| 2026-10-25 | 판독용 사본 PDF와 Chrome PDF 화면 캡처 | 같은 임시 폴더 fixtures/img/out2/ | image_worker·image_input, Chrome 헤드리스 CDP | 같음 | 가상 자료. 저장소에 넣지 않음 |
+| 2026-10-25 | 16비트 회색조 가상 PNG, 투명 PNG(브라우저 흐름용) | 같은 임시 폴더 fixtures/img2/gray16.png, alpha_black_text.png | 스크립트 | 같음 | 가상 자료. 저장소에 넣지 않음 |
+| 2026-10-25 | 화면 캡처 PNG(1440 전체, 모의 이미지 판독 결과, 2차 갱신) | 같은 임시 폴더 green_claim_image_ocr_mock_1440.png(1차 파일을 덮어씀) | Chrome 헤드리스 CDP | 같음 | 모의 결과 화면. 저장소에 넣지 않음 |
+- 저장소 테스트(tests/test_image_ocr.py)는 가상 이미지를 메모리에서 생성하며 파일 자료를 추가하지 않음

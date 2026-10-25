@@ -57,9 +57,9 @@ def extract_text():
 
 @bp.post("/api/green-claim/ocr")
 def ocr_text():
-    """사용자가 AI 판독 버튼을 눌렀을 때만 호출되는 PDF AI 글자 판독(공통 OpenAI PDF 연결)."""
+    """사용자가 AI 판독 버튼을 눌렀을 때만 호출되는 AI 글자 판독(PDF·JPG·JPEG·PNG, 공통 OpenAI PDF 연결)."""
     try:
-        return _handle_upload(ocr_service.run_ocr)
+        return _handle_upload(ocr_service.run_file_ocr)  # .pdf / .jpg·.jpeg·.png 분기
     except AIError as err:
         return _fail(err)
     except Exception:

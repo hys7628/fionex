@@ -300,3 +300,88 @@
 - 정정 2. 대조 주체: "사용자가 판독문과 테스트 원문을 대조" → **사용자가 전달한 판독문을 ChatGPT가 테스트 원문과 대조한 결과**(사용자 보고). Claude는 판독문·원문을 보지 않았고 대조하지 않음. 대조 내용(한·영·포 문장, 악센트 문자, ABC-123 / 25% / 2026-10-25, 마지막 문장 보존, 누락·임의 추가 미확인)은 변경 없음
 - 함께 반영: features/green_claim/prompts/README.md 버전 표의 pdf_ocr_v1 상태를 "작성만. 실제 모델 실험 미실행" → "사용자 실행으로 가상 스캔 PDF 1페이지 판독 성공 1건 확인. 다른 문서의 정확도·비용·시간은 미검증"으로 갱신(담당자 지시). 프롬프트 본문 pdf_ocr_v1.md는 수정하지 않음
 - 한계: 대조는 외부 도구(ChatGPT)가 수행한 것으로, 사람 검수나 Claude 확인이 아님
+
+## DEV-2026_10_25-08 홍보 이미지(JPG·JPEG·PNG) AI 글자 판독 흐름 추가
+- 유형: development_instruction (서비스 프롬프트 작성 포함, 서비스 프롬프트 실험 아님, 실제 AI 호출 없음, 기능 전체 완성 아님)
+- 날짜/시간: 2026-10-25 21:25~21:55 무렵 (Asia/Seoul)
+- 작업자: 김민정 / 기능: green_claim / 브랜치: feature/green_claim (작업 전 HEAD 0a9301e = origin/feature/green_claim, 작업 전 변경·병합 중·충돌 없음. 원격 최신성은 마지막 fetch 2026-10-25 19:38 이후 미확인. 로컬 origin/develop 9e2066c)
+- 도구·모델/설정: Claude Code(VS Code 확장), 모델 ID claude-opus-5-5(세션 시스템 정보), 그 밖의 설정 미확인. OpenAI·외부 유료 API 호출 없음
+- 지시 요약(팀 합의에 따라 요약본 기록)
+  - 이미지 1개 선택 → 사용자가 AI 판독 실행 → 판독 문구·한계 확인 → 사용자 수정. 디자인 평가·검수·번역·기준 자료 갱신·결과 PDF 제외
+  - 공통 연결의 이미지 입력 지원 여부를 먼저 확인. 없으면 설치된 도구만으로 원본 이미지를 그대로 담은 1페이지 PDF를 만들어 공통 PDF 판독 재사용 검토. 별도 클라이언트·SDK 직접 호출 금지
+  - JPG·JPEG·PNG, 1개, 10,000,000바이트, 가로·세로 8,000픽셀, 전체 20,000,000픽셀, 애니메이션·여러 프레임 거부, 20,000자(자르지 않음)
+  - 서비스 프롬프트는 별도 버전(pdf_ocr_v1.md 수정 금지), 자동 재시도·모델 전환·분할 호출 금지
+  - 공통 파일·requirements·패키지 설치·환경변수·키 조회·실제 OpenAI 호출 금지, 사용자 서버(키 포함 가능) 호출·종료 금지
+- 작업 전 확인(읽기 전용)
+  - common/ai_client.py: 이미지 입력 함수 없음(generate_image는 생성 전용). docs/decisions.md도 "이미지 분석 입력"을 공통 첫 범위 제외로 기록
+  - jasonenv 설치 패키지 목록에 Pillow 등 이미지 디코더 없음(pip list 확인)
+- 선택한 방식과 이유
+  - 원본 이미지 압축 데이터를 다시 인코딩하지 않고 1페이지 PDF에 그대로 넣음(JPEG: DCTDecode, PNG: IDAT + FlateDecode/PNG 예측기). 표준 라이브러리만 사용
+  - 디코더가 없어 알파 채널·인터레이스·16비트 PNG와 12비트·산술 부호화·무손실 JPEG 등은 보류(거부 코드로 안내)
+  - JPEG EXIF 방향은 PDF 배치 행렬로만 반영(픽셀 그대로)
+- 실제 결과(파일)
+  - image_input.py(신규): 서명·확장자 일치, PNG 청크·CRC·IHDR·크기 → 압축 해제 크기 제한 검사, JPEG 마커 구조·SOF·크기, 애니메이션·다중 사진 거부, EXIF 방향, 1페이지 PDF 생성
+  - ocr_service.py: run_file_ocr(확장자 분기), run_image_ocr(검사 → PDF → 공통 inspect_pdf → 공통 함수 1회), build_image_result, 이미지 안내 문구. 기존 PDF 판독 동작 유지(동시 1건 제한을 공용 함수로 정리)
+  - ocr_schema.py: ImageOcrResult(text, uncertain, limitations)
+  - prompts/image_ocr_v1.md(신규), prompts/README.md 버전 표 추가. **작성만 했고 실제 모델 실험은 하지 않음**
+  - service.py: 이미지 오류 코드 9개 추가, FILE_MISSING·FILE_TYPE_UNSUPPORTED 문구를 이미지 포함으로 변경, 지난 작업 이후 남아 있던 "스캔 PDF OCR 준비 중" 문장(PDF_NO_TEXT·일부 페이지 없음 안내) 정정
+  - routes.py: /api/green-claim/ocr이 run_file_ocr 사용
+  - 화면(panel.html·green_claim.js): JPG·JPEG·PNG 선택, 글자 추출/AI 판독 차이 안내, 이미지 선택 시 안내, 이미지+글자 추출·Word+AI 판독은 요청 없이 안내, 이미지 결과 요약(원본 형식·픽셀 크기, PDF·페이지 미표시)
+  - green_claim.css: 변경 없음
+  - tests/test_image_ocr.py(신규, 28개)
+  - feature_spec.md: "홍보 이미지 AI 글자 판독" 절과 "구현 상태 갱신 (이미지 AI 글자 판독)" 추가
+- 지시와 다르게 진행한 점: 명세 계약을 구현 전에 작성하라는 지시가 있었으나, 이번에는 구현·모의 검증 후 명세를 작성함(명세에 작성 순서 명시)
+- 작업 중 발견·수정한 문제
+  - 테스트 생성 함수가 IDAT를 직접 줄 때도 큰 원본 줄 데이터를 만들어 실패 → 테스트 함수 수정. 기대 글자 수를 잘못 계산 → 기대값 수정(기능 코드 문제 아님)
+  - 기존 브라우저 검증 스크립트의 안내 문구 기대값이 이번에 의도적으로 바꾼 문구와 달라 실패(PDF 2건) → 저장소 밖 스크립트 기대값만 수정
+  - PDF 텍스트 없음 실패 안내에 AI 판독 안내가 서버 문구와 화면 덧붙임으로 두 번 나옴 → 서버 문구에서 제거
+- 한계·남은 사항
+  - 실제 OpenAI 호출·이미지 판독 정확도·비용·소요 시간 미검증. 성공 화면은 모의 응답으로만 확인
+  - 공급자가 이미지 PDF를 어떻게 렌더링·판독하는지 미검증(로컬 Chrome PDF 화면만 확인)
+  - 알파 PNG 등 보류 형식은 이미지 디코더 패키지 도입 또는 공통 이미지 입력 함수 추가가 필요(팀·공통 담당 협의)
+  - JPEG 메타데이터(EXIF 위치 등)가 원본 그대로 공급자에 전달됨(제거 여부 협의 필요)
+  - PDF 래핑 방식이 공통 "이미지 분석 입력 제외" 범위와 맞는지 공통 담당 확인 필요
+
+## DEV-2026_10_25-08 후속: 이미지 판독 보완(Pillow 검사·판독용 사본·투명 PNG·메타데이터 제거)
+- 유형: development_instruction (서비스 프롬프트 설명 1줄 수정 포함, 서비스 프롬프트 실험 아님, 실제 AI 호출 없음, 기능 전체 완성 아님)
+- 날짜/시간: 2026-10-25 22:00~22:45 무렵 (Asia/Seoul)
+- 작업자: 김민정 / 기능: green_claim / 브랜치: feature/green_claim (HEAD 0a9301e, 위 DEV-2026_10_25-08 미커밋 변경 위에서 작업, 병합 중·충돌 없음. 원격 최신성은 마지막 fetch 19:38 이후 미확인)
+- 도구·모델/설정: Claude Code(VS Code 확장), 모델 ID claude-opus-5-5(세션 시스템 정보), 그 밖의 설정 미확인. OpenAI·외부 유료 API 호출 없음
+- 승인 범위(담당자): Pillow 설치와 requirements.txt 추가, 투명 PNG 지원, 실제 이미지 디코딩 검증, 외부 전송 전 메타데이터 제거. 새 기능 확장·공통 파일 수정·실제 OpenAI 호출 금지
+- 지시 요약
+  - 명세를 코드 변경 전에 갱신. Pillow로 형식·디코딩(verify 후 다시 열어 load) 확인, 압축 폭탄 경고 처리, 잘린 파일 허용 설정 금지, 로컬 검사·변환 30초 제한·정리
+  - 투명 영역 흰 배경 합성, EXIF 방향은 사본에 한 번만, 색 변환 정책 명시, 자르기·축소·보정 금지
+  - 디코딩 후 새 사본으로 메타데이터 제거, 반복 손실 압축을 피하는 형식, 변환 후 크기 초과 시 조용히 축소 금지
+- 진행 순서(실제): 공식 자료 확인 → Pillow 설치 → Pillow 동작 확인(코드 변경 없음) → **feature_spec.md 갱신** → 코드 → 테스트 → 브라우저 → 기록. 1차 때 명세를 나중에 쓴 이력은 명세·이 기록에 보존
+- 패키지: Pillow 13.0.0(PyPI 2026-10-16 공개, requires_python >=3.11, cp311 win_amd64 wheel, 공식 문서 Python 3.11 지원). 12.3.0도 3.11 지원이나 13.0.0 공식 릴리스 노트에 JPEG 디코더 버퍼 오버플로 등 보안 수정이 있어 13.0.0 선택. 설치 차이는 pillow 1개(하위 의존성 없음), pip check 정상
+- 변경 이유와 결과
+  - image_worker.py(신규): Pillow(JPEG·PNG 플러그인만) → 확장자와 실제 형식 일치 → 헤더 크기·픽셀 → 프레임 → 색 형식 → verify → 재열기·load → EXIF 방향(사본에 1회) → 흰 배경 알파 합성 → L/RGB → 픽셀만으로 새 이미지 → 메타데이터 없는 PNG(IHDR·IDAT·IEND만 확인) → 변환 후 크기
+  - image_input.py: 1차의 직접 만든 JPEG·PNG 구조 파서·EXIF 파서·PDF 배치 회전 제거. 사전 검사(빈 파일·크기·확장자)와 사본 PNG → 1페이지 PDF만 남김
+  - ocr_service.py: 별도 프로세스(service.run_worker, 30초) 호출, 작업 오류 코드 매핑(시간 초과 → IMAGE_PREPARE_TIMEOUT), 사본 PDF 크기 초과 → IMAGE_CONVERTED_TOO_LARGE, 응답 image 필드(원본·처리·보낸 사본 구분), 메타데이터·방향·투명 안내
+  - service.py: IMAGE_UNSUPPORTED_MODE·IMAGE_CONVERTED_TOO_LARGE·IMAGE_PREPARE_TIMEOUT·IMAGE_DEPENDENCY_MISSING 추가, 1차 미커밋 코드 IMAGE_PNG_UNSUPPORTED·IMAGE_JPEG_UNSUPPORTED 제거, IMAGE_INVALID·IMAGE_DAMAGED 문구 조정
+  - requirements.txt: 끝에 설명 2줄 + pillow==13.0.0 추가(기존 내용 바이트 단위 동일 확인)
+  - prompts/image_ocr_v1.md: 첫 설명을 "판독용 사본(자르지·줄이지 않음, 방향 반영, 투명은 흰 배경)"으로 수정. 아직 실제 모델 실험 전이라 같은 버전에서 수정(README 상태에 명시)
+  - 화면: 파일 안내(사본 전송·흰 배경·16비트 회색조 PNG 미지원), 요약에 원본 크기와 방향 반영 사본 크기 구분
+  - tests/test_image_ocr.py: Pillow 기준으로 다시 작성(32개)
+- 작업 중 발견한 사실·문제
+  - Pillow 13.0.0: I;16(16비트 회색)을 L로 바꾸면 값이 255로 잘림 → 16비트 회색조 PNG 미지원으로 결정. 16비트 RGB·RGBA·회색+알파는 8비트로 정상 축소됨을 값으로 확인
+  - PNG IDAT CRC 오류는 load()만으로 통과하고 verify()에서 잡힘 → verify 단계 필요 확인
+  - 압축 스트림은 정상 종료지만 줄이 모자란 PNG는 verify·load 모두 통과(감지 못함) → 한계로 명세·테스트에 기록(직접 파서를 다시 두지 않음)
+  - 머리 20바이트만 남은 JPEG는 IMAGE_INVALID로 분류됨(테스트 기대값 조정)
+  - 사진형 JPEG 3,000×2,000 이상은 무손실 사본이 10 MiB를 넘어 거부됨(측정) → 협의 항목
+  - 브라우저 검증 스크립트 기대값 2건(투명 PNG 오류 → 성공으로 바뀜, IMAGE_DAMAGED 문구)만 수정
+- 한계·남은 사항
+  - 실제 OpenAI 호출·판독 정확도·비용·시간 미검증. 모의 성공은 실제 판독 성공이 아님
+  - 사진 크기 거부, 흰 글자+투명 배경 소실, 줄 모자란 PNG 미감지, 실제 메모리 사용량 미측정
+  - PDF로 감싸 공통 PDF 함수를 쓰는 방식과 공통 "이미지 분석 입력 제외" 범위의 관계는 공통 담당 확인 전(해결로 기록하지 않음)
+  - 메타데이터 제거는 파일 정보 제거이며 화면에 보이는 개인정보 익명화가 아님
+
+## DEV-2026_10_25-08 후속: 이미지 판독 화면 사용자 수동 확인 기록
+- 유형: development_instruction (기록만, 서비스 프롬프트 실험 아님, 실제 AI 호출 없음)
+- 날짜/시간: 2026-10-25 23:55 무렵 기록 (Asia/Seoul). 사용자 확인 시각은 미확인
+- 작업자: 김민정 / 기능: green_claim / 브랜치: feature/green_claim (HEAD 0a9301e, 이미지 작업 미커밋)
+- 도구·모델/설정: Claude Code(VS Code 확장), 모델 ID claude-opus-5-5(세션 시스템 정보). OpenAI 호출 없음
+- 지시 요약: 사용자가 실제 브라우저에서 확인한 이미지 판독 화면 결과를 validation.md·prompt_log.md에 사용자 수동 확인으로 추가. Claude 직접 검증과 구분, 파일명·이미지 내용 미기록, 코드·공통 파일 수정·API 호출·Git 변경 금지
+- 결과(사용자 보고): 파일 업로드에 PDF·Word·이미지 지원 안내 표시, "AI 글자 판독 (PDF·이미지)" 버튼 표시, PNG 선택 후 '글자 추출' 시 일반 추출 미지원·AI 판독 이용 안내 표시. AI 판독 버튼은 누르지 않음
+- Claude 직접 확인: 기록 시점 Git 상태(읽기 전용)만. 화면은 보지 않음
+- 한계: 실제 이미지 AI 판독은 여전히 미검증. 이 확인은 안내 표시 3가지에 한정

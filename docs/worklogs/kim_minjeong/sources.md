@@ -63,3 +63,24 @@
 | 공통 연결 문서 | docs/data_contracts.md(develop 병합분) | 같음 | 공식 file-inputs 가이드 근거(detail, 공급자 상한 50 MB), 스캔 PDF 처리는 가이드에 명시 없음, store=False가 모든 보관을 없애지 않음 | 공통 문서 내용 확인(공식 가이드는 이번에 직접 조회하지 않음) |
 | .env.example | 저장소 루트 | 같음 | 변수 이름 OPENAI_API_KEY·OPENAI_MODEL·OPENAI_IMAGE_MODEL만 확인 | 값 미확인·미출력 |
 - OpenAI 공식 문서는 이번에 직접 조회하지 않음(공통 문서의 기록만 참고)
+
+## 2026-10-25 이미지 AI 판독 구현 참고 (DEV-2026_10_25-08)
+| 자료 | 위치 | 확인 시각(KST) | 확인 내용 | 상태 |
+|---|---|---|---|---|
+| 공통 AI 연결 | common/ai_client.py | 2026-10-25 21:25 무렵 | 이미지 입력 함수 없음(generate_image는 Images API 생성 전용). generate_structured_from_pdf는 PDF bytes·inspect_pdf 통과·고정 파일명 document.pdf | 로컬 파일 읽기 전용 |
+| 공통 설정·PDF 검사 | common/config.py, common/pdf_utils.py | 같음 | PDF 10 MiB·20쪽, timeout 120초, 재시도 0, 출력 4,096토큰, store=False, detail high | 로컬 파일 읽기 전용 |
+| 공통 결정 | docs/decisions.md, docs/data_contracts.md | 같음 | "이미지 분석 입력" 공통 첫 범위 제외, 스캔·이미지 전용 PDF 처리는 공식 가이드에 명시 없음(공통 문서 기록) | 로컬 문서 확인 |
+| 설치 패키지 | jasonenv pip list | 같음 | Pillow 등 이미지 디코더 없음. 사용: 파이썬 표준 라이브러리(zlib·struct), 기존 pypdf(검증용 PDF 읽기) | 패키지 추가·변경 없음 |
+| PNG·JPEG·EXIF·PDF 형식 | 공개 형식 사양(PNG 청크·CRC·필터, JPEG 마커·SOF, EXIF Orientation 1~8, PDF 이미지 XObject·DCTDecode·FlateDecode 예측기·색상 키 마스크) | 같음 | 일반 지식으로 구현. 이번에 공식 사양 문서를 직접 조회하지 않음. 동작은 Chrome 디코딩·PDF 화면 대조와 단위 테스트로만 확인 | 공식 문서 미조회 |
+| Windows 기본 그래픽(가상 자료 생성) | .NET System.Drawing(Windows PowerShell 5.1) | 같음 | 가상 문구 JPG·PNG·팔레트 PNG·GIF 생성. 저장소에 넣지 않음 | 설치 없음 |
+- OpenAI 공식 문서(이미지 입력·PDF 렌더링 방식)는 이번에 조회하지 않음
+
+## 2026-10-25 이미지 판독 보완 참고 (DEV-2026_10_25-08 후속)
+| 자료 | 위치 | 확인 시각(KST) | 확인 내용 | 상태 |
+|---|---|---|---|---|
+| PyPI Pillow JSON | https://pypi.org/pypi/pillow/json | 2026-10-25 22:00 무렵 | 최신 13.0.0(2026-10-16 공개, requires_python >=3.11, cp311 win_amd64 wheel), 12.3.0(2026-07-01, >=3.10, cp311 wheel). 철회 없음 | 공식 배포처 조회 |
+| Pillow 13.0.0 릴리스 노트 | https://pillow.readthedocs.io/en/stable/releasenotes/13.0.0.html | 같음 | Python 3.10 지원 종료, JPEG 디코더 버퍼 오버플로 등 보안 수정, APNG·MPO 압축 폭탄 우회 수정, I;16N 변환 수정, getdata 폐기 예정 | 공식 문서 조회(요약 도구로 읽음) |
+| Pillow Python 지원 표 | https://pillow.readthedocs.io/en/stable/installation/python-support.html | 같음 | Pillow 13.0: Python 3.11~3.15, 12.x: 3.10~3.14 | 공식 문서 조회 |
+| 설치 결과 | jasonenv pip install pillow==13.0.0 | 같음 | 설치 1개, 하위 의존성 없음, pip check 정상, License-Expression MIT-CMU, 내장 libjpeg-turbo 8.0·zlib-ng 확인 | 실제 설치 |
+| Pillow 동작 | 로컬 확인 스크립트(저장소 밖) | 같음 | 16비트 회색 변환 잘림, verify/load 차이, MPO·APNG 프레임, exif_transpose 후 info 유지 등(validation 기록) | 실제 실행 |
+- 이미지 형식 사양(PNG·JPEG·EXIF) 원문은 이번에도 직접 조회하지 않음. OpenAI 공식 문서도 조회하지 않음

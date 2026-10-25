@@ -442,6 +442,129 @@ OpenAI
 
 미검증: 실제 OpenAI 호출, 판독 정확도·비용·소요 시간, 4,096토큰으로 처리 가능한 분량, 스캔 PDF 처리 가능 여부(공통 문서상 공식 가이드에 명시 없음).
 
+### 홍보 이미지 AI 글자 판독 (2026-10-25 구현 기준, 실제 AI 호출 미검증)
+범위: 사용자가 버튼으로 직접 선택한 이미지(JPG·JPEG·PNG) 1개의 **보이는 글자를 원문 언어로 옮기는 판독**까지. 판독 문구·한계 확인 → 사용자 수정. 디자인·색상·그림·로고·배치 평가, 그린워싱 검수, 번역, 기준 자료 갱신, 결과 PDF는 범위 밖.
+
+작성·변경 경위
+- 1차(같은 날, 미커밋): 구현과 모의 검증을 먼저 한 뒤 이 절을 작성했다(구현 전 작성 지시와 순서가 다름, 개인 기록에 명시). 1차는 이미지 디코더 없이 **원본 압축 데이터를 그대로** PDF에 넣었고, 투명(알파)·인터레이스·16비트 PNG를 지원하지 않았으며, JPEG는 마커 구조만 검사했다. EXIF 방향은 PDF 배치 행렬로 반영했다.
+- 2차 보완(같은 날, 미커밋, **코드 변경 전에 이 절을 다시 작성**): 담당자가 Pillow 설치·requirements.txt 추가를 승인했다. Pillow로 실제 디코딩을 검증하고, 메타데이터 없는 **새 판독용 사본**을 만들어 보낸다. 투명 PNG를 흰 배경으로 합성해 지원한다. 1차의 직접 만든 JPEG·PNG 구조 파서와 PDF 배치 회전은 제거한다. 아래 내용은 2차 기준이다.
+
+공통 연결 확인 결과 (2026-10-25 로컬 common/ai_client.py 확인)
+- 공통 연결에 **이미지 입력 함수가 없다**. `generate_image`는 이미지 생성 함수이며 글자 판독에 쓰지 않는다. docs/decisions.md도 "이미지 분석 입력"을 공통 첫 범위 제외로 적고 있다.
+- 공통 `generate_structured_from_pdf`는 PDF bytes(공통 `inspect_pdf` 통과)를 받는다. 기능 내부에서 판독용 이미지 사본을 담은 **1페이지 PDF**를 만들어 이 함수를 재사용한다. 별도 OpenAI 클라이언트·SDK 직접 호출·공통 파일 수정 없음.
+- [협의] 이 방식은 공통 함수의 입력 계약(PDF bytes)을 지키지만, 공통 담당(유정현)이 정한 "이미지 분석 입력 제외" 범위를 기능에서 PDF로 감싸 우회하는 것으로 볼 수도 있다. **해결되지 않았으며** 공통 이미지 입력 함수 추가 여부와 함께 공통 담당 확인이 필요하다.
+
+Pillow 역할 [구현]
+- 패키지: Pillow 13.0.0(2026-10-25 PyPI·공식 문서에서 Python 3.11 지원 확인, jasonenv 설치). requirements.txt 끝에 추가.
+- 실제 형식 판별(`Image.open(formats=["JPEG", "PNG"])`, 다른 형식 플러그인은 쓰지 않음), 크기 확인, `verify()`로 구조·CRC 확인 후 **다시 열어 `load()`로 실제 픽셀 디코딩**, EXIF 방향 반영, 투명 합성, 색 변환, 메타데이터 없는 PNG 저장.
+- `ImageFile.LOAD_TRUNCATED_IMAGES`는 켜지 않는다(잘린 파일 허용 안 함, 작업 프로세스에서 명시적으로 False). `Image.MAX_IMAGE_PIXELS`를 기능의 픽셀 상한(20,000,000)으로 두고 `DecompressionBombWarning`도 오류로 처리한다.
+
+로컬 검사·변환 시간 제한 [구현]
+- 이미지 검사·디코딩·변환·PNG 저장은 기존 일반 추출과 같은 별도 프로세스(multiprocessing spawn, `service.run_worker`)에서 **30초 초기 제한** 안에 실행한다. 넘으면 프로세스를 terminate → kill로 종료하고 IMAGE_PREPARE_TIMEOUT. 일반 추출과 같은 동시 실행 상한(2건)을 공유한다.
+- 이 30초는 로컬 처리 제한이며 외부 AI 호출 timeout(공통 120초)과 별개다. 메모리 사용량 상한을 보장하지 않는다(상한 픽셀 RGBA 디코딩만으로 약 80MB, 변환 중 사본이 여러 개 생길 수 있음).
+- 이미지 객체·스트림은 성공·실패 모두 닫고, 작업 프로세스는 종료·회수한다.
+
+처리 순서 [구현]
+1. 요청 프로세스: 빈 파일 → 10,000,000바이트 → 확장자(.jpg·.jpeg·.png).
+2. 작업 프로세스: Pillow로 열기(JPEG·PNG 외 형식은 IMAGE_INVALID) → 실제 형식과 확장자 일치(다르면 재해석하지 않고 IMAGE_FORMAT_MISMATCH) → **헤더의 가로·세로·픽셀 수 확인(픽셀 디코딩 전)** → 프레임 수(애니메이션 PNG·다중 사진 JPEG(MPO) 거부) → 색 형식 확인 → `verify()` → 다시 열어 `load()` → EXIF 방향 → 투명 합성·색 변환 → 메타데이터 없는 새 PNG 저장 → 변환 후 크기 확인.
+3. 요청 프로세스: PNG의 IDAT를 1페이지 PDF에 넣음 → 공통 `inspect_pdf`(10 MiB·1쪽) → AI 의존성 → 동시 AI 판독 1건 → 공통 함수 1회 호출.
+
+지원·제외 형식 [구현, 모든 PNG·JPEG 변형 지원을 보장하지 않음]
+- 지원(Pillow 13.0.0에서 디코딩·변환을 가상 이미지로 확인한 것): JPEG 회색·RGB(YCbCr)·CMYK(Adobe 반전 포함은 Pillow 처리에 따름), PNG 회색(1·2·4·8비트)·RGB·팔레트(투명 포함)·회색+알파·RGBA·인터레이스, 16비트 RGB·RGBA·회색+알파 PNG(Pillow가 8비트로 줄여 읽음, 확인한 값: 16비트 128×257 → 8비트 128).
+- 제외: 16비트 회색조 PNG(Pillow `I;16`을 8비트 회색으로 바꾸면 값이 255로 잘리는 것을 확인 → IMAGE_UNSUPPORTED_MODE), 그 밖에 확인하지 않은 색 형식, Pillow가 디코딩하지 못하는 JPEG 변형(손상과 구분하지 않고 IMAGE_DAMAGED), 애니메이션 PNG·MPO, GIF·WebP·HEIC·BMP·TIFF 등.
+
+판독용 사본 정책 [구현]
+- 투명도: 알파 채널·팔레트 투명·색상 키 투명이 있으면 **흰색(255) 배경에 알파 합성**한 사본을 만든다. 응답 `transparency_flattened=true`와 화면 안내. **흰색·밝은 글자가 투명 배경 위에 있으면 합성 후 배경과 구별되지 않아 판독되지 않을 수 있다**(자동 감지·보정 안 함).
+- 방향: EXIF Orientation(1~8)이 있으면 Pillow `ImageOps.exif_transpose`로 **사본에 한 번만** 반영한다. PDF 배치는 항상 회전 없음(1차의 PDF 배치 회전 제거 → 이중 회전 없음). PNG의 EXIF 방향도 Pillow가 읽으면 반영한다.
+- 색: 회색 계열 원본(1비트·회색·회색+알파)은 8비트 회색(L), 나머지(RGB·팔레트·CMYK·YCbCr·RGBA 등)는 8비트 RGB로 변환한다. CMYK→RGB는 ICC 프로필 없이 Pillow 기본 변환이라 색이 원본과 다를 수 있다. **색 재현이 아니라 글자 판독이 목적**이다.
+- 하지 않는 것: 자르기·자동 축소·확대·샤프닝·대비 보정·미화·추정 보정·글자 추가.
+- 크기: 사본의 픽셀 크기는 원본과 같고, EXIF 방향이 90도 계열(5~8)이면 가로·세로가 바뀐다. 응답에 원본 크기와 보낸 사본 크기를 따로 둔다.
+- 메타데이터: 디코딩한 픽셀만으로 새 이미지를 만들어(`Image.frombytes`) PNG로 저장한다. 사본 PNG는 IHDR·IDAT·IEND 청크만 가진다(코드로 확인, 다른 청크가 있으면 IMAGE_CONVERT_FAILED). EXIF·GPS·XMP·IPTC·주석(COM·tEXt 등)·ICC·원본 파일명은 넣지 않는다. PDF에는 IDAT 데이터만 넣는다.
+  - 이는 파일 메타데이터 제거이며 **이미지에 보이는 글자·얼굴·개인정보를 지우거나 익명화하지 않는다**.
+- 전송 형식: 무손실 PNG(FlateDecode). JPEG 원본을 다시 JPEG로 저장하면 손실 압축이 한 번 더 일어나 작은 글자가 더 흐려질 수 있어 무손실을 선택. 대신 사진은 PNG가 원본 JPEG보다 훨씬 커질 수 있다.
+- 변환 후 크기: 사본 PNG가 공통 PDF 상한(10 MiB = 10,485,760바이트)을 넘거나 만든 PDF가 공통 검사를 넘으면 IMAGE_CONVERTED_TOO_LARGE. **자동 축소·손실 압축·품질 낮추기를 하지 않는다**. 사진처럼 무손실 사본이 큰 이미지는 거부될 수 있다[협의: 사진 대응 방식].
+- **원본 압축 데이터를 그대로 보존·전달하지 않는다**(1차 설명 폐기). 변환한 사본이 원본과 바이트·픽셀 단위로 같다고 보장하지 않는다(투명 합성·색 변환·16비트 축소·방향 반영). 원본 업로드 파일은 수정하지 않는다.
+- 공급자에는 공통 고정 파일명 document.pdf만 전달.
+
+구현 후 확인된 한계 (2026-10-25 가상 이미지 로컬 측정, 성능·품질 보장 아님)
+- 사진 크기: 사진처럼 무손실 압축이 잘 안 되는 이미지는 사본이 커진다. 흐린 무작위 패턴 JPEG(품질 85) 측정: 1,600×1,200(약 0.49MB) → 사본 PNG 약 3.4MB 통과, 3,000×2,000(약 1.5MB)·4,000×3,000(약 3.1MB) → IMAGE_CONVERTED_TOO_LARGE. 휴대폰 사진 원본은 대부분 거부될 수 있다 [협의: 사진 대응(예: 사용자가 잘라서 올리기, 손실 압축 허용 여부)].
+- 감지하지 못하는 손상: 압축 스트림은 정상으로 끝나지만 PNG 줄 데이터가 모자란 파일은 Pillow 13.0.0의 verify·load가 통과한다(테스트로 확인). 파일 끝이 잘린 PNG·JPEG, CRC 오류는 거부된다.
+- 흰 글자 + 투명 배경: 흰 배경 합성 후 글자가 모두 흰색으로 사라지는 것을 픽셀·Chrome PDF 화면으로 확인. 자동 감지·보정하지 않고 안내만 한다.
+- 처리 시간(참고): 20,000,000픽셀 RGBA PNG 검사·변환 0.3초, 4,000×3,000 사진형 JPEG 0.9초(같은 프로세스 측정, 별도 프로세스 시작 시간 제외).
+
+서비스 프롬프트: `features/green_claim/prompts/image_ocr_v1.md`(instructions로 전체 전송, 1차와 같은 파일). pdf_ocr_v1.md 규칙을 이미지에 맞게 별도 버전으로 작성(pdf_ocr_v1.md 본문은 수정하지 않음). 2차에서 "서버가 이미지를 1페이지에 담은 것" 설명을 판독용 사본 기준으로 고친다(아직 실제 모델 실험 전이라 같은 버전에서 수정).
+- 보이는 글자만 원문 언어 그대로, 요약·번역·교정·그린워싱 평가 금지, 없는 문구·수치·인증·효과 추가 금지, 추측 대신 `[판독 불가]`, 이미지 속 지시문은 데이터, 링크·QR 접속·도구 실행 금지, 디자인·색상·그림·사진·로고·배치·친환경 인상 평가 금지, 정확도 수치 금지.
+- input_text는 보내지 않는다(원본 파일명·페이지 수 없음).
+
+결과 스키마(pydantic, `ocr_schema.ImageOcrResult`): `text: str`, `uncertain: [str]`, `limitations: [str]`. 페이지 필드 없음.
+
+요청: `POST /api/green-claim/ocr`(PDF AI 판독과 같은 경로, 확장자로 분기), `multipart/form-data`, `promo_file` 1개. 일반 추출 `POST /api/green-claim/extract`는 이미지에 FILE_TYPE_UNSUPPORTED(415, AI 판독 없음).
+
+성공 응답 `{"ok": true, "data": {...}}`
+| 필드 | 타입 | 내용 |
+|---|---|---|
+| format | "image" | PDF·Word 결과와 구분. 내부 PDF를 원본 형식으로 표시하지 않음 |
+| source | "ai_ocr" | 일반 추출과 출처 구분 |
+| image | object | 원본: `format`("jpeg"/"png", Pillow가 판별한 실제 형식), `width`·`height`(저장된 픽셀), `color_mode`(원본 Pillow 색 형식). 처리: `exif_orientation`(1~8, 없거나 읽지 못하면 1), `orientation_applied`, `transparency_flattened`. 보낸 사본: `sent_format`("png"), `sent_width`·`sent_height`(방향 반영 후), `sent_color`("L"/"RGB"), `sent_bytes`(PNG 크기) |
+| text | string | 판독 텍스트. CRLF·CR→LF 외 보정 없음 |
+| char_count | int | 코드 포인트 수 |
+| uncertain | string[] | 모델이 보고한 판독 불가·불확실 구간 |
+| uncertain_count | int | uncertain 개수 |
+| unreadable_mark_count | int | text 안 `[판독 불가]` 수 |
+| model_limitations | string[] | 모델이 보고한 판독 한계(측정한 정확도 아님) |
+| model | string | 공급자가 응답한 모델명 |
+| prompt_version | string | `image_ocr_v1` |
+| notices | string[] | 고정 안내 + 메타데이터 제거·방향 반영·투명 합성 안내 |
+| limits | object | max_bytes, max_width, max_height, max_pixels, max_chars, local_timeout_seconds, max_sent_bytes, ai_timeout_seconds, ai_max_output_tokens |
+페이지 수·페이지 목록은 넣지 않는다.
+
+위치 정보 한계: 판독 범위는 "이미지 1장 전체"뿐이며 이미지 안 좌표·영역을 제공하지 않는다. 모델이 uncertain에 적은 위치는 모델 자기 보고이고, 방향 반영·투명 합성 후 사본 기준이다. 사용자가 판독문을 고치면 글자 범위도 정확하지 않을 수 있다.
+
+오류(공통 실패 형식, 메시지는 고정 문장. 경로·예외 원문·파일 내용 없음)
+| code | HTTP | 상황 |
+|---|---|---|
+| REQUEST_INVALID, FILE_MISSING, FILE_MULTIPLE, FILE_EMPTY, FILE_TOO_LARGE | 기존 | 업로드 요청·파일 없음·여러 파일·빈 파일·크기 초과 |
+| FILE_TYPE_UNSUPPORTED | 415 | 지원하지 않는 확장자(GIF·WebP·HEIC 등), AI 판독에 Word, 일반 추출에 이미지 |
+| IMAGE_INVALID | 422 | 확장자는 이미지지만 Pillow가 JPEG·PNG로 열지 못함 |
+| IMAGE_FORMAT_MISMATCH | 422 | 확장자와 실제 형식이 다름(.png 이름의 JPEG 등) |
+| IMAGE_DAMAGED | 422 | verify·load 실패(잘림·CRC·손상·Pillow가 디코딩하지 못하는 저장 방식), 가로/세로 0 |
+| IMAGE_TOO_LARGE_DIMENSIONS | 422 | 가로 또는 세로 8,000픽셀 초과 |
+| IMAGE_TOO_MANY_PIXELS | 422 | 전체 20,000,000픽셀 초과(Pillow 압축 폭탄 경고·오류 포함) |
+| IMAGE_MULTI_FRAME | 422 | 애니메이션 PNG·다중 사진 JPEG(MPO) |
+| IMAGE_UNSUPPORTED_MODE | 415 | 16비트 회색조 PNG 등 변환을 검증하지 않은 색 형식 |
+| IMAGE_CONVERTED_TOO_LARGE | 422 | 판독용 PNG·PDF가 공통 PDF 상한 초과(축소하지 않음) |
+| IMAGE_PREPARE_TIMEOUT | 504 | 로컬 검사·변환 30초 초과(프로세스 종료) |
+| IMAGE_CONVERT_FAILED | 500 | 변환·PDF 생성 문제(예상 밖 청크, 공통 PDF 검사 실패 등). PDF 오류로 표시하지 않음 |
+| IMAGE_DEPENDENCY_MISSING | 503 | Pillow 없음 |
+| EXTRACT_BUSY | 429 | 로컬 처리 동시 2건 또는 AI 판독 동시 1건 초과 |
+| AI_DEPENDENCY_MISSING | 503 | 공통 AI 연결 의존성 없음 |
+| AI_CONFIG_MISSING, AI_AUTH_FAILED, AI_PERMISSION_DENIED, AI_MODEL_UNAVAILABLE, AI_RATE_LIMITED, AI_CONNECTION_FAILED, AI_TIMEOUT, AI_PROVIDER_ERROR, AI_BAD_REQUEST | 공통 | 설정·인증·권한·모델·요청 제한·통신·시간 초과 |
+| AI_REFUSED, AI_INCOMPLETE, AI_OUTPUT_INVALID | 공통 | 거절·출력 잘림·응답 형식 오류 |
+| OCR_NO_TEXT | 422 | 판독 결과 글자 없음 |
+| TEXT_TOO_LONG | 422 | 20,000자 초과(자르지 않음) |
+| AI_UNKNOWN_ERROR | 500 | 그 밖의 오류 |
+1차의 IMAGE_PNG_UNSUPPORTED·IMAGE_JPEG_UNSUPPORTED(미커밋)는 2차에서 IMAGE_UNSUPPORTED_MODE·IMAGE_DAMAGED로 대체한다.
+
+화면 [1차 구현 유지 + 2차 안내 갱신]
+- 파일 안내에서 '글자 추출'(외부 전송 없음: 일반 PDF·Word)과 'AI 글자 판독'(OpenAI 전송: 스캔 PDF·JPG·JPEG·PNG)을 구분하고, 이미지 제한·투명 영역 흰색 처리·메타데이터 제거·16비트 회색조 PNG 미지원을 안내.
+- AI 판독 버튼 "AI 글자 판독 (PDF·이미지)" 옆에 PDF·이미지가 OpenAI로 전송되고 요금이 발생할 수 있음, 디자인 평가 안 함을 안내.
+- 이미지 선택만으로·탭 이동으로 요청하지 않음. 이미지로 '글자 추출'·Word로 AI 판독은 요청 없이 안내.
+- 결과 요약: 출처(AI 판독·모델), 원본 형식·원본 픽셀 크기, 보낸 사본 크기(방향 반영으로 바뀐 경우), `[판독 불가]` 수, 모델 보고 불확실 구간·한계(측정 정확도 아님), 판독 범위(이미지 1장 전체), 안내(메타데이터 제거·방향·투명 합성). 내부 PDF·페이지 수는 표시하지 않음.
+- 처리 중 중복 실행 방지, 파일 교체·입력 방식 전환 시 취소·오래된 응답 무시, 브라우저 취소가 처리·요금 취소를 보장하지 않음 안내. 실패 시 기존 문구 유지, 교체 전 확인, 글자 수·AppShell 상태 재계산, 탭 왕복 유지·재실행 없음, 새로고침 후 복원 없음. AI 검수·결과 PDF 버튼은 계속 비활성.
+
+저장: 업로드 이미지·판독용 사본·PDF·판독 결과·AI 응답을 DB·디스크·로그·브라우저 저장소·개발 기록에 남기지 않는다(요청 처리·작업 프로세스 메모리, 프로세스 간 파이프 전달만). 로그에는 오류 code만. 공급자 측 보관은 공통 문서 기준(`store=False`가 모든 보관을 없애지 않음).
+
+검증 계획 (2차, 외부 API 없이 새 가상 이미지로)
+- 정상 JPEG·RGB PNG·회색·팔레트, 알파 PNG·팔레트 투명, 인터레이스 PNG의 디코딩과 사본 픽셀(흰 배경 합성 값 계산 대조).
+- 흰 글자 + 투명 배경이 합성 후 구별되지 않는 한계 사례.
+- EXIF 방향 1~8을 사본에 한 번만 반영(사본 픽셀 방향, PDF 배치 행렬은 회전 없음).
+- EXIF·GPS·XMP·주석·PNG 텍스트 테스트 문자열이 사본 PNG와 최종 PDF에 남지 않음, 원본 bytes 미변경.
+- 손상·잘림·CRC·가짜 확장자·미지원 형식·16비트 회색조, 파일·해상도·픽셀·프레임 제한, 압축 폭탄 경고, 변환 후 크기 초과.
+- 시간 초과·작업 프로세스 예외 시 자식 프로세스 정리.
+- 모의 AI 정상·실패·빈 결과·출력 잘림, 화면 흐름(기존 문구 보존·교체 확인·파일 교체·탭 이동), 기존 PDF·Word·직접 입력·스캔 PDF 회귀, 공통 테스트, pip check·requirements 기존 내용 보존.
+
+미검증(2차 후에도 남는 것): 실제 OpenAI 호출, 공급자의 이미지 PDF 렌더링·판독 결과, 판독 정확도·비용·소요 시간, 회전된 실제 사진·작은 글자·복잡한 배치·투명 PNG의 실제 판독, 4,096토큰 출력으로 처리 가능한 분량, 실제 메모리 사용량, 사람이 조작하는 실제 브라우저.
+
 ## 검증
 현재 기능 미구현·실행 검증 미실시. 아래는 앞으로 수행할 계획이며 실행 결과가 아니다.
 
@@ -470,6 +593,16 @@ OpenAI
 - 계속 미구현: 이미지(JPG/PNG) 판독, Word 삽입 이미지·텍스트 상자·머리글 등의 글자, AI 그린워싱 검수, 결과 PDF.
 - 미검증: 실제 AI 판독 정확도·비용·소요 시간, 4,096토큰 출력 상한으로 처리 가능한 분량, 스캔 PDF 처리 가능 여부.
 담당 worklogs에 실제 결과만 기록하고 실행하지 못한 항목은 미검증으로 남긴다.
+
+### 구현 상태 갱신 (2026-10-25 이미지 AI 글자 판독)
+- 추가 구현: JPG·JPEG·PNG AI 글자 판독(위 "홍보 이미지 AI 글자 판독" 계약). `POST /api/green-claim/ocr`이 확장자로 PDF·이미지를 분기, Pillow 검사·판독용 사본(`image_worker.py`, 별도 프로세스 30초), 사본 PDF(`image_input.py`), 서비스 프롬프트 `prompts/image_ocr_v1.md`, 결과 스키마 `ImageOcrResult`, 화면의 이미지 선택·안내·요약.
+- 위 "계속 미구현"의 "이미지(JPG/PNG) 판독"은 코드가 추가되었으나 **실제 OpenAI 호출로는 검증하지 않았다**(모의 테스트만).
+- 1차→2차(같은 날, 미커밋): 1차의 "원본 압축 데이터 그대로 전달"·"투명(알파)·인터레이스·16비트 PNG 미지원"·"JPEG 마커 구조만 검사"·"EXIF 방향은 PDF 배치로 반영"은 2차에서 바뀌었다. 현재는 Pillow 디코딩 검증 후 메타데이터 없는 판독용 사본(무손실 PNG)을 보내며, 투명 PNG(흰 배경 합성)·인터레이스·16비트 RGB/RGBA·회색+알파를 지원하고, 16비트 회색조 PNG만 미지원이다. 방향은 사본에 한 번만 반영한다.
+- "스캔 PDF AI 글자 판독" 절의 화면 안내 중 "Word·JPG·PNG는 지원하지 않음"은 "Word는 지원하지 않음"으로 바뀌었다(이미지 지원). PDF 판독 요청·응답은 그대로.
+- 문구 변경: FILE_MISSING·FILE_TYPE_UNSUPPORTED 안내를 이미지 포함 표현으로, 지난 작업 이후 남아 있던 "스캔 PDF 글자 인식(OCR)은 준비 중" 문장(PDF_NO_TEXT·일부 페이지 없음 안내)을 정정(코드는 동일). 일반 추출에 이미지를 보내면 계속 FILE_TYPE_UNSUPPORTED.
+- 패키지: Pillow 13.0.0 추가(requirements.txt 끝, 기존 항목 변경 없음).
+- 계속 미구현: Word 삽입 이미지·텍스트 상자·머리글 등의 글자, AI 그린워싱 검수, 결과 PDF. 기능 전체 완료 아님.
+- 미검증: 실제 이미지 판독 정확도·비용·소요 시간, 공급자의 사본 PDF 처리, 회전된 실제 사진·작은 글자·복잡한 배치, 실제 메모리 사용량. 공통 범위("이미지 분석 입력 제외")와의 관계는 공통 담당 확인 전.
 
 ### 완료 기준·검증 계획
 - 직접 입력과 파일 업로드의 각 흐름.

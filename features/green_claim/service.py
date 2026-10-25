@@ -2,7 +2,8 @@
 
 - 추출은 별도 프로세스(pdf_worker.run, docx_worker.run)에서 실행하고, 시간 제한을 넘으면 프로세스를 종료합니다.
 - 업로드 내용·추출 문구를 디스크·DB·로그에 남기지 않습니다. 로그에는 오류 code만 남깁니다.
-- AI 검수·스캔 PDF OCR·이미지 판독은 아직 없습니다.
+- AI 글자 판독(PDF·이미지)은 ocr_service.py, 이미지 검사·판독용 사본은 image_worker.py(별도 프로세스)·image_input.py.
+  AI 검수는 아직 없습니다.
 """
 import logging
 import multiprocessing
@@ -32,19 +33,19 @@ OLE_ENCRYPTED_PACKAGE = "EncryptedPackage".encode("utf-16-le")
 # code: (HTTP 상태, 사용자 안내). 안내 문장에 경로·예외 원문·업로드 내용을 넣지 않습니다.
 ERRORS = {
     "REQUEST_INVALID": (400, "파일 업로드 요청을 읽지 못했습니다. 페이지를 확인한 뒤 다시 시도해 주세요."),
-    "FILE_MISSING": (400, "PDF 또는 Word(.docx) 파일을 선택해 주세요."),
+    "FILE_MISSING": (400, "PDF·Word(.docx)·이미지(JPG·PNG) 파일을 선택해 주세요."),
     "FILE_MULTIPLE": (400, "파일은 한 번에 1개만 올릴 수 있습니다."),
     "FILE_EMPTY": (400, "빈 파일입니다. 내용이 있는 파일을 선택해 주세요."),
     "FILE_TOO_LARGE": (413, "파일이 10,000,000바이트(약 10MB)를 넘습니다. 문서를 나누거나 용량을 줄여 주세요."),
-    "FILE_TYPE_UNSUPPORTED": (415, "현재는 일반 PDF(.pdf)와 Word(.docx) 파일만 지원합니다. "
-                                   ".doc·.docm 등 다른 형식과 이미지 파일은 지원하지 않습니다."),
+    "FILE_TYPE_UNSUPPORTED": (415, "이 파일 형식은 이 기능에서 지원하지 않습니다. '글자 추출'은 PDF(.pdf)·Word(.docx), "
+                                   "'AI 글자 판독'은 PDF·JPG·JPEG·PNG를 지원합니다. .doc·.docm·GIF·WebP·HEIC 등은 지원하지 않습니다."),
     "PDF_INVALID": (422, "PDF 파일 형식이 아닙니다. 확장자만 .pdf인 파일일 수 있습니다."),
     "PDF_DAMAGED": (422, "PDF를 읽지 못했습니다. 파일이 손상되었을 수 있습니다."),
     "PDF_ENCRYPTED": (422, "암호가 걸린 PDF는 지원하지 않습니다. 암호를 해제한 PDF로 다시 시도해 주세요."),
     "PDF_NO_PAGES": (422, "페이지가 없는 PDF입니다."),
     "PDF_TOO_MANY_PAGES": (422, "PDF는 20페이지까지 처리할 수 있습니다. 문서를 나눠 주세요."),
-    "PDF_NO_TEXT": (422, "이 PDF에서는 텍스트를 추출하지 못했습니다. 이미지로 된 문서일 수 있으며, "
-                         "스캔 PDF 글자 인식(OCR)은 아직 준비 중입니다. 문구를 직접 입력해 주세요."),
+    "PDF_NO_TEXT": (422, "이 PDF에서는 텍스트를 추출하지 못했습니다. 이미지로 된 문서일 수 있습니다. "
+                         "문구를 직접 입력해 주세요."),  # 화면이 AI 판독 선택 안내(전송 안내 포함)를 덧붙임
     "TEXT_TOO_LONG": (422, "추출한 문구가 20,000자를 넘습니다. 문구를 자르지 않았습니다. "
                            "문서를 나누거나 분량을 줄여 다시 시도해 주세요."),
     "DOCX_INVALID": (422, "Word(.docx) 문서 구조가 아닙니다. 확장자만 .docx인 다른 파일일 수 있습니다."),
@@ -61,6 +62,21 @@ ERRORS = {
     "OCR_PAGE_MISMATCH": (502, "AI 판독 결과의 페이지 정보가 PDF와 맞지 않아 결과를 사용하지 않았습니다. "
                                "다시 시도하거나 문서를 나눠 주세요."),
     "OCR_NO_TEXT": (422, "AI 판독에서도 글자를 찾지 못했습니다. 필요한 문구를 직접 입력해 주세요."),
+    "IMAGE_INVALID": (422, "JPG·PNG 이미지로 열 수 없습니다. 확장자만 .jpg·.jpeg·.png인 다른 형식의 파일일 수 있습니다."),
+    "IMAGE_FORMAT_MISMATCH": (422, "파일 확장자와 실제 이미지 형식이 다릅니다(예: 이름은 .png인데 내용은 JPG). "
+                                   "원본 이미지를 실제 형식에 맞게 다시 저장해 올려 주세요."),
+    "IMAGE_DAMAGED": (422, "이미지를 읽지 못했습니다. 파일이 손상되었거나 일부가 잘렸거나, 지원하지 않는 저장 방식일 수 있습니다."),
+    "IMAGE_TOO_LARGE_DIMENSIONS": (422, "이미지 가로·세로는 각각 8,000픽셀 이하여야 합니다. 이미지를 나누거나 크기를 줄여 주세요."),
+    "IMAGE_TOO_MANY_PIXELS": (422, "이미지 전체 픽셀 수(가로×세로)가 20,000,000을 넘습니다. 이미지를 나누거나 크기를 줄여 주세요."),
+    "IMAGE_MULTI_FRAME": (422, "움직이는 이미지나 여러 장이 들어 있는 이미지(애니메이션 PNG, 다중 사진 JPG 등)는 지원하지 않습니다. "
+                               "한 장짜리 이미지로 저장해 주세요."),
+    "IMAGE_UNSUPPORTED_MODE": (415, "이 이미지의 색 형식(예: 16비트 회색조 PNG)은 지원하지 않습니다. "
+                                    "일반 8비트 PNG 또는 JPG로 저장해 다시 시도해 주세요."),
+    "IMAGE_CONVERTED_TOO_LARGE": (422, "판독용으로 변환한 이미지가 전송 상한(10MiB)을 넘습니다. 이미지를 자동으로 줄이지 않았습니다. "
+                                       "이미지를 나누거나 크기를 줄여 다시 시도해 주세요."),
+    "IMAGE_PREPARE_TIMEOUT": (504, "이미지 검사·변환이 30초 안에 끝나지 않아 중단했습니다. 이미지 크기를 줄여 다시 시도해 주세요."),
+    "IMAGE_CONVERT_FAILED": (500, "이미지를 AI 판독용으로 준비하지 못했습니다. 다시 시도해 주세요."),
+    "IMAGE_DEPENDENCY_MISSING": (503, "이미지 처리에 필요한 구성 요소가 서버에 준비되지 않았습니다. 관리자에게 문의하세요."),
     "EXTRACT_TIMEOUT": (504, "글자 추출이 30초 안에 끝나지 않아 중단했습니다. 문서 분량을 줄여 다시 시도해 주세요."),
     "EXTRACT_BUSY": (429, "다른 추출 작업이 진행 중입니다. 잠시 후 다시 시도해 주세요."),
     "EXTRACT_FAILED": (500, "글자 추출 중 문제가 생겼습니다. 다시 시도해 주세요."),
@@ -68,8 +84,8 @@ ERRORS = {
 
 NOTICE_TEXT_ONLY = "PDF 안의 텍스트 정보만 읽었습니다. 텍스트가 나온 페이지에도 이미지 속 문구는 빠졌을 수 있습니다."
 NOTICE_ORDER = "표·다단 배치 문서는 읽는 순서가 원본과 다를 수 있습니다. 원본과 비교해 확인해 주세요."
-NOTICE_MISSING = ("텍스트를 추출하지 못한 페이지가 있습니다. 이미지로만 된 페이지일 수 있으나 단정할 수 없으며, "
-                  "스캔 PDF 글자 인식(OCR)은 준비 중입니다. 필요한 문구는 직접 추가해 주세요.")
+NOTICE_MISSING = ("텍스트를 추출하지 못한 페이지가 있습니다. 이미지로만 된 페이지일 수 있으나 단정할 수 없습니다. "
+                  "필요한 문구는 직접 추가하거나 'AI 글자 판독'을 직접 선택해 주세요.")
 
 DOCX_NOTICE_SCOPE = "Word 본문의 문단과 표만 문서 순서대로 읽었습니다. 표는 행마다 한 줄, 셀 사이를 ' | '로 구분했습니다."
 DOCX_NOTICE_EXCLUDED = ("머리글·바닥글, 텍스트 상자·도형·SmartArt, 삽입 이미지 속 글자, 메모·각주·미주, "
@@ -294,7 +310,10 @@ def extract_docx(filename, data, timeout=EXTRACT_TIMEOUT_SECONDS):
 
 
 def extract_file(filename, data, timeout=EXTRACT_TIMEOUT_SECONDS):
-    """확장자로 PDF·Word 처리를 나눕니다. 실제 형식은 각 처리에서 다시 확인합니다."""
+    """확장자로 PDF·Word 처리를 나눕니다. 실제 형식은 각 처리에서 다시 확인합니다.
+
+    이미지(JPG·PNG)는 일반 글자 추출이 없어 FILE_TYPE_UNSUPPORTED입니다(AI 판독은 ocr_service.run_file_ocr).
+    """
     name = (filename or "").lower()
     if name.endswith(".docx"):
         return extract_docx(filename, data, timeout)

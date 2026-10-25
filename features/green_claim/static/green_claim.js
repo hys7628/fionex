@@ -1,6 +1,6 @@
 // 그린 클레임 체크 탭 스크립트. 이 탭 패널 내부만 다룹니다. 공통 API 사용법: docs/design_system.md
-// 현재 단계: 문구 직접 입력 + 일반 PDF·Word(.docx) 글자 추출 + 사용자가 선택한 PDF AI 글자 판독·확인·수정.
-// AI 그린워싱 검수·이미지 파일 판독·결과 PDF는 아직 연결하지 않습니다.
+// 현재 단계: 문구 직접 입력 + 일반 PDF·Word(.docx) 글자 추출 + 사용자가 선택한 PDF·이미지(JPG·JPEG·PNG) AI 글자 판독·확인·수정.
+// AI 그린워싱 검수·결과 PDF는 아직 연결하지 않습니다.
 (function () {
   "use strict";
 
@@ -24,6 +24,9 @@
     },
   };
   const OCR_HINT = "필요하면 아래 'AI 글자 판독'을 직접 선택할 수 있습니다(선택한 PDF가 OpenAI로 전송됩니다).";
+  const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png"];
+  const IMAGE_HINT = "이미지는 '글자 추출'로 읽을 수 없습니다. 필요하면 'AI 글자 판독'을 직접 눌러 주세요"
+    + "(이미지가 OpenAI로 전송되며 요금이 발생할 수 있습니다).";
   const MESSAGES = {
     empty: "검수할 문구를 입력해 주세요. 공백만으로는 검수할 수 없습니다.",
     over: "최대 20,000자를 넘었습니다. 초과한 만큼 줄여 주세요. 입력한 문구는 자동으로 자르지 않습니다.",
@@ -232,13 +235,22 @@
     replaceBox.hidden = true;
   }
 
+  // 확장자 구분은 화면 안내용입니다. 실제 형식은 서버가 파일 내용으로 다시 확인합니다.
+  function fileKind(file) {
+    const name = file.name.toLowerCase();
+    if (name.endsWith(".pdf")) return "pdf";
+    if (name.endsWith(".docx")) return "docx";
+    if (IMAGE_EXTENSIONS.some(function (ext) { return name.endsWith(ext); })) return "image";
+    return null;
+  }
+
   function checkFile(file) {
-    if (!file) return "PDF 또는 Word(.docx) 파일을 선택해 주세요.";
+    if (!file) return "PDF·Word(.docx)·이미지(JPG·PNG) 파일을 선택해 주세요.";
     if (file.size === 0) return "빈 파일입니다. 내용이 있는 파일을 선택해 주세요.";
     if (file.size > MAX_FILE_BYTES) return "파일이 10,000,000바이트(약 10MB)를 넘습니다. 문서를 나누거나 용량을 줄여 주세요.";
-    const name = file.name.toLowerCase();
-    if (!name.endsWith(".pdf") && !name.endsWith(".docx")) {
-      return "현재는 일반 PDF(.pdf)와 Word(.docx) 파일만 지원합니다. .doc·.docm 등 다른 형식과 이미지 파일은 지원하지 않습니다.";
+    if (!fileKind(file)) {
+      return "지원하지 않는 파일 형식입니다. PDF(.pdf)·Word(.docx)·JPG·JPEG·PNG 파일만 올릴 수 있습니다. "
+        + ".doc·.docm·GIF·WebP·HEIC 등은 지원하지 않습니다.";
     }
     return "";
   }
@@ -263,10 +275,15 @@
     const file = fileInput.files[0];
     const problem = file ? checkFile(file) : "";
     setFileError(problem);
+    const previous = appliedText !== null
+      ? "새 파일로 추출·판독하기 전까지 아래 문구는 이전 파일에서 가져와 수정한 내용입니다." : "";
     if (canceled) {
       // 취소 안내를 유지합니다.
-    } else if (file && !problem && appliedText !== null) {
-      showMessage("info", "새 파일을 선택했습니다", "글자 추출을 실행해 확인하기 전까지 아래 문구는 이전 파일에서 추출·수정한 내용입니다.");
+    } else if (file && !problem && fileKind(file) === "image") {
+      // 이미지 선택만으로는 요청하지 않습니다. 사용할 수 있는 버튼만 안내합니다.
+      showMessage("info", "이미지 파일을 선택했습니다", (IMAGE_HINT + " " + previous).trim());
+    } else if (file && !problem && previous) {
+      showMessage("info", "새 파일을 선택했습니다", previous);
     } else {
       showMessage(null);
     }
@@ -292,7 +309,8 @@
     data.notices.forEach(function (notice) { addItem(noticeList, notice); });
     detectedList.replaceChildren();
     pageList.replaceChildren();
-    if (data.source === "ai_ocr") renderOcrSummary(data);
+    if (data.source === "ai_ocr" && data.format === "image") renderImageOcrSummary(data);
+    else if (data.source === "ai_ocr") renderOcrSummary(data);
     else if (data.format === "docx") renderDocxSummary(data);
     else renderPdfSummary(data);
     detectedBox.hidden = detectedList.children.length === 0;
@@ -318,6 +336,29 @@
       addItem(pageList, page.page + "페이지: " + (page.status === "text"
         ? charRange(page.char_start, page.char_end) : "판독된 글자 없음"));
     });
+  }
+
+  function pixelSize(width, height) {
+    return numberFormat.format(width) + "×" + numberFormat.format(height) + "픽셀";
+  }
+
+  // 이미지 판독: 원본 이미지와 판독용 사본 정보만 표시합니다(서버가 내부적으로 쓴 PDF·페이지 수는 표시하지 않음).
+  function renderImageOcrSummary(data) {
+    const image = data.image;
+    summaryBox.className = "notice notice-warning";
+    let text = "출처: AI 판독(모델 " + data.model + "). 원본 이미지(" + image.format.toUpperCase() + ", "
+      + pixelSize(image.width, image.height) + ")의 판독용 사본에서 판독한 "
+      + numberFormat.format(data.char_count) + "자를 아래 입력칸에 넣었습니다.";
+    if (image.sent_width !== image.width || image.sent_height !== image.height) {
+      text += " 방향을 맞춘 사본 크기: " + pixelSize(image.sent_width, image.sent_height) + ".";
+    }
+    if (data.unreadable_mark_count) text += " [판독 불가] 표시 " + data.unreadable_mark_count + "곳.";
+    summaryText.textContent = text;
+    detectedTitle.textContent = "모델이 보고한 판독 불가·불확실 구간과 한계(측정한 정확도가 아님):";
+    data.uncertain.forEach(function (note) { addItem(detectedList, "구간: " + note); });
+    data.model_limitations.forEach(function (note) { addItem(detectedList, "이미지 전체: " + note); });
+    pagesLabel.textContent = "판독 범위";
+    addItem(pageList, "이미지 1장 전체: " + charRange(0, data.char_count));
   }
 
   function renderDocxSummary(data) {
@@ -410,13 +451,23 @@
     if (busy) return; // 중복 실행 방지
     const config = REQUESTS[kind];
     const file = fileInput.files[0];
-    let problem = checkFile(file);
-    if (!problem && kind === "ocr" && !file.name.toLowerCase().endsWith(".pdf")) {
-      problem = "AI 글자 판독은 PDF 파일만 지원합니다. Word는 '글자 추출'을 사용해 주세요.";
-    }
+    const problem = checkFile(file);
     setFileError(problem);
     if (problem) {
       fileInput.focus();
+      return;
+    }
+    // 파일은 정상이지만 이 버튼이 지원하지 않는 형식이면 요청하지 않고 다른 버튼을 안내합니다.
+    const kindOfFile = fileKind(file);
+    if (kind === "extract" && kindOfFile === "image") {
+      clearPending();
+      showMessage("warning", "이미지는 '글자 추출'을 지원하지 않습니다", IMAGE_HINT + " 아래 문구는 바뀌지 않았습니다.");
+      return;
+    }
+    if (kind === "ocr" && kindOfFile === "docx") {
+      clearPending();
+      showMessage("warning", "Word는 'AI 글자 판독'을 지원하지 않습니다",
+        "AI 글자 판독은 PDF·JPG·JPEG·PNG만 지원합니다. Word는 '글자 추출'을 사용해 주세요. 아래 문구는 바뀌지 않았습니다.");
       return;
     }
     clearPending();
