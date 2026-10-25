@@ -36,14 +36,15 @@
 선택은 보기 설정이라 작성 중 감지·이탈 경고에서 제외(`data-work-ignore`)하고, 페이지 메모리에만 유지한다.
 
 ### 화면 표시
-Home 화면은 요약(2026-10-25): 현재 상태 · 브라질 현지 시각(도시명) · 다음 공휴일 · 기준 도시 선택만 보인다.
-- 카드 맨 위 가장 큰 상태 문구(색 + 텍스트): `지금 연락 가능`(초록) · `업무시간 외` · `주말`(주황) · `공휴일`(빨강). 판정 규칙은 그대로.
-- 브라질 현지 시각(`10/25(일) 22:00` 형식)과 도시명.
+Home 화면은 요약(2026-10-25): 기준 도시 선택(도시명 겸용) · 큰 현지 시각 · 작은 상태 글자 · 다음 공휴일만 보인다. 큰 상태 문구·배지는 쓰지 않는다.
+- 현지 시각 `07:47`(크게, tabular-nums)의 색이 연락 가능 상태: 업무시간 초록, 업무시간 외·주말 주황, 공휴일 빨강. 판정 규칙은 그대로.
+- 시각 아래 작은 글자(같은 색) `연락 가능` / `연락 어려움` + 현지 날짜 `10/25(일)`. 이유(업무시간·업무시간 외·주말·공휴일)는 화면낭독용 숨은 글로만 읽힌다(색만으로 전달하지 않음).
+- 기준 도시 선택이 카드 위쪽에서 도시명을 겸한다(도시명 텍스트는 화면낭독용으로만 유지).
 - Home 화면에서 숨김(계산·DOM은 유지, 일일 브리핑 PDF에는 표시): 서울 현재 시각, 다음 연락 가능(다음 업무 시작) `10/26(월) 21:00 KST` + `현지 10/26(월) 09:00`(공휴일 자료를 확인하지 못한 날이 있으면 `· 공휴일 미반영`).
 - 다음 공휴일(항상 표시, 2026-10-25): 기준 도시 **현지 날짜** 이후(오늘 포함) 가장 가까운 국가 공휴일 `11/2(월) Finados · D-8`, 오늘이면 `D-DAY`. 이름은 BrasilAPI `name` 원문(번역·AI 없음).
   올해 남은 공휴일이 없을 때만 다음 해 목록을 기존 `/api/home/holidays?year=`(연도 캐시)로 불러온다. 필요한 연도 자료를 확인하지 못하면 `다음 공휴일 확인 불가`(추측 없음). 기준 도시를 바꾸면 다시 계산.
   화면(home.js `nextHoliday`)과 PDF(buyer_time.py `next_holiday`·`next_holiday_text`)는 같은 규칙·같은 표기.
-- 배치: 이름 | 값 두 열(행 간격 좁게), 기준 도시 선택은 카드 맨 아래.
+- 배치: 기준 도시 선택 → 현지 시각 → 상태 글자·날짜 → 다음 공휴일(이름 | 값).
 - 안내: 공휴일 자료 출처 줄은 Home 화면에 보이지 않는다(조회 실패·대체 자료 안내만 카드에 표시). 업무시간 가정값과 전체 문장 `기준: 현지 09:00~18:00 (가정, 확정되지 않은 업무시간) · 점심시간 미반영 · 브라질 국가 공휴일만 반영(주·시 공휴일 제외)`은 하단 `출처 및 유의사항`.
 
 ### 데이터 출처
@@ -170,7 +171,7 @@ Home 맨 위 `일일 브리핑` 바(첫 화면): 한 줄 안내 `바이어 시�
 ### PDF 구성(순서)
 머리말(fionex 일일 브리핑, 생성 시각, 서울 시각, 선택 도시 시각) → 1. 바이어 시간(상태·다음 업무 시작·다음 공휴일 `11/2(월) Finados · D-8`(7일 이내 공휴일이 있으면 같은 줄에 `· 7일 이내: … — 회신 지연 가능/(주말)`)·가정값 안내) →
 2. 환율(값·고시일·전일 대비·출처, BRL/KRW는 USD 경유 계산값) → 3. 최신 뉴스(최신순 상위 8건, KOTRA 필터 통과 기사가 있으면 최소 1건 포함(`NEWS_SOURCE_MINIMUM`, 없으면 채우지 않음, 중복·최대 건수 유지): 제목이 원문 링크, `[AI 요약]`(Google·ABIT, 있을 때만), 경로·매체(도메인)·날짜·주제 태그. 긴 URL 문자열은 쓰지 않음) →
-4. 다가오는 전시회(3건: 행사·기간·D-day·도시·장소·확인 상태·출처 링크) → 5. 출처 및 유의사항(출처별 조회 시각, 뉴스 경로별 `수집 N건 / 필터 후 M건 / 브리핑 선정 K건`, 가정값·계산값·AI 요약 안내, 확인 필요 전시회, 수집 실패·확인 불가 항목 목록). 쪽마다 생성 시각·쪽 번호 `n / N`(전체 쪽 수를 아는 사용자 정의 캔버스). BRL/KRW 고시일 칸은 두 고시일이 같으면 `2026-10-23 (두 환율 동일)`, 다르면 `KRW 10-23 / BRL 10-24`. 뉴스 8건 기준 A4 2쪽 이내.
+4. 다가오는 전시회(3건, 화면 '전체'와 같은 브라질 최소 2건 정책: 행사·기간·D-day·국가 · 도시 · 장소·확인 상태·출처 링크) → 5. 출처 및 유의사항(출처별 조회 시각, 뉴스 경로별 `수집 N건 / 필터 후 M건 / 브리핑 선정 K건`, 가정값·계산값·AI 요약 안내, 확인 필요 전시회, 수집 실패·확인 불가 항목 목록). 쪽마다 생성 시각·쪽 번호 `n / N`(전체 쪽 수를 아는 사용자 정의 캔버스). BRL/KRW 고시일 칸은 두 고시일이 같으면 `2026-10-23 (두 환율 동일)`, 다르면 `KRW 10-23 / BRL 10-24`. 뉴스 8건 기준 A4 2쪽 이내.
 
 ### 데이터 출처
 기존 service 함수와 캐시: get_holidays · get_fx · get_news · get_upcoming_fairs(3). PDF 요청당 각 1회, 캐시 우선(만료 영역만 각 정책대로 갱신). AI 요약은 이미 만든 것만 사용(PDF로 OpenAI를 부르지 않음).
@@ -292,36 +293,41 @@ Home 화면은 요약 타일 3개(통화쌍 → 큰 숫자 `tabular-nums` + 옆�
 - 한국수출입은행 현재환율 API 개발명세: https://www.koreaexim.go.kr/ir/HPHKIR020M01?apino=2&viewtype=C (인증키 발급신청: 같은 페이지 `viewtype=O`)
 - Banco Central do Brasil PTAX OData: https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/ (문서 /documentacao)
 
-## 5. 브라질 섬유 전시회
+## 5. 브라질·중남미 섬유 전시회
 ### 목적
-다가오는 브라질 섬유·의류 전시회 일정을 출처·확인 상태와 함께 보고 출장·바이어 미팅을 계획한다.
+다가오는 브라질·중남미 섬유·의류 전시회 일정을 출처·확인 상태와 함께 보고 출장·바이어 미팅을 계획한다.
 
 ### 입력
 없음. 자료는 담당자가 출처를 확인해 넣는 정적 JSON(자동 수집·AI 생성 없음).
 
 ### 화면 표시
-카드 제목 `다가오는 전시회`. 행사별 기본 표시: 큰 D-day(`D-93` / `D-DAY` / `진행 중`) | 행사명 · `2027.04.27–04.30 · Americana/SP`(기간·도시) · 한 줄에 `[확인 필요]`(미확인 행사만) `[상세 정보]`.
+카드 제목 `다가오는 전시회`. 지역 필터 `[전체] [브라질] [중남미]`(기본 전체, `aria-pressed`, 회색 기본·선택만 포인트 색, 건수 표시). 받은 목록을 화면에서만 거르고(추가 요청 없음) 필터마다 3건 표시.
+- 전체: 날짜순이되 브라질 행사를 최소 2건(가정값 `MIN_BRAZIL_IN_ALL`, 있는 만큼만) 먼저 넣고 나머지를 날짜순으로 채운 뒤 날짜순 정렬. 브라질: region=brazil만. 중남미: region=latin_america(브라질 외)만. 해당 없으면 `선택한 지역의 예정 전시회가 없습니다.`
+행사별 기본 표시: 큰 D-day(`D-93` / `D-DAY` / `진행 중`) | 행사명 · `페루 · Lima`(국가·도시) · `2026.11.05–11.08`(기간) · 한 줄에 `[확인 필요]`(미확인 행사만) `[상세 정보]`.
 행사별 `상세 정보`(native `<details>`, 기본 접힘): 기간(전체 날짜), 장소(도시 · 장소), 분야, 확인 상태(`공식 사이트 확인` / `확인 필요`)와 확인일, 메모(있을 때), 출처 링크(새 탭, `rel="noopener noreferrer"`).
 빈 값은 `미확인`. 예정 행사가 없으면 `확인된 예정 전시회가 없습니다`, 형식 오류 항목이 있으면 `일부 일정 제외` 안내, 자료 오류면 `일정 확인 불가` + 재시도. 카드 맨 아래 한 줄 `자료 확인일 … · 방문 전 출처에서 다시 확인하세요.`, 전체 안내는 `출처 및 유의사항`.
 
 ### 데이터 출처
 features/home/data/br_textile_fairs.json(자료 확인일 2026-10-25, 출처 URL·문구는 docs/worklogs/hong_eunju/sources.md).
-| 행사 | 기간 | 도시 · 장소 | verified |
+| 행사 | 기간 | 국가 · 도시 · 장소 | verified |
 |---|---|---|---|
-| Inspiramais | 2027-01-26 ~ 2027-01-27 | Porto Alegre/RS · Centro de Eventos FIERGS | false(공식 사이트 페이지 간 연도 표기 불일치) |
-| Tecnotêxtil Brasil 2027 | 2027-04-27 ~ 2027-04-30 | Americana/SP · Fidam | true |
-| Febratex Summit 2027 | 2027-08-24 ~ 2027-08-26 | Blumenau/SC · Parque Vila Germânica | true |
+| Inspiramais | 2027-01-26 ~ 2027-01-27 | 브라질 · Porto Alegre/RS · Centro de Eventos FIERGS | false(공식 사이트 페이지 간 연도 표기 불일치) |
+| Tecnotêxtil Brasil 2027 | 2027-04-27 ~ 2027-04-30 | 브라질 · Americana/SP · Fidam | true |
+| Febratex Summit 2027 | 2027-08-24 ~ 2027-08-26 | 브라질 · Blumenau/SC · Parque Vila Germânica | true |
+| Expotextil Perú 2026 | 2026-11-05 ~ 2026-11-08 | 페루 · Lima · Centro de Exposiciones Jockey | false(EventsEye 목록 기준, 공식 사이트 미확인) |
+| Colombiatex de las Américas 2027 | 2027-01-19 ~ 2027-01-21 | 콜롬비아 · Medellín · 장소 미확인 | false(ICE 이탈리아 국가관 안내 기준) |
+| Createx 2027 | 2027-05-25 ~ 2027-05-27 | 콜롬비아 · Bogotá · Corferias | false(EventsEye 목록 기준, 공식 사이트 미확인) |
 표의 기간은 JSON의 start·end와 같은 전체 날짜로 쓴다(test_fairs가 대조). Tecnotêxtil Brasil 2027은 2026-10-25 공식 사이트 재확인("de 27 a 30 de abril de 2027").
-제외: Inspiramais 2027-08(사이트 머리글 표기와 충돌), Febratex 본 박람회 2028(공식 문구가 지난 행사 문구와 섞여 신뢰 불가).
-필드: 필수 `name`·`start`·`end`(YYYY-MM-DD)·`url`(http/https)·`source`·`verified`(bool)·`checked_at`, 선택 `city`·`venue`·`focus`·`note`(없으면 null). verified=true는 공식 사이트에서 일정·장소를 확인한 경우.
+제외: Inspiramais 2027-08(사이트 머리글 표기와 충돌), Febratex 본 박람회 2028(공식 문구가 지난 행사 문구와 섞여 신뢰 불가), Colombiamoda 2027(7월, 날짜 미확정), IM Intermoda 2027(일정 미확인). 날짜를 추정해 넣지 않는다.
+필드: 필수 `name`·`start`·`end`(YYYY-MM-DD)·`url`(http/https)·`source`·`verified`(bool)·`checked_at`·`country`(표시용 국가명)·`region`(`brazil` | `latin_america`), 선택 `city`·`venue`·`focus`·`note`(없으면 null). 필수 값이 없거나 region이 둘 중 하나가 아니면 그 항목은 제외(건수만 안내). region은 화면 필터 구분값이라 브라질은 `brazil`, 브라질 외 중남미는 `latin_america`로 겹치지 않게 둔다. verified=true는 공식 사이트에서 일정·장소를 확인한 경우(목록 사이트 기준 행사는 false).
 
 ### 작동 방식
 요청마다 파일을 읽는다(작은 파일, 수정 즉시 반영). 형식이 틀린 항목은 내보내지 않고 건수만 알린다. 서울 날짜 기준 `end ≥ 오늘`만, 시작일 순. D-day는 `시작일 - 오늘`(오늘 시작 D-DAY, 시작 후 종료 전 진행 중).
 
 ### API
 `GET /api/home/fairs?limit=N` (기본 5, 20 초과는 20, 1 미만·정수 아님 400 `invalid_limit`)
-→ `{"fairs": [{name, start, end, d_day, status: upcoming|today|ongoing, city, venue, focus, note, url, source, verified, checked_at}], "data_checked_at", "total_upcoming", "invalid_count"}`.
-자료 파일 없음·형식 오류 503 `fairs_unavailable`. 화면은 5건 요청(현재 자료 3건).
+→ `{"fairs": [{name, start, end, d_day, status: upcoming|today|ongoing, country, region, city, venue, focus, note, url, source, verified, checked_at}], "data_checked_at", "total_upcoming", "invalid_count"}`(날짜순).
+자료 파일 없음·형식 오류 503 `fairs_unavailable`. 화면은 20건 요청 후 지역 필터·브라질 최소 노출을 화면에서 적용(현재 자료 6건). 일일 브리핑 PDF는 `get_upcoming(3, min_brazil=2)`로 화면 '전체'와 같은 정책.
 
 ### 캐시
 없음(정적 파일, 요청마다 읽음).

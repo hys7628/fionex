@@ -85,7 +85,8 @@ def collect(city=DEFAULT_CITY, now=None):
         failures.append("뉴스 전체")
 
     try:
-        data["fairs"] = service.get_upcoming_fairs(FAIRS_LIMIT)
+        # 화면의 '전체' 보기와 같은 정책(브라질 최소 노출)으로 3건
+        data["fairs"] = service.get_upcoming_fairs(FAIRS_LIMIT, min_brazil=service.FAIRS_MIN_BRAZIL_IN_ALL)
     except service.FairsDataError:
         data["fairs"] = None
         failures.append("전시회 일정 자료")
@@ -318,10 +319,10 @@ def _fairs_section(fairs, s, width):
         return out + [_p("일정 확인 불가", s["body"])]
     if not fairs["fairs"]:
         return out + [_p("확인된 예정 전시회가 없습니다", s["body"])]
-    rows = [[_p(h, s["head"]) for h in ("행사", "기간", "D-day", "도시 · 장소", "확인 상태 · 출처")]]
+    rows = [[_p(h, s["head"]) for h in ("행사", "기간", "D-day", "국가 · 도시 · 장소", "확인 상태 · 출처")]]
     for f in fairs["fairs"]:
         period = f["start"] if f["start"] == f["end"] else f"{f['start']} ~ {f['end']}"
-        place = " · ".join(x for x in (f.get("city"), f.get("venue")) if x) or "미확인"
+        place = " · ".join(x for x in (f.get("country"), f.get("city"), f.get("venue")) if x) or "미확인"
         state = ("공식 사이트 확인" if f["verified"] else "확인 필요") + f" ({f['checked_at']} 확인)"
         rows.append([_p(f["name"], s["cell"]), _p(period, s["cell"]), _p(f["d_day"], s["cell"]), _p(place, s["cell"]),
                      [_p(state, s["cell"]), _link(f["url"], f["source"], s["cell"])]])

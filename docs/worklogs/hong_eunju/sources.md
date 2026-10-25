@@ -78,3 +78,11 @@
 ## 뉴스 관련성 필터 근거·전시회 재확인 (2026-10-25 PR 리뷰 반영)
 - Google News RSS 검색 결과 — https://news.google.com/rss/search (현재 검색어, 브라질로 좁힌 후보, site:abit.org.br when:30d, "ABIT" têxtil when:30d), 조회 2026-10-25 18:56~18:57. 적용 범위: TEXTILE_NEWS_KEYWORDS·EXCLUDED_MEDIA_TLDS(.pt)·EXCLUDED_MEDIA_DOMAINS(portugaltextil.com, vietnam.vn)·TEXTILE_TRUSTED_DOMAINS(abit.org.br) 결정. 본문은 저장소에 두지 않음(scratchpad에 RSS만 임시 저장).
 - Tecnotêxtil Brasil 공식 사이트(tecnotextilbrasil.com.br, 위 Tecnotêxtil 항목의 공식 페이지) 1회 재조회, 2026-10-25 18:56. 문구 "A Tecnotêxtil Brasil retorna a Americana, de 27 a 30 de abril de 2027". 적용 범위: br_textile_fairs.json(변경 없음, 일치)·feature_spec 표 전체 날짜.
+
+## 중남미 섬유 전시회 (2026-10-25, Home 전시회 확장)
+- 사용자 제공 후보(전시회 목록 사이트 기준 조사)를 공개 페이지로 다시 확인했다. 공식 주최 사이트 확인은 하지 않았으므로 모두 verified=false.
+- Expotextil Perú 2026 — EventsEye https://www.eventseye.com/fairs/f-expotextil-peru-12465-1.html ("Nov. 05 - 08, 2026", Lima, Centro de Exposiciones Jockey, "All dates are subject to changes"), 조회 2026-10-25. Fibre2Fashion 페이지는 요청 거부(HTTP 405)로 확인 못 함.
+- Colombiatex de las Américas 2027 — ICE(이탈리아 무역공사) 국가관 안내 https://www.ice.it/it/area-clienti/eventi/dettaglio-evento/2026/Q1/034 ("19/01/2027 - 21/01/2027", "dal 19 al 21 gennaio 2027", Medellín, 장소 표기 없음), 조회 2026-10-25.
+- Createx 2027 — EventsEye https://www.eventseye.com/fairs/f-salon-createx-25847-1.html ("May 25 - 27, 2027", Bogotá, Corferias - Centro de Convenciones, 일정 변경 가능 안내), 조회 2026-10-25.
+- 넣지 않음: Colombiamoda 2027(7월, 정확한 날짜 없음), IM Intermoda 2027(일정 미확인). 날짜를 추정하지 않음.
+- 적용 범위: features/home/data/br_textile_fairs.json(country·region 포함), 화면 전시회 카드·일일 브리핑 PDF.

@@ -1,11 +1,13 @@
 {
   "checked_at": "2026-10-25",
-  "note": "홈 '브라질 섬유 전시회' 카드용 정적 자료. 출처 링크가 있는 행사만 넣고, 확인하지 못한 값은 null로 둡니다. verified=true는 공식 사이트에서 일정·장소를 확인한 경우입니다. 출처·확인 기록: docs/worklogs/hong_eunju/sources.md",
+  "note": "홈 '다가오는 전시회' 카드용 정적 자료(브라질 + 중남미). 출처 링크가 있는 행사만 넣고, 확인하지 못한 값은 null로 둡니다. verified=true는 공식 사이트에서 일정·장소를 확인한 경우입니다. region은 화면 필터 구분값으로 brazil(브라질)·latin_america(브라질 외 중남미) 중 하나입니다. 정확한 날짜가 없는 행사(Colombiamoda 2027, IM Intermoda 2027)는 넣지 않습니다. 출처·확인 기록: docs/worklogs/hong_eunju/sources.md",
   "fairs": [
     {
       "name": "Inspiramais",
       "start": "2027-01-26",
       "end": "2027-01-27",
+      "country": "브라질",
+      "region": "brazil",
       "city": "Porto Alegre/RS",
       "venue": "Centro de Eventos FIERGS",
       "focus": "신발·의류·가구·액세서리용 소재의 디자인·혁신·지속가능성 전시",
@@ -19,6 +21,8 @@
       "name": "Tecnotêxtil Brasil 2027",
       "start": "2027-04-27",
       "end": "2027-04-30",
+      "country": "브라질",
+      "region": "brazil",
       "city": "Americana/SP",
       "venue": "Fidam (Feira Industrial de Americana)",
       "focus": "섬유·의류 산업 기술 전시(기계·장비·원사·가공·소프트웨어 등)",
@@ -32,6 +36,8 @@
       "name": "Febratex Summit 2027",
       "start": "2027-08-24",
       "end": "2027-08-26",
+      "country": "브라질",
+      "region": "brazil",
       "city": "Blumenau/SC",
       "venue": "Parque Vila Germânica",
       "focus": "원료부터 리테일까지 패션 산업의 디지털·지속가능 전환(원사·편직물·원단 등)",
@@ -40,6 +46,51 @@
       "verified": true,
       "checked_at": "2026-10-25",
       "note": null
+    },
+    {
+      "name": "Expotextil Perú 2026",
+      "start": "2026-11-05",
+      "end": "2026-11-08",
+      "country": "페루",
+      "region": "latin_america",
+      "city": "Lima",
+      "venue": "Centro de Exposiciones Jockey",
+      "focus": null,
+      "url": "https://www.eventseye.com/fairs/f-expotextil-peru-12465-1.html",
+      "source": "EventsEye 전시회 목록",
+      "verified": false,
+      "checked_at": "2026-10-25",
+      "note": "전시회 목록 사이트 기준 일정이며 공식 사이트 확인 전입니다. 출처 페이지도 일정 변경 가능을 안내합니다."
+    },
+    {
+      "name": "Colombiatex de las Américas 2027",
+      "start": "2027-01-19",
+      "end": "2027-01-21",
+      "country": "콜롬비아",
+      "region": "latin_america",
+      "city": "Medellín",
+      "venue": null,
+      "focus": null,
+      "url": "https://www.ice.it/it/area-clienti/eventi/dettaglio-evento/2026/Q1/034",
+      "source": "ICE(이탈리아 무역공사) 국가관 안내",
+      "verified": false,
+      "checked_at": "2026-10-25",
+      "note": "주최 측 공식 사이트가 아닌 이탈리아 국가관 참가 안내 페이지 기준 일정입니다. 장소는 그 페이지에 없어 비워 둡니다."
+    },
+    {
+      "name": "Createx 2027",
+      "start": "2027-05-25",
+      "end": "2027-05-27",
+      "country": "콜롬비아",
+      "region": "latin_america",
+      "city": "Bogotá",
+      "venue": "Corferias - Centro de Convenciones",
+      "focus": null,
+      "url": "https://www.eventseye.com/fairs/f-salon-createx-25847-1.html",
+      "source": "EventsEye 전시회 목록",
+      "verified": false,
+      "checked_at": "2026-10-25",
+      "note": "전시회 목록 사이트 기준 일정이며 공식 사이트 확인 전입니다. 출처 페이지도 일정 변경 가능을 안내합니다."
     }
   ]
 }

@@ -124,42 +124,64 @@
 }
 
 /* ---------- 바이어 시간 ---------- */
-/* 큰 상태 문구: 업무시간 초록, 주말·업무시간 외 주황, 공휴일 빨강(공통 상태 색 + 문구) */
-.feature-home .home-status {
+/* 현지 시각이 핵심: 도시명 → 큰 시각 → 작은 상태 글자·날짜.
+   시각·상태 글자 색 = 업무시간 초록, 업무시간 외·주말 주황, 공휴일 빨강(공통 상태 색, 글자와 함께 표시) */
+.feature-home .home-clock {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-muted);
+  flex-direction: column;
+  gap: 2px;
   color: var(--color-text-muted);
-  font-size: var(--font-size-xl);
+}
+
+.feature-home .home-clock-city {
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-tight);
+  color: var(--color-text);
 }
 
-.feature-home .home-status::before {
-  content: "";
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: currentColor;
+.feature-home .home-clock-time {
+  font-size: 2.5rem;
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--color-text);
 }
 
-.feature-home .home-status-success {
-  background: var(--color-success-soft);
+.feature-home .home-clock-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.feature-home .home-clock-date {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+}
+
+.feature-home .home-status-success .home-clock-time,
+.feature-home .home-status-success .home-clock-meta {
   color: var(--color-success);
 }
 
-.feature-home .home-status-warning {
-  background: var(--color-warning-soft);
+.feature-home .home-status-warning .home-clock-time,
+.feature-home .home-status-warning .home-clock-meta {
   color: var(--color-warning);
 }
 
-.feature-home .home-status-danger {
-  background: var(--color-danger-soft);
+.feature-home .home-status-danger .home-clock-time,
+.feature-home .home-status-danger .home-clock-meta {
   color: var(--color-danger);
+}
+
+/* 전시회 국가·도시 줄 */
+.feature-home .home-fair-place {
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
 }
 
 /* 이름 | 값 두 열, 행 사이 좁게. 보조 정보는 값 아래 작은 회색 글씨 */
@@ -222,7 +244,7 @@
   justify-content: start;
   align-items: center;
   gap: var(--space-2) var(--space-3);
-  margin-top: auto;
+  margin-bottom: var(--space-2);
 }
 
 /* 같은 행 카드가 늘어날 때 마지막 줄(도시 선택·환율 안내)이 카드 아래에 붙도록 본문을 채웁니다(빈 칸 추가 없음). */

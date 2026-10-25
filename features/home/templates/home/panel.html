@@ -31,16 +31,28 @@
         </div>
       </div>
       <div class="home-card-body">
-        <p class="home-status" id="home-status" aria-live="polite">확인 중</p>
+        {# 현지 시각이 핵심. 연락 가능 상태는 시각의 색(초록·주황·빨강) + 작은 글자(연락 가능/연락 어려움)로 보이고,
+           세부 이유(업무시간·업무시간 외·주말·공휴일)는 화면낭독용 숨은 글로 읽힙니다. 판정 로직은 그대로입니다. #}
+        <div class="home-clock" id="home-clock">
+          {# 기준 도시 선택이 도시명을 겸합니다(따로 쓴 도시명은 화면낭독용으로만 남김). #}
+          <div class="home-city-field" data-work-ignore>
+            <label class="field-label" for="home-city">기준 도시</label>
+            <select class="select" id="home-city" aria-describedby="home-hours-hint">
+              <option value="America/Sao_Paulo" selected>상파울루</option>
+              <option value="America/Fortaleza">포르탈레자</option>
+              <option value="America/Manaus">마나우스</option>
+              <option value="America/Rio_Branco">히우브랑쿠</option>
+            </select>
+          </div>
+          <p class="visually-hidden"><span id="home-brazil-city">상파울루</span> 현지 시각</p>
+          <p class="home-clock-time" id="home-brazil-time">-</p>
+          <p class="home-clock-meta" aria-live="polite"><span id="home-status">확인 중</span><span class="visually-hidden" id="home-status-detail"></span>
+            <span class="home-clock-date" id="home-brazil-date"></span></p>
+        </div>
 
-        {# 이름 | 값 두 열. Home은 요약이라 상태·현지 시각·다음 공휴일만 보입니다.
+        {# Home은 요약이라 다음 공휴일만 보입니다.
            서울 시각·다음 연락 가능(KST)은 계산을 그대로 두고 화면에서만 숨깁니다(home-buyer-extra, 일일 브리핑 PDF에는 표시). #}
         <dl class="home-time-list">
-          <div class="home-time-pair">
-            <dt>브라질 현지</dt>
-            <dd><span class="home-time-value" id="home-brazil-time">-</span>
-              <span class="home-time-sub" id="home-brazil-city">상파울루</span></dd>
-          </div>
           <div class="home-time-pair home-buyer-extra">
             <dt>서울</dt>
             <dd><span class="home-time-value" id="home-seoul-time">-</span></dd>
@@ -57,15 +69,6 @@
           </div>
         </dl>
 
-        <div class="home-city-field" data-work-ignore>
-          <label class="field-label" for="home-city">기준 도시</label>
-          <select class="select" id="home-city" aria-describedby="home-hours-hint">
-            <option value="America/Sao_Paulo" selected>상파울루</option>
-            <option value="America/Fortaleza">포르탈레자</option>
-            <option value="America/Manaus">마나우스</option>
-            <option value="America/Rio_Branco">히우브랑쿠</option>
-          </select>
-        </div>
       </div>
     </article>
 
@@ -129,12 +132,14 @@
       <div class="card-header">
         <div>
           <h2 class="card-title" id="home-fairs-title">다가오는 전시회</h2>
-          <p class="card-description">다가오는 브라질 섬유 전시회 일정입니다.</p>
+          <p class="card-description">브라질·중남미 섬유 전시회 일정입니다.</p>
         </div>
       </div>
       <div class="home-card-body" id="home-fairs-body" aria-busy="true">
+        <div class="home-news-filter" id="home-fairs-filter" role="group" aria-label="지역별 보기" hidden></div>
         <p class="home-news-loading" id="home-fairs-loading"><span class="spinner" aria-hidden="true"></span>전시회 일정을 불러오는 중</p>
         <ul class="home-fair-list" id="home-fairs-list" aria-label="전시회 목록" tabindex="-1" hidden></ul>
+        <p class="field-hint" id="home-fairs-filter-empty" hidden>선택한 지역의 예정 전시회가 없습니다.</p>
         <div class="empty-state" id="home-fairs-empty" hidden>
           <p class="empty-state-title">확인된 예정 전시회가 없습니다</p>
           <p>출처를 확인한 일정이 추가되면 이곳에 표시됩니다.</p>
@@ -186,7 +191,7 @@
       <section aria-labelledby="home-notes-news">
         <h3 class="home-notes-title" id="home-notes-news">업계 소식</h3>
         <ul>
-          <li>수집 경로별 최신 20건 · 1시간마다 갱신. Home에는 3건을 보여 주며 '업계 소식 더 보기'로 이미 받은 목록을 펼칩니다.</li>
+          <li>수집 경로별 최신 20건 · 1시간마다 갱신. Home에는 4건을 보여 주며 '업계 소식 더 보기'로 이미 받은 목록을 펼칩니다.</li>
           <li>"AI 요약"은 Google News·ABIT 포르투갈어 제목만 보고 만든 한국어 한 줄로, 기사 본문을 보지 않았으므로 원문 확인이 필요합니다. KOTRA 뉴스는 요약하지 않습니다.</li>
           <li>Google News·ABIT 링크는 Google News를 거쳐 원문으로 이동합니다.</li>
           <li>주제 태그는 제목의 키워드로 코드가 분류한 것(AI 아님, 최대 2개, 해당 없으면 기타)이며 기사 내용과 다를 수 있습니다.</li>
@@ -197,7 +202,8 @@
         <h3 class="home-notes-title" id="home-notes-fairs">전시회</h3>
         <ul>
           <li id="home-fairs-hint">담당자가 출처를 확인해 넣은 자료입니다(자동 수집 아님). 일정은 바뀔 수 있으니 방문 전 출처에서 다시 확인하세요. D-day는 서울 날짜 기준입니다.</li>
-          <li>'확인 필요'는 공식 출처에서 일정이 다르게 표기되는 등 추가 확인이 필요한 행사입니다. 행사별 상세 정보에서 장소·분야·확인일·출처를 볼 수 있습니다.</li>
+          <li>브라질과 중남미(페루·콜롬비아 등) 행사를 함께 보여 줍니다. '전체'에서는 브라질 행사를 가능하면 2건 이상 포함합니다. 날짜가 확정되지 않은 행사는 넣지 않습니다.</li>
+          <li>'확인 필요'는 공식 출처에서 일정이 다르게 표기되거나 전시회 목록 사이트 기준이라 공식 확인 전인 행사입니다. 행사별 상세 정보에서 장소·분야·확인일·출처를 볼 수 있습니다.</li>
         </ul>
       </section>
       <section aria-labelledby="home-notes-report">

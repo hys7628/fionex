@@ -332,3 +332,22 @@
 - 검증: validation.md 2026-10-25 Home 요약 대시보드 항목.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 1440px 2행은 외곽선과 마지막 줄은 맞지만 전시회 목록과 아래 안내 줄 사이 약 150px 여백이 남음. 별도 뉴스 상세 화면은 없음.
+
+## DEV-HOME-016 바이어 시각 색상 표시·환율 compact·전시회 중남미 확장
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 21:05~21:45경 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/home, 작업 전 미커밋 변경 없음, 직전 커밋 2fc6e62)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: (1) 바이어 카드: 큰 상태 문구 제거, 현지 시각 색으로 상태 표시 + 작은 보조 글자, 서울·다음 연락 KST·공휴일 출처 숨김, 다음 공휴일 유지 (2) 환율 compact·바이어와 높이 정렬 (3) 전시회 브라질+중남미 확장(Expotextil Perú·Colombiatex·Createx는 확인 필요, Colombiamoda·IM Intermoda 제외) (4) 지역 필터 [전체][브라질][중남미], 전체에서 브라질 최소 2건 (5) PDF 전시회 표 국가 정보. 뉴스 Home 4건. Git 작업 금지.
+- 판단:
+  - 바이어: 판정 로직 그대로, 표시만 변경. 작은 글자는 `연락 가능`/`연락 어려움`, 이유(주말 등)는 화면낭독용 숨은 글. 높이를 맞추려고 기준 도시 선택을 시각 위로 올려 도시명을 겸하게 함(지시의 '도시명'과 '도시 선택'을 한 컨트롤로 합침, 도시명 텍스트는 화면낭독용으로 유지).
+  - 전시회 데이터: 사용자 후보 표에 출처 URL이 없어 JSON 필수 url·source를 채우려고 공개 페이지를 확인(WebSearch 3회, WebFetch 4회 중 1회 405). 공식 사이트가 아니므로 verified=false, 페이지에 없는 장소·분야는 null.
+  - region 구조: 필터 구분값 `brazil`(브라질) / `latin_america`(브라질 외 중남미) 둘 중 하나로 겹치지 않게. country는 표시용 국가명. 둘 다 필수(없거나 다른 region이면 제외, 건수만 안내). 파일명 br_textile_fairs.json은 다른 참조가 많아 유지.
+  - 선정: fairs.select_for_all(브라질을 앞에서부터 최소 2건 먼저, 나머지 날짜순, 결과 날짜순). PDF는 get_upcoming(3, min_brazil=2), 화면은 같은 규칙을 home.js에서 받은 목록으로 계산. API 기본 응답은 날짜순 그대로(limit만).
+  - PDF 표는 열을 늘리지 않고 '도시 · 장소' 열을 '국가 · 도시 · 장소'로(2쪽 유지).
+- 변경 파일: features/home/data/br_textile_fairs.json, fairs.py, service.py(상수 별칭), report.py, static/home.js, static/home.css, templates/home/panel.html, feature_spec.md, tests/test_home/test_fairs.py, test_report.py.
+- 발견 문제: 측정 스크립트가 닫힌 details 안 요소(Chrome은 레이아웃함)를 내용 높이에 넣어 잘못 계산 → 스크립트 수정. 기존 검증 스크립트 3곳(필터 그룹 선택자·시각 요소 분리·탭 넘침 범위)은 구조 변경에 맞춰 스크립트만 수정.
+- 외부 호출: WebSearch 3회·WebFetch 4회(전시회 출처 확인, 공개 페이지, 1회 HTTP 405). OpenAI·KOTRA·한국수출입은행·BrasilAPI 0회.
+- 검증: validation.md 2026-10-25 바이어 시각·환율·전시회 중남미 항목.
+- 담당자 판단: 미기재(담당자 검토 필요) — 중남미 행사 공식 사이트 확인, 브라질 최소 2건 가정값 확인 필요
+- 남은 한계: 1440px 2행 전시회 목록과 하단 안내 사이 약 120px 여백, 1행 환율 카드 내용이 바이어보다 약 28px 짧음(외곽선은 같음).

@@ -66,12 +66,15 @@ def news_ok():
     return {"items": items, "media": media, "summary": {"pending": 0}}
 
 
-def fairs_ok(limit=3):
+def fairs_ok(limit=3, min_brazil=0):
     def fair(name, start, end, d_day, verified):
-        return {"name": name, "start": start, "end": end, "d_day": d_day, "status": "upcoming", "city": "Americana/SP",
+        return {"name": name, "start": start, "end": end, "d_day": d_day, "status": "upcoming",
+                "country": "페루" if "Perú" in name else "브라질", "region": "latin_america" if "Perú" in name else "brazil",
+                "city": "Lima" if "Perú" in name else "Americana/SP",
                 "venue": "TEST Venue", "focus": "TEST", "note": None, "url": "https://example.com/" + name, "source": "TEST 출처",
                 "verified": verified, "checked_at": "2026-10-25"}
-    return {"fairs": [fair("Inspiramais", "2027-01-26", "2027-01-27", "D-93", False),
+    return {"fairs": [fair("Expotextil Perú 2026", "2026-11-05", "2026-11-08", "D-11", False),
+                      fair("Inspiramais", "2027-01-26", "2027-01-27", "D-93", False),
                       fair("Tecnotêxtil Brasil 2027", "2027-04-27", "2027-04-30", "D-184", True),
                       fair("Febratex Summit 2027", "2027-08-24", "2027-08-26", "D-303", True)][:limit],
             "data_checked_at": "2026-10-25", "total_upcoming": 3, "invalid_count": 0}
@@ -172,7 +175,7 @@ class CollectTests(ReportTestBase):
         self.assertEqual(data["failures"], [])
         self.assertEqual(len(data["news"]["items"]), report.NEWS_LIMIT)
         self.assertEqual(data["news"]["total"], 10)
-        self.mocks["get_upcoming_fairs"].assert_called_once_with(report.FAIRS_LIMIT)
+        self.mocks["get_upcoming_fairs"].assert_called_once_with(report.FAIRS_LIMIT, min_brazil=service.FAIRS_MIN_BRAZIL_IN_ALL)
         self.mocks["get_news"].assert_called_once_with()  # 새로고침(refresh) 없이 캐시 정책 그대로
         self.mocks["get_fx"].assert_called_once_with()
 
@@ -260,6 +263,12 @@ class PdfLayoutTests(ReportTestBase):
         self.assertIn("KST · 기타", text)  # 기본 제목(têxtil·Produção)은 태그 키워드가 없어 기타
         self.assertIn("KST · 패션·리테일", text)  # Confecções 제목
         self.assertLessEqual(len(reader.pages), 2)
+
+    def test_fairs_country_in_pdf(self):
+        _, text, _ = self.pdf()
+        self.assertIn("국가 · 도시 · 장소", text)
+        self.assertIn("페루 · Lima", text)
+        self.assertIn("브라질 · Americana/SP", text)
 
     def test_kotra_minimum_in_briefing(self):
         news = news_ok()

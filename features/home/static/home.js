@@ -20,12 +20,12 @@
   const WORK_END_HOUR = 18;
   const NEXT_START_SEARCH_DAYS = 31;
   const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
-  // 카드 맨 위 큰 상태 문구. 색과 문구를 함께 바꿉니다(색만으로 구분하지 않음).
+  // 현지 시각의 색(tone) + 작은 글자(text) + 화면낭독용 이유(detail). 색만으로 구분하지 않습니다.
   const STATUS = {
-    holiday: { text: "공휴일", tone: "home-status-danger" },
-    weekend: { text: "주말", tone: "home-status-warning" },
-    work: { text: "지금 연락 가능", tone: "home-status-success" },
-    off: { text: "업무시간 외", tone: "home-status-warning" },
+    holiday: { text: "연락 어려움", detail: "공휴일", tone: "home-status-danger" },
+    weekend: { text: "연락 어려움", detail: "주말", tone: "home-status-warning" },
+    work: { text: "연락 가능", detail: "업무시간", tone: "home-status-success" },
+    off: { text: "연락 어려움", detail: "업무시간 외", tone: "home-status-warning" },
   };
 
   const citySelect = panel.querySelector("#home-city");
@@ -33,7 +33,10 @@
     seoul: panel.querySelector("#home-seoul-time"),
     brazil: panel.querySelector("#home-brazil-time"),
     city: panel.querySelector("#home-brazil-city"),
+    date: panel.querySelector("#home-brazil-date"),
+    clock: panel.querySelector("#home-clock"),
     status: panel.querySelector("#home-status"),
+    statusDetail: panel.querySelector("#home-status-detail"),
     nextRow: panel.querySelector("#home-next-row"),
     next: panel.querySelector("#home-next-start"),
     nextLocal: panel.querySelector("#home-next-local"),
@@ -231,16 +234,19 @@
     const today = { year: local.year, month: local.month, day: local.day };
 
     setText(el.seoul, formatDayTime(partsIn(now, SEOUL_TZ)));
-    setText(el.brazil, formatDayTime(local));
+    setText(el.brazil, pad2(local.hour) + ":" + pad2(local.minute));
+    setText(el.date, formatDay(today));
     setText(el.city, citySelect.selectedOptions[0].textContent);
 
     const status = workStatus(today, local.hour);
     if (holidayYears.get(today.year).loading) {
-      setClass(el.status, "home-status");
+      setClass(el.clock, "home-clock");
       setText(el.status, "확인 중");
+      setText(el.statusDetail, "");
     } else {
-      setClass(el.status, "home-status " + status.tone);
+      setClass(el.clock, "home-clock " + status.tone);
       setText(el.status, status.text);
+      setText(el.statusDetail, " (" + status.detail + ")");
     }
 
     if (status === STATUS.work) {
@@ -285,8 +291,8 @@
     more: panel.querySelector("#home-news-more"),
   };
   // 매체 필터·더 보기는 이미 받은 목록을 화면에서만 거릅니다(추가 요청 없음).
-  // Home은 요약 화면이라 기본 3건만 보이고(전시회 카드와 높이 균형), '업계 소식 더 보기'로 이미 받은 목록을 펼칩니다.
-  const NEWS_PAGE_SIZE = 3;
+  // Home은 요약 화면이라 기본 4건만 보이고, '업계 소식 더 보기'로 이미 받은 목록을 펼칩니다.
+  const NEWS_PAGE_SIZE = 4;
   const newsView = { origin: "all", topic: "all", expanded: false };
   // 주제 태그 순서(서버 service.NEWS_TOPIC_ORDER + "기타")와 같게 둡니다. 태그는 서버가 붙여 보냅니다.
   const NEWS_TOPICS = ["원사", "원단", "규제·무역", "리사이클·ESG", "패션·리테일", "기타"];
@@ -753,8 +759,9 @@
     if (!fxLoaded && !fxBusy) loadFx(null);
   }
 
-  /* ---------- 브라질 섬유 전시회 ---------- */
-  // 서버(/api/home/fairs)가 정적 자료에서 다가오는 행사만 골라 줍니다. 홈을 처음 열 때 한 번 요청합니다.
+  /* ---------- 다가오는 전시회(브라질·중남미) ---------- */
+  // 서버(/api/home/fairs)가 정적 자료에서 다가오는 행사를 날짜순으로 줍니다. 홈을 처음 열 때 한 번 요청하고,
+  // 지역 필터·브라질 최소 노출은 받은 목록에서만 계산합니다(추가 요청 없음).
   const fairsEl = {
     body: panel.querySelector("#home-fairs-body"),
     loading: panel.querySelector("#home-fairs-loading"),
@@ -763,7 +770,14 @@
     notices: panel.querySelector("#home-fairs-notices"),
     hint: panel.querySelector("#home-fairs-hint"),
     foot: panel.querySelector("#home-fairs-foot"),
+    filter: panel.querySelector("#home-fairs-filter"),
+    filterEmpty: panel.querySelector("#home-fairs-filter-empty"),
   };
+  const FAIR_REGIONS = { all: "전체", brazil: "브라질", latin_america: "중남미" };
+  const FAIR_PAGE_SIZE = 3;
+  // 가정값: '전체'에서 브라질 행사 최소 건수(있는 만큼만). 서버 fairs.MIN_BRAZIL_IN_ALL(PDF)과 같은 값입니다.
+  const FAIR_MIN_BRAZIL_IN_ALL = 2;
+  const fairsView = { region: "all", fairs: [] };
   // D-day 칸: 다가오는 행사는 기본 글자색, 오늘·진행 중만 상태 색
   const FAIR_DAY_TONES = { upcoming: "", today: " home-fair-dday-today", ongoing: " home-fair-dday-ongoing" };
   let fairsLoaded = false;
@@ -788,11 +802,12 @@
     li.append(make("p", "home-fair-dday" + (FAIR_DAY_TONES[fair.status] || ""), fair.d_day));
     const main = make("div", "home-fair-main");
     main.append(make("p", "home-fair-name", fair.name));
+    // D-day → 행사명 → 국가·도시 → 기간 순으로 읽힙니다.
+    main.append(make("p", "home-fair-place", [fair.country, fair.city].filter(Boolean).join(" · ")));
     const when = make("p", "home-fair-when");
     const period = make("time", "", fairPeriod(fair.start, fair.end));
     period.dateTime = fair.start;
     when.append(period);
-    if (fair.city) when.append(make("span", "", " · " + fair.city));
     main.append(when);
     // [확인 필요] [상세 정보]를 한 줄에. 펼치면 상세 내용이 그 아래에 나옵니다.
     const tags = make("div", "home-fair-tags");
@@ -802,7 +817,7 @@
     const details = make("details", "home-fair-details");
     details.append(make("summary", "", "상세 정보"));
     details.append(fairLine("기간", fair.start === fair.end ? fair.start : fair.start + " ~ " + fair.end));
-    details.append(fairLine("장소", [fair.city, fair.venue].filter(Boolean).join(" · ")));
+    details.append(fairLine("장소", [fair.country, fair.city, fair.venue].filter(Boolean).join(" · ")));
     details.append(fairLine("분야", fair.focus));
     const check = make("p", "home-fair-line");
     check.append(make("span", "home-fair-label", "확인"),
@@ -821,10 +836,52 @@
     return li;
   }
 
+  // '전체': 브라질 행사를 앞에서부터 최소 건수만큼 먼저 넣고 나머지를 날짜순으로 채운 뒤 날짜순으로(서버 select_for_all과 같은 규칙).
+  function selectForAll(fairs, limit, minBrazil) {
+    const chosen = fairs.filter(function (f) { return f.region === "brazil"; }).slice(0, Math.min(minBrazil, limit));
+    fairs.forEach(function (f) { if (chosen.length < limit && chosen.indexOf(f) === -1) chosen.push(f); });
+    return chosen.sort(function (a, b) { return fairs.indexOf(a) - fairs.indexOf(b); });
+  }
+
+  function renderFairsFilter() {
+    const counts = { all: fairsView.fairs.length };
+    fairsView.fairs.forEach(function (f) { counts[f.region] = (counts[f.region] || 0) + 1; });
+    fairsEl.filter.replaceChildren.apply(fairsEl.filter, Object.keys(FAIR_REGIONS).map(function (key) {
+      const button = make("button", "home-news-tab");
+      button.type = "button";
+      button.dataset.fairsRegion = key;
+      button.setAttribute("aria-pressed", String(fairsView.region === key));
+      button.append(make("span", "", FAIR_REGIONS[key]), make("span", "home-news-tab-count", String(counts[key] || 0)));
+      return button;
+    }));
+    fairsEl.filter.hidden = fairsView.fairs.length === 0;
+  }
+
+  function applyFairsView() {
+    const all = fairsView.fairs;
+    const shown = fairsView.region === "all"
+      ? selectForAll(all, FAIR_PAGE_SIZE, FAIR_MIN_BRAZIL_IN_ALL)
+      : all.filter(function (f) { return f.region === fairsView.region; }).slice(0, FAIR_PAGE_SIZE);
+    fairsEl.list.replaceChildren.apply(fairsEl.list, shown.map(fairItem));
+    fairsEl.list.hidden = shown.length === 0;
+    fairsEl.empty.hidden = all.length > 0;
+    fairsEl.filterEmpty.hidden = all.length === 0 || shown.length > 0;
+  }
+
+  fairsEl.filter.addEventListener("click", function (event) {
+    const button = event.target.closest("[data-fairs-region]");
+    if (!button) return;
+    fairsView.region = button.dataset.fairsRegion;
+    fairsEl.filter.querySelectorAll("[data-fairs-region]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b === button));
+    });
+    applyFairsView();
+  });
+
   function renderFairs(data) {
-    fairsEl.list.replaceChildren.apply(fairsEl.list, data.fairs.map(fairItem));
-    fairsEl.list.hidden = data.fairs.length === 0;
-    fairsEl.empty.hidden = data.fairs.length > 0;
+    fairsView.fairs = data.fairs;
+    renderFairsFilter();
+    applyFairsView();
     fairsEl.notices.replaceChildren();
     if (data.invalid_count > 0) {
       const notice = make("div", "notice notice-warning");
@@ -842,6 +899,8 @@
   function showFairsError() {
     fairsEl.list.hidden = true;
     fairsEl.empty.hidden = true;
+    fairsEl.filter.hidden = true;
+    fairsEl.filterEmpty.hidden = true;
     const notice = make("div", "notice notice-warning");
     notice.append(make("p", "notice-title", "일정 확인 불가"),
       make("p", "", "전시회 일정 자료를 확인할 수 없습니다. 다른 홈 기능은 그대로 사용할 수 있습니다."));
@@ -861,7 +920,7 @@
     fairsEl.loading.hidden = false;
     fairsEl.notices.querySelectorAll("[data-fairs-retry]").forEach(function (b) { b.disabled = true; });
     try {
-      const res = await fetch("/api/home/fairs?limit=5");
+      const res = await fetch("/api/home/fairs?limit=20");  // 필터용으로 다가오는 행사 전체(최대 20)
       const body = await res.json();
       if (!body.ok) throw new Error(body.error.message);
       renderFairs(body.data);

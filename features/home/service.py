@@ -28,6 +28,7 @@ FX_SOURCES = fx.SOURCES
 get_fx = fx.get_fx
 FAIRS_DEFAULT_LIMIT = fairs.DEFAULT_LIMIT
 FAIRS_MAX_LIMIT = fairs.MAX_LIMIT
+FAIRS_MIN_BRAZIL_IN_ALL = fairs.MIN_BRAZIL_IN_ALL
 FairsDataError = fairs.FairsDataError
 get_upcoming_fairs = fairs.get_upcoming
 # 일일 브리핑 PDF는 features/home/report.py가 위 함수들을 모아 만듭니다.

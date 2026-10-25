@@ -25,7 +25,8 @@ TODAY = date(2026, 10, 25)
 
 def fair(name, start, end, verified=True, **extra):
     item = {"name": name, "start": start, "end": end, "city": "TEST City", "venue": "TEST Venue", "focus": "TEST",
-            "url": "https://example.com/" + name, "source": "TEST 출처", "verified": verified, "checked_at": "2026-10-25"}
+            "url": "https://example.com/" + name, "source": "TEST 출처", "verified": verified, "checked_at": "2026-10-25",
+            "country": "브라질", "region": "brazil"}
     item.update(extra)
     return item
 
@@ -104,6 +105,46 @@ class ListTests(FairsTestBase):
                 self.upcoming()
 
 
+def latam(name, start, end, country="페루"):
+    return fair(name, start, end, verified=False, country=country, region="latin_america")
+
+
+class RegionTests(FairsTestBase):
+    """A 브라질 · B 중남미 · C 전체 · D 브라질 최소 2건 · E 브라질 1건뿐 · G country/region 누락."""
+
+    def setUp(self):
+        super().setUp()
+        self.write([latam("L1", "2026-11-01", "2026-11-02"), latam("L2", "2026-11-10", "2026-11-11", "콜롬비아"),
+                    latam("L3", "2026-12-01", "2026-12-02"), fair("B1", "2027-01-10", "2027-01-11"),
+                    fair("B2", "2027-02-10", "2027-02-11"), fair("B3", "2027-03-10", "2027-03-11")])
+
+    def test_region_fields_and_filters(self):
+        listed = self.upcoming(limit=20)["fairs"]
+        self.assertEqual([(f["name"], f["country"], f["region"]) for f in listed][:2],
+                         [("L1", "페루", "latin_america"), ("L2", "콜롬비아", "latin_america")])
+        self.assertEqual([f["name"] for f in listed if f["region"] == "brazil"], ["B1", "B2", "B3"])  # A
+        self.assertEqual([f["name"] for f in listed if f["region"] == "latin_america"], ["L1", "L2", "L3"])  # B
+        self.assertEqual(len(listed), 6)  # C 양쪽 모두
+
+    def test_all_view_keeps_two_brazil(self):
+        names = [f["name"] for f in fairs.get_upcoming(3, today=TODAY, path=self.path, min_brazil=fairs.MIN_BRAZIL_IN_ALL)["fairs"]]
+        self.assertEqual(names, ["L1", "B1", "B2"])  # D 브라질 2건 + 나머지 날짜순, 결과는 날짜순
+        self.assertEqual([f["name"] for f in self.upcoming(limit=3)["fairs"]], ["L1", "L2", "L3"])  # 정책 없으면 날짜순
+
+    def test_only_one_brazil_no_fake(self):
+        self.write([latam("L1", "2026-11-01", "2026-11-02"), latam("L2", "2026-11-10", "2026-11-11"),
+                    latam("L3", "2026-12-01", "2026-12-02"), fair("B1", "2027-01-10", "2027-01-11")])
+        names = [f["name"] for f in fairs.get_upcoming(3, today=TODAY, path=self.path, min_brazil=2)["fairs"]]
+        self.assertEqual(names, ["L1", "L2", "B1"])  # E 있는 1건만, 가짜 없음
+
+    def test_missing_country_or_region_excluded(self):
+        bad = [fair("NoCountry", "2026-11-01", "2026-11-02", country=""), fair("NoRegion", "2026-11-01", "2026-11-02", region=None),
+               fair("BadRegion", "2026-11-01", "2026-11-02", region="europe"), fair("OK", "2026-11-01", "2026-11-02")]
+        self.write(bad)
+        data = self.upcoming()
+        self.assertEqual(([f["name"] for f in data["fairs"]], data["invalid_count"]), (["OK"], 3))  # G
+
+
 class RealDataTests(unittest.TestCase):
     def test_repository_data_is_valid(self):
         listed, checked_at, invalid = fairs.load_fairs(fairs.DATA_FILE)
@@ -115,6 +156,13 @@ class RealDataTests(unittest.TestCase):
         names = {f["name"]: f for f in listed}
         self.assertIs(names["Inspiramais"]["verified"], False)  # 공식 사이트 연도 표기 불일치
         self.assertIsNotNone(names["Inspiramais"]["note"])
+        # 중남미 추가 3건: 목록 사이트 기준이라 확인 필요, 날짜 미확정 행사(F)는 자료에 없음
+        for name, country in (("Expotextil Perú 2026", "페루"), ("Colombiatex de las Américas 2027", "콜롬비아"), ("Createx 2027", "콜롬비아")):
+            self.assertEqual((names[name]["country"], names[name]["region"], names[name]["verified"]), (country, "latin_america", False))
+        self.assertFalse([n for n in names if "Colombiamoda" in n or "Intermoda" in n])
+        for f in listed:
+            self.assertIn(f["region"], fairs.REGIONS)
+            self.assertEqual(f["region"] == "brazil", f["country"] == "브라질")
         tecno = names["Tecnotêxtil Brasil 2027"]  # 공식 사이트 "de 27 a 30 de abril de 2027"(2026-10-25 재확인)
         self.assertEqual((str(tecno["start"]), str(tecno["end"]), tecno["verified"]), ("2027-04-27", "2027-04-30", True))
 
