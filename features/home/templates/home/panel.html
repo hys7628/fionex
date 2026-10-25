@@ -51,16 +51,25 @@
     </div>
   </article>
 
-  <article class="card">
+  {# 업계 소식: /api/home/news. 수집 경로(KOTRA·Google News·ABIT)별 상태와 재시도는 home.js가 그립니다.
+     외부 제목·매체명은 textContent로만 넣습니다. 요약·본문은 표시하지 않습니다. #}
+  <article class="card" aria-labelledby="home-news-title" id="home-news">
     <div class="card-header">
       <div>
-        <h2 class="card-title">업계 소식</h2>
-        <p class="card-description">원단·원사·섬유 관련 최신 소식을 모아 봅니다.</p>
+        <h2 class="card-title" id="home-news-title">업계 소식</h2>
+        <p class="card-description">원단·원사·섬유 관련 최신 소식을 원문 제목 그대로 모아 봅니다.</p>
       </div>
     </div>
-    <div class="empty-state">
-      <p class="empty-state-title">불러온 소식이 없습니다</p>
-      <p>소식 수집 기능이 개발되면 출처와 함께 표시됩니다.</p>
+    <div class="stack" id="home-news-body" aria-busy="true">
+      <ul class="home-news-sources" id="home-news-sources" aria-label="수집 경로별 상태"></ul>
+      <div class="stack" id="home-news-notices"></div>
+      <p class="home-news-loading" id="home-news-loading"><span class="spinner" aria-hidden="true"></span>뉴스를 불러오는 중</p>
+      <ul class="home-news-list" id="home-news-list" aria-label="뉴스 목록" tabindex="0" hidden></ul>
+      <div class="empty-state" id="home-news-empty" hidden>
+        <p class="empty-state-title">불러온 소식이 없습니다</p>
+        <p id="home-news-empty-text"></p>
+      </div>
+      <p class="field-hint">수집 경로별 최신 20건 · 1시간마다 갱신 · AI 요약·번역 없음. Google News·ABIT 링크는 Google News를 거쳐 원문으로 이동합니다. KOTRA 자료 출처: KOTRA 해외시장뉴스.</p>
     </div>
   </article>
 

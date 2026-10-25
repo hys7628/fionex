@@ -34,3 +34,18 @@ def holidays():
             "message": f"year는 {service.MIN_YEAR}~{service.MAX_YEAR} 사이의 정수여야 합니다.",
         }), 400
     return jsonify(ok=True, data=service.get_holidays(year))
+
+
+@bp.get("/api/home/news")
+def news():
+    """업계 소식. ?refresh=kotra|google|abit 은 그 경로만 캐시를 무시하고 다시 가져옵니다.
+
+    성공 {"ok": true, "data": {items, media}}. 경로별 실패는 data.media[경로].status로 알립니다.
+    """
+    refresh = request.args.get("refresh")
+    if refresh is not None and refresh not in service.NEWS_MEDIA:
+        return jsonify(ok=False, error={
+            "code": "invalid_refresh",
+            "message": "refresh는 " + ", ".join(service.NEWS_MEDIA) + " 중 하나여야 합니다.",
+        }), 400
+    return jsonify(ok=True, data=service.get_news(refresh))

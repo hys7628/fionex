@@ -57,3 +57,53 @@ JS 예외 0건. 콘솔 오류: favicon.ico 404(기존, 이번 변경과 무관),
 - 실제 BrasilAPI 장애 상황(로컬 닫힌 포트·무응답 소켓으로만 모의).
 - 실제 대체 공휴일 자료(파일 없음).
 - `python app.py`(debug 재시작기) 실행은 하지 않고 동일 앱을 `app.run(port=5003)`로 실행.
+
+## 2026-10-25 홈 업계 소식 (DEV-HOME-002)
+변경: features/home/ routes.py·service.py·panel.html·home.js·home.css
+환경: Conda jasonenv Python 3.11.17, Flask 3.1.2, OPENAI_API_KEY·KOTRA 키 없이 실행. 검증 스크립트는 저장소 밖 임시 폴더.
+
+### 외부 응답 확인 (2026-10-25 15:50~16:20 KST)
+- Google News RSS `hl=pt-BR&gl=BR&ceid=BR:pt-419`: 5개 검색어 모두 HTTP 200 application/xml. channel language pt-BR.
+  item 구조: title("제목 - 매체명"), link(news.google.com/rss/articles/… 경유 주소), guid, pubDate(RFC 822, GMT), description(제목 링크 + 매체명만), source(url 속성 = 매체 도메인).
+- 초안 1번 검색어 53건(Vietnam.vn 14건 중 무관 기사 포함, Portugal Têxtil 8건). 초안 2번 19건, 무관 결과 다수 → 제외.
+- `site:abit.org.br when:30d` 38건 모두 abit.org.br → site: 동작. 초안 OR 묶음 37건 모두 abit.org.br. `"ABIT" têxtil when:30d` 19건, 언론 매체.
+- KOTRA: 공공데이터포털 15034831 페이지의 Swagger 명세에서 엔드포인트·요청 변수·응답 필드 확인. 키 없이 호출 → HTTP 401 `SERVICE_KEY_IS_NULL`(코드 20), 등록되지 않은 키 → HTTP 403 `SERVICE_KEY_IS_NOT_REGISTERED_ERROR`(코드 30). **실제 뉴스 데이터 응답은 키가 없어 미실행.**
+
+### 서버 (Flask test client, 38/38 통과)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| /api/home/news 실제 호출 | google·abit ok, kotra key_missing(외부 요청 없음) | google 20, abit 20, 외부 요청 3회(google 1 + abit 2), 0.83s | 통과 |
+| 항목 형식 | id/title/url/media/published_at/origin/lang, summary_ko·snippet 없음, https 링크·날짜 있음 | 40건 일치 | 통과 |
+| 최신순·URL/제목 중복 없음·제목 접미 제거 | 일치 | 일치 | 통과 |
+| ABIT 매체 | 공식(ABIT)과 언론 보도 모두 | ABIT 14 + 언론 5개 매체 | 통과 |
+| 1시간 안 재요청 | 외부 요청 0 | 0회, fetched_at 동일 | 통과 |
+| refresh=google / abit / 캐시 만료 | 해당 경로만 재요청 | 1회 / 2회 / google 1회 | 통과 |
+| refresh=bad·빈 값·대문자 | 400 invalid_refresh | 3건 일치 | 통과 |
+| Google 실패(모의) | google error, 이전 수집분 있으면 stale·목록 유지, abit 정상 | 일치 | 통과 |
+| ABIT 실패(모의 timeout) | abit error, google 정상 | 일치 | 통과 |
+| 모든 경로 실패 / 예상 밖 예외 | 빈 목록·모두 error / 500 없이 fetch_failed | 일치 | 통과 |
+| 중복 제거 단위 | 같은 URL → abit 유지, 공백·대소문자만 다른 제목 하나만, URL로 겹친 기사와 같은 제목도 제거 | 1차 실패(마지막 항목) → 수정 후 통과 | 통과 |
+| RSS 정리 단위 | 날짜 없음·해석 불가·시간대 없음·링크 없음·javascript: 제외 | 일치 | 통과 |
+| KOTRA 파싱 단위(명세 형태 TEST 입력, 실제 응답 아님) | 브라질·섬유 낱말만, 날짜 없음 제외, item 단일 객체 처리, 게이트웨이 오류 형식 거부 | 일치 | 통과 |
+| KOTRA 등록되지 않은 키 실제 호출 | access_denied | HTTP 403 → access_denied | 통과 |
+| 응답 없는 로컬 소켓 | 10초 후 timeout | 10.02s | 통과 |
+바이어 시간 서버 회귀(DEV-HOME-001 스크립트) 19/19 통과.
+
+### 브라우저 (headless Chrome + CDP, 실제 서버 127.0.0.1:5003, 20/20 통과)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| 실제 수집 화면 | 목록·경로별 상태 3개·KOTRA 실패 안내(재시도 버튼 없음) | 39건(경로 간 중복 1건 제거), 링크 새 탭·rel noopener noreferrer, 배지·매체·KST 날짜·언어 | 통과 |
+| 바이어 시간 카드 | 유지 | 시각 표시 정상 | 통과 |
+| 탭 이동 후 복귀 | 뉴스 재요청 0, 목록 유지, 작성 중 표시 없음 | 일치 | 통과 |
+| Google 실패 → 재시도(응답 가로채기) | 해당 경로 안내·버튼, 요청 중 disabled·aria-busy, refresh=google 1회, 새로고침 없음 | 일치, 완료 후 목록으로 초점 | 통과 |
+| ABIT 실패(이전 수집분) | 이전 항목 유지 + 수집 시각 안내 | 일치 | 통과 |
+| 모든 경로 실패 / 서버 요청 실패 | 빈 상태 + 실제 오류 안내, 가짜 항목 없음 / 위험 안내 + 전체 재시도 | 일치 | 통과 |
+| 제목에 HTML | 텍스트로 표시, 실행 없음 | img 0개, 스크립트 미실행 | 통과 |
+| 다른 4개 탭, 1440/1024/390px | 표시, 가로 스크롤 없음 | 일치(1440·390 스크린샷 육안 확인) | 통과 |
+JS 예외 0건. 콘솔 오류: favicon.ico 404(기존), 의도적으로 실패시킨 요청 1건.
+
+### 미검증
+- KOTRA 실제 데이터 응답(인증키 없음): 게시일자 형식, item 배열 여부, 국가명 필터 값 "브라질" 동작, 섬유 낱말 필터 결과, 결과 순서, 인증키를 디코딩 키로 넣어야 하는지.
+- 실제 Google·ABIT 장애(모의로만 확인), Google의 요청 제한·차단 조건.
+- 실제 사용자 브라우저(헤드리스 외), Edge·Safari·실제 모바일 기기, 화면낭독기.
+- 검색 결과 품질의 정량 평가(관련 기사 비율)는 하지 않음. 목록을 눈으로 확인한 소견만 기록.

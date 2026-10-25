@@ -251,6 +251,174 @@
     }));
   }
 
+  /* ---------- 업계 소식 ---------- */
+  // 서버(/api/home/news)가 수집 경로별로 가져와 1시간 캐시합니다. 홈을 처음 열 때 한 번 요청하고,
+  // 탭을 다시 열 때는 DOM이 유지되므로 다시 요청하지 않습니다. 외부 문자열은 textContent로만 넣습니다.
+  const NEWS_ORIGINS = { kotra: "KOTRA", google: "Google News", abit: "ABIT" };
+  const news = {
+    body: panel.querySelector("#home-news-body"),
+    sources: panel.querySelector("#home-news-sources"),
+    notices: panel.querySelector("#home-news-notices"),
+    loading: panel.querySelector("#home-news-loading"),
+    list: panel.querySelector("#home-news-list"),
+    empty: panel.querySelector("#home-news-empty"),
+    emptyText: panel.querySelector("#home-news-empty-text"),
+  };
+  let newsLoaded = false;
+  let newsBusy = false;
+
+  function make(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function formatKst(iso) {
+    return formatDayTime(partsIn(new Date(iso), SEOUL_TZ));
+  }
+
+  // 날짜만 있는 항목(KOTRA)은 날짜만, 시각이 있으면 KST로 표시합니다.
+  function formatNewsDate(value) {
+    if (value.length === 10) {
+      const p = value.split("-").map(Number);
+      return formatDay({ year: p[0], month: p[1], day: p[2] });
+    }
+    return formatKst(value) + " KST";
+  }
+
+  function langLabel(lang) {
+    if (!lang) return "";
+    if (lang.indexOf("pt") === 0) return "포르투갈어";
+    if (lang.indexOf("ko") === 0) return "한국어";
+    return lang;
+  }
+
+  function renderNewsSources(media) {
+    news.sources.replaceChildren.apply(news.sources, Object.keys(NEWS_ORIGINS).map(function (origin) {
+      const info = media[origin];
+      const ok = info.status === "ok";
+      const li = make("li", "home-news-source");
+      li.append(
+        make("span", "badge " + (ok ? "badge-success" : "badge-warning"), NEWS_ORIGINS[origin] + " · " + (ok ? "정상" : "실패")),
+        make("span", "home-news-source-meta",
+          info.fetched_at ? formatKst(info.fetched_at) + " 갱신 · " + info.count + "건" : "수집 기록 없음"));
+      return li;
+    }));
+  }
+
+  function renderNewsNotices(media) {
+    news.notices.replaceChildren.apply(news.notices, Object.keys(NEWS_ORIGINS).filter(function (origin) {
+      return media[origin].status !== "ok";
+    }).map(function (origin) {
+      const info = media[origin];
+      const notice = make("div", "notice notice-warning");
+      notice.append(make("p", "notice-title", NEWS_ORIGINS[origin] + " 불러오기 실패"));
+      notice.append(make("p", "", info.error.message +
+        (info.stale ? " " + formatKst(info.fetched_at) + " 수집분을 계속 표시합니다." : "")));
+      if (info.error.retryable) {
+        const button = make("button", "btn btn-secondary", NEWS_ORIGINS[origin] + " 다시 시도");
+        button.type = "button";
+        button.dataset.newsRetry = origin;
+        const row = make("div", "btn-row");
+        row.append(button);
+        notice.append(row);
+      }
+      return notice;
+    }));
+  }
+
+  function renderNewsList(items, media) {
+    news.list.replaceChildren.apply(news.list, items.map(function (item) {
+      const li = make("li", "home-news-item");
+      const link = make("a", "home-news-link", item.title);
+      link.href = item.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      if (item.lang) link.lang = item.lang;
+      link.append(make("span", "visually-hidden", " (새 탭에서 원문 열기)"));
+
+      const meta = make("p", "home-news-meta");
+      meta.append(make("span", "badge badge-info", NEWS_ORIGINS[item.origin]));
+      if (item.media) meta.append(make("span", "", item.media));
+      const time = make("time", "", formatNewsDate(item.published_at));
+      time.dateTime = item.published_at;
+      meta.append(time);
+      if (langLabel(item.lang)) meta.append(make("span", "", langLabel(item.lang)));
+
+      li.append(link, meta);
+      return li;
+    }));
+    news.list.hidden = items.length === 0;
+    news.empty.hidden = items.length > 0;
+    const allFailed = Object.keys(NEWS_ORIGINS).every(function (origin) { return media[origin].status !== "ok"; });
+    news.emptyText.textContent = allFailed
+      ? "모든 수집 경로에서 뉴스를 불러오지 못했습니다. 위 안내를 확인한 뒤 다시 시도하세요."
+      : "수집 기간 안에 해당하는 소식이 없습니다.";
+  }
+
+  function setNewsBusy(value) {
+    newsBusy = value;
+    news.body.setAttribute("aria-busy", value ? "true" : "false");
+    news.loading.hidden = !value;
+    news.notices.querySelectorAll("[data-news-retry]").forEach(function (b) { b.disabled = value; });
+  }
+
+  // 서버 자체에 닿지 못한 경우. 이미 보이는 목록은 지우지 않습니다.
+  function showNewsRequestError() {
+    const old = news.notices.querySelector("#home-news-request-error");
+    if (old) old.remove();
+    const notice = make("div", "notice notice-danger");
+    notice.id = "home-news-request-error";
+    notice.append(make("p", "notice-title", "업계 소식 불러오기 실패"));
+    notice.append(make("p", "", "서버에서 뉴스 목록을 받지 못했습니다. 잠시 후 다시 시도하세요."));
+    const button = make("button", "btn btn-secondary", "업계 소식 다시 시도");
+    button.type = "button";
+    button.dataset.newsRetry = "";
+    const row = make("div", "btn-row");
+    row.append(button);
+    notice.append(row);
+    news.notices.prepend(notice);
+    if (!newsLoaded) {
+      news.emptyText.textContent = "뉴스 목록을 받지 못했습니다.";
+      news.empty.hidden = false;
+    }
+  }
+
+  async function loadNews(refresh) {
+    if (newsBusy) return;
+    setNewsBusy(true);
+    try {
+      const res = await fetch("/api/home/news" + (refresh ? "?refresh=" + encodeURIComponent(refresh) : ""));
+      const body = await res.json();
+      if (!body.ok) throw new Error(body.error.message);
+      renderNewsSources(body.data.media);
+      renderNewsNotices(body.data.media);
+      renderNewsList(body.data.items, body.data.media);
+      newsLoaded = true;
+    } catch (err) {
+      showNewsRequestError();
+    } finally {
+      setNewsBusy(false);
+    }
+  }
+
+  // 재시도 버튼은 다시 그려지므로, 같은 경로가 또 실패하면 그 버튼으로, 아니면 목록으로 초점을 옮깁니다.
+  news.notices.addEventListener("click", function (event) {
+    const button = event.target.closest("[data-news-retry]");
+    if (!button || button.disabled) return;
+    const origin = button.dataset.newsRetry;
+    loadNews(origin || null).then(function () {
+      const again = news.notices.querySelector('[data-news-retry="' + origin + '"]');
+      if (again) again.focus();
+      else if (!news.list.hidden) news.list.focus();
+    });
+  });
+
+  function ensureNews() {
+    if (!newsLoaded && !newsBusy) loadNews(null);
+  }
+
   // 화면에 분 단위까지만 표시하므로 매 분 경계에 한 번 갱신합니다. 홈이 숨겨지면 멈춥니다.
   let timer = null;
 
@@ -275,7 +443,11 @@
   AppShell.onShow(FEATURE_ID, function () {
     forgetUnavailableYears();
     tick();
+    ensureNews();
   });
   AppShell.onHide(FEATURE_ID, stop);
-  if (AppShell.current() === FEATURE_ID) tick();
+  if (AppShell.current() === FEATURE_ID) {
+    tick();
+    ensureNews();
+  }
 })();
