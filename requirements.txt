@@ -1,3 +1,11 @@
 # 공통 화면 실행용. Conda jasonenv(Python 3.11.17) + Flask 3.1.2로 실행 확인(2026-10-24).
 Flask==3.1.2
-# OpenAI SDK·PDF 도구는 기능 개발 단계에서 선정·검증 후 추가한다.
+# 공통 OpenAI 연결(common/ai_client.py). jasonenv에 설치 후 모의 테스트로 확인(2026-10-25).
+# 실제 OpenAI API 호출은 아직 검증하지 않았다.
+openai==3.37.0
+# common/ai_client.py가 직접 사용(결과 스키마). openai 설치 시 함께 설치된 버전.
+pydantic==2.14.1
+# openai 3.37.0의 HTTP 의존성. tests/test_common의 모의 전송(MockTransport)이 직접 사용.
+httpx2==2.16.0
+# 이 밖의 하위 의존성(anyio, jiter, sniffio, typing-extensions 등)은 openai 설치 시 자동 설치된다.
+# PDF 도구는 기능 개발 단계에서 선정·검증 후 추가한다.
