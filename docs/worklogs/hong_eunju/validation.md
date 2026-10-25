@@ -107,3 +107,56 @@ JS 예외 0건. 콘솔 오류: favicon.ico 404(기존), 의도적으로 실패�
 - 실제 Google·ABIT 장애(모의로만 확인), Google의 요청 제한·차단 조건.
 - 실제 사용자 브라우저(헤드리스 외), Edge·Safari·실제 모바일 기기, 화면낭독기.
 - 검색 결과 품질의 정량 평가(관련 기사 비율)는 하지 않음. 목록을 눈으로 확인한 소견만 기록.
+
+## 2026-10-25 홈 뉴스 AI 한 줄 요약 (DEV-HOME-003, SPE-HOME-NEWS-001)
+변경: features/home/news_summary.py·prompts/news_summary_v1.md·v2.md(신규), service.py·routes.py·panel.html·home.js·home.css, tests/test_home/(신규 2개)
+환경: Conda jasonenv Python 3.11.17, Flask 3.1.2, openai 3.37.0·pydantic 2.14.1·httpx2 2.16.0(requirements.txt 그대로 이번에 설치). python-dotenv 미설치.
+
+### 사전 확인
+- Google News RSS description 재확인: Google 검색 1개 + ABIT 검색 2개, 111건 모두 제목+매체명 반복 → AI 입력에서 제외.
+- 공통 테스트 `python -m unittest discover -s tests/test_common` 32건 OK(패키지 설치 후).
+
+### 실제 OpenAI 호출 (SPE-HOME-NEWS-001)
+- 실행: `tests/test_home/run_news_summary_experiment.py --live --real 20`, OPENAI_API_KEY는 .env 값을 실험 프로세스에만 읽음(출력·기록 안 함), OPENAI_MODEL=gpt-5.4-mini.
+- 결과: v1·v2 각 1회 요청 성공, 응답 모델 gpt-5.4-mini-2026-03-17, 30건 batch 구조화 JSON 파싱 성공, id 불일치 0. 상세는 prompt_log와 experiments/news_summary_2026_10_25_163947.json.
+- 결과 파일에 키 문자열("sk-") 0건 확인.
+
+### 모의 테스트 `python -m unittest discover -s tests/test_home` (18건 OK)
+공통 클라이언트 `_create_client`를 MockTransport로 바꿔 generate_structured 실제 경로를 지남.
+| 사례 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| batch | 대상 3건을 한 요청으로, 입력은 id·title만, KOTRA 제외, store=False | 일치 | 통과 |
+| 정상 요약 / 정보 부족 / 없는 숫자(15%) | 표시 / 빈 값 / 폐기, 셋 다 캐시 | 일치 | 통과 |
+| 1시간 안 재요청 | OpenAI 호출 없음 | 0회 | 통과 |
+| 새 기사 추가 / 같은 id 제목 변경 / 만료 | 새 기사만 요청 / 새로 요청 / 새로 요청 | 일치 | 통과 |
+| 45건 | 40 + 5 두 번 | 일치 | 통과 |
+| 잘린 JSON / 배열 형태 JSON | error, 요약 없음, 캐시 안 함(다음에 재시도) | 일치 | 통과 |
+| 요청하지 않은 id만 응답 | 무시, 요약 없음 | 일치 | 통과 |
+| HTTP 500 / 429 | error, 원문 제목만 안내 | 일치 | 통과 |
+| 키 없음 | unavailable, OpenAI 요청 0, 뉴스 3건 그대로 | 일치 | 통과 |
+| 숫자 검증 단위 | 2026·12,5%=12.5 허용 / 12억·2027·15·1200(원문 1.200)·전각 숫자 폐기 | 일치 | 통과 |
+| id 검증 단위 | 없는 id 무시, 같은 id 다른 값 폐기, 같은 값 중복 허용, 누락 빈 값 | 일치 | 통과 |
+| 길이·형식 단위 | 81자·여러 줄·한글 없음·문자열 아님 폐기 | 일치 | 통과 |
+| 뉴스 연계 | 목록 요청은 AI 미호출·pending 2, 요약 후 목록에 summary_ko(KOTRA 없음), 수집 캐시는 원문 그대로, refresh 후 같은 기사 재요청 없음 | 일치 | 통과 |
+
+### 브라우저 (headless Chrome + CDP, 실제 서버 127.0.0.1:5003, 18/18 통과)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| 실제 서버(실제 Google·ABIT 수집, 서버에 OpenAI 키 없음) | 뉴스 39건 정상, 요약 0, "AI 요약을 사용할 수 없습니다" 1줄, GET 1·POST 1 | 일치 | 통과 |
+| 탭 이동 후 복귀 | 뉴스·요약 재요청 0 | 0 | 통과 |
+| 요약 지연 응답(가로채기) | 원문 제목 먼저 표시, 목록 aria-busy=true·진행 문구 | 일치 | 통과 |
+| 요약 도착 | 요약 있는 항목만 "AI 요약" 표시, 빈 값·KOTRA 표시 없음 | 일치 | 통과 |
+| 캐시된 요약 | 목록과 함께 표시, POST 없음 | 일치 | 통과 |
+| 요약 요청 실패 / error 상태 | 목록 유지 + 안내 | 일치 | 통과 |
+| 요약 문자열 HTML | 텍스트로 표시 | img 0, 미실행 | 통과 |
+| 요약 중 경로 재시도 | 끝난 뒤 요약 재요청(POST 2), 새 기사 요약 | 일치 | 통과 |
+| 바이어 시간·다른 4개 탭·1440/1024/390px | 유지·표시·가로 스크롤 없음 | 일치 | 통과 |
+JS 예외 0. 콘솔 오류: favicon 404(기존), 의도적 실패 요청 1건.
+
+### 회귀
+- 바이어 시간 서버 검증(DEV-HOME-001 스크립트) 19/19, 뉴스 서버 검증(DEV-HOME-002 스크립트, 실제 RSS) 38/38 통과.
+
+### 미검증
+- 앱 경로(POST /api/home/news/summaries → 실제 OpenAI) 실제 호출: 미실행. 사전 안내한 실험 2회 범위를 넘지 않음. 서버는 OpenAI 키 없이 실행.
+- 같은 입력 반복 실행 편차, 다른 모델, 비용 실측.
+- 요약 사실 정확성의 체계적 평가(30건 원출력을 담당 AI가 눈으로 판독한 소견만 있음).

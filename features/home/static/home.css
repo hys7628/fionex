@@ -114,6 +114,19 @@
   overflow-wrap: anywhere;
 }
 
+.feature-home .home-news-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.feature-home .home-news-summary > span:last-child {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
 .feature-home .home-news-meta {
   display: flex;
   flex-wrap: wrap;

@@ -260,12 +260,15 @@
     sources: panel.querySelector("#home-news-sources"),
     notices: panel.querySelector("#home-news-notices"),
     loading: panel.querySelector("#home-news-loading"),
+    summaryLoading: panel.querySelector("#home-news-summary-loading"),
+    summaryStatus: panel.querySelector("#home-news-summary-status"),
     list: panel.querySelector("#home-news-list"),
     empty: panel.querySelector("#home-news-empty"),
     emptyText: panel.querySelector("#home-news-empty-text"),
   };
   let newsLoaded = false;
   let newsBusy = false;
+  let summaryBusy = false;
 
   function make(tag, className, text) {
     const node = document.createElement(tag);
@@ -331,6 +334,7 @@
   function renderNewsList(items, media) {
     news.list.replaceChildren.apply(news.list, items.map(function (item) {
       const li = make("li", "home-news-item");
+      li.dataset.newsId = item.id;
       const link = make("a", "home-news-link", item.title);
       link.href = item.url;
       link.target = "_blank";
@@ -346,7 +350,9 @@
       meta.append(time);
       if (langLabel(item.lang)) meta.append(make("span", "", langLabel(item.lang)));
 
-      li.append(link, meta);
+      li.append(link);
+      if (item.summary_ko) li.append(summaryNode(item.summary_ko));
+      li.append(meta);
       return li;
     }));
     news.list.hidden = items.length === 0;
@@ -355,6 +361,59 @@
     news.emptyText.textContent = allFailed
       ? "모든 수집 경로에서 뉴스를 불러오지 못했습니다. 위 안내를 확인한 뒤 다시 시도하세요."
       : "수집 기간 안에 해당하는 소식이 없습니다.";
+  }
+
+  // 검증을 통과한 요약만 서버가 보내므로, 받은 항목에만 "AI 요약" 표시를 붙입니다.
+  function summaryNode(text) {
+    const p = make("p", "home-news-summary");
+    p.append(make("span", "badge badge-info", "AI 요약"));
+    const body = make("span", "", text);
+    body.lang = "ko";
+    p.append(body);
+    return p;
+  }
+
+  function applySummaries(summaries) {
+    news.list.querySelectorAll(".home-news-item").forEach(function (li) {
+      const text = summaries[li.dataset.newsId];
+      if (!text || li.querySelector(".home-news-summary")) return;
+      li.querySelector(".home-news-link").after(summaryNode(text));
+    });
+  }
+
+  function setSummaryStatus(text) {
+    news.summaryStatus.textContent = text;
+    news.summaryStatus.hidden = !text;
+  }
+
+  // 목록을 먼저 보여 준 뒤 요약만 따로 요청합니다. 실패해도 목록은 그대로 둡니다.
+  // 요약 요청 중 목록이 다시 그려지면(경로 재시도) 끝난 뒤 한 번 더 요청합니다.
+  let summaryAgain = false;
+
+  async function loadSummaries() {
+    if (summaryBusy) {
+      summaryAgain = true;
+      return;
+    }
+    summaryBusy = true;
+    summaryAgain = false;
+    news.list.setAttribute("aria-busy", "true");
+    news.summaryLoading.hidden = false;
+    setSummaryStatus("");
+    try {
+      const res = await fetch("/api/home/news/summaries", { method: "POST" });
+      const body = await res.json();
+      if (!body.ok) throw new Error(body.error.message);
+      applySummaries(body.data.summaries);
+      setSummaryStatus(body.data.status === "ok" ? "" : body.data.message);
+    } catch (err) {
+      setSummaryStatus("AI 요약을 만들지 못했습니다. 원문 제목만 표시합니다.");
+    } finally {
+      summaryBusy = false;
+      news.list.setAttribute("aria-busy", "false");
+      news.summaryLoading.hidden = true;
+    }
+    if (summaryAgain) loadSummaries();
   }
 
   function setNewsBusy(value) {
@@ -396,6 +455,7 @@
       renderNewsNotices(body.data.media);
       renderNewsList(body.data.items, body.data.media);
       newsLoaded = true;
+      if (body.data.summary && body.data.summary.pending > 0) loadSummaries();
     } catch (err) {
       showNewsRequestError();
     } finally {

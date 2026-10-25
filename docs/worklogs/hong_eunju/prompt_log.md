@@ -53,3 +53,54 @@
 - 검증: validation.md 2026-10-25 업계 소식 항목. 서버 38/38, 브라우저 20/20, 바이어 시간 서버 회귀 19/19.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: KOTRA 실제 데이터 응답 미확인(키 없음), KOTRA 이용허락 제4유형(상업적 이용금지·변경금지)과 사내 업무 도구 사용 적합성 미확인, Google News RSS 비공식·검색 결과 노이즈(포르투갈·베트남 매체), 링크가 Google News 경유 주소.
+
+## DEV-HOME-003 홈 뉴스 포르투갈어 제목 AI 한 줄 요약
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 16:00~16:50경 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/home)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5)
+- 지시 요약: 기존 뉴스에 Google News·ABIT 포르투갈어 제목의 한국어 한 줄 AI 요약만 추가. KOTRA 제외, 본문 크롤링 금지, batch 요청, 구조화 JSON, 코드 검증(id·타입·길이·입력에 없는 숫자), 실패 시 제목만, 뉴스 캐시와 연계, `AI 요약` 표시, 프롬프트 버전 파일과 A(규칙)/B(규칙+few-shot) 실제 비교 기록. 공통 파일 수정 필요 시 먼저 보고. Git 작업 금지.
+- 작업 전 상태: `.env.example`에 작업 전부터 있던 미커밋 변경(`KOTRA_API_KEY=` 추가). 수정하지 않음. jasonenv에 requirements.txt의 openai·pydantic·httpx2가 설치되지 않은 상태 → requirements.txt 그대로 설치(파일 수정 없음). 실행 셸 환경변수에 OPENAI 값 없음, python-dotenv 미설치.
+- 지시와 저장소의 차이: feature_spec.md에 뉴스 요약 계획·가상 예시가 없음(이전 작업과 같음). few-shot 예시는 새로 만든 가상 제목 사용.
+- 변경 파일: features/home/news_summary.py(신규), prompts/news_summary_v1.md·v2.md(신규), service.py, routes.py, templates/home/panel.html, static/home.js, static/home.css, tests/test_home/test_news_summary.py(신규), tests/test_home/run_news_summary_experiment.py(신규)
+- 구현 판단:
+  - RSS description 재확인(111건 모두 제목+매체명 반복) → 입력은 id·제목만.
+  - 공통 `common.ai_client.generate_structured` 사용. Home 전용 OpenAI 클라이언트 없음. openai·pydantic은 요약 시점에만 불러와 미설치 환경에서도 뉴스는 표시.
+  - 목록 응답(/api/home/news)은 이미 만든 요약만 붙이고, 새 요약은 POST /api/home/news/summaries로 따로 요청(목록을 먼저 보여 줌). 요약 대상은 서버에 수집된 뉴스만이며 클라이언트 문장을 받지 않음.
+  - 요약 캐시: (id, 제목) 기준 1시간. 빈 값·검증 탈락도 캐시해 다시 묻지 않음. AI 오류는 캐시하지 않음.
+  - 검증 탈락 기준: 요청하지 않은 id 무시, 같은 id 서로 다른 값이면 폐기, 문자열 아님, 여러 줄, 80자 초과(자르지 않음), 한글 없음, 제목에 없는 숫자(쉼표·점 소수 구분은 같게 봄).
+  - 모델은 코드에 고정하지 않음(OPENAI_MODEL 환경변수). 실험에서는 .env의 OPENAI_MODEL이 비어 있어 .env.example 초기 후보 gpt-5.4-mini를 실험 프로세스에만 지정.
+- 발견 문제: AI 요약 배지가 흰 배경에서 잘 안 보이고 요약문이 줄바꿈됨(스크린샷 확인) → badge-info + 배치 조정.
+- 검증: validation.md 2026-10-25 AI 요약 항목.
+- 담당자 판단: 미기재(담당자 검토 필요)
+
+## SPE-HOME-NEWS-001 뉴스 요약 프롬프트 v1/v2 비교
+- 유형: service_prompt_experiment
+- 날짜/시간: 2026-10-25 16:39 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home 업계 소식 AI 요약
+- 모델/설정: 요청 OPENAI_MODEL=gpt-5.4-mini(.env.example 초기 후보, 실험 프로세스에만 지정), 응답 모델 `gpt-5.4-mini-2026-03-17`. Responses API `responses.parse`(구조화 출력), store=False, max_output_tokens=4096, timeout 60초, 재시도 0. temperature 등 미전송(공급자 기본값, 값 미확인).
+- 프롬프트: A안 features/home/prompts/news_summary_v1.md(규칙만), B안 news_summary_v2.md(같은 규칙 + 가상 few-shot 4개)
+- 테스트 입력: 가상 제목 10건(A 정상 2, B 숫자 함정 2, C 정보 부족 3, D 여러 숫자 3; few-shot 예시와 다른 문장) + 실행 시점 Google News 공개 제목 20건. 버전당 1회 요청(30건 묶음).
+- 실제 출력: docs/worklogs/hong_eunju/experiments/news_summary_2026_10_25_163947.json
+- 결과(코드 지표):
+
+| 지표 | v1 | v2 |
+|---|---|---|
+| 호출·JSON 구조 | 성공 | 성공 |
+| unknown/missing/duplicate id | 0/0/0 | 0/0/0 |
+| 원 출력 중 입력에 없는 숫자 포함 | 2 | 1 |
+| 60자 초과 | 0 | 0 |
+| 정보 부족 3건 → 빈 값 | 3/3 | 3/3 |
+| 요약해야 할 가상 사례를 빈 값으로 | 0 | 0 |
+| 최종 채택 요약(30건 중) | 23 | 25 |
+| 토큰(입력/출력) · 시간 | 1408/956 · 5.45s | 1648/895 · 4.25s |
+
+- 발견 문제(원 출력 관측):
+  - v1 실제 제목 "Teka ... inaugura loja em um dos principais centros ..." → "매장 1곳을 연다": 제목에 없는 숫자 1 → 코드에서 폐기(정상 동작). "em um dos"(~중 하나에) 의미도 잘못 읽음.
+  - v1·v2 가상 D1 "terceiro trimestre de 2026" → "3분기": 뜻은 맞지만 제목에 숫자 3이 없어 코드가 폐기(숫자 검증의 보수적 오탐).
+  - 사람 판독(담당 AI의 판독이며 사실 판정 아님): v1 "resíduos florestais"→"플로레스타산 잔재"(오역), "Projeto de Lei propõe"→"국회의원이 … 제안"(주체 왜곡). v2 "Sinditec"→"산디텍", "Marca catarinense"→"카타리나 브랜드"(지명 축약 왜곡). 제목에 없는 사실 추가는 위 숫자 1건 외 확인되지 않음.
+  - v1은 "~한다" 문장형, v2는 기사 제목형("~ 투자", "~ 출범")으로 짧음.
+- 변경 이유·제어: 입력을 제목만으로 제한, 규칙(입력 외 정보·숫자 추가 금지, 판단 불가 시 빈 값), 구조화 출력, 코드 숫자·id·길이·한글 검증, 실패 시 제목만 표시.
+- 채택: **v1 유지**. v2가 숫자 탈락 1건 적고 채택 2건 많았으나 버전당 1회 실행이고 차이가 1~2건이며, v2에도 고유명사 왜곡이 있어 few-shot이 낫다는 근거로 보지 않음.
+- 재실행: 미실행(같은 입력 반복 실행으로 편차 확인 필요).
+- 남은 한계: 제목만 보고 만든 요약이라 기사 내용과 다를 수 있음(원문 확인 안내 표시). 서수·숫자 낱말(terceiro, um 등) 번역은 숫자 검증에서 탈락하거나 걸러지지 않음(한국어 숫자 낱말 "두 배" 등은 검사 대상 아님). 고유명사 음역 오류는 코드로 걸러지지 않음. 앱 경로(POST /api/home/news/summaries)의 실제 OpenAI 호출은 미실행(같은 함수·스키마·검증을 실험 스크립트로 실행, 앱 경로는 모의로 확인).

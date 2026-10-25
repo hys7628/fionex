@@ -49,3 +49,13 @@ def news():
             "message": "refresh는 " + ", ".join(service.NEWS_MEDIA) + " 중 하나여야 합니다.",
         }), 400
     return jsonify(ok=True, data=service.get_news(refresh))
+
+
+@bp.post("/api/home/news/summaries")
+def news_summaries():
+    """서버에 수집된 Google News·ABIT 포르투갈어 제목의 한국어 한 줄 요약. KOTRA는 대상이 아닙니다.
+
+    성공 {"ok": true, "data": {status: ok|unavailable|error, message?, summaries: {id: 요약}}}.
+    요약 실패는 뉴스 표시에 영향을 주지 않도록 data.status로만 알립니다. 클라이언트가 보낸 문장은 받지 않습니다.
+    """
+    return jsonify(ok=True, data=service.summarize_news())

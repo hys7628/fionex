@@ -19,6 +19,8 @@ from pathlib import Path
 from time import monotonic
 from zoneinfo import ZoneInfo
 
+from features.home import news_summary
+
 logger = logging.getLogger(__name__)
 
 BRASILAPI_URL = "https://brasilapi.com.br/api/feriados/v1/{year}"
@@ -196,7 +198,21 @@ def get_news(refresh=None):
             code = errors[medium]
             info["error"] = {"code": code, "message": NEWS_ERRORS[code], "retryable": code != "key_missing"}
         media[medium] = info
-    return {"items": merge_news(lists), "media": media}
+    # 이미 만든 AI 요약만 붙입니다(새 요약은 summarize_news에서 따로 요청해 목록 표시를 늦추지 않음).
+    items = []
+    for item in merge_news(lists):
+        item = dict(item)
+        summary = news_summary.cached(item) if news_summary.is_target(item) else None
+        if summary:
+            item["summary_ko"] = summary
+        items.append(item)
+    return {"items": items, "media": media, "summary": {"pending": news_summary.pending_count(items)}}
+
+
+def summarize_news():
+    """현재 서버에 수집된 뉴스(새로 가져오지 않음) 중 요약이 없는 Google·ABIT 포르투갈어 제목을 요약합니다."""
+    lists = {m: _news_cache[m]["items"] for m in NEWS_MEDIA if m in _news_cache}
+    return news_summary.summarize(merge_news(lists))
 
 
 def merge_news(lists):
