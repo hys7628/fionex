@@ -188,13 +188,48 @@
   function syncFileList(name) {
     const list = panel.querySelector('[data-ps-file-list="' + name + '"]');
     const selected = files(name);
-    list.replaceChildren.apply(list, selected.map(function (file) {
+    // 목록을 다시 그리면 버튼이 교체되므로, 초점이 있던 × 버튼 위치를 기억해 복원합니다.
+    const focused = list.contains(document.activeElement) ? document.activeElement.dataset.psRemoveIndex : null;
+    list.replaceChildren.apply(list, selected.map(function (file, index) {
       const li = document.createElement("li");
-      li.textContent = file.name + " (" + sizeText(file.size) + ")";
+      li.className = "ps-file-item";
+      const label = document.createElement("span");
+      label.textContent = file.name + " (" + sizeText(file.size) + ")";
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "btn btn-ghost ps-file-remove";
+      remove.textContent = "×";
+      remove.dataset.psRemoveFile = name;
+      remove.dataset.psRemoveIndex = String(index);
+      remove.setAttribute("aria-label", file.name + " 첨부 해제");
+      remove.title = "첨부 해제(컴퓨터의 원본 파일은 삭제되지 않습니다)";
+      li.append(label, remove);
       return li;
     }));
     list.hidden = !selected.length;
+    if (focused !== null) {
+      const again = list.querySelector('[data-ps-remove-index="' + focused + '"]');
+      (again || el(name)).focus();
+    }
   }
+
+  // 선택한 파일 하나만 첨부에서 뺍니다. 파일 입력은 목록 일부 삭제를 지원하지 않아 나머지 파일로 목록을 다시 만듭니다.
+  // 브라우저는 선택 목록만 바꾸며 컴퓨터의 원본 파일에는 접근하지 않습니다.
+  function removeFile(name, index) {
+    const input = el(name);
+    const keep = new DataTransfer();
+    files(name).forEach(function (file, i) { if (i !== index) keep.items.add(file); });
+    input.files = keep.files;
+    input.dispatchEvent(new Event("change", { bubbles: true }));  // 검증·목록·작성 중 감지·PDF 안내를 기존 경로로 갱신
+    const next = panel.querySelector('[data-ps-remove-file="' + name + '"][data-ps-remove-index="' + Math.min(index, keep.files.length - 1) + '"]');
+    (next || input).focus();
+  }
+
+  panel.addEventListener("click", function (event) {
+    const button = event.target.closest("[data-ps-remove-file]");
+    if (!button) return;
+    removeFile(button.dataset.psRemoveFile, Number(button.dataset.psRemoveIndex));
+  });
 
   function syncAll() {
     syncOther("purposes", "purpose_other");
@@ -220,6 +255,8 @@
     }
     syncAll();
     syncStale();
+    syncPdf();
+    syncImageGen();  // 제품 사진이 바뀌면 장면 이미지 생성 가능 여부를 갱신합니다.
   });
   form.addEventListener("focusout", function (event) {
     if (event.target.name && event.target.type !== "file") {
@@ -243,7 +280,16 @@
   const staleBox = panel.querySelector("[data-ps-stale]");
   const emptyBox = panel.querySelector("[data-ps-empty]");
   const resultBox = panel.querySelector("[data-ps-result]");
+  const errorTitle = panel.querySelector("[data-ps-error-title]");
+  const pdfBtn = panel.querySelector("[data-ps-pdf]");
+  const pdfEdition = panel.querySelector("[data-ps-pdf-edition]");
+  const pdfHint = panel.querySelector("[data-ps-pdf-hint]");
 
+  let lastResult = null;       // PDF 요청에 다시 보내는 현재 결과(페이지 메모리에만 보관)
+  let pdfBusy = false;
+  let sceneImages = {};        // 장면 번호 → {blob, url, cost}. 페이지 메모리에만 보관
+  let imageBusy = false;
+  let imageController = null;
   let controller = null;       // 진행 중 요청. 동시에 하나만 보냅니다.
   let requestSeq = 0;          // 취소·시간 초과 뒤 늦게 온 응답을 버리기 위한 번호
   let resultSignature = null;  // 현재 결과를 만든 입력 조건
@@ -266,11 +312,241 @@
     busyBox.hidden = !on;
     if (on) resultCard.setAttribute("aria-busy", "true");
     else resultCard.removeAttribute("aria-busy");
+    syncPdf();
+    syncImageGen();
   }
 
-  function showError(message) {
+  function showError(message, title) {
+    errorTitle.textContent = title || "콘티를 만들지 못했습니다";
     errorText.textContent = message;
     errorBox.hidden = false;
+  }
+
+  // PDF는 시간 합계가 맞는 결과가 있을 때만 만들 수 있습니다(feature_spec.md 7장).
+  function syncPdf() {
+    const ready = lastResult !== null && lastResult.timing.ok;
+    pdfBtn.disabled = !ready || pdfBusy || controller !== null || imageBusy;
+    pdfEdition.disabled = !ready;
+    pdfBtn.textContent = pdfBusy ? "PDF 만드는 중…" : "PDF 다운로드";
+    if (lastResult === null) pdfHint.textContent = "콘티를 생성하면 PDF로 내려받을 수 있습니다.";
+    else if (!ready) pdfHint.textContent = "장면 시간 합계가 영상 길이와 달라 PDF를 만들 수 없습니다. 콘티를 다시 생성하세요.";
+    else {
+      const made = Object.keys(sceneImages).length;
+      pdfHint.textContent = "PDF는 표지·장면별 페이지·확인 필요 사항으로 구성되며, 올린 로고는 표지에 넣습니다. " +
+        (files("photos").length ? (made ? "생성한 장면 이미지 " + made + "장을 넣고, " : "") +
+          "이미지가 없는 장면은 PDF 다운로드 때 AI 생성 또는 첨부 사진 중 고른 방법으로 채웁니다." :
+          (made ? "생성한 장면 이미지 " + made + "장을 해당 장면 페이지에 넣습니다." :
+            "제품 사진을 첨부하면 장면 이미지 칸을 채울 수 있습니다. 지금은 이미지 칸이 비어 있는 텍스트 PDF입니다."));
+    }
+  }
+
+  function fileNameOf(res) {
+    const m = /filename="?([^";]+)"?/.exec(res.headers.get("Content-Disposition") || "");
+    return m ? m[1] : "promotion_storyboard.pdf";
+  }
+
+  // usePhotos: AI 이미지가 없는 장면 칸에 첨부 제품 사진을 넣습니다(사진이 있을 때).
+  async function downloadPdf(usePhotos) {
+    if (!lastResult || pdfBusy) return;
+    pdfBusy = true;
+    errorBox.hidden = true;
+    pdfChoice.hidden = true;
+    syncPdf();
+    const body = new FormData();
+    body.append("storyboard", JSON.stringify(lastResult));
+    body.append("edition", pdfEdition.value);
+    const logo = files("logo")[0];
+    if (logo) body.append("logo", logo);
+    Object.keys(sceneImages).forEach(function (n) {
+      body.append("scene_images", sceneImages[n].blob, "scene_image_" + n + ".png");
+    });
+    if (usePhotos === true && files("photos").length) {
+      body.append("use_photos", "1");
+      files("photos").forEach(function (f) { body.append("photos", f); });
+    }
+    try {
+      const res = await fetch("/api/promotion-studio/pdf", { method: "POST", body: body });
+      if (res.ok && (res.headers.get("Content-Type") || "").indexOf("application/pdf") === 0) {
+        AppShell.work.downloadBlob(FEATURE_ID, await res.blob(), fileNameOf(res));
+      } else {
+        let data = null;
+        try { data = await res.json(); } catch (e) { data = null; }
+        showError(data && data.error ? data.error.message : "PDF를 만들지 못했습니다. 잠시 후 다시 시도하세요.", "PDF를 만들지 못했습니다");
+      }
+    } catch (err) {
+      showError("서버에 연결하지 못했습니다. 앱 서버가 실행 중인지 확인한 뒤 다시 시도하세요.", "PDF를 만들지 못했습니다");
+    } finally {
+      pdfBusy = false;
+      syncPdf();
+    }
+  }
+  // PDF 버튼: 제품 사진이 있고 AI 이미지가 없는 장면이 있으면 이미지 칸 채우는 방법을 먼저 묻습니다.
+  const pdfChoice = panel.querySelector("[data-ps-pdf-choice]");
+  const pdfChoiceText = panel.querySelector("[data-ps-pdf-choice-text]");
+  pdfBtn.addEventListener("click", function () {
+    const missing = missingScenes();
+    const photos = files("photos").length;
+    if (!photos || !missing.length) {
+      downloadPdf(photos > 0);
+      return;
+    }
+    const estimate = IMAGE_INFO.estimated_usd === null ? "예상 비용 미실측" :
+      "약 $" + (IMAGE_INFO.estimated_usd * missing.length).toFixed(3) + " 추정(참조 사진 1장·low 실측 기준, 실제 청구와 다를 수 있음)";
+    pdfChoiceText.textContent = "이미지가 없는 장면 " + missing.length + "개(장면 " + missing.join(", ") + ")가 있습니다. " +
+      "AI 생성: 첨부 사진 " + photos + "장을 참고해 장면별 이미지를 만든 뒤 PDF를 받습니다(장당 약 20초, " + estimate +
+      "). 실패한 장면에는 첨부 사진을 넣습니다. 첨부 사진: 요금 없이 올린 사진을 장면 순서대로 넣습니다.";
+    pdfChoice.hidden = false;
+    panel.querySelector("[data-ps-pdf-choice-ai]").focus();
+  });
+  panel.querySelector("[data-ps-pdf-choice-ai]").addEventListener("click", async function () {
+    pdfChoice.hidden = true;
+    if (await generateImages(missingScenes())) downloadPdf(true);
+  });
+  panel.querySelector("[data-ps-pdf-choice-photo]").addEventListener("click", function () { downloadPdf(true); });
+  panel.querySelector("[data-ps-pdf-choice-cancel]").addEventListener("click", function () {
+    pdfChoice.hidden = true;
+    pdfBtn.focus();
+  });
+
+  // ---------- 장면 이미지 생성(첨부 제품 사진 참고) ----------
+  const imageGen = panel.querySelector("[data-ps-image-gen]");
+  const IMAGE_INFO = JSON.parse(imageGen.dataset.psImageInfo);
+  const imageStart = panel.querySelector("[data-ps-image-start]");
+  const imageStop = panel.querySelector("[data-ps-image-stop]");
+  const imageHint = panel.querySelector("[data-ps-image-hint]");
+  const imageStatus = panel.querySelector("[data-ps-image-status]");
+  const imageConfirm = panel.querySelector("[data-ps-image-confirm]");
+  const imageConfirmText = panel.querySelector("[data-ps-image-confirm-text]");
+
+  function missingScenes() {
+    return lastResult ? lastResult.scenes.map(function (s) { return s.number; }).filter(function (n) { return !sceneImages[n]; }) : [];
+  }
+
+  function clearSceneImages() {
+    Object.keys(sceneImages).forEach(function (n) { URL.revokeObjectURL(sceneImages[n].url); });
+    sceneImages = {};
+    imageStatus.textContent = "";
+    imageConfirm.hidden = true;
+  }
+
+  function syncImageGen() {
+    imageGen.hidden = lastResult === null;
+    if (lastResult === null) return;
+    const photos = files("photos").length;
+    const missing = missingScenes().length;
+    imageStart.disabled = imageBusy || controller !== null || pdfBusy || !photos || !missing;
+    imageStart.textContent = Object.keys(sceneImages).length && missing ? "남은 장면 이미지 생성" : "장면 이미지 생성";
+    imageStop.hidden = !imageBusy;
+    if (!photos) imageHint.textContent = "장면 이미지는 첨부한 제품 사진을 반드시 참고해 만듭니다. 콘티 조건에서 제품 사진을 1장 이상 첨부하세요.";
+    else if (!missing) imageHint.textContent = "모든 장면 이미지가 준비되었습니다. 다시 만들려면 콘티를 다시 생성하세요.";
+    else imageHint.textContent = "첨부한 제품 사진 " + photos + "장을 매 장면 참고해 이미지를 만듭니다. 생성 전에 장수와 예상 비용을 확인합니다.";
+  }
+
+  function costText(usd) { return usd === null || usd === undefined ? "미확인" : "$" + usd.toFixed(3); }
+
+  imageStart.addEventListener("click", function () {
+    const missing = missingScenes();
+    const size = IMAGE_INFO.sizes[lastResult.conditions.aspect_ratio];
+    const estimate = IMAGE_INFO.estimated_usd === null ? "장당 예상 비용은 아직 실측 전입니다(생성 후 장면별 사용 토큰 기준 추정액을 표시)." :
+      "장당 약 $" + IMAGE_INFO.estimated_usd.toFixed(3) + ", 합계 약 $" + (IMAGE_INFO.estimated_usd * missing.length).toFixed(3) + "(참조 사진 1장·low 품질 실측 1회 기준 추정, 사진이 많을수록 입력 비용이 늘어남).";
+    imageConfirmText.textContent = "장면 " + missing.length + "개의 이미지를 만듭니다(장면 " + missing.join(", ") + "). 첨부 사진 " +
+      files("photos").length + "장을 매 장면 참고하며 품질 " + IMAGE_INFO.quality + ", 크기 " + size + "입니다. " + estimate +
+      " 실제 청구액과 다를 수 있고, 중지해도 이미 보낸 요청은 과금될 수 있습니다.";
+    imageConfirm.hidden = false;
+    panel.querySelector("[data-ps-image-confirm-yes]").focus();
+  });
+  panel.querySelector("[data-ps-image-confirm-no]").addEventListener("click", function () {
+    imageConfirm.hidden = true;
+    imageStart.focus();
+  });
+  panel.querySelector("[data-ps-image-confirm-yes]").addEventListener("click", function () {
+    imageConfirm.hidden = true;
+    generateImages(missingScenes());
+  });
+  imageStop.addEventListener("click", function () { if (imageController) imageController.abort(); });
+
+  function b64ToBlob(b64, type) {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: type });
+  }
+
+  function showSceneImage(number, data) {
+    const area = resultBox.querySelector('[data-ps-scene-image="' + number + '"]');
+    if (!area) return;
+    if (data.error) {
+      const msg = node("p", "field-error", "이미지 생성 실패: " + data.error + " '남은 장면 이미지 생성'으로 다시 시도할 수 있습니다.");
+      area.replaceChildren(msg);
+      return;
+    }
+    const img = node("img", "ps-scene-img");
+    img.src = data.url;
+    img.style.aspectRatio = lastResult.conditions.aspect_ratio.replace(":", " / ");
+    img.alt = "장면 " + number + " AI 생성 이미지(첨부 제품 사진 참고)";
+    area.replaceChildren(img, node("p", "field-hint",
+      "AI 생성 이미지 · 첨부 사진 " + data.references + "장 참고 · 실제 제품 외형과 다를 수 있어 검토가 필요합니다. 추정 비용 " + costText(data.cost)));
+  }
+
+  async function generateImages(numbers) {
+    imageBusy = true;
+    imageController = new AbortController();
+    errorBox.hidden = true;
+    syncImageGen();
+    syncPdf();
+    submitBtn.disabled = true;
+    let done = 0;
+    let failed = 0;
+    let total = 0;
+    const conditions = lastResult.conditions;
+    const style = conditions.image_style_code ? conditions : { image_style_code: "photo", image_style: "실사형" };
+    let stopped = false;
+    try {
+      for (const number of numbers) {
+        imageStatus.textContent = "장면 " + number + " 이미지 생성 중… (" + (done + failed + 1) + "/" + numbers.length + ")";
+        const scene = lastResult.scenes[number - 1];
+        const body = new FormData();
+        body.append("scene", JSON.stringify({
+          visual_pt: scene.visual_pt, camera_pt: scene.camera_pt, aspect_ratio: conditions.aspect_ratio,
+          image_style_code: style.image_style_code, image_style: style.image_style,
+        }));
+        files("photos").forEach(function (f) { body.append("photos", f); });
+        let res;
+        try {
+          res = await fetch("/api/promotion-studio/scene-image", { method: "POST", body: body, signal: imageController.signal });
+        } catch (err) {
+          if (imageController.signal.aborted) break;
+          showSceneImage(number, { error: "서버에 연결하지 못했습니다." });
+          failed++;
+          continue;
+        }
+        let data = null;
+        try { data = await res.json(); } catch (e) { data = null; }
+        if (data && data.ok) {
+          const blob = b64ToBlob(data.data.image_base64, data.data.mime_type);
+          sceneImages[number] = { blob: blob, url: URL.createObjectURL(blob), cost: data.data.estimated_cost_usd };
+          showSceneImage(number, { url: sceneImages[number].url, references: data.data.reference_count, cost: data.data.estimated_cost_usd });
+          if (typeof data.data.estimated_cost_usd === "number") total += data.data.estimated_cost_usd;
+          done++;
+        } else {
+          showSceneImage(number, { error: data && data.error ? data.error.message : "알 수 없는 오류입니다." });
+          failed++;
+          // 설정·인증·사진 누락처럼 모든 장면에 같은 오류가 날 경우는 멈춥니다.
+          if (data && data.error && /CONFIG|AUTH|PERMISSION|PHOTO|MODEL_UNAVAILABLE/.test(data.error.code)) break;
+        }
+      }
+    } finally {
+      stopped = imageController.signal.aborted;
+      imageStatus.textContent = (stopped ? "중지했습니다. " : "") + "생성 " + done + "장, 실패 " + failed + "장. " +
+        "사용 토큰 기준 추정 합계 $" + total.toFixed(3) + "(실제 청구와 다를 수 있음)." +
+        (stopped ? " 중지 직전 보낸 요청은 과금될 수 있습니다." : "");
+      imageBusy = false;
+      imageController = null;
+      submitBtn.disabled = false;
+      syncImageGen();
+      syncPdf();
+    }
+    return !stopped;  // 사용자가 중지하면 false
   }
 
   // 모델 출력은 textContent로만 넣습니다(HTML로 해석하지 않음).
@@ -319,7 +595,10 @@
     table.append(thead, tbody);
     const wrap = node("div", "table-wrap");
     wrap.append(table);
-    article.append(head, wrap, node("p", "field-hint", "이미지: 아직 생성하지 않았습니다(이미지 생성은 다음 단계)."));
+    const imageArea = node("div", "ps-scene-image");
+    imageArea.dataset.psSceneImage = String(scene.number);
+    imageArea.append(node("p", "field-hint", "이미지: 아직 생성하지 않았습니다. 제품 사진을 첨부한 뒤 '장면 이미지 생성'을 누르세요."));
+    article.append(head, imageArea, wrap);
     return article;
   }
 
@@ -403,7 +682,10 @@
         if (fields.length) render();
         showError([body.error.message].concat(fields.map(function (f) { return f.message; })).join(" "));
       } else {
+        clearSceneImages();
         renderResult(body.data);
+        lastResult = body.data;
+        syncImageGen();
         resultSignature = signature;
         syncStale();
         AppShell.work.setResult(FEATURE_ID, true);
