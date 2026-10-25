@@ -309,3 +309,28 @@
 - review_flags 오탐·미탐 비율(단순 숫자·어휘 검사)
 - 화면 연결(미구현), 생성 결과의 브라우저 표시
 
+## 2026-10-25 카탈로그 생성 API 화면 연결·결과 미리보기
+- 변경 내용: product_brochure.js, panel.html, catalog_preview.html(결과 dialog), product_brochure.css, test_panel.py, review_logic_check.js, test_review_logic.py
+- 실제 생성 API·OpenAI 호출 없음(모의 응답·정적 검사·Node 로직 점검만)
+
+### Claude가 직접 실행한 검증
+- `node --check product_brochure.js` → 문법 오류 없음
+- `node tests/test_product_brochure/review_logic_check.js` → 22개 점검 통과(기존 13 + 생성 9)
+  - origin 변환(추출·사용자 수정·사용자 추가, 사용자 추가 재수정 시 유지)
+  - 적용 스냅샷 독립성(원본 수정 후 스냅샷 불변, 객체 참조 미공유, 필드 5개만)
+  - 생성 가능 조건: 개발용 예시 → 불가, 미적용·새 입력 버전 → not_applied, 확인 체크 변경 → reapply, 필수 미확인 → required, 길이 초과 → too_long(요청 본문 값은 자르지 않음), 진행 중 → busy, 정상 시 포함·제외(미확인·빈 값)
+  - 요청 본문: 최상위 fields만, 8개 key 순서, 항목 필드 5개·boolean·문자열, 근거 발췌 미포함
+  - 응답 검사: 정상 통과, 상태·쪽 누락·사용하지 않은 key·다른 쪽 항목·중복·empty 불일치·문단 0/3개·source_keys 이상·review_flags 형식·used_keys 필수 누락·notices 누락 → 거부
+  - 실패 해석: 알려진 코드만 고정 안내(서버 원문 미표시), 미지 코드·비JSON·413·시간 초과("과금 취소 보장 아님" 문구)·비2xx 성공 형식 구분
+  - 생성 실행기: 정상 1회, 조건 미충족·분석 중·재생성 취소·스냅샷 없음 → 요청 0회·진행 상태 변화 없음, 중복 클릭 무시, 실패 시 성공 콜백 없음, 오래된 응답 무시
+  - 이전 결과 판정(입력 수정·재분석 → 다를 수 있음), review_flags 위치 설명(한국어 항목 이름), HTML 형태 AI 문자열이 데이터에 그대로 보관
+- `python -m unittest discover -s tests/test_product_brochure` → 1차 4건 실패(구조 변경에 따른 정적 테스트, prompt_log DI-16) → 수정 후 68개 실행, OK
+  - 화면 요청 본문 ↔ 서버 스키마 교차 확인: Node(화면 JS)가 만든 본문을 generation.parse_request·select_inputs가 그대로 받고 used/excluded·origin·virtual이 기대와 일치
+  - 정적: dialog 2개(시안·결과) 자동 열림 없음, 결과 dialog에 예시 값·예시 문구 없음·slot 존재·4쪽·검토 초안 안내·AI 이미지 안내, 처음 비활성 버튼 4개(생성 포함), fetch 1곳·분석/생성 URL·run 각 1곳·Content-Type 직접 지정 없음·브라우저 저장소 없음·onShow 없음, setResult 호출 없음, 미리보기 공통·시안 블록이 검토/생성 상태를 참조하지 않음, HTML 삽입 없음, CSS 범위
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+
+### 미실행·미검증(브라우저 도구 없음)
+- DOM 연결 코드 실행 전반: 버튼 활성/비활성 전환, 안내 문구, 잠금·aria-busy, 교체 확인 대화상자, 결과 dialog 렌더링, 점선 검토 표시, "현재 입력과 다를 수 있음" 표시, 탭 이동 후 유지, 새로고침 경고
+- 상한 길이 문구(소개 140자·문단 600자×2·공급 값 200자)와 빈 상세·공급의 실제 배치·넘침(넘침 검사 코드는 있으나 실행 미확인)
+- 실제 서버·OpenAI 종단 동작, 생성 품질(서비스 프롬프트 실험 미실행)
+

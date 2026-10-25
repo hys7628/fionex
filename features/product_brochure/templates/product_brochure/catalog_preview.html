@@ -9,7 +9,7 @@
 <dialog class="catalog-dialog" data-catalog-dialog aria-labelledby="product_brochure-catalog-title" data-work-ignore>
   <div class="catalog-dialog-head">
     <div>
-      <h2 class="card-title" id="product_brochure-catalog-title" tabindex="-1">카탈로그 디자인 시안 (고정 예시)</h2>
+      <h2 class="card-title" id="product_brochure-catalog-title" tabindex="-1" data-catalog-title>카탈로그 디자인 시안 (고정 예시)</h2>
       <p class="card-description">브라질 시장 제안용 A4 세로 4페이지 시안입니다. 실제 생성·다운로드 결과가 아닙니다.</p>
     </div>
     <div class="btn-row">
@@ -137,6 +137,123 @@
         </div>
         <footer class="catalog-footer">
           <span>{{ footer_notice }}</span>
+          <span class="catalog-page-no">4 / 4</span>
+        </footer>
+      </article></div>
+
+    </div>
+  </div>
+</dialog>
+
+{# 카탈로그 생성 결과 미리보기. 시안과 같은 4페이지 디자인을 쓰되 문구는 비어 있고 JS가 마지막 성공한 생성 결과로 채웁니다(textContent).
+   고정 텍스트는 쪽 머리말·이미지·AI 이미지 안내·마무리 문구뿐이며 제품 정보·공급 조건 예시는 없습니다. #}
+<dialog class="catalog-dialog" data-result-dialog aria-labelledby="product_brochure-result-dialog-title" data-work-ignore>
+  <div class="catalog-dialog-head">
+    <div>
+      <h2 class="card-title" id="product_brochure-result-dialog-title" tabindex="-1" data-catalog-title>카탈로그 생성 결과 (검토가 필요한 초안)</h2>
+      <p class="card-description">사용자가 적용한 항목으로 생성한 pt-BR 문구입니다. 번역·내용 검토가 필요한 초안이며 공식 사양이 아닙니다.</p>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-secondary" data-catalog-zoom aria-pressed="false">실제 크기(100%)</button>
+      <button type="button" class="btn btn-primary" data-catalog-close>닫고 돌아가기</button>
+    </div>
+  </div>
+  <div class="notice notice-warning" role="note">
+    <p class="notice-title">번역·내용 검토가 필요한 초안입니다.</p>
+    <p>AI가 만든 문구는 자동 검토 완료로 처리하지 않습니다. 원래 값·수치·단위와 대조하세요. 사용자 확인은 사실 검증·공식 사양 인증을 뜻하지 않으며,
+      이미지는 AI로 생성한 콘셉트 이미지로 제품 사양이나 실제 조직을 보여 주지 않습니다.</p>
+    <p data-result-meta></p>
+  </div>
+  <div class="notice notice-danger" data-result-stale role="note" hidden>
+    <p class="notice-title">현재 입력과 다를 수 있음</p>
+    <p>이 결과를 만든 뒤 검토 항목이 바뀌었거나 새 PDF·분석 결과로 바뀌었습니다. 현재 입력으로 만들려면 다시 적용한 뒤 생성하세요.</p>
+  </div>
+  <div class="notice notice-info" data-result-flags hidden></div>
+  <p class="field-error" data-catalog-overflow hidden></p>
+
+  <div class="catalog-scroller" data-catalog-scroller tabindex="0" aria-label="카탈로그 생성 결과 페이지 목록">
+    <div class="catalog-pages" data-catalog-pages>
+
+      <div class="catalog-sheet"><article class="catalog-page catalog-cover" data-page="1" lang="pt-BR" aria-label="1쪽 표지">
+        <figure class="catalog-figure catalog-cover-figure" data-visual-role="hero">
+          <img src="{{ cover_src }}" alt="Imagem conceitual gerada por IA: tecido marfim em curvas com detalhe verde-escuro (não é o produto real)"
+               width="1024" height="1536" loading="lazy" decoding="async">
+          <span class="catalog-figure-fallback">Imagem conceitual indisponível</span>
+        </figure>
+        <div class="catalog-cover-text">
+          <p class="catalog-kicker">fionex · catálogo de demonstração</p>
+          <h3 class="catalog-title" data-slot="product_name"></h3>
+          <div data-slot="tagline"></div>
+        </div>
+        <div class="catalog-cover-band">
+          <p class="catalog-caption">{{ ai_notice }}</p>
+        </div>
+        <footer class="catalog-footer">
+          <span data-slot="unofficial"></span>
+          <span class="catalog-page-no">1 / 4</span>
+        </footer>
+      </article></div>
+
+      <div class="catalog-sheet"><article class="catalog-page catalog-intro-page catalog-result-intro" data-page="2" lang="pt-BR" aria-label="2쪽 제품 소개">
+        <header class="catalog-page-head">
+          <p class="catalog-kicker">01 · Apresentação</p>
+          <h3 class="catalog-heading">Sobre o material</h3>
+        </header>
+        <figure class="catalog-figure catalog-intro-figure" data-visual-role="material">
+          <img src="{{ material_src }}" alt="Imagem conceitual gerada por IA: carretel de fio e tecido marfim sobre tecido verde-escuro (não é o produto real)"
+               width="1448" height="1086" loading="lazy" decoding="async">
+          <span class="catalog-figure-fallback">Imagem conceitual indisponível</span>
+        </figure>
+        <p class="catalog-caption catalog-intro-caption">{{ ai_notice }}</p>
+        <div class="catalog-intro-text catalog-result-paragraphs" data-slot="paragraphs"></div>
+        <footer class="catalog-footer">
+          <span data-slot="unofficial"></span>
+          <span class="catalog-page-no">2 / 4</span>
+        </footer>
+      </article></div>
+
+      <div class="catalog-sheet"><article class="catalog-page catalog-detail-page" data-page="3" lang="pt-BR" aria-label="3쪽 제품 상세">
+        <figure class="catalog-figure catalog-detail-figure" data-visual-role="detail">
+          <img src="{{ material_src }}" alt="Recorte ampliado da mesma imagem conceitual gerada por IA: trama do tecido (não é o produto real)"
+               width="1448" height="1086" loading="lazy" decoding="async">
+          <span class="catalog-figure-fallback">Imagem conceitual indisponível</span>
+        </figure>
+        <p class="catalog-caption catalog-detail-caption">{{ ai_notice }} Recorte ampliado da imagem da página 2.</p>
+        <div class="catalog-detail-text">
+          <header class="catalog-page-head">
+            <p class="catalog-kicker">02 · Detalhes</p>
+            <h3 class="catalog-heading">Detalhes do produto</h3>
+          </header>
+          <dl class="catalog-specs" data-slot="details"></dl>
+          <div class="catalog-status" data-slot="details-empty" hidden></div>
+        </div>
+        <footer class="catalog-footer">
+          <span data-slot="unofficial"></span>
+          <span class="catalog-page-no">3 / 4</span>
+        </footer>
+      </article></div>
+
+      <div class="catalog-sheet"><article class="catalog-page catalog-supply-page" data-page="4" lang="pt-BR" aria-label="4쪽 공급 조건">
+        <header class="catalog-page-head">
+          <p class="catalog-kicker">03 · Fornecimento</p>
+          <h3 class="catalog-heading">Condições de fornecimento</h3>
+        </header>
+        <ul class="catalog-terms" data-slot="supply"></ul>
+        <div class="catalog-status" data-slot="supply-empty" hidden></div>
+        <div class="catalog-closing">
+          <figure class="catalog-figure catalog-closing-figure" data-visual-role="accent">
+            <img src="{{ cover_src }}" alt="Recorte da imagem conceitual gerada por IA da capa: tecido marfim e verde-escuro (não é o produto real)"
+                 width="1024" height="1536" loading="lazy" decoding="async">
+            <span class="catalog-figure-fallback">Imagem conceitual indisponível</span>
+          </figure>
+          <div class="catalog-closing-text">
+            <p class="catalog-closing-title">Próximos passos</p>
+            <p class="catalog-body">Solicite amostras e informações adicionais ao remetente deste material.</p>
+            <p class="catalog-caption">{{ ai_notice }}</p>
+          </div>
+        </div>
+        <footer class="catalog-footer">
+          <span data-slot="unofficial"></span>
           <span class="catalog-page-no">4 / 4</span>
         </footer>
       </article></div>

@@ -125,7 +125,11 @@ class PanelRenderTests(RenderedPanel):
         for label in ("카탈로그 생성", "PDF 다운로드"):
             self.assertIn(label, self.text)
         disabled = [a for t, a in self.parser.elements if t == "button" and "disabled" in a]
-        self.assertEqual(len(disabled), 3)  # PDF 분석, 카탈로그 생성, PDF 다운로드
+        # 처음 화면: PDF 분석·카탈로그 생성(조건 충족 전)·PDF 다운로드(미구현)·생성 결과 보기(결과 없음)
+        self.assertEqual(len(disabled), 4)
+        generate = [a for t, a in self.parser.elements if t == "button" and "data-generate" in a]
+        self.assertEqual(len(generate), 1)
+        self.assertIn("disabled", generate[0])
 
     def test_out_of_scope_inputs_absent(self):
         self.assertEqual(len(self.find("textarea")), 0)  # 이전 예시 입력(요청 사항) 제거
@@ -142,9 +146,30 @@ class CatalogPreviewTests(RenderedPanel):
         self.assertNotIn("disabled", opener[0])
         self.assertIn("디자인 시안 보기", self.text)
         dialogs = [a for t, a in self.parser.elements if t == "dialog"]
-        self.assertEqual(len(dialogs), 1)
-        self.assertNotIn("open", dialogs[0])          # 자동으로 열리지 않음
-        self.assertIn("data-work-ignore", dialogs[0])
+        self.assertEqual(len(dialogs), 2)              # 고정 시안 + 생성 결과(분리)
+        self.assertIn("data-catalog-dialog", dialogs[0])
+        self.assertIn("data-result-dialog", dialogs[1])
+        for d in dialogs:
+            self.assertNotIn("open", d)                # 자동으로 열리지 않음
+            self.assertIn("data-work-ignore", d)
+        result_open = [a for t, a in self.parser.elements if t == "button" and "data-result-open" in a]
+        self.assertEqual(len(result_open), 1)
+        self.assertIn("disabled", result_open[0])      # 생성 결과가 생기기 전에는 비활성
+
+    def test_result_dialog_has_no_sample_data(self):
+        # 생성 결과 미리보기에는 시안의 예시 문구·더미 공급 조건이 없고 데이터 칸(slot)만 있음
+        html = create_app().test_client().get("/").get_data(as_text=True)
+        start = html.index("data-result-dialog")
+        result = html[start:html.index("</dialog>", start)]
+        for sample in ("500 kg", "1 kg", "30 dias", "Fibra de poliéster feita", "O regen T2T é",
+                       "Informações técnicas a confirmar.", "Condições fictícias para demonstração.", "regen T2T<"):
+            self.assertNotIn(sample, result)
+        for name in ("product_name", "tagline", "paragraphs", "details", "details-empty", "supply", "supply-empty"):
+            self.assertEqual(result.count(f'data-slot="{name}"'), 1, name)
+        self.assertEqual(result.count('data-slot="unofficial"'), 4)
+        self.assertEqual(len(re.split(r"<article ", result)) - 1, 4)
+        self.assertIn("번역·내용 검토가 필요한 초안", result)
+        self.assertIn("Imagem conceitual gerada por IA — não representa o produto real.", result)
 
     @classmethod
     def rendered_pages(cls):
@@ -194,27 +219,36 @@ class CatalogPreviewTests(RenderedPanel):
             self.assertIsNone(re.search(forbidden, doc), forbidden)  # 외부 이미지·연락처·회사 표기 없음
 
     def test_preview_code_does_not_touch_review_state(self):
-        block = JS.split("/* ---------- 카탈로그 디자인 시안(고정 예시) ---------- */", 1)[1]
-        for forbidden in ("fields", "setDraft", "setResult", "downloadBlob", "fetch(", "Storage",
-                          "clearReview", "showFields", "analyzer", "recheckInputs"):
+        # 미리보기 공통 블록과 디자인 시안 블록(생성 결과 블록 전까지)
+        start = JS.index("/* ---------- 카탈로그 미리보기 공통")
+        end = JS.index("/* ---------- 카탈로그 생성 결과 미리보기 ---------- */")
+        block = JS[start:end]
+        for forbidden in ("fields", "setDraft", "setResult", "downloadBlob", "fetch(", "Storage", "generation",
+                          "clearReview", "showFields", "analyzer", "generator", "recheckInputs", "snapshot"):
             self.assertNotIn(forbidden, block)
 
 
 class StaticRuleTests(unittest.TestCase):
-    def test_only_analyze_request_and_no_browser_storage(self):
-        # 이전: "네트워크 요청 없음". 현재: 분석 API 1곳만 요청, 파일 내용을 브라우저에서 읽거나 저장하지 않음
+    def test_only_known_requests_and_no_browser_storage(self):
+        # 이전: "분석 API 1곳만". 현재: 공통 요청 함수 1곳(fetch)으로 분석·생성 API만 요청, 파일 내용을 브라우저에서 읽거나 저장하지 않음
         self.assertEqual(len(re.findall(r"\bfetch\s*\(", JS)), 1)
-        self.assertIn('fetch(Review.ANALYZE_URL, {', JS)
+        self.assertIn("fetch(url, {", JS)
         self.assertIn('ANALYZE_URL = "/api/product-brochure/analyze"', JS)
+        self.assertIn('GENERATE_URL = "/api/product-brochure/generate"', JS)
+        self.assertEqual(len(re.findall(r"postRequest\(Review\.(ANALYZE|GENERATE)_URL", JS)), 2)
         self.assertIn('method: "POST"', JS)
         self.assertEqual(len(re.findall(r'\.append\("source_file"', JS)), 1)
-        # multipart 경계는 브라우저가 설정: 요청 헤더에 Content-Type을 지정하지 않음
+        # 생성 요청 본문은 적용 스냅샷으로 만든 JSON(Blob type이 Content-Type을 정함)
+        self.assertIn('new Blob([JSON.stringify(Review.buildGeneratePayload(snap))], { type: "application/json" })', JS)
+        # Content-Type 헤더를 직접 지정하지 않음(multipart 경계·JSON 타입은 본문에 맞춰 브라우저가 설정)
         self.assertIsNone(re.search(r"""["']?Content-Type["']?\s*:""", JS, re.I))
         for pattern in (r"XMLHttpRequest", r"sendBeacon", r"localStorage", r"sessionStorage", r"indexedDB",
                         r"FileReader", r"\.arrayBuffer\s*\(", r"\.text\s*\(", r"setInterval"):
             self.assertIsNone(re.search(pattern, JS), pattern)
-        # 분석 요청은 form submit(사용자 클릭) 한 곳에서만 시작(자동 분석·자동 재시도 없음)
+        # 분석·생성 요청은 각각 사용자 조작(submit·버튼 클릭) 한 곳에서만 시작(자동 실행·자동 재시도 없음)
         self.assertEqual(len(re.findall(r"analyzer\.run\(", JS)), 1)
+        self.assertEqual(len(re.findall(r"generator\.run\(", JS)), 1)
+        self.assertIn('generateBtn.addEventListener("click"', JS)
         self.assertNotIn("AppShell.onShow", JS)  # 탭 재진입 시 재요청·초기화 없음
 
     def test_no_html_injection_sinks(self):
@@ -222,9 +256,10 @@ class StaticRuleTests(unittest.TestCase):
             self.assertIsNone(re.search(pattern, JS), pattern)
 
     def test_example_not_marked_as_result(self):
-        self.assertNotIn("setResult", JS)
+        # 다운로드 기능이 없으므로 결과 상태(setResult)를 만들지 않고 draft로만 보호
+        self.assertIsNone(re.search(r"setResult\s*\(", JS))
         self.assertNotIn("downloadBlob", JS)
-        self.assertIn("setDraft", JS)
+        self.assertIn("AppShell.work.setDraft(FEATURE_ID, protect)", JS)
 
     def test_example_values_and_virtual_flags(self):
         for text in ('"리젠 T2T"', '"폐의류를 재활용하는 폴리에스터 섬유"', '"500 kg"', '"1 kg"', '"30일"'):

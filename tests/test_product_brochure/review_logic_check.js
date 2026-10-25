@@ -227,6 +227,205 @@ check("예시: 8개 항목·가상 고정·수정 시 확인 해제·사용자 �
   assert.equal(R.isDirty(fs), true);
 });
 
+/* ---------- 카탈로그 생성 연결 ---------- */
+function analysisFields() {
+  return R.createFieldsFromAnalysis(R.validateAnalysis(analysisBody()));
+}
+function confirmAll(fs, keys) {
+  keys.forEach((k) => R.setConfirmed(fs.find((f) => f.key === k), true));
+}
+function ctxOf(fs, snap, extra) {
+  return Object.assign({ source: "analysis", snapshot: snap, version: 1, currentSignature: R.inputSignature(fs), busy: false }, extra || {});
+}
+function copyOut(text, keys, virtual, flags) {
+  return { text: text, source_keys: keys, virtual: !!virtual, origins: {}, review_flags: flags || [] };
+}
+function infoOut(key, value, virtual, flags) {
+  return { key: key, label: key, value: value, source_keys: [key], virtual: !!virtual, origin: "extracted", review_flags: flags || [] };
+}
+function generationBody(over) {
+  const data = {
+    status: "draft_needs_review", language: "pt-BR", prompt_version: "brochure_generate_v1", model: "test-model",
+    notices: { unofficial: "Material demonstrativo — não é um catálogo oficial.", fictitious: "Condições fictícias para demonstração." },
+    pages: {
+      cover: { page: 1, product_name: copyOut("regen T2T", ["product_name"]), tagline: copyOut(XSS, ["description"]) },
+      intro: { page: 2, paragraphs: [copyOut("Parágrafo.", ["description", "moq"], true, ["new_number"])] },
+      details: { page: 3, items: [], empty: true, empty_message: "Informações técnicas a confirmar." },
+      supply: { page: 4, items: [infoOut("moq", "500 kg", true)], empty: false, empty_message: null },
+    },
+    used_keys: ["product_name", "description", "moq"],
+    excluded: [{ key: "sample", reason: "unconfirmed" }],
+    input_meta: {},
+  };
+  return { ok: true, data: Object.assign(data, over || {}) };
+}
+
+check("origin 변환: 추출 / 사용자 수정 / 사용자 추가(재수정해도 유지)", () => {
+  const fs = analysisFields();
+  const get = (k) => fs.find((f) => f.key === k);
+  assert.equal(R.originOf(get("product_name")), "extracted");
+  R.setValue(get("description"), "수정한 설명");
+  assert.equal(R.originOf(get("description")), "user_modified");
+  R.setValue(get("yarn_spec"), "75D");
+  assert.equal(R.originOf(get("yarn_spec")), "user_added");
+  R.setValue(get("yarn_spec"), "75D/36F");
+  assert.equal(R.originOf(get("yarn_spec")), "user_added"); // 다시 고쳐도 문서 추출로 바뀌지 않음
+});
+
+check("적용 스냅샷은 독립 복사본", () => {
+  const fs = analysisFields();
+  confirmAll(fs, ["product_name", "description"]);
+  const snap = R.createSnapshot(fs, "analysis", 1);
+  R.setValue(fs[0], "다른 이름");
+  assert.equal(snap.fields[0].value, "리젠 T2T");
+  assert.ok(snap.fields.every((s, i) => s !== fs[i]));
+  assert.deepEqual(Object.keys(snap.fields[0]).sort(), ["confirmed", "key", "origin", "value", "virtual"]);
+});
+
+check("생성 가능 조건: 예시·미적용·재적용 필요·필수 미확인·길이 초과·진행 중", () => {
+  const ex = R.createFields(R.EXAMPLE_FIELDS);
+  confirmAll(ex, ["product_name", "description"]);
+  const exSnap = R.createSnapshot(ex, "example", 1);
+  assert.equal(R.evaluateGeneration(ctxOf(ex, exSnap, { source: "example" })).reason, "example");
+  const fs = analysisFields();
+  assert.equal(R.evaluateGeneration(ctxOf(fs, null)).reason, "not_applied");
+  let snap = R.createSnapshot(fs, "analysis", 1);
+  assert.equal(R.evaluateGeneration(ctxOf(fs, snap)).reason, "required"); // 필수 미확인
+  confirmAll(fs, ["product_name", "description"]);
+  assert.equal(R.evaluateGeneration(ctxOf(fs, snap)).reason, "reapply"); // 확인 체크 변경 → 다시 적용 필요
+  snap = R.createSnapshot(fs, "analysis", 1);
+  assert.equal(R.evaluateGeneration(ctxOf(fs, snap, { version: 2 })).reason, "not_applied"); // 새 분석·파일 교체 후
+  assert.equal(R.evaluateGeneration(ctxOf(fs, snap, { busy: true })).reason, "busy");
+  const ok = R.evaluateGeneration(ctxOf(fs, snap));
+  assert.equal(ok.ok, true);
+  assert.ok(ok.included.includes("product_name") && ok.included.includes("description"));
+  assert.ok(ok.excluded.some((e) => e.key === "moq" && e.reason === "unconfirmed"));
+  assert.ok(ok.excluded.some((e) => e.key === "yarn_spec" && e.reason === "empty"));
+  R.setValue(fs.find((f) => f.key === "moq"), "x".repeat(201));
+  confirmAll(fs, ["moq"]);
+  const longSnap = R.createSnapshot(fs, "analysis", 1);
+  const tooLong = R.evaluateGeneration(ctxOf(fs, longSnap));
+  assert.equal(tooLong.reason, "too_long");
+  assert.deepEqual(tooLong.tooLong, ["moq"]);
+  assert.equal(R.buildGeneratePayload(longSnap).fields.find((f) => f.key === "moq").value.length, 201); // 자르지 않음
+});
+
+check("생성 요청 본문: 8개 key·엄격 형식·추가 필드 없음", () => {
+  const fs = analysisFields();
+  confirmAll(fs, ["product_name", "description"]);
+  const payload = R.buildGeneratePayload(R.createSnapshot(fs, "analysis", 1));
+  assert.deepEqual(Object.keys(payload), ["fields"]);
+  assert.deepEqual(payload.fields.map((f) => f.key), R.FIELD_KEYS);
+  payload.fields.forEach((f) => {
+    assert.deepEqual(Object.keys(f).sort(), ["confirmed", "key", "origin", "value", "virtual"]);
+    assert.equal(typeof f.confirmed, "boolean");
+    assert.equal(typeof f.virtual, "boolean");
+    assert.equal(typeof f.value, "string");
+  });
+  assert.equal(payload.fields.find((f) => f.key === "moq").virtual, true);
+  assert.ok(!JSON.stringify(payload).includes("MOQ 500 kg")); // 근거 발췌 미포함
+});
+
+check("생성 응답 검사: 정상 통과, 잘못된 구조는 거부(부분 반영 없음)", () => {
+  const d = R.validateGeneration(generationBody());
+  assert.ok(d);
+  assert.equal(d.pages.cover.tagline.text, XSS); // 문자열 그대로(렌더링은 textContent)
+  const bad = (fn) => { const b = generationBody(); fn(b.data); return R.validateGeneration(b); };
+  assert.equal(bad((x) => { x.status = "final"; }), null);
+  assert.equal(bad((x) => { delete x.pages.supply; }), null);
+  assert.equal(bad((x) => { x.pages.supply.items.push(infoOut("sample", "1 kg")); }), null);          // 사용하지 않은 key
+  assert.equal(bad((x) => { x.pages.details.items = [infoOut("moq", "500 kg")]; x.pages.details.empty = false; x.pages.details.empty_message = null; }), null); // 다른 쪽 항목
+  assert.equal(bad((x) => { x.pages.supply.items.push(infoOut("moq", "500 kg")); }), null);           // 중복
+  assert.equal(bad((x) => { x.pages.details.empty = false; }), null);                                 // empty 불일치
+  assert.equal(bad((x) => { x.pages.intro.paragraphs = []; }), null);
+  assert.equal(bad((x) => { x.pages.intro.paragraphs = [1, 2, 3].map(() => copyOut("p", ["description"])); }), null);
+  assert.equal(bad((x) => { x.pages.cover.tagline.source_keys = ["certification"]; }), null);
+  assert.equal(bad((x) => { x.pages.cover.product_name.source_keys = ["description"]; }), null);
+  assert.equal(bad((x) => { x.pages.supply.items[0].review_flags = "x"; }), null);
+  assert.equal(bad((x) => { x.used_keys = ["moq"]; }), null);
+  assert.equal(bad((x) => { x.notices = {}; }), null);
+});
+
+check("생성 실패 해석: 알려진 코드만 고정 안내, 원문·HTML 미표시, 과금 취소 보장 표현 없음", () => {
+  const known = R.interpretGenerateResponse({ status: 502, json: { ok: false, error: { code: "GENERATE_OUTPUT_INVALID", message: "<b>SERVER RAW</b>" } } });
+  assert.equal(known.code, "GENERATE_OUTPUT_INVALID");
+  assert.ok(!known.message.includes("SERVER RAW"));
+  const unknown = R.interpretGenerateResponse({ status: 500, json: { ok: false, error: { code: "X", message: "RAW" } } });
+  assert.ok(!unknown.message.includes("RAW"));
+  assert.equal(R.interpretGenerateResponse({ status: 500, json: undefined }).kind, "not_json");
+  assert.equal(R.interpretGenerateResponse({ status: 413, json: undefined }).kind, "too_large");
+  const timeout = R.interpretGenerateResponse({ networkError: true, aborted: true });
+  assert.equal(timeout.kind, "timeout");
+  assert.ok(timeout.message.includes("취소되었다는 뜻은 아닙니다"));
+  assert.equal(R.interpretGenerateResponse({ status: 500, json: generationBody() }).kind, "invalid_response");
+  assert.equal(R.interpretGenerateResponse({ status: 200, json: generationBody() }).ok, true);
+});
+
+function genHarness(opts) {
+  const log = { sends: [], busy: [], success: [], failure: [], confirms: 0 };
+  const g = R.createGenerator({
+    send: (s) => { log.sends.push(s); return opts.send(s); },
+    blocked: () => !!opts.blocked,
+    canGenerate: () => opts.can !== false,
+    needsConfirm: () => !!opts.hasResult,
+    confirm: () => { log.confirms++; return opts.confirm !== false; },
+    onBusy: (v) => log.busy.push(v),
+    onSuccess: (d) => log.success.push(d),
+    onFailure: (o) => log.failure.push(o),
+  });
+  return { g: g, log: log };
+}
+const SNAP = { fields: [] };
+
+check("생성 실행기: 정상·조건 미충족·분석 중·재생성 취소는 요청 0회", async () => {
+  const ok = genHarness({ send: async () => ({ status: 200, json: generationBody() }) });
+  assert.equal(await ok.g.run(SNAP), "success");
+  assert.equal(ok.log.sends.length, 1);
+  assert.deepEqual(ok.log.busy, [true, false]);
+  for (const [opts, expected] of [[{ can: false }, "invalid"], [{ blocked: true }, "blocked"], [{ hasResult: true, confirm: false }, "cancelled"]]) {
+    const h = genHarness(Object.assign({ send: async () => ({ status: 200, json: generationBody() }) }, opts));
+    assert.equal(await h.g.run(SNAP), expected);
+    assert.equal(h.log.sends.length, 0);
+    assert.deepEqual(h.log.busy, []);
+  }
+  assert.equal(await genHarness({ send: async () => ({}) }).g.run(null), "invalid"); // 스냅샷 없음
+});
+
+check("생성 실행기: 중복 클릭 방지, 실패 시 성공 콜백 없음, 오래된 응답 무시", async () => {
+  const d = deferred();
+  const h = genHarness({ send: () => d.p });
+  const first = h.g.run(SNAP);
+  assert.equal(await h.g.run(SNAP), "busy");
+  d.resolve({ status: 502, json: { ok: false, error: { code: "AI_TIMEOUT", message: "x" } } });
+  assert.equal(await first, "failure");
+  assert.equal(h.log.success.length, 0);
+  assert.equal(h.log.sends.length, 1);
+  const d2 = deferred();
+  const h2 = genHarness({ send: () => d2.p });
+  const p = h2.g.run(SNAP);
+  h2.g.invalidate();
+  d2.resolve({ status: 200, json: generationBody() });
+  assert.equal(await p, "stale");
+  assert.equal(h2.log.success.length, 0);
+});
+
+check("이전 결과 판정과 검토 표시 설명", () => {
+  const fs = analysisFields();
+  confirmAll(fs, ["product_name", "description"]);
+  const snap = R.createSnapshot(fs, "analysis", 1);
+  const result = { data: null, signature: snap.signature, version: 1 };
+  assert.equal(R.isResultStale(result, ctxOf(fs, snap)), false);
+  R.setValue(fs[1], "바뀐 설명");
+  assert.equal(R.isResultStale(result, ctxOf(fs, snap)), true);     // 입력 수정
+  assert.equal(R.isResultStale(result, { version: 2, currentSignature: snap.signature }), true); // 재분석·파일 교체
+  assert.equal(R.isResultStale(null, ctxOf(fs, snap)), false);
+  const flags = R.describeReviewFlags(R.validateGeneration(generationBody()));
+  assert.deepEqual(flags.map((f) => f.where), ["2쪽 소개 문단 1"]);
+  const withItemFlag = generationBody();
+  withItemFlag.data.pages.supply.items[0].review_flags = ["number_not_preserved"];
+  assert.equal(R.describeReviewFlags(withItemFlag.data)[1].where, "4쪽 MOQ"); // 내부 key 대신 항목 이름
+});
+
 (async () => {
   let failed = 0;
   for (const [name, fn] of checks) {

@@ -81,10 +81,12 @@
       <div class="notice notice-info" data-apply-status role="status" hidden></div>
       <div class="btn-row">
         <button type="button" class="btn btn-primary" data-apply>확인 내용 적용</button>
-        <button type="button" class="btn btn-secondary" disabled aria-describedby="product_brochure-next-pending">카탈로그 생성</button>
+        <button type="button" class="btn btn-secondary" data-generate disabled aria-describedby="product_brochure-generate-status">카탈로그 생성</button>
         <button type="button" class="btn btn-secondary" disabled aria-describedby="product_brochure-next-pending">PDF 다운로드</button>
-        <span class="field-hint" id="product_brochure-next-pending">준비 중: 카탈로그 생성·PDF 다운로드는 아직 사용할 수 없습니다.</span>
       </div>
+      <p class="field-hint" id="product_brochure-generate-status" data-generate-status role="status"></p>
+      <p class="field-hint" id="product_brochure-next-pending">준비 중: PDF 다운로드와 생성 문구 편집은 아직 사용할 수 없습니다.</p>
+      <div class="notice notice-danger" data-generate-error role="alert" hidden></div>
     </div>
   </section>
 </div>
@@ -92,14 +94,19 @@
 <section class="card product_brochure-design" aria-labelledby="product_brochure-design-title">
   <div class="card-header">
     <div>
-      <h2 class="card-title" id="product_brochure-design-title">카탈로그 디자인 시안</h2>
+      <h2 class="card-title" id="product_brochure-design-title">카탈로그 미리보기</h2>
       <p class="card-description" id="product_brochure-design-hint">
-        실제 생성 기능을 붙이기 전에 4페이지 레이아웃을 검토하기 위한 고정 예시입니다.
-        분석 결과·수정값을 사용하거나 바꾸지 않으며, API를 호출하지 않습니다.
+        "디자인 시안 보기"는 4페이지 레이아웃을 검토하기 위한 고정 예시입니다(분석 결과·수정값을 쓰지 않고 API를 호출하지 않음).
+        "생성 결과 보기"는 마지막으로 성공한 카탈로그 생성 결과를 같은 디자인으로 보여 줍니다.
       </p>
+      <p class="field-hint" id="product_brochure-result-status" data-result-status role="status">아직 생성 결과가 없습니다.</p>
     </div>
-    <button type="button" class="btn btn-secondary" data-catalog-open aria-haspopup="dialog"
-            aria-describedby="product_brochure-design-hint">디자인 시안 보기</button>
+    <div class="btn-row">
+      <button type="button" class="btn btn-secondary" data-catalog-open aria-haspopup="dialog"
+              aria-describedby="product_brochure-design-hint">디자인 시안 보기</button>
+      <button type="button" class="btn btn-primary" data-result-open aria-haspopup="dialog" disabled
+              aria-describedby="product_brochure-result-status">생성 결과 보기</button>
+    </div>
   </div>
 </section>
 

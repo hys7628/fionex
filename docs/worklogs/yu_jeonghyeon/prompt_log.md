@@ -270,3 +270,23 @@
 - 변경: features/product_brochure/generation.py(신규), prompts/brochure_generate_v1.md(신규), routes.py(generate 라우트), feature_spec.md(§13 메모·§21), tests/test_product_brochure/test_generate_api.py(신규)
 - 담당자 판단: 검토 대기
 - 남은 한계: 화면 연결·문구 수정 UI 미구현, 실제 생성 품질·번역 의미·수치 보존 실제 비율·비용·시간 미검증, 무저장 구조라 확인 이력 서버 인증 불가
+
+## DI-2026_10_25-16 카탈로그 생성 API 화면 연결·결과 미리보기
+- 유형: development_instruction / 서비스 프롬프트 실험: 미실행 / **실제 생성 API·OpenAI 호출 없음**
+- 날짜/시간: 2026-10-25 12:23 (Asia/Seoul) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure
+- 도구·모델: Claude Code (Opus 5.5)
+- 사전 확인: HEAD a0bdec4, 작업 트리 깨끗, 병합 중 아님, develop이 HEAD의 조상. stash@{0} 미조작. product_brochure.js 전체(확인 내용 적용·상태 필드 userAdded/userModified/source)·generation.py 계약·시안 템플릿·AppShell.work를 다시 읽음
+- 지시 요약: 적용 스냅샷 기반 생성 버튼(조건부 활성)·요청·진행/실패 처리·재생성 확인, 응답 검사 후 4페이지 결과 미리보기(시안과 분리), 이전 결과 경고, draft 보호, 2쪽 간격 축소. 개발용 예시로는 생성하지 않음. 서버·공통 변경 금지
+- 설계 이유
+  - "확인 내용 적용"이 요약만 저장하던 구조 → 생성 입력 독립 복사본 + 입력 서명 + 입력 버전(파일 교체·새 분석·예시 시 증가)으로 "다시 적용 필요"와 이전 결과 판정을 같은 기준으로 계산
+  - 분석 요청 실행기를 createRunner로 일반화해 생성에도 사용(중복·오래된 응답·자동 재시도 없음 동작 공유), 서로 blocked로 동시 실행 차단. 기존 createAnalyzer 동작 유지(Node 점검 13개 그대로 통과)
+  - fetch는 공통 postRequest 한 곳. JSON은 Blob(type application/json)으로 보내 Content-Type 헤더를 직접 지정하지 않는 기존 규칙 유지
+  - 서버 오류 메시지 대신 알려진 코드 → 화면 고정 안내 표(생성 오류는 서버 메시지에 위치 정보가 들어갈 수 있어 직접 표시하지 않음)
+  - 결과 미리보기를 별도 dialog + data-slot으로 만들어 시안 문구와 섞이지 않게 하고, 공통 미리보기 컨트롤러(createPreview)로 배율·넘침 검사·이미지 처리를 공유
+  - 화면 JS 요청 본문과 서버 엄격 스키마가 따로 구현되어 어긋날 위험 → Node가 만든 본문을 Python parse_request에 넣는 교차 테스트 추가
+- 실제 실패와 수정
+  - 구조 변경으로 기존 정적 테스트 4건 실패(dialog 수 1→2, 처음 비활성 버튼 3→4, 주석의 "setResult" 글자, 분석 전용 fetch 위치 검사) → 각 테스트의 보호 의도를 유지한 채 새 구조 기준으로 수정(setResult는 호출 형태만 검사, 요청은 fetch 1곳·URL 2개·run 각 1곳)
+  - 결과 템플릿 초안에서 빈 상태 문구 칸이 hidden 상자 안에 있어 표시될 수 없는 구조였음(코드 검토로 발견) → 상자 자체를 slot으로 바꾸고 JS가 내용·hidden을 함께 설정
+- 변경: static/product_brochure.js, templates/product_brochure/panel.html, templates/product_brochure/catalog_preview.html(결과 dialog 추가), static/product_brochure.css, feature_spec.md(§21 메모·§22), tests/test_product_brochure/test_panel.py, review_logic_check.js, test_review_logic.py
+- 담당자 판단: 브라우저 확인 대기
+- 남은 한계: DOM·시각 미확인, 상한 길이 배치·넘침 미확인, 생성 품질 미검증, 생성 문구 편집·PDF 다운로드 미구현
