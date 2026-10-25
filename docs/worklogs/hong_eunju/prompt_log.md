@@ -152,3 +152,22 @@
 - 검증: validation.md 2026-10-25 환율 항목.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 수출입은행 실제 데이터 응답 미확인(키 없음), 환경변수명 미확정, 수출입은행 11시 이전·비영업일 실제 null 응답 형태 미확인(명세는 null, 관측은 오류 응답만).
+
+## DEV-HOME-006 홈 브라질 섬유 전시회 카드
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 17:05~17:20경 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/home, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: Home `## 5. 브라질 섬유 전시회 일정`만 구현. 기능 전용 정적 JSON, 예정 행사 필터(end ≥ 서울 오늘), 시작일 순, 기본 5건·limit, D-day(D-N/D-DAY/진행 중), 장소·분야·출처·공식 확인 여부, GET /api/home/fairs, 카드 UI. 후보 Inspiramais·Tecnotêxtil Brasil·Febratex Summit을 실제 출처로 재확인, 출처 없는 항목·미확인 값 추정 금지, 다음 일정 미확인 행사 제외. 크롤링·OpenAI·KOTRA·환율 호출 금지, 테스트는 FLASK_SKIP_DOTENV=1. Git 작업 금지.
+- 지시와 저장소의 차이: feature_spec.md에 `## 5.` 섹션·후보 값이 없음(지시의 후보명만 기준으로 공식 사이트 확인).
+- 데이터 판단(2026-10-25 공식 사이트 조회, sources.md):
+  - Tecnotêxtil Brasil 2027: 공식 사이트 뉴스(2026-09-16) "Americana, de 27 a 30 de abril de 2027", 장소 안내 "A Fidam (Feira Industrial de Americana) é a sede" → verified true.
+  - Febratex Summit 2027: 공식 사이트 "24 – 26 / Agosto / 2027 – Blumenau – SC", "Parque Vila Germânica" → verified true.
+  - Inspiramais 2027-01-26~27 Centro de Eventos FIERGS(Porto Alegre/RS): 공식 'O Salão' 페이지는 2027, 홈 프로그램 안내는 같은 날짜를 2026으로 표기 → verified false + note.
+  - 제외: Inspiramais 2027-08-03~04 Pro Magno(같은 사이트 머리글의 '07 e 08 de julho'와 충돌), Febratex 본 박람회 2028-08-22~25(공식 문구가 '등록 마감·현장 매표' 등 지난 행사 문구와 섞여 신뢰 불가, 지시상 제외 대상).
+- 구현 판단: 데이터 위치 features/home/data/br_textile_fairs.json(green_claim/data와 같은 기능 전용 기준 자료 패턴). 파일이 작아 요청마다 읽음(수정 즉시 반영, 캐시 없음). 필수 name·start·end·url(http/https)·source·verified(bool)·checked_at, city·venue·focus·note는 없으면 null → 화면 "미확인". 잘못된 항목은 제외하고 건수만 안내. 파일 없음·형식 오류는 503 fairs_unavailable → 카드만 "일정 확인 불가"+재시도. limit 1 미만·정수 아님은 400, 20 초과는 20으로 제한.
+- 발견 문제: 390px에서 장소·분야 값이 항목 이름 아래로 내려감 → 값 칸 flex 조정. 브라우저 검증 1회차에서 AI 요약 안내 확인 시점이 일러 실패(첫 요약 요청 때 openai 패키지 import로 수 초 지연) → 기다리는 방식으로 고친 뒤 통과(기능 문제 아님).
+- 외부 호출: 출처 확인용 공식 사이트 조회(Inspiramais·Tecnotêxtil·Febratex·Febratex Summit 페이지). 테스트 서버는 FLASK_SKIP_DOTENV=1·키 없음으로 KOTRA·OpenAI 실제 호출 없음. 단, 뉴스 회귀 스크립트(DEV-HOME-002)가 **등록되지 않은 테스트 키로 KOTRA 게이트웨이 1회 호출**(403 거부, 실제 키 미사용).
+- 검증: validation.md 2026-10-25 전시회 항목.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 일정은 수동 자료라 주기적 재확인 필요(자료 확인일 표시). Inspiramais 연도 확인 필요. 분야(focus)는 공식 소개 문구를 한국어로 요약한 것.

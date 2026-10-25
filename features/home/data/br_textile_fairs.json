@@ -1,0 +1,45 @@
+{
+  "checked_at": "2026-10-25",
+  "note": "홈 '브라질 섬유 전시회' 카드용 정적 자료. 출처 링크가 있는 행사만 넣고, 확인하지 못한 값은 null로 둡니다. verified=true는 공식 사이트에서 일정·장소를 확인한 경우입니다. 출처·확인 기록: docs/worklogs/hong_eunju/sources.md",
+  "fairs": [
+    {
+      "name": "Inspiramais",
+      "start": "2027-01-26",
+      "end": "2027-01-27",
+      "city": "Porto Alegre/RS",
+      "venue": "Centro de Eventos FIERGS",
+      "focus": "신발·의류·가구·액세서리용 소재의 디자인·혁신·지속가능성 전시",
+      "url": "https://www.inspiramais.com.br/o-salao",
+      "source": "Inspiramais 공식 사이트",
+      "verified": false,
+      "checked_at": "2026-10-25",
+      "note": "공식 사이트 'O Salão' 페이지는 2027년으로, 홈페이지 프로그램 안내는 같은 날짜를 2026년으로 표기해 연도 확인이 필요합니다."
+    },
+    {
+      "name": "Tecnotêxtil Brasil 2027",
+      "start": "2027-04-27",
+      "end": "2027-04-30",
+      "city": "Americana/SP",
+      "venue": "Fidam (Feira Industrial de Americana)",
+      "focus": "섬유·의류 산업 기술 전시(기계·장비·원사·가공·소프트웨어 등)",
+      "url": "https://tecnotextilbrasil.com.br/brasil-fashion-designers-e-uma-das-novidades-da-tecnotextil-brasil-2027/",
+      "source": "Tecnotêxtil Brasil 공식 사이트",
+      "verified": true,
+      "checked_at": "2026-10-25",
+      "note": null
+    },
+    {
+      "name": "Febratex Summit 2027",
+      "start": "2027-08-24",
+      "end": "2027-08-26",
+      "city": "Blumenau/SC",
+      "venue": "Parque Vila Germânica",
+      "focus": "원료부터 리테일까지 패션 산업의 디지털·지속가능 전환(원사·편직물·원단 등)",
+      "url": "https://febratexsummit.com.br/",
+      "source": "Febratex Summit 공식 사이트",
+      "verified": true,
+      "checked_at": "2026-10-25",
+      "note": null
+    }
+  ]
+}

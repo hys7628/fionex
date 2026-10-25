@@ -75,3 +75,30 @@ def fx():
             "message": "refresh는 " + ", ".join(service.FX_SOURCES) + " 중 하나여야 합니다.",
         }), 400
     return jsonify(ok=True, data=service.get_fx(refresh))
+
+
+@bp.get("/api/home/fairs")
+def fairs():
+    """다가오는 브라질 섬유 전시회(정적 자료). ?limit=1~ (기본 5, 최대 20으로 제한)
+
+    성공 {"ok": true, "data": {fairs, data_checked_at, total_upcoming, invalid_count}}.
+    자료 파일을 읽지 못하면 503 fairs_unavailable(다른 홈 기능에는 영향 없음).
+    """
+    raw = request.args.get("limit")
+    limit = service.FAIRS_DEFAULT_LIMIT
+    if raw is not None:
+        limit = request.args.get("limit", type=int)
+        if limit is None or limit < 1:
+            return jsonify(ok=False, error={
+                "code": "invalid_limit",
+                "message": "limit은 1 이상의 정수여야 합니다.",
+            }), 400
+        limit = min(limit, service.FAIRS_MAX_LIMIT)
+    try:
+        data = service.get_upcoming_fairs(limit)
+    except service.FairsDataError:
+        return jsonify(ok=False, error={
+            "code": "fairs_unavailable",
+            "message": "전시회 일정 자료를 확인할 수 없습니다.",
+        }), 503
+    return jsonify(ok=True, data=data)

@@ -241,3 +241,40 @@ tests/test_common OK, 공휴일 서버 19/19, 뉴스 서버(실제 RSS) 38/38.
 - 수출입은행 실제 키로 USD/KRW 정상 응답·쉼표 형식·11시 이전·비영업일 실제 응답(키 없음).
 - 실제 주말·공휴일 역조회는 PTAX만 실제(일요일 → 금요일). 수출입은행은 모의.
 - 실제 사용자 브라우저·기기, 화면낭독기.
+
+## 2026-10-25 홈 브라질 섬유 전시회 (DEV-HOME-006)
+변경: features/home/data/br_textile_fairs.json·fairs.py(신규), service.py·routes.py·panel.html·home.js·home.css, tests/test_home/test_fairs.py(신규)
+
+### 서버 (tests/test_home/test_fairs.py 9건 OK, tests/test_home 전체 42건 OK)
+| 사례 | 기대 | 판정 |
+|---|---|---|
+| 필터·정렬 | 종료(10/24 끝) 제외, 오늘 끝나는 행사 포함, 시작일 순 | 통과 |
+| D-day(기준 2026-10-25) | 2027-04-27 → D-184, 오늘 시작 → D-DAY, 시작 후 종료 전 → 진행 중 | 통과 |
+| limit | 3건 제한, total_upcoming 8 | 통과 |
+| 예정 없음 | 빈 목록 | 통과 |
+| 항목 오류 8종(URL 없음·javascript: URL·출처 없음·날짜 오류·종료<시작·verified 문자열·이름 없음·객체 아님) | 제외, invalid_count 8, 값 보충 없음 | 통과 |
+| 선택 값 없음 | city·venue·focus·note null 유지 | 통과 |
+| 파일 없음·JSON 오류·최상위 형식 오류 3종 | FairsDataError | 통과 |
+| 저장소 자료 | 제외 0건, 확인일 2026-10-25, https 링크, Inspiramais verified false+note | 통과 |
+| 라우트 | 기본 5건, limit=2, limit=500 → 20, limit 0/-1/abc/빈 값 → 400 invalid_limit, 파일 오류 → 503 fairs_unavailable | 통과 |
+| 실제 자료 API(test client) | Inspiramais D-93 → Tecnotêxtil D-184 → Febratex Summit D-303 | 통과 |
+
+### 브라우저 (headless Chrome, 테스트 서버 127.0.0.1:5013 FLASK_SKIP_DOTENV=1·키 없음, 18/18 통과)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| 실제 자료 | 3건 날짜순, D-93/D-184/D-303, "확인 필요"(Inspiramais)·"공식 사이트 확인", note, 출처 링크 target=_blank·rel noopener noreferrer, 자료 확인일 안내 | 일치 | 통과 |
+| 기간·장소·분야 | "2027-04-27 ~ 2027-04-30", "Americana/SP · Fidam (…)" | 일치 | 통과 |
+| 다른 Home 카드 | 바이어 시간, 환율(USD/KRW 확인 불가·USD/BRL 실제 PTAX), 뉴스 40건, KOTRA 설정 필요, AI 요약 사용 불가 안내 | 일치(1회차는 확인 시점이 일러 실패 → 대기 후 통과) | 통과 |
+| 탭 이동 후 복귀 | /api/home/fairs 재요청 0 | 0 | 통과 |
+| 진행 중·D-DAY·하루 행사·빈 값·제목 HTML(가로채기) | 배지 문구, "기간 2027-01-01", "미확인", HTML 텍스트 처리 | 일치 | 통과 |
+| 빈 상태 / 일부 제외 | "확인된 예정 전시회가 없습니다" / "일부 일정 제외" | 일치 | 통과 |
+| 자료 오류(503) → 재시도 | 카드만 "일정 확인 불가"+버튼, 바이어 시간 유지, 요청 중 disabled·aria-busy, 회복·새로고침 없음·초점 목록 | 일치 | 통과 |
+| 다른 4개 탭, 1440/1024/390px | 표시, 가로 스크롤 없음(1440·390 스크린샷 확인, 390 줄바꿈 수정 후 재확인) | 일치 | 통과 |
+JS 예외 0. 콘솔 오류: favicon 404(기존), 의도적 503 1건.
+
+### 회귀·외부 호출
+- tests/test_common OK, 공휴일 서버 19/19, 뉴스 서버(실제 Google RSS) 38/38. 모두 .env 미로드·OpenAI 키 없음.
+- KOTRA·OpenAI 실제 키 호출 없음. 뉴스 회귀 스크립트의 잘못된 테스트 키 KOTRA 게이트웨이 호출 1회(403).
+
+### 미검증
+- 실제 사용자 브라우저·기기, 화면낭독기. 일정 자체의 정확성은 출처 문구 기준이며 주최사 문의 등 추가 확인은 하지 않음.

@@ -93,6 +93,27 @@
     </div>
   </article>
 
+  {# 브라질 섬유 전시회: /api/home/fairs(기능 전용 정적 자료). 출처 링크 있는 행사만, 확인 상태를 배지로 표시.
+     외부 문자열은 textContent로만 넣습니다. 자동 수집·AI 생성 없음. #}
+  <article class="card" aria-labelledby="home-fairs-title" id="home-fairs">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title" id="home-fairs-title">브라질 섬유 전시회</h2>
+        <p class="card-description">다가오는 브라질 섬유·의류 관련 전시회를 날짜순으로 보여 줍니다.</p>
+      </div>
+    </div>
+    <div class="stack" id="home-fairs-body" aria-busy="true">
+      <p class="home-news-loading" id="home-fairs-loading"><span class="spinner" aria-hidden="true"></span>전시회 일정을 불러오는 중</p>
+      <ul class="home-fair-list" id="home-fairs-list" aria-label="전시회 목록" tabindex="-1" hidden></ul>
+      <div class="empty-state" id="home-fairs-empty" hidden>
+        <p class="empty-state-title">확인된 예정 전시회가 없습니다</p>
+        <p>출처를 확인한 일정이 추가되면 이곳에 표시됩니다.</p>
+      </div>
+      <div class="stack" id="home-fairs-notices"></div>
+      <p class="field-hint" id="home-fairs-hint">담당자가 출처를 확인해 넣은 자료입니다(자동 수집 아님). 일정은 바뀔 수 있으니 방문 전 출처에서 다시 확인하세요. D-day는 서울 날짜 기준입니다.</p>
+    </div>
+  </article>
+
   <article class="card">
     <div class="card-header">
       <div>

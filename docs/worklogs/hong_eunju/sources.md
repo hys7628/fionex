@@ -53,3 +53,10 @@
 - 조회일: 2026-10-25 (실제 호출 성공)
 - 적용 범위: 홈 환율 USD/BRL PTAX 매도(cotacaoVenda)
 - 사용권: 데이터셋 페이지 표시 Open Data Commons Open Database License (ODbL). 인증키 불필요(실제 확인)
+
+## 브라질 섬유 전시회 초기 자료 (features/home/data/br_textile_fairs.json)
+조회일 모두 2026-10-25. 적용 범위: 홈 전시회 카드의 일정·장소·분야. 사용권: 각 사이트 이용약관 미확인(행사명·일정 사실 정보만 사용, 문구 복제 없음).
+- Tecnotêxtil Brasil 2027 (주최 표기: Febratex Group / FCEM) — 공식 사이트 뉴스 https://tecnotextilbrasil.com.br/brasil-fashion-designers-e-uma-das-novidades-da-tecnotextil-brasil-2027/ ("Americana, de 27 a 30 de abril de 2027", 2026-09-16 게시), 장소 https://tecnotextilbrasil.com.br/a-feira/ ("A Fidam (Feira Industrial de Americana) é a sede"). verified true.
+- Febratex Summit 2027 — 공식 사이트 https://febratexsummit.com.br/ ("24 – 26 / Agosto / 2027 – Blumenau – SC", "Parque Vila Germânica", "transformação digital e sustentável na indústria da moda", "Da matéria-prima ao varejo"). verified true.
+- Inspiramais — 공식 사이트 https://www.inspiramais.com.br/o-salao (머리글 "26 e 27 de janeiro | 2027 | Centro de Eventos FIERGS | Porto Alegre/RS", "Salão de Design, Inovação e Sustentabilidade de materiais … calçados, confecção, móveis e bijuterias"). 홈 https://www.inspiramais.com.br/ 프로그램은 "26 e 27 de janeiro de 2026" → 연도 불일치로 verified false.
+- 제외 확인: Inspiramais 'O Salão' 프로그램 "3 e 4 de agosto de 2027 … Pro Magno"(머리글 '07 e 08 de julho'와 충돌), Febratex https://febratex.com.br/ "22 e 25 de agosto de 2028"(지난 행사 문구와 혼재).

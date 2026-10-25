@@ -19,11 +19,15 @@ from pathlib import Path
 from time import monotonic
 from zoneinfo import ZoneInfo
 
-from features.home import fx, news_summary
+from features.home import fairs, fx, news_summary
 
-# 환율은 features/home/fx.py에서 처리합니다.
+# 환율은 features/home/fx.py, 전시회 일정은 features/home/fairs.py에서 처리합니다.
 FX_SOURCES = fx.SOURCES
 get_fx = fx.get_fx
+FAIRS_DEFAULT_LIMIT = fairs.DEFAULT_LIMIT
+FAIRS_MAX_LIMIT = fairs.MAX_LIMIT
+FairsDataError = fairs.FairsDataError
+get_upcoming_fairs = fairs.get_upcoming
 
 logger = logging.getLogger(__name__)
 

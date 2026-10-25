@@ -67,6 +67,73 @@
   flex-basis: 4.5rem;
 }
 
+/* 브라질 섬유 전시회: 행사별 이름·D-day·기간·장소·분야·확인 상태·출처 */
+.feature-home .home-fair-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feature-home .home-fair-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+  min-width: 0;
+}
+
+.feature-home .home-fair-item:first-child {
+  padding-top: 0;
+}
+
+.feature-home .home-fair-item:last-child {
+  border-bottom: 0;
+}
+
+.feature-home .home-fair-head,
+.feature-home .home-fair-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  min-width: 0;
+  font-size: var(--font-size-sm);
+}
+
+.feature-home .home-fair-name {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.feature-home .home-fair-label,
+.feature-home .home-fair-checked {
+  color: var(--color-text-muted);
+}
+
+.feature-home .home-fair-label {
+  flex: 0 0 2.5rem;
+}
+
+.feature-home .home-fair-line > span:last-child {
+  flex: 1 1 10rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.feature-home .home-fair-note {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.feature-home .home-fair-link {
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
 /* 업계 소식: 수집 경로별 상태 + 최신순 목록. 목록이 길어 카드 안에서 세로 스크롤합니다. */
 .feature-home .home-news-sources {
   display: flex;

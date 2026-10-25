@@ -618,6 +618,119 @@
     if (!fxLoaded && !fxBusy) loadFx(null);
   }
 
+  /* ---------- 브라질 섬유 전시회 ---------- */
+  // 서버(/api/home/fairs)가 정적 자료에서 다가오는 행사만 골라 줍니다. 홈을 처음 열 때 한 번 요청합니다.
+  const fairsEl = {
+    body: panel.querySelector("#home-fairs-body"),
+    loading: panel.querySelector("#home-fairs-loading"),
+    list: panel.querySelector("#home-fairs-list"),
+    empty: panel.querySelector("#home-fairs-empty"),
+    notices: panel.querySelector("#home-fairs-notices"),
+    hint: panel.querySelector("#home-fairs-hint"),
+  };
+  const FAIR_DAY_TONES = { upcoming: "badge-info", today: "badge-warning", ongoing: "badge-success" };
+  let fairsLoaded = false;
+  let fairsBusy = false;
+
+  function fairLine(label, value) {
+    const p = make("p", "home-fair-line");
+    p.append(make("span", "home-fair-label", label), make("span", "", value || "미확인"));
+    return p;
+  }
+
+  function fairItem(fair) {
+    const li = make("li", "home-fair-item");
+    const head = make("div", "home-fair-head");
+    head.append(make("span", "home-fair-name", fair.name),
+      make("span", "badge " + (FAIR_DAY_TONES[fair.status] || "badge-info"), fair.d_day));
+    li.append(head);
+    li.append(fairLine("기간", fair.start === fair.end ? fair.start : fair.start + " ~ " + fair.end));
+    li.append(fairLine("장소", [fair.city, fair.venue].filter(Boolean).join(" · ")));
+    li.append(fairLine("분야", fair.focus));
+
+    const check = make("p", "home-fair-line");
+    check.append(make("span", "badge " + (fair.verified ? "badge-success" : "badge-warning"),
+      fair.verified ? "공식 사이트 확인" : "확인 필요"));
+    check.append(make("span", "home-fair-checked", fair.checked_at + " 확인"));
+    li.append(check);
+    if (fair.note) li.append(make("p", "home-fair-note", fair.note));
+
+    const link = make("a", "home-fair-link", "출처: " + fair.source);
+    link.href = fair.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.append(make("span", "visually-hidden", " (새 탭에서 열기)"));
+    li.append(link);
+    return li;
+  }
+
+  function renderFairs(data) {
+    fairsEl.list.replaceChildren.apply(fairsEl.list, data.fairs.map(fairItem));
+    fairsEl.list.hidden = data.fairs.length === 0;
+    fairsEl.empty.hidden = data.fairs.length > 0;
+    fairsEl.notices.replaceChildren();
+    if (data.invalid_count > 0) {
+      const notice = make("div", "notice notice-warning");
+      notice.append(make("p", "notice-title", "일부 일정 제외"),
+        make("p", "", "형식이 맞지 않거나 출처가 없는 항목 " + data.invalid_count + "건은 표시하지 않았습니다."));
+      fairsEl.notices.append(notice);
+    }
+    if (data.data_checked_at) {
+      fairsEl.hint.textContent = "담당자가 출처를 확인해 넣은 자료입니다(자동 수집 아님, 자료 확인일 " + data.data_checked_at +
+        "). 일정은 바뀔 수 있으니 방문 전 출처에서 다시 확인하세요. D-day는 서울 날짜 기준입니다.";
+    }
+  }
+
+  function showFairsError() {
+    fairsEl.list.hidden = true;
+    fairsEl.empty.hidden = true;
+    const notice = make("div", "notice notice-warning");
+    notice.append(make("p", "notice-title", "일정 확인 불가"),
+      make("p", "", "전시회 일정 자료를 확인할 수 없습니다. 다른 홈 기능은 그대로 사용할 수 있습니다."));
+    const button = make("button", "btn btn-secondary", "전시회 일정 다시 시도");
+    button.type = "button";
+    button.dataset.fairsRetry = "";
+    const row = make("div", "btn-row");
+    row.append(button);
+    notice.append(row);
+    fairsEl.notices.replaceChildren(notice);
+  }
+
+  async function loadFairs() {
+    if (fairsBusy) return;
+    fairsBusy = true;
+    fairsEl.body.setAttribute("aria-busy", "true");
+    fairsEl.loading.hidden = false;
+    fairsEl.notices.querySelectorAll("[data-fairs-retry]").forEach(function (b) { b.disabled = true; });
+    try {
+      const res = await fetch("/api/home/fairs?limit=5");
+      const body = await res.json();
+      if (!body.ok) throw new Error(body.error.message);
+      renderFairs(body.data);
+      fairsLoaded = true;
+    } catch (err) {
+      showFairsError();
+    } finally {
+      fairsBusy = false;
+      fairsEl.body.setAttribute("aria-busy", "false");
+      fairsEl.loading.hidden = true;
+    }
+  }
+
+  fairsEl.notices.addEventListener("click", function (event) {
+    const button = event.target.closest("[data-fairs-retry]");
+    if (!button || button.disabled) return;
+    loadFairs().then(function () {
+      const again = fairsEl.notices.querySelector("[data-fairs-retry]");
+      if (again) again.focus();
+      else if (!fairsEl.list.hidden) fairsEl.list.focus();
+    });
+  });
+
+  function ensureFairs() {
+    if (!fairsLoaded && !fairsBusy) loadFairs();
+  }
+
   // 화면에 분 단위까지만 표시하므로 매 분 경계에 한 번 갱신합니다. 홈이 숨겨지면 멈춥니다.
   let timer = null;
 
@@ -644,11 +757,13 @@
     tick();
     ensureFx();
     ensureNews();
+    ensureFairs();
   });
   AppShell.onHide(FEATURE_ID, stop);
   if (AppShell.current() === FEATURE_ID) {
     tick();
     ensureFx();
     ensureNews();
+    ensureFairs();
   }
 })();
