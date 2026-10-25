@@ -1,5 +1,23 @@
 /*
  * 홍보 스튜디오 탭 전용 스타일. 선택자는 .feature-promotion_studio 안으로 한정합니다.
  * 공통 컴포넌트(.card, .btn, .input 등)를 복제·덮어쓰지 말고 tokens.css 변수를 사용합니다.
- * 예) .feature-promotion_studio .xxx-list { gap: var(--space-3); }
  */
+.feature-promotion_studio .ps-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.feature-promotion_studio .ps-number {
+  max-width: 160px;
+}
+
+.feature-promotion_studio .ps-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
