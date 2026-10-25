@@ -8,7 +8,7 @@ pydantic==2.14.1
 # openai 3.37.0의 HTTP 의존성. tests/test_common의 모의 전송(MockTransport)이 직접 사용.
 httpx2==2.16.0
 # 이 밖의 하위 의존성(anyio, jiter, sniffio, typing-extensions 등)은 openai 설치 시 자동 설치된다.
-# PDF 도구는 기능 개발 단계에서 선정·검증 후 추가한다.
-# 그린 클레임 일반 PDF 텍스트 추출(features/green_claim). 팀 협의 후 jasonenv에 설치, pip check 정상(2026-10-25).
-# 하위 필수 의존성 없음(Python 3.11). 암호화 PDF는 거부하므로 crypto extra는 설치하지 않았다.
+# PDF 입력 검사(common/pdf_utils.py). BSD-3-Clause, Python 3.11에서 추가 의존성 없음. jasonenv 설치·모의 테스트 확인(2026-10-25).
+# pdf_utils가 pypdf 내부 메서드(PdfReader._handle_encryption)를 덮어쓰므로 버전을 바꾸면 tests/test_common/test_pdf.py로 재확인한다.
 pypdf==6.21.2
+# PDF 출력 도구는 기능 개발 단계에서 선정·검증 후 추가한다.
