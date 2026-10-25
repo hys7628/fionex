@@ -211,3 +211,42 @@
 - 사전 확인: 브랜치 feature/product_brochure, HEAD 0800d51, 병합 중 아님. DI-11 화면 연결 변경은 미커밋 상태로 보존
 - 지시: 사용자가 실제 브라우저에서 확인한 결과를 후속 검증으로 기록(Claude 미관측 명시), 서비스 프롬프트 첫 실제 실행을 SPE-2026_10_25-01로 기록, 확인되지 않은 범위는 미검증 유지
 - 변경: docs/worklogs/yu_jeonghyeon/prompt_log.md, validation.md
+
+## DI-2026_10_25-13 제품소개서 4페이지 카탈로그 디자인 시안
+- 유형: development_instruction / 서비스 프롬프트 실험: 해당 없음 / **AI API 호출 없음(OpenAI·이미지 생성 미호출)**
+- 날짜/시간: 2026-10-25 11:16 (Asia/Seoul) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure
+- 도구·모델: Claude Code (Opus 5.5)
+- 사전 확인: HEAD dc25bc7(화면 연결 커밋), 작업 트리 깨끗, 병합 중 아님, develop이 HEAD의 조상. stash@{0} 미조작. static/assets·resources/brand·resources/product에는 README만 있어 사용권 확인된 이미지 없음, resources/design/dashboard_reference.png는 화면 참고용이라 미사용
+- 지시 요약: 고정 더미 데이터 기반 pt-BR A4 세로 4페이지 카탈로그 미리보기. "디자인 시안 보기" 진입점(카탈로그 생성과 구분), 열고 닫아도 분석 결과·수정값 유지, 미다운로드 결과 상태 만들지 않음. 오프화이트·딥그린, 큰 이미지·명확한 위계·여백, 상투적 아이콘 금지, 텍스트는 HTML, CSS 범위 제한, 새 폰트·CDN·프레임워크 금지, 이미지 없으면 CSS/SVG 패턴과 "실제 제품 사진 아님" 표시. 페이지마다 시연·비공식 안내와 번호, 공급 조건 가상 표시, 연락처·인증·수치 창작 금지
+- 설계 판단
+  - 공통 tokens.css에 오프화이트·딥그린이 없음 → 조작 UI는 공통 토큰, 카탈로그 문서 영역에서만 지역 팔레트(--catalog-*) 정의(.feature-product_brochure 범위). 토큰 편입 여부는 공통 담당과 추후 결정(보고)
+  - 네이티브 dialog(showModal)로 초점 가두기·Esc 닫기, 닫으면 연 버튼으로 초점 복귀, AppShell.onHide로 탭 숨김 시 닫기
+  - A4 794x1123 CSS px 페이지를 transform으로 축소해 원래 배치 유지, 화면 맞춤(2쪽/1쪽)·실제 크기 전환, 내부 스크롤
+  - CSS 범위 테스트가 @media를 허용하지 않는 구조라 반응형 배치는 JS 배율 계산으로 처리
+  - 페이지 넘침을 화면에서 알 수 있도록 scrollHeight 기반 경고 표시
+  - 시안 코드는 별도 블록으로 두고 검토 상태·작업 상태 API를 참조하지 않음
+- 실제 실패와 수정
+  - 셸 heredoc으로 CSS를 추가하려다 따옴표 해석 오류로 실행되지 않음(파일 변경 없음 확인) → Edit 도구로 추가
+  - 테스트 1차: 대화상자 설명의 "바이어" 단어가 기존 "바이어 입력 없음" 검사에 걸림 → 문구를 "브라질 시장 제안용"으로 변경(기존 테스트 의도 유지)
+  - 테스트 1차: 시안 테스트 클래스가 기존 화면 테스트 클래스를 상속해 기존 테스트가 중복 실행됨 → 공통 준비 클래스(RenderedPanel)로 분리
+- 변경: templates/product_brochure/catalog_preview.html(신규), panel.html(진입 카드·include), static/product_brochure.js(시안 블록), static/product_brochure.css(시안 스타일), feature_spec.md(§4 표시·§19 후속 메모·§20), tests/test_product_brochure/test_panel.py(시안 검사 4개·클래스 정리)
+- 담당자 판단: 사용자 시각 검토 대기
+- 남은 한계: 시각 검증(넓은·좁은 화면·넘침·초점) 미실행, pt-BR 번역 검수 전, 인쇄·PDF 일치 미검증
+
+## DI-2026_10_25-14 카탈로그 시안에 콘셉트 이미지 적용·편집 디자인 개선
+- 유형: development_instruction / 서비스 프롬프트 실험: 해당 없음 / **AI API 호출 없음(OpenAI·이미지 생성 미호출, 이미지 재생성·외부 검색 없음)**
+- 날짜/시간: 2026-10-25 11:44 (Asia/Seoul) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure
+- 도구·모델: Claude Code (Opus 5.5)
+- 사전 확인: HEAD dc25bc7, 병합 중 아님. DI-13 시안 작업 미커밋 상태와 사용자가 추가한 이미지 2개(미추적)를 보존. stash@{0} 미조작
+- 이미지 확인: `file`로 PNG 형식·해상도 확인(cover 1024×1536, material 1448×1086), 이미지 보기로 구도 확인(cover: 왼쪽 위 밝은 여백·대각선 곡선·오른쪽 아래 딥그린 / material: 왼쪽 위 실타래·오른쪽 조직·아래 딥그린). 원본 미변경
+- 지시 요약: 표지 패턴을 cover 이미지로 교체(밝은 여백에 HTML 제목), 2쪽 비대칭 material 배치, 3쪽 이미지·정보 균형과 "Informações técnicas a confirmar.", 4쪽 숫자 위계 유지·빈 공간 축소·연락처 비노출, 제작 안내·점선 자리표시자는 문서 밖으로, 이미지 쪽마다 AI 콘셉트 안내, object-fit/position·로딩 실패 대체·alt·로드 후 넘침 검사
+- 설계 판단
+  - 이미지 영역 크기를 CSS로 고정(표지 높이 940px, 2쪽 680×510, 3쪽 340×960, 4쪽 남은 높이) → 로딩 전후 배치가 같아 넘침 검사가 이미지에 좌우되지 않음. 그래도 load·error 때 검사를 다시 실행
+  - 2쪽은 4:3 이미지를 크롭 없이 써서 실타래·조직이 모두 보이게 하고, 3쪽은 같은 이미지의 조직 부분 크롭에 "Recorte ampliado da imagem da página 2." 표기
+  - AI 안내는 이미지 위가 아닌 종이 바탕에 배치해 가독성 확보
+  - 제작 안내는 `<details>` "시안 제작 메모"로 이동, 문서 안에는 가상·비공식 안내만
+  - loading="lazy"로 시안을 열 때만 약 5.9 MB 이미지를 불러옴(원본 최적화는 하지 않음)
+- 실제 실패와 수정: 이번 작업 중 테스트 실패 없음. 이전 heredoc 문제를 피하려고 CSS 섹션은 스크래치패드 파일로 작성 후 표시줄 이후만 교체
+- 변경: templates/product_brochure/catalog_preview.html, static/product_brochure.css(시안 섹션 교체), static/product_brochure.js(이미지 실패·로드 처리), feature_spec.md(§20 1차 표기 정리·§20-2), tests/test_product_brochure/test_panel.py(CSS 패턴 전제 검사를 이미지 요구 검사로 교체), docs/worklogs/yu_jeonghyeon/assets.md(이미지 2개)
+- 담당자 판단: 사용자 시각 검토 대기
+- 남은 한계: 시각 검증 미실행, 이미지 사용권 조건·생성 설정 미확인, pt-BR 번역 검수 전, 인쇄·PDF 일치 미검증

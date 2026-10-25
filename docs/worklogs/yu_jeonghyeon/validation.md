@@ -253,3 +253,38 @@
 - 응답 모델명·사용량, 비용 금액, 소요 시간
 - 새로고침 경고(분석 결과 상태), 반응형·키보드·화면낭독기
 - 이전 기록(브라우저 미확인, 서비스 프롬프트 실험 미실행)은 당시 상태로 보존하며 이 항목으로 후속 보완함
+
+## 2026-10-25 제품소개서 4페이지 카탈로그 디자인 시안
+- 변경 내용: catalog_preview.html(신규), panel.html, product_brochure.js(시안 블록), product_brochure.css, test_panel.py
+- AI API 호출 없음(OpenAI·이미지 생성 미호출)
+
+### Claude가 직접 실행한 검증
+- `node --check product_brochure.js` → 문법 오류 없음
+- `python -m unittest discover -s tests/test_product_brochure` → 1차 2건 실패(기존 "바이어" 검사에 시안 설명 문구가 걸림, 상속으로 기존 테스트 중복 실행) → 수정 후 51개 실행, OK
+  - 시안 검사 4개: 진입 버튼(type=button·활성)·dialog 1개(자동 열림 없음·data-work-ignore), 4쪽(data-page 1~4·lang pt-BR) 각각 비공식 안내와 "n / 4", 공급 조건 3개 각각 가상 안내, 규격·인증·탄소 자리표시자에 숫자·% 없음, img·외부 URL·@·+55·회사 표기 없음, "não é foto real do produto" 표시, 시안 JS 블록이 검토 상태·작업 상태·fetch·저장소를 참조하지 않음
+  - 기존 화면·분석 API·Node 로직 점검(13개) 회귀 없음, CSS 선택자 범위 검사 통과
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+
+### 미실행·미검증
+- 시각 검증 전체(브라우저 도구 없음): 넓은 화면 2쪽 배치, 좁은 화면 축소, 실제 크기 전환, 페이지 넘침 여부(경고 표시 동작 포함), 대화상자 초점·Esc·초점 복귀, 화면 전체 가로 스크롤 여부
+- 시안을 열고 닫은 뒤 분석 결과·수정값 유지(코드 정적 검사로만 확인, 브라우저 미확인)
+- 색 대비 실측, pt-BR 문구 검수, 인쇄·PDF 출력 일치
+
+## 2026-10-25 카탈로그 시안 콘셉트 이미지 적용·편집 디자인 개선
+- 변경 내용: catalog_preview.html, product_brochure.css(시안 섹션), product_brochure.js(이미지 처리), test_panel.py, assets.md
+- AI API 호출 없음(이미지 생성·재생성 없음)
+
+### Claude가 직접 실행한 검증
+- 이미지 파일: `file`로 PNG 1024×1536(cover)·1448×1086(material), 8-bit RGB 확인. 이미지 보기 도구로 두 이미지 구도 확인(디자인 배치 판단용, 육안 품질 검토는 사용자 몫)
+- Flask test_client: 두 정적 URL `/features/product_brochure/static/images/…` → 200, image/png, PNG 서명 일치. 렌더링 HTML에 로컬 절대 경로 없음
+- `node --check product_brochure.js` → 문법 오류 없음
+- `python -m unittest discover -s tests/test_product_brochure` → 52개 실행, OK
+  - 시안 검사 5개: 진입·dialog, 렌더링된 4쪽 각각 비공식 안내·"n / 4"·콘셉트 이미지(로컬 정적 경로)·alt "conceitual"·AI 이미지 안내·로딩 실패 대체 요소, 이미지 정적 응답, 4쪽 공급 조건 3개 가상 안내, 3쪽 "Informações técnicas a confirmar."·규격·인증 수치 없음, 문서 안 제작 안내·점선 자리표시자·연락처 자리 없음, "시안 제작 메모"는 대화상자에 존재, 시안 JS 블록이 검토 상태를 참조하지 않음
+  - CSS 범위 검사(모든 선택자 .feature-product_brochure 시작), 기존 화면·분석 API·Node 로직 점검 회귀 없음
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+
+### 미실행·미검증
+- 시각 검증 전체(브라우저 도구 없음): 이미지 로딩 후 각 쪽 크롭·제목과 이미지의 위계·가독성, 넓은 화면 2쪽 배치·좁은 화면 축소·100% 전환, 페이지 넘침(경고 동작 포함), 대화상자 내부 스크롤, 초점 복귀
+- 이미지 로딩 실패 시 대체 안내의 실제 표시(코드·정적 검사만)
+- 이미지 사용권 조건·생성 설정(미확인), 색 대비 실측, pt-BR 검수, 인쇄·PDF 일치, 약 5.9 MB 이미지 로딩 시간
+

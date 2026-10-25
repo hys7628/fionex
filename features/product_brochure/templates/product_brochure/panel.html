@@ -88,3 +88,19 @@
     </div>
   </section>
 </div>
+
+<section class="card product_brochure-design" aria-labelledby="product_brochure-design-title">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title" id="product_brochure-design-title">카탈로그 디자인 시안</h2>
+      <p class="card-description" id="product_brochure-design-hint">
+        실제 생성 기능을 붙이기 전에 4페이지 레이아웃을 검토하기 위한 고정 예시입니다.
+        분석 결과·수정값을 사용하거나 바꾸지 않으며, API를 호출하지 않습니다.
+      </p>
+    </div>
+    <button type="button" class="btn btn-secondary" data-catalog-open aria-haspopup="dialog"
+            aria-describedby="product_brochure-design-hint">디자인 시안 보기</button>
+  </div>
+</section>
+
+{% include "product_brochure/catalog_preview.html" %}

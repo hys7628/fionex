@@ -52,7 +52,9 @@ class PanelParser(HTMLParser):
             self.text.append(data)
 
 
-class PanelRenderTests(unittest.TestCase):
+class RenderedPanel(unittest.TestCase):
+    """GET / 결과에서 제품소개서 패널을 파싱하는 공통 준비(테스트 없음)."""
+
     @classmethod
     def setUpClass(cls):
         response = create_app().test_client().get("/")
@@ -64,6 +66,9 @@ class PanelRenderTests(unittest.TestCase):
     def find(self, tag, **attrs):
         return [a for t, a in self.parser.elements
                 if t == tag and all(a.get(k.replace("_", "-")) == v for k, v in attrs.items())]
+
+
+class PanelRenderTests(RenderedPanel):
 
     def test_home_renders_with_all_panels(self):
         self.assertEqual(self.status, 200)
@@ -125,6 +130,74 @@ class PanelRenderTests(unittest.TestCase):
     def test_out_of_scope_inputs_absent(self):
         self.assertEqual(len(self.find("textarea")), 0)  # 이전 예시 입력(요청 사항) 제거
         self.assertNotIn("바이어", self.text)
+
+
+class CatalogPreviewTests(RenderedPanel):
+    """디자인 시안: 고정 예시 4쪽, 시연·가상 안내, 기존 상태와 분리."""
+
+    def test_entry_point_and_dialog(self):
+        opener = [a for t, a in self.parser.elements if t == "button" and "data-catalog-open" in a]
+        self.assertEqual(len(opener), 1)
+        self.assertEqual(opener[0]["type"], "button")
+        self.assertNotIn("disabled", opener[0])
+        self.assertIn("디자인 시안 보기", self.text)
+        dialogs = [a for t, a in self.parser.elements if t == "dialog"]
+        self.assertEqual(len(dialogs), 1)
+        self.assertNotIn("open", dialogs[0])          # 자동으로 열리지 않음
+        self.assertIn("data-work-ignore", dialogs[0])
+
+    @classmethod
+    def rendered_pages(cls):
+        html = create_app().test_client().get("/").get_data(as_text=True)
+        dialog = html[html.index("<dialog"):html.index("</dialog>")]
+        return dialog, re.split(r"<article ", dialog)[1:]
+
+    def test_four_pages_with_disclaimer_page_number_and_ai_image_notice(self):
+        _, pages = self.rendered_pages()
+        self.assertEqual(len(pages), 4)
+        for n, page in enumerate(pages, start=1):
+            self.assertIn(f'data-page="{n}" lang="pt-BR"', page)
+            self.assertIn("Material demonstrativo — não é um catálogo oficial.", page)
+            self.assertIn(f"{n} / 4", page)
+            imgs = re.findall(r"<img\b[^>]*>", page)
+            self.assertTrue(imgs)  # 모든 쪽에 콘셉트 이미지
+            self.assertIn("Imagem conceitual gerada por IA — não representa o produto real.", page)
+            for tag in imgs:
+                src = re.search(r'src="([^"]+)"', tag).group(1)
+                self.assertRegex(src, r"^/features/product_brochure/static/images/catalog_(cover|material)_concept\.png$")
+                self.assertIn("conceitual", re.search(r'alt="([^"]+)"', tag).group(1))
+            self.assertIn("catalog-figure-fallback", page)  # 로딩 실패 대체 안내
+
+    def test_images_served_as_png(self):
+        client = create_app().test_client()
+        for name in ("catalog_cover_concept.png", "catalog_material_concept.png"):
+            response = client.get("/features/product_brochure/static/images/" + name)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.mimetype, "image/png")
+            self.assertTrue(response.get_data().startswith(b"\x89PNG\r\n\x1a\n"))
+            response.close()
+
+    def test_supply_terms_fictitious_and_no_invented_or_production_text_in_pages(self):
+        dialog, pages = self.rendered_pages()
+        terms = re.findall(r'<li class="catalog-term" data-term="(\w+)">(.*?)</li>', pages[3], re.S)
+        self.assertEqual([k for k, _ in terms], ["moq", "sample", "lead_time"])
+        for _, body in terms:
+            self.assertIn("Condições fictícias para demonstração.", body)
+        self.assertIn("Informações técnicas a confirmar.", pages[2])
+        self.assertIsNone(re.search(r"%|\bdtex\b|\b\d+\s*D\b|GRS|OEKO|ISO\s*\d", pages[2]))  # 규격·인증·탄소 수치 없음
+        doc = "".join(pages)
+        # 제작 안내·점선 자리표시자·연락처는 문서 페이지 밖(시안 제작 메모)에만
+        for production in ("Texto de exemplo", "Área exibida", "catalog-placeholder", "Área de contato"):
+            self.assertNotIn(production, doc)
+        self.assertIn("시안 제작 메모", dialog)
+        for forbidden in (r"https?://", r"@", r"\+55", r"Hyosung", r"효성"):
+            self.assertIsNone(re.search(forbidden, doc), forbidden)  # 외부 이미지·연락처·회사 표기 없음
+
+    def test_preview_code_does_not_touch_review_state(self):
+        block = JS.split("/* ---------- 카탈로그 디자인 시안(고정 예시) ---------- */", 1)[1]
+        for forbidden in ("fields", "setDraft", "setResult", "downloadBlob", "fetch(", "Storage",
+                          "clearReview", "showFields", "analyzer", "recheckInputs"):
+            self.assertNotIn(forbidden, block)
 
 
 class StaticRuleTests(unittest.TestCase):

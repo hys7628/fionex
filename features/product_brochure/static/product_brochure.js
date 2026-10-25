@@ -666,4 +666,102 @@
   });
 
   syncControls();
+
+  /* ---------- 카탈로그 디자인 시안(고정 예시) ---------- */
+  // 검토 항목·분석 결과·작업 상태를 읽거나 바꾸지 않습니다. 서버 요청·브라우저 저장소 사용 없음.
+  const CATALOG_PAGE_WIDTH = 794; // A4 세로 210mm @96dpi
+  const catalogDialog = panel.querySelector("[data-catalog-dialog]");
+  const catalogOpenBtn = panel.querySelector("[data-catalog-open]");
+  const catalogCloseBtn = panel.querySelector("[data-catalog-close]");
+  const catalogZoomBtn = panel.querySelector("[data-catalog-zoom]");
+  const catalogScroller = panel.querySelector("[data-catalog-scroller]");
+  const catalogPages = panel.querySelector("[data-catalog-pages]");
+  const catalogOverflow = panel.querySelector("[data-catalog-overflow]");
+  const catalogTitle = panel.querySelector("#product_brochure-catalog-title");
+  let catalogActualSize = false;
+  let catalogObserver = null;
+
+  function layoutCatalog() {
+    const style = getComputedStyle(catalogScroller);
+    const available = catalogScroller.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    const gap = parseFloat(getComputedStyle(catalogPages).columnGap) || 0;
+    let cols = 1;
+    let scale = 1;
+    if (!catalogActualSize) {
+      // 화면 맞춤: 넓으면 2쪽씩, 좁으면 1쪽. 컨테이너 폭에 맞춰 축소하고 확대하지는 않음
+      cols = available >= CATALOG_PAGE_WIDTH * 1.2 + gap ? 2 : 1;
+      scale = Math.max(0.2, Math.min(1, (available - gap * (cols - 1)) / (cols * CATALOG_PAGE_WIDTH)));
+    }
+    catalogPages.style.setProperty("--catalog-scale", String(scale));
+    catalogPages.style.setProperty("--catalog-cols", String(cols));
+  }
+
+  function checkCatalogOverflow() {
+    // 페이지 상자(축소 전 레이아웃 크기)를 넘는 내용이 있으면 시안 수정이 필요하다고 알립니다.
+    const over = Array.from(catalogPages.querySelectorAll(".catalog-page")).filter(function (page) {
+      return page.scrollHeight > page.clientHeight + 1 || page.scrollWidth > page.clientWidth + 1;
+    }).map(function (page) { return page.dataset.page + "쪽"; });
+    catalogOverflow.textContent = over.length ? over.join(", ") + " 내용이 페이지 영역을 넘습니다. 시안 수정이 필요합니다." : "";
+    catalogOverflow.hidden = !over.length;
+  }
+
+  // 콘셉트 이미지: 로딩 실패 시 깨진 아이콘 대신 대체 안내, 로드 후 넘침 검사를 다시 실행
+  const catalogImages = Array.from(catalogPages.querySelectorAll("img"));
+
+  function markCatalogImageMissing(img) {
+    const figure = img.closest(".catalog-figure");
+    if (figure) figure.classList.add("catalog-figure-missing");
+  }
+
+  catalogImages.forEach(function (img) {
+    img.addEventListener("load", function () {
+      if (catalogDialog.open) checkCatalogOverflow();
+    });
+    img.addEventListener("error", function () {
+      markCatalogImageMissing(img);
+      if (catalogDialog.open) checkCatalogOverflow();
+    });
+  });
+
+  function checkCatalogImages() {
+    // 이벤트 등록 전에 이미 실패한 이미지 처리
+    catalogImages.forEach(function (img) {
+      if (img.complete && img.naturalWidth === 0 && img.getAttribute("src")) markCatalogImageMissing(img);
+    });
+  }
+
+  function setCatalogZoom(actual) {
+    catalogActualSize = actual;
+    catalogZoomBtn.setAttribute("aria-pressed", actual ? "true" : "false");
+    catalogZoomBtn.textContent = actual ? "화면 맞춤" : "실제 크기(100%)";
+    layoutCatalog();
+  }
+
+  catalogOpenBtn.addEventListener("click", function () {
+    setCatalogZoom(false);
+    catalogDialog.showModal(); // 모달: 뒤 화면 조작 차단, Esc로 닫힘
+    layoutCatalog();
+    checkCatalogImages();
+    checkCatalogOverflow();
+    if (window.ResizeObserver) {
+      catalogObserver = new ResizeObserver(layoutCatalog);
+      catalogObserver.observe(catalogScroller);
+    }
+    catalogScroller.scrollTop = 0;
+    catalogTitle.focus();
+  });
+
+  catalogCloseBtn.addEventListener("click", function () { catalogDialog.close(); });
+  catalogZoomBtn.addEventListener("click", function () { setCatalogZoom(!catalogActualSize); });
+
+  catalogDialog.addEventListener("close", function () {
+    if (catalogObserver) catalogObserver.disconnect();
+    catalogObserver = null;
+    catalogOpenBtn.focus(); // 연 버튼으로 초점 복귀
+  });
+
+  // 해시 변경 등으로 탭이 숨겨지면 시안을 닫습니다(검토 상태는 그대로).
+  AppShell.onHide(FEATURE_ID, function () {
+    if (catalogDialog.open) catalogDialog.close();
+  });
 })();
