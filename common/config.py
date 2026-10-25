@@ -32,6 +32,18 @@ IMAGE_MIME_TYPE = "image/png"
 # 디코딩 후 이미지 1장의 메모리 상한. base64 문자열은 디코딩 전에 같은 기준으로 길이를 검사합니다.
 IMAGE_MAX_BYTES = 16 * 1024 * 1024
 
+# PDF 입력(텍스트 모델 OPENAI_MODEL 사용). 파일 자체 제한이며 HTTP 요청 전체 제한은 라우트에서 별도로 정합니다.
+PDF_MAX_BYTES = 10 * 1024 * 1024
+PDF_MAX_PAGES = 20
+PDF_TIMEOUT_SECONDS = 120.0
+PDF_MAX_RETRIES = 0
+PDF_MAX_OUTPUT_TOKENS = 4096
+PDF_STORE = False
+# input_file.detail(auto/low/high). 공식 안내상 GPT-5.6 미만 모델은 auto가 low로 동작하므로 high를 명시합니다.
+PDF_DETAIL = "high"
+# 원본 파일명에는 경로·민감정보가 있을 수 있어 공급자에는 고정 이름만 보냅니다.
+PDF_PROVIDER_FILENAME = "document.pdf"
+
 
 def _env(name):
     return os.environ.get(name, "").strip()

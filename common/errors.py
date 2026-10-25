@@ -49,6 +49,48 @@ class AIInputError(AIError):
     http_status = 400
 
 
+# PDF 입력 검사(common/pdf_utils.py). AIInputError 하위 클래스라 `except AIError`로 함께 처리됩니다.
+class PdfValidationError(AIInputError):
+    code = "PDF_INVALID"
+    message = "PDF 파일을 확인하지 못했습니다."
+
+
+class PdfEmptyError(PdfValidationError):
+    code = "PDF_EMPTY"
+    message = "빈 파일입니다. 내용이 있는 PDF를 선택하세요."
+
+
+class PdfTooLargeError(PdfValidationError):
+    code = "PDF_TOO_LARGE"
+    message = "PDF 파일이 허용 용량을 넘습니다."
+    http_status = 413
+
+
+class PdfNotPdfError(PdfValidationError):
+    code = "PDF_NOT_PDF"
+    message = "PDF 형식의 파일이 아닙니다."
+
+
+class PdfCorruptError(PdfValidationError):
+    code = "PDF_CORRUPT"
+    message = "PDF 구조를 읽지 못했습니다. 손상되지 않은 PDF를 선택하세요."
+
+
+class PdfEncryptedError(PdfValidationError):
+    code = "PDF_ENCRYPTED"
+    message = "암호가 설정된 PDF는 지원하지 않습니다. 암호를 해제한 PDF를 선택하세요."
+
+
+class PdfNoPagesError(PdfValidationError):
+    code = "PDF_NO_PAGES"
+    message = "페이지가 없는 PDF입니다."
+
+
+class PdfTooManyPagesError(PdfValidationError):
+    code = "PDF_TOO_MANY_PAGES"
+    message = "PDF 페이지 수가 허용 범위를 넘습니다."
+
+
 # 인증·권한·모델 접근
 class AIAuthError(AIError):
     code = "AI_AUTH_FAILED"
