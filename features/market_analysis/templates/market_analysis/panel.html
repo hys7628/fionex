@@ -1,46 +1,93 @@
-{# 시장 분석 작업 영역. 입력 항목은 공통 UI 확인용 예시이며 명세 확정 후 담당자가 교체합니다.
-   통계·차트는 실제 조회 결과만 표시합니다. 꾸민 수치를 넣지 않습니다. #}
+{# 시장 분석 작업 영역. 통계·차트는 실제 조회 결과만 표시합니다. 꾸민 수치를 넣지 않습니다.
+   기본값(품목·기간)은 /api/market-analysis/meta 응답으로 채웁니다. #}
 <div class="workspace">
-  <form class="card" aria-labelledby="market_analysis-input-title">
+  <form class="card" aria-labelledby="market_analysis-input-title" novalidate data-ma-form>
     <div class="card-header">
       <div>
         <h2 class="card-title" id="market_analysis-input-title">조회 조건</h2>
-        <p class="card-description">품목과 기간을 정해 수입 동향을 조회합니다.</p>
+        <p class="card-description">브라질 수입 통계(ComexStat)에서 품목·기간·공급국 조건으로 조회합니다.</p>
       </div>
     </div>
+
     <div class="field">
-      <label class="field-label" for="market_analysis-code">품목코드</label>
-      <input class="input" id="market_analysis-code" name="code" type="text" autocomplete="off"
-             aria-describedby="market_analysis-code-hint">
-      <p class="field-hint" id="market_analysis-code-hint">코드 체계와 조회 범위는 기능 명세 확정 후 안내합니다.</p>
+      <span class="field-label">대상 시장</span>
+      <p><span class="badge badge-info">브라질 · 수입</span></p>
+      <p class="field-hint">대상 시장은 브라질로 고정됩니다. 공급국은 브라질에 수출한 국가입니다.</p>
     </div>
-    <div class="grid">
+
+    <div class="grid ma-code-grid">
       <div class="field">
-        <label class="field-label" for="market_analysis-from">시작 월</label>
-        <input class="input" id="market_analysis-from" name="from" type="month">
+        <label class="field-label" for="market_analysis-code_system">코드 체계<span class="field-required">필수</span></label>
+        <select class="select" id="market_analysis-code_system" name="code_system" aria-describedby="market_analysis-code_system-error">
+          <option value="ncm" selected>NCM 8자리 (브라질)</option>
+          <option value="hs6">HS 6자리 (국제 공통)</option>
+        </select>
+        <p class="field-error" id="market_analysis-code_system-error" data-error-for="code_system" hidden></p>
       </div>
       <div class="field">
-        <label class="field-label" for="market_analysis-to">종료 월</label>
-        <input class="input" id="market_analysis-to" name="to" type="month">
+        <label class="field-label" for="market_analysis-code">품목코드<span class="field-required">필수</span></label>
+        <input class="input" id="market_analysis-code" name="code" type="text" inputmode="numeric" autocomplete="off"
+               aria-describedby="market_analysis-code-hint market_analysis-code-error">
+        <p class="field-hint" id="market_analysis-code-hint">기본값 54023310: 폴리에스터 DTY 미염색(시장 분석용 후보, 수출 신고 코드 확정 아님). 점(.)은 넣어도 됩니다.</p>
+        <p class="field-error" id="market_analysis-code-error" data-error-for="code" hidden></p>
       </div>
     </div>
+
+    <div class="grid ma-period-grid">
+      <div class="field">
+        <label class="field-label" for="market_analysis-from">시작 월<span class="field-required">필수</span></label>
+        <input class="input" id="market_analysis-from" name="from" type="month"
+               aria-describedby="market_analysis-period-hint market_analysis-from-error">
+        <p class="field-error" id="market_analysis-from-error" data-error-for="from" hidden></p>
+      </div>
+      <div class="field">
+        <label class="field-label" for="market_analysis-to">종료 월<span class="field-required">필수</span></label>
+        <input class="input" id="market_analysis-to" name="to" type="month"
+               aria-describedby="market_analysis-period-hint market_analysis-to-error">
+        <p class="field-error" id="market_analysis-to-error" data-error-for="to" hidden></p>
+      </div>
+    </div>
+    <p class="field-hint" id="market_analysis-period-hint" data-ma-period-hint>최신 제공 월을 확인하는 중입니다.</p>
+
+    <fieldset class="fieldset">
+      <legend class="field-label">공급국 비교 <span class="field-hint">(선택)</span></legend>
+      <p class="field-hint" id="market_analysis-countries-hint">선택하지 않으면 전체 국가 기준입니다. 선택한 국가는 아래 비교표에 따로 표시하며, 비중은 항상 브라질 전체 수입액 기준입니다.</p>
+      <div data-work-ignore>
+        <label class="visually-hidden" for="market_analysis-country-search">공급국 검색</label>
+        <input class="input" id="market_analysis-country-search" type="search" placeholder="국가 검색 (예: 중국, China)" autocomplete="off">
+      </div>
+      <div class="ma-country-list" role="group" aria-describedby="market_analysis-countries-hint market_analysis-countries-error" data-ma-country-list>
+        <p class="field-hint">공급국 목록을 불러오는 중입니다.</p>
+      </div>
+      <p class="field-hint" data-ma-country-count aria-live="polite">선택한 공급국 없음</p>
+      <p class="field-error" id="market_analysis-countries-error" data-error-for="countries" hidden></p>
+    </fieldset>
+
+    <div class="notice notice-danger" role="alert" data-ma-form-error hidden></div>
+
     <div class="btn-row">
-      <button type="submit" class="btn btn-primary" disabled aria-describedby="market_analysis-pending">분석 실행</button>
-      <span class="field-hint" id="market_analysis-pending">준비 중: 아직 사용할 수 없습니다.</span>
+      <button type="submit" class="btn btn-primary" data-ma-submit>분석 실행</button>
+      <button type="button" class="btn btn-secondary" data-ma-refresh hidden>다시 불러오기</button>
     </div>
+    <p class="field-hint">ComexStat 호출 한도 때문에 첫 조회는 수십 초 걸릴 수 있습니다. 같은 날 같은 품목을 다시 조회하면 받아 둔 자료를 사용합니다.</p>
   </form>
 
   <section class="card" aria-labelledby="market_analysis-result-title">
     <div class="card-header">
       <div>
         <h2 class="card-title" id="market_analysis-result-title">분석 결과</h2>
-        <p class="card-description">수입액·수입량·주요 공급국·평균단가 추세와 출처를 표시합니다.</p>
+        <p class="card-description">수입액·수입량·평균 수입단가 추세와 공급국 현황을 출처와 함께 표시합니다.</p>
       </div>
-      <button type="button" class="btn btn-secondary" disabled>PDF 다운로드</button>
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" disabled aria-describedby="market_analysis-pdf-pending">PDF 다운로드</button>
+        <span class="field-hint" id="market_analysis-pdf-pending">준비 중: 다음 단계에서 제공</span>
+      </div>
     </div>
-    <div class="empty-state">
-      <p class="empty-state-title">아직 결과가 없습니다</p>
-      <p>분석 기능이 개발되면 조회 결과가 이곳에 표시됩니다.</p>
+    <div data-ma-result aria-live="polite">
+      <div class="empty-state">
+        <p class="empty-state-title">아직 결과가 없습니다</p>
+        <p>조회 조건을 확인하고 '분석 실행'을 누르세요.</p>
+      </div>
     </div>
   </section>
 </div>

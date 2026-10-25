@@ -1,6 +1,6 @@
 # 시장 분석
 담당: 한윤수
-상태: 사용자 협의 반영 최종 요구사항 명세(2026-10-25). 기능 범위 확정, 구현·실행 검증 전. 데이터 접근·세부 기술 항목은 아래 미정 사항을 확인한 뒤 구현합니다. 최종 확인 담당자는 한윤수이며 별도 마감일 제약은 없습니다.
+상태: 사용자 협의 반영 최종 요구사항 명세(2026-10-25). 1단계(ComexStat 통계·코드 계산·화면) 구현 완료, 2~3단계(KOTRA·KITA·뉴스·AI 분석·PDF) 미구현. 구현 결정과 실제 확인 결과는 맨 아래 '1단계 구현 현황'을 봅니다. 최종 확인 담당자는 한윤수이며 별도 마감일 제약은 없습니다.
 
 ## 목적/범위
 - 사용자: 효성티앤씨 해외영업·마케팅 담당자. 흩어진 브라질 시장 정보와 자료를 한 화면에서 확인하고 영업·마케팅 판단에 활용합니다.
@@ -119,3 +119,38 @@
 - 구현 전 남은 확인: 현행 NCM 및 기본 코드 묶음, ComexStat 실호출·응답 매핑, KOTRA 활용 신청·인증키 설정·실호출·업무용 요약/번역/PDF/캐시 이용 범위, KITA 공식 연계 방식, 일반 뉴스 API 선정, 이상치 기준·집계 결측 처리·반올림·허용 오차, 상태 보존·종료 처리와 공통 동작 조정, 캐시·일일 갱신 방식, AI 모델·비용·소요 시간·재시도, PDF 도구, 배포 환경.
 - 한윤수 담당 worklogs(docs/worklogs/han_yunsu/)에는 실제 조회·계산·검토·실행 결과만 기록합니다. 가설·미확인·미실시는 실제 관측값과 구분하고 사용자 결과 전문이나 비밀값을 남기지 않습니다.
 - 최종 확인 담당자: 한윤수. 별도 개발 마감일 제약 없음.
+
+## 1단계 구현 현황 (2026-10-25)
+단계 구분(사용자 결정): 1단계 ComexStat 통계·계산·화면 → 2단계 KOTRA 뉴스·AI 분석(5차례 검토) → 3단계 PDF.
+
+### 이번에 확정한 결정 (사용자 답변)
+- 기본 품목: NCM 54023310(폴리에스터 DTY 미염색) 하나. 5402.33.20·5402.33.90은 기본 조회에서 제외.
+- 코드 입력: NCM 8자리 또는 HS 6자리, 한 번에 코드 하나(여러 품목 합산·비교 없음).
+- 단가 '확인 필요' 기준: 같은 조회의 단가 중앙값 대비 ½배 미만 또는 2배 초과(단가 3개 미만이면 판정 안 함). 월별·공급국별로 따로 판정, 값은 삭제하지 않음.
+- 표시 반올림: 수입액 USD 정수(천 단위 쉼표), 수입량 t 소수 1자리, 단가 USD/kg 소수 2자리, 증감률·비중 % 소수 1자리. 계산은 원본 값.
+- 캐시: 서버 메모리. 같은 날(KST) 같은 코드는 재사용, 서버 재시작 시 비워짐. 디스크 저장 없음.
+- 국가명: 한국어명(주요 97개국, features/market_analysis/data/countries.json) + ComexStat 포르투갈어 원문. 한국어명이 없으면 원문만.
+- 그래프: 직접 그린 SVG(외부 스크립트 없음). 지표(수입액·수입량·평균단가) 전환, 단일 계열·단일 축.
+- 새로고침 유지: 공통 규칙(메모리 유지, 새로고침 시 복원 없음)을 우선 따름. 새로고침 유지는 공통 담당자 합의 후 별도 작업으로 보류.
+- PDF(3단계 예정): 서버 생성 + 무료 한글 글꼴(Noto Sans KR, OFL) 방식으로 선택. 라이브러리는 미선정, requirements.txt 변경 필요.
+
+### ComexStat 실제 호출로 확인한 동작 (2026-10-25)
+- POST /general의 period는 "연도 범위 × 월 범위"로 해석된다. 2024-01~2026-09 요청 시 매년 1~9월만, 2022-10~2026-09 요청 시 빈 목록. → 항상 YYYY-01~YYYY-12 전체 연도로 요청하고 서버에서 월을 잘라낸다. 2022-01~2026-12 요청은 2022-01~2026-09 57개월을 빠짐없이 반환했다.
+- HS 6자리 필터 이름은 subHeading(구 이름 sh6는 거부된다는 comexr 변경 기록 확인). 국가 필터는 3자리 코드(한국 190, 중국 160). 응답의 국가는 포르투갈어 이름만 온다.
+- 금액(metricFOB)·순중량(metricKG)은 문자열. 코드 검증은 GET /tables/ncm?search=, /tables/hs?search=(없는 코드는 빈 목록).
+- 약 30초 간격 연속 호출에서 HTTP 429. 공식 한도 수치는 찾지 못했다. 서버는 호출을 하나씩 보내고 최소 10초 간격, 429·5xx·연결 실패만 15초·30초 후 최대 2회 재시도한다. 첫 조회는 수십 초 걸릴 수 있다.
+
+### 엔드포인트
+- GET /api/market-analysis/meta → data: default{code_system, code, months, from, to}, max_months, max_countries, first_month(1997-01), korea_code, countries[{code, name_pt, name_ko}], latest{month, updated, checked_at, stale}|null, error|null.
+- POST /api/market-analysis/analyze (JSON) 요청: code_system(ncm|hs6), code, from, to(YYYY-MM), countries[국가 코드], refresh(bool, 캐시 무시).
+  성공 data: query, has_data, summary(fob, kg, unit_price, prior, yoy, 기록 월 수), monthly[], suppliers{count, top(10), korea, selected}, outlier{rule, 중앙값}, notes[], sources[](ComexStat 기준일·받은 시각·cache_status fresh|cached|stale), pending_sources[].
+  실패: 400 MA_INVALID_INPUT(+fields 입력란별 문장, 현행 코드표에 없는 코드 포함), 429 MA_SOURCE_RATE_LIMITED, 502 MA_SOURCE_UNAVAILABLE / MA_SOURCE_BAD_RESPONSE / MA_SOURCE_REJECTED, 500 MA_INTERNAL_ERROR. 소스 오류에는 retryable 포함.
+- 전년 동기 비교를 위해 시작 월 12개월 전 연도부터 조회한다. 조회 실패 시 같은 날이 아니어도 범위를 포함한 이전 자료가 있으면 '이전 자료 사용(stale)'으로 표시한다.
+- 행이 없는 월은 '기록 없음'(0 아님). 결과가 비면 현행 코드표를 확인해 '없는 코드'(입력 오류)와 '조회 결과 없음'을 구분한다.
+
+### 남은 일
+- 2단계: KOTRA 활용 신청·서비스키(환경변수 이름 공통 합의 필요), 일반 뉴스 공급자, OpenAI 프롬프트·스키마·비용 기준, 5차례 검토 설계.
+- 3단계: PDF 라이브러리 선정·글꼴 동봉·requirements.txt 변경(공통 합의).
+- 공통 문서 갱신 제안: README '시장 분석 미구현' 문구, docs/data_contracts.md의 /api/market-analysis 계약 요약.
+- 공급국 'country'가 원산국인지 선적·구매국인지 ComexStat 정의 확인. 응답에 Brasil(자국)이 공급국으로 나오는 의미 확인.
+- 과거 기간의 코드 적용 여부(NCM 개정 이력) 확인 방법.
