@@ -50,7 +50,7 @@
               <span class="home-time-sub home-time-sub-line" id="home-next-local"></span></dd>
           </div>
           <div class="home-time-pair">
-            <dt>공휴일</dt>
+            <dt>다음 공휴일</dt>
             <dd><span id="home-holiday">확인 중</span>
               <span class="field-hint home-time-sub-line" id="home-holiday-source" role="status">공휴일 정보 확인 중</span></dd>
           </div>
@@ -100,6 +100,7 @@
       </div>
       <div class="home-card-body" id="home-news-body" aria-busy="true">
         <div class="home-news-filter" id="home-news-filter" role="group" aria-label="매체별 보기" hidden></div>
+        <div class="home-news-filter" id="home-news-topics" role="group" aria-label="주제별 보기" hidden></div>
         <details class="home-news-status">
           <summary>수집 현황</summary>
           <ul class="home-news-sources" id="home-news-sources" aria-label="수집 경로별 상태"></ul>
@@ -109,7 +110,7 @@
         <p class="home-news-loading" id="home-news-summary-loading" hidden><span class="spinner" aria-hidden="true"></span>AI 요약을 만드는 중 · 원문 제목은 먼저 표시됩니다</p>
         <p class="field-hint" id="home-news-summary-status" role="status" hidden></p>
         <ul class="home-news-list" id="home-news-list" aria-label="뉴스 목록" tabindex="-1" hidden></ul>
-        <p class="field-hint" id="home-news-filter-empty" hidden>이 매체에서 표시할 소식이 없습니다.</p>
+        <p class="field-hint" id="home-news-filter-empty" hidden>선택한 조건에 해당하는 뉴스가 없습니다.</p>
         <div class="btn-row" id="home-news-more-row" hidden>
           <button type="button" class="btn btn-secondary" id="home-news-more" aria-controls="home-news-list" aria-expanded="false">더 보기</button>
         </div>
@@ -143,6 +144,22 @@
     </article>
   </div>
 
+  {# 다른 탭 바로가기: 사이드바와 같은 해시 링크(#기능id)로 이동만 합니다(데이터·상태 전달 없음).
+     제목·안내는 각 탭 routes.py FEATURE의 label·description(사이드바·머리글과 같은 원본)을 그대로 씁니다. #}
+  <nav class="home-shortcuts" aria-labelledby="home-shortcuts-title">
+    <h2 class="visually-hidden" id="home-shortcuts-title">다른 탭 바로가기</h2>
+    <ul class="home-shortcut-list">
+      {% for t in features if t.id != "home" %}
+      <li>
+        <a class="home-shortcut" href="#{{ t.id }}">
+          <span class="home-shortcut-title">{{ t.label }}<span class="home-shortcut-arrow" aria-hidden="true">→</span></span>
+          <span class="home-shortcut-desc">{{ t.description }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </nav>
+
   {# 카드에 있던 긴 안내·출처 문장을 모읍니다. 내용은 줄이지 않고 위치만 옮겼습니다. #}
   <details class="card home-notes" id="home-notes">
     <summary class="home-notes-summary"><h2 class="card-title">출처 및 유의사항</h2></summary>
@@ -153,6 +170,7 @@
           <li id="home-hours-hint">기준: 현지 09:00~18:00 (가정, 확정되지 않은 업무시간) · 점심시간 미반영 · 브라질 국가 공휴일만 반영(주·시 공휴일 제외)</li>
           <li>공휴일: BrasilAPI 국가 공휴일. 조회에 실패하면 대체 자료를 쓰거나 공휴일 없이 주말·업무시간만 판단합니다(카드에 표시).</li>
           <li>상태와 다음 연락 가능 시각은 위 가정값으로 계산한 안내이며 실제 바이어 일정과 다를 수 있습니다.</li>
+          <li>다음 공휴일은 기준 도시 현지 날짜 기준 D-day이며, 공휴일 이름은 BrasilAPI 원문(포르투갈어) 그대로입니다.</li>
         </ul>
       </section>
       <section aria-labelledby="home-notes-fx">
@@ -169,6 +187,7 @@
           <li>수집 경로별 최신 20건 · 1시간마다 갱신. 기본 8건을 보여 주며 더 보기로 이미 받은 목록을 펼칩니다.</li>
           <li>"AI 요약"은 Google News·ABIT 포르투갈어 제목만 보고 만든 한국어 한 줄로, 기사 본문을 보지 않았으므로 원문 확인이 필요합니다. KOTRA 뉴스는 요약하지 않습니다.</li>
           <li>Google News·ABIT 링크는 Google News를 거쳐 원문으로 이동합니다.</li>
+          <li>주제 태그는 제목의 키워드로 코드가 분류한 것(AI 아님, 최대 2개, 해당 없으면 기타)이며 기사 내용과 다를 수 있습니다.</li>
           <li>KOTRA 자료 출처: KOTRA 해외시장뉴스.</li>
         </ul>
       </section>

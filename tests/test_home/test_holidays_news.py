@@ -176,6 +176,48 @@ class RelevanceTests(unittest.TestCase):
                          {"kotra": (2, 1, 1), "google": (2, 2, 2), "abit": (2, 2, 2)})
 
 
+class TopicTagTests(NewsTestBase):
+    """뉴스 주제 태그(코드 기반, 제목만). 필수 사례 4개 + 최대 2개·순서·API tags."""
+
+    def test_required_cases(self):
+        cases = [
+            ("Brasil regulamenta acesso a cotas de exportação para a Noruega", ["규제·무역"]),
+            ("Abrapa destaca inovação e sustentabilidade como caminhos para o futuro do algodão", ["원사", "리사이클·ESG"]),
+            ("Setor enfrenta o desafio de crescer em 2027", ["기타"]),  # desafio 안의 fio는 원사가 아님
+            ("Veja as novidades da semana", ["기타"]),
+        ]
+        for title, expected in cases:
+            self.assertEqual(service.news_topics(title), expected, title)
+
+    def test_normalize_word_boundary_max_two_and_order(self):
+        self.assertEqual(service.news_topics("FIOS de POLIÉSTER"), ["원사"])  # 대소문자·악센트 무시
+        self.assertEqual(service.news_topics("Desafios e desafio"), ["기타"])
+        self.assertEqual(service.news_topics("Novo fio"), ["원사"])
+        # 원사·원단·규제·ESG·패션 모두 맞아도 표 순서 앞쪽 2개
+        tags = service.news_topics("Fios e tecidos reciclados: exportação e moda")
+        self.assertEqual(tags, ["원사", "원단"])
+        self.assertEqual(service.news_topics("Exportações de moda sustentável"), ["규제·무역", "리사이클·ESG"])
+        self.assertEqual(service.news_topics("한국 원사 수출 동향"), ["원사", "규제·무역"])  # KOTRA 한국어 제목
+        self.assertEqual(service.news_topics("TEST 브라질 섬유 시장 동향"), ["기타"])
+
+    def test_constants_cover_order(self):
+        self.assertEqual(service.NEWS_TOPIC_ORDER, ("원사", "원단", "규제·무역", "리사이클·ESG", "패션·리테일"))
+        self.assertEqual(set(service.NEWS_TOPIC_KEYWORDS), set(service.NEWS_TOPIC_ORDER))
+
+    def test_api_items_have_tags(self):
+        self.use(FakeHttp())
+        body = app.test_client().get("/api/home/news").get_json()
+        items = body["data"]["items"]
+        self.assertTrue(items)
+        for item in items:
+            self.assertTrue(1 <= len(item["tags"]) <= 2, item)
+        self.assertEqual({i["title"]: i["tags"] for i in items}["Abit alerta para importações de vestuário"], ["규제·무역", "패션·리테일"])
+
+    def test_relevance_filter_unchanged_by_tags(self):
+        # 관련성 필터는 별도 상수: 태그 키워드(예: cotas)만 있는 제목은 여전히 걸러짐
+        self.assertFalse(service.is_relevant_news(item("Brasil regulamenta acesso a cotas de exportação para a Noruega")))
+
+
 class KotraExposureTests(NewsTestBase):
     """A 응답 0건 · B 필터 후 0건 · C 최소 노출 · D 강제 포함 없음 · E 중복 없음."""
 

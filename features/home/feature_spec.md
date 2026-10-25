@@ -39,7 +39,9 @@
 - 서울 현재 시각, 브라질 현재 시각(`10/25(일) 22:00` 형식)과 도시명.
 - 카드 맨 위 큰 상태 문구(색 + 텍스트): `지금 연락 가능`(초록) · `지금은 주말` · `지금은 업무시간 외`(주황) · `오늘은 공휴일`(빨강). 판정 규칙은 그대로.
 - 다음 연락 가능(다음 업무 시작): `10/26(월) 21:00 KST` + `현지 10/26(월) 09:00`. 업무시간 중에는 숨김. 공휴일 자료를 확인하지 못한 날이 있으면 `· 공휴일 미반영`.
-- 공휴일: 오늘부터 14일 이내 가장 가까운 국가 공휴일(`11/2(월) Finados · 8일 후 — 회신 지연 가능`, 주말이면 `(주말)`, 오늘이면 `오늘 … — 국가 공휴일`, 없으면 `14일 이내 국가 공휴일 없음`).
+- 다음 공휴일(항상 표시, 2026-10-25): 기준 도시 **현지 날짜** 이후(오늘 포함) 가장 가까운 국가 공휴일 `11/2(월) Finados · D-8`, 오늘이면 `D-DAY`. 이름은 BrasilAPI `name` 원문(번역·AI 없음).
+  올해 남은 공휴일이 없을 때만 다음 해 목록을 기존 `/api/home/holidays?year=`(연도 캐시)로 불러온다. 필요한 연도 자료를 확인하지 못하면 `다음 공휴일 확인 불가`(추측 없음). 기준 도시를 바꾸면 다시 계산.
+  화면(home.js `nextHoliday`)과 PDF(buyer_time.py `next_holiday`·`next_holiday_text`)는 같은 규칙·같은 표기.
 - 배치: 이름 | 값 두 열(행 간격 좁게), 보조 정보(현지 시각·공휴일 자료 `BrasilAPI · 조회 시각`)는 값 아래 작은 회색 글씨, 기준 도시 선택은 카드 맨 아래.
 - 안내: 카드에는 공휴일 자료 출처·조회 시각만, 업무시간 가정값과 전체 문장 `기준: 현지 09:00~18:00 (가정, 확정되지 않은 업무시간) · 점심시간 미반영 · 브라질 국가 공휴일만 반영(주·시 공휴일 제외)`은 하단 `출처 및 유의사항`.
 
@@ -101,13 +103,32 @@ BrasilAPI timeout 5초. 실패 시 대체 자료 `features/home/data/holidays_br
 - 정규화 `{id, title, url, media, media_domain, published_at, origin, lang}`(media_domain: RSS `<source url>` 또는 KOTRA 링크의 호스트, `www.` 제거). Google 제목 끝 ` - 매체명` 제거. 날짜·링크(http/https)가 없거나 날짜를 해석할 수 없으면 제외. RSS description은 제목·매체명 반복이라 쓰지 않는다(`snippet` 없음).
 - 관련성 필터(Google News·ABIT, 상수는 service.py 상단): 매체 도메인은 news.google.com 링크가 아니라 RSS `<source url>`로 판단. `.pt` 도메인과 `EXCLUDED_MEDIA_DOMAINS`(portugaltextil.com·vietnam.vn, 2026-10-25 실제 RSS 근거)는 제외, `abit.org.br`는 키워드 검사 면제, 그 밖은 제목에 섬유 낱말(`TEXTILE_NEWS_KEYWORDS`, 악센트·대소문자 무시, 낱말 단위) 또는 구문(`indústria da moda` 등, `moda` 단독 제외)이 있어야 통과. KOTRA는 기존 섬유 낱말 필터. Google 검색어는 좁힌 후보가 일반 노이즈를 줄이지 못해 바꾸지 않음.
 - 건수: `collected`(응답에서 읽은 건수, 경로 안 중복 제외, KOTRA는 API 응답 건수) → `after_filter` → `count`(표시, 최대 20). 로그에 `collected=… filtered=… shown=…` 집계만 남겨 KOTRA 0건이 응답 0건/필터 후 0건인지 구분한다.
+- 주제 태그: 정규화 후 각 항목에 `tags`(1~2개)를 붙인다. 아래 `(4-1)` 참고.
 - 중복 제거: 같은 URL 또는 공백·대소문자를 정리한 같은 제목이면 하나만(abit → kotra → google 순으로 남김, 버린 항목의 URL·제목도 기억). 최신순 정렬.
 
 ### API
 - `GET /api/home/news?refresh=kotra|google|abit` (잘못된 값 400 `invalid_refresh`)
-  → `{"items": [...], "media": {경로: {"status": "ok|error|not_configured", "fetched_at", "collected", "after_filter", "count", "stale", "error"?: {"code","message","retryable"}}}, "summary": {"pending": n}}`
+  → `{"items": [{…, "tags": ["원사", "리사이클·ESG"]}], "media": {경로: {"status": "ok|error|not_configured", "fetched_at", "collected", "after_filter", "count", "stale", "error"?: {"code","message","retryable"}}}, "summary": {"pending": n}}`
   항목의 `summary_ko`는 이미 만든 요약이 있을 때만 붙는다.
 - `POST /api/home/news/summaries` → `{"status": "ok|unavailable|error", "message"?, "summaries": {id: 요약}}` (서버에 수집된 뉴스만 대상, 클라이언트 문장을 받지 않음)
+
+### (4-1) 뉴스 주제 태그
+**초안(2026-10-25)**: 요청에 명시된 (4-1) 키워드 표가 이 문서에 없어, 관련성 필터 낱말과 필수 검증 사례로 정한 초안이다. 확정 표가 오면 service.py `NEWS_TOPIC_KEYWORDS`만 바꾼다.
+- 코드 기반 분류(AI 없음). 입력은 수집된 **제목만**(RSS description은 제목 반복이라 발췌 없음, AI 요약은 쓰지 않음).
+- 판정용 정규화: 소문자 + 악센트 제거(`têxtil` → `textil`, 화면 제목은 그대로). 라틴 키워드는 낱말 단위(`fio`는 `desafio`에 맞지 않음), 두 낱말 이상은 구절 단위, 한국어(KOTRA 제목)는 글자 포함 여부.
+- 표 순서가 우선순위, 기사당 최대 2개, 하나도 없으면 `기타`. 관련성 필터(포함/제외)와는 목적이 달라 키워드를 따로 둔다(필터 결과 불변).
+
+| 순서 | 태그 | 키워드(초안) |
+|---|---|---|
+| 1 | 원사 | fio, fios, fiação, filamento(s), fibra(s), poliéster, polyester, poliamida, nylon, elastano, viscose, algodão · 원사, 화섬, 폴리에스터, 면화 |
+| 2 | 원단 | tecido(s), malha(s), malharia, tecelagem, tinturaria, estamparia, denim · 원단, 직물, 편직 |
+| 3 | 규제·무역 | exportação/exportações, importação/importações, cota(s), tarifa(s), imposto(s), tributária/tributário, antidumping, dumping, regulamenta, regulamentação, mercosul, acordo comercial, comércio exterior · 수출, 수입, 관세, 무역, 규제, 통관, 협정 |
+| 4 | 리사이클·ESG | reciclagem, reciclado(s)/reciclada(s), sustentabilidade, sustentável/sustentáveis, esg, circular, economia circular, resíduos, carbono, emissões, rastreabilidade · 재활용, 리사이클, 친환경, 지속가능, 탄소 |
+| 5 | 패션·리테일 | moda, varejo, vestuário, confecção/confecções, coleção, roupa(s), desfile, fashion, loja(s) · 패션, 의류, 소매, 유통, 브랜드 |
+| 6 | 기타 | 위 키워드가 하나도 없을 때 |
+
+- 화면: 기사마다 회색 주제 라벨(매체 라벨과 같은 계층), 매체 필터와 별도의 주제 필터 `[전체] [원사] [원단] [규제·무역] [리사이클·ESG] [패션·리테일] [기타]`(`aria-pressed`, 건수 표시). 두 필터는 함께 적용(둘 다 맞는 기사만), 이미 받은 목록을 화면에서만 거른다(추가 요청 없음). 맞는 기사가 없으면 `선택한 조건에 해당하는 뉴스가 없습니다.`
+- PDF: 매체·날짜 줄 끝에 ` · 원사 · 리사이클·ESG`.
 
 ### 캐시
 경로별 서버 메모리 1시간. 갱신 실패 시 이전 성공 수집분을 지우지 않고 `stale`로 표시. 실패는 캐시하지 않는다. `refresh`는 그 경로만 다시 가져온다.
@@ -146,8 +167,8 @@ Home 맨 위 `일일 브리핑` 바(첫 화면): 한 줄 안내 `바이어 시�
 `서버에 저장하지 않음`·A4 구성 안내는 `출처 및 유의사항`. 공통 머리글의 `다운로드 요청됨 · 저장 여부는 브라우저에서 확인` 칩은 공통 shell(app_shell.js) 표시이며, Home에서는 머리글과 함께 화면에서 숨겨진다(화면낭독기에는 role=status로 남음).
 
 ### PDF 구성(순서)
-머리말(fionex 일일 브리핑, 생성 시각, 서울 시각, 선택 도시 시각) → 1. 바이어 시간(상태·다음 업무 시작·7일 이내 공휴일·가정값 안내) →
-2. 환율(값·고시일·전일 대비·출처, BRL/KRW는 USD 경유 계산값) → 3. 최신 뉴스(최신순 상위 8건, KOTRA 필터 통과 기사가 있으면 최소 1건 포함(`NEWS_SOURCE_MINIMUM`, 없으면 채우지 않음, 중복·최대 건수 유지): 제목이 원문 링크, `[AI 요약]`(Google·ABIT, 있을 때만), 경로·매체(도메인)·날짜. 긴 URL 문자열은 쓰지 않음) →
+머리말(fionex 일일 브리핑, 생성 시각, 서울 시각, 선택 도시 시각) → 1. 바이어 시간(상태·다음 업무 시작·다음 공휴일 `11/2(월) Finados · D-8`(7일 이내 공휴일이 있으면 같은 줄에 `· 7일 이내: … — 회신 지연 가능/(주말)`)·가정값 안내) →
+2. 환율(값·고시일·전일 대비·출처, BRL/KRW는 USD 경유 계산값) → 3. 최신 뉴스(최신순 상위 8건, KOTRA 필터 통과 기사가 있으면 최소 1건 포함(`NEWS_SOURCE_MINIMUM`, 없으면 채우지 않음, 중복·최대 건수 유지): 제목이 원문 링크, `[AI 요약]`(Google·ABIT, 있을 때만), 경로·매체(도메인)·날짜·주제 태그. 긴 URL 문자열은 쓰지 않음) →
 4. 다가오는 전시회(3건: 행사·기간·D-day·도시·장소·확인 상태·출처 링크) → 5. 출처 및 유의사항(출처별 조회 시각, 뉴스 경로별 `수집 N건 / 필터 후 M건 / 브리핑 선정 K건`, 가정값·계산값·AI 요약 안내, 확인 필요 전시회, 수집 실패·확인 불가 항목 목록). 쪽마다 생성 시각·쪽 번호 `n / N`(전체 쪽 수를 아는 사용자 정의 캔버스). BRL/KRW 고시일 칸은 두 고시일이 같으면 `2026-10-23 (두 환율 동일)`, 다르면 `KRW 10-23 / BRL 10-24`. 뉴스 8건 기준 A4 2쪽 이내.
 
 ### 데이터 출처
@@ -317,3 +338,18 @@ features/home/data/br_textile_fairs.json(자료 확인일 2026-10-25, 출처 URL
 
 ### 완료 기준
 종료되지 않은 행사만 날짜순, D-day 코드 계산, 출처 없는 항목 미표시, 자료 오류 시 카드만 오류.
+
+## 6. 다른 탭 바로가기
+### 목적
+Home에서 다른 주요 탭으로 바로 이동한다. 이동만 하며 Home 데이터·선택 상태를 전달하지 않는다.
+
+### 화면 표시
+`출처 및 유의사항` 바로 위, 순서 시장 분석 · 제품소개서 · 그린 클레임 체크 · 홍보 스튜디오. 1100px 이상 한 줄 4개, 미만 2×2.
+카드마다 제목 · 한 줄 안내 · `→`. **문구 원본**: 이 절의 확정 문구가 없어(2026-10-25) 각 탭 routes.py `FEATURE`의 `label`·`description`(사이드바·탭 머리글과 같은 원본)을 그대로 쓴다. 효율·시간 절감 수치는 넣지 않는다.
+
+### 작동 방식
+`<a href="#기능id">`로 사이드바와 같은 해시 이동(공통 shell이 탭 전환·제목 초점 처리). query·저장소를 쓰지 않는다. 공통 코드 변경 없음.
+
+### 검증 상태
+- 확인함(2026-10-25 브라우저): 4개 링크의 href·이름이 사이드바와 같음, 클릭 시 각 탭 표시·해시 일치·query 없음, 다녀온 뒤 Home 필터·목록 유지, 1440 한 줄 4개·1024/390 2×2.
+

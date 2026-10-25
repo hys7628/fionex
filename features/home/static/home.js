@@ -18,7 +18,6 @@
   const SEOUL_TZ = "Asia/Seoul";
   const WORK_START_HOUR = 9;
   const WORK_END_HOUR = 18;
-  const HOLIDAY_LOOKAHEAD_DAYS = 14;
   const NEXT_START_SEARCH_DAYS = 31;
   const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
   // 카드 맨 위 큰 상태 문구. 색과 문구를 함께 바꿉니다(색만으로 구분하지 않음).
@@ -178,19 +177,32 @@
     return null;
   }
 
-  // 오늘부터 HOLIDAY_LOOKAHEAD_DAYS일 안의 가장 가까운 국가 공휴일
-  function holidayText(today) {
-    let allKnown = true;
-    for (let i = 0; i <= HOLIDAY_LOOKAHEAD_DAYS; i++) {
-      const day = addDays(today, i);
-      const holiday = lookupHoliday(day);
-      if (!holiday.known) allKnown = false;
-      if (!holiday.name) continue;
-      if (i === 0) return "오늘 " + formatDay(day) + " " + holiday.name + " — 국가 공휴일";
-      const effect = isWeekend(day) ? " (주말)" : " — 회신 지연 가능";
-      return formatDay(day) + " " + holiday.name + " · " + (i === 1 ? "내일" : i + "일 후") + effect;
+  // 다음 공휴일(PDF의 buyer_time.next_holiday와 같은 규칙): 기준 도시 현지 날짜 이후(오늘 포함) 가장 가까운 공휴일.
+  // 올해 남은 공휴일이 없을 때만 다음 해 목록을 불러옵니다. 그 해 자료를 확인하지 못하면 추측하지 않습니다.
+  // 반환 { day, name, days } | { loading: true } | null(확인 불가)
+  function nextHoliday(today) {
+    const todayKey = dayKey(today);
+    for (let year = today.year; year <= today.year + 1; year++) {
+      ensureYear(year);
+      const entry = holidayYears.get(year);
+      if (entry.loading) return { loading: true };
+      if (entry.source === "none") return null;
+      const key = Array.from(entry.byDate.keys()).filter(function (k) { return k >= todayKey; }).sort()[0];
+      if (key) {
+        const p = key.split("-").map(Number);
+        const day = { year: p[0], month: p[1], day: p[2] };
+        const days = Math.round((Date.UTC(p[0], p[1] - 1, p[2]) - Date.UTC(today.year, today.month - 1, today.day)) / 86400000);
+        return { day: day, name: entry.byDate.get(key), days: days };
+      }
     }
-    return allKnown ? HOLIDAY_LOOKAHEAD_DAYS + "일 이내 국가 공휴일 없음" : "공휴일 정보 확인 불가";
+    return null;
+  }
+
+  // 11/2(월) Finados · D-8 / 오늘이면 D-DAY. 공휴일 이름은 BrasilAPI 원문 그대로(번역 없음).
+  function nextHolidayText(holiday) {
+    if (holiday === null) return "다음 공휴일 확인 불가";
+    if (holiday.loading) return "확인 중";
+    return formatDay(holiday.day) + " " + holiday.name + " · " + (holiday.days === 0 ? "D-DAY" : "D-" + holiday.days);
   }
 
   function renderSource(years) {
@@ -247,10 +259,9 @@
       el.nextRow.hidden = false;
     }
 
-    setText(el.holiday, holidayText(today));
-    renderSource([today.year, addDays(today, HOLIDAY_LOOKAHEAD_DAYS).year].filter(function (y, i, a) {
-      return a.indexOf(y) === i;
-    }));
+    setText(el.holiday, nextHolidayText(nextHoliday(today)));
+    // 출처 줄은 올해 + (다음 공휴일·다음 업무일 계산으로 불러온 경우) 다음 해
+    renderSource(holidayYears.has(today.year + 1) ? [today.year, today.year + 1] : [today.year]);
   }
 
   /* ---------- 업계 소식 ---------- */
@@ -268,13 +279,16 @@
     empty: panel.querySelector("#home-news-empty"),
     emptyText: panel.querySelector("#home-news-empty-text"),
     filter: panel.querySelector("#home-news-filter"),
+    topics: panel.querySelector("#home-news-topics"),
     filterEmpty: panel.querySelector("#home-news-filter-empty"),
     moreRow: panel.querySelector("#home-news-more-row"),
     more: panel.querySelector("#home-news-more"),
   };
   // 매체 필터·더 보기는 이미 받은 목록을 화면에서만 거릅니다(추가 요청 없음).
   const NEWS_PAGE_SIZE = 8;
-  const newsView = { origin: "all", expanded: false };
+  const newsView = { origin: "all", topic: "all", expanded: false };
+  // 주제 태그 순서(서버 service.NEWS_TOPIC_ORDER + "기타")와 같게 둡니다. 태그는 서버가 붙여 보냅니다.
+  const NEWS_TOPICS = ["원사", "원단", "규제·무역", "리사이클·ESG", "패션·리테일", "기타"];
   let newsLoaded = false;
   let newsBusy = false;
   let summaryBusy = false;
@@ -337,7 +351,7 @@
     const tabs = [{ key: "all", label: "전체" }].concat(Object.keys(NEWS_ORIGINS).map(function (origin) {
       return { key: origin, label: NEWS_ORIGINS[origin], status: media[origin].status };
     }));
-    news.filter.replaceChildren.apply(news.filter, tabs.map(function (tab) {
+    news.filter.replaceChildren.apply(news.filter, [make("span", "home-news-filter-label", "매체")].concat(tabs.map(function (tab) {
       const button = make("button", "home-news-tab");
       button.type = "button";
       button.dataset.newsFilter = tab.key;
@@ -351,15 +365,34 @@
         button.title = tab.label + " " + label;
       }
       return button;
-    }));
+    })));
     news.filter.hidden = false;
+  }
+
+  // 주제 필터 [전체] [원사] … [기타]. 매체 필터와 함께 적용합니다(둘 다 맞는 기사만).
+  function renderTopicFilter(items) {
+    const counts = { all: items.length };
+    items.forEach(function (item) {
+      (item.tags || []).forEach(function (tag) { counts[tag] = (counts[tag] || 0) + 1; });
+    });
+    const keys = ["all"].concat(NEWS_TOPICS);
+    news.topics.replaceChildren.apply(news.topics, [make("span", "home-news-filter-label", "주제")].concat(keys.map(function (key) {
+      const button = make("button", "home-news-tab");
+      button.type = "button";
+      button.dataset.newsTopic = key;
+      button.setAttribute("aria-pressed", String(newsView.topic === key));
+      button.append(make("span", "", key === "all" ? "전체" : key), make("span", "home-news-tab-count", String(counts[key] || 0)));
+      return button;
+    })));
+    news.topics.hidden = false;
   }
 
   function applyNewsView() {
     const items = Array.prototype.slice.call(news.list.children);
     let matched = 0;
     items.forEach(function (li) {
-      const match = newsView.origin === "all" || li.dataset.origin === newsView.origin;
+      const match = (newsView.origin === "all" || li.dataset.origin === newsView.origin) &&
+        (newsView.topic === "all" || li.dataset.tags.split("|").indexOf(newsView.topic) !== -1);
       li.hidden = !match || (!newsView.expanded && matched >= NEWS_PAGE_SIZE);
       if (match) matched += 1;
     });
@@ -375,6 +408,17 @@
     newsView.origin = button.dataset.newsFilter;
     newsView.expanded = false;
     news.filter.querySelectorAll("[data-news-filter]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b === button));
+    });
+    applyNewsView();
+  });
+
+  news.topics.addEventListener("click", function (event) {
+    const button = event.target.closest("[data-news-topic]");
+    if (!button) return;
+    newsView.topic = button.dataset.newsTopic;
+    newsView.expanded = false;
+    news.topics.querySelectorAll("[data-news-topic]").forEach(function (b) {
       b.setAttribute("aria-pressed", String(b === button));
     });
     applyNewsView();
@@ -412,6 +456,7 @@
       const li = make("li", "home-news-item");
       li.dataset.newsId = item.id;
       li.dataset.origin = item.origin;
+      li.dataset.tags = (item.tags || []).join("|");
       const link = make("a", "home-news-link", item.title);
       link.href = item.url;
       link.target = "_blank";
@@ -421,6 +466,12 @@
 
       const meta = make("p", "home-news-meta");
       meta.append(make("span", "home-label", NEWS_ORIGINS[item.origin]));  // 분류 라벨은 회색(상태 색 아님)
+      // 주제 태그(1~2개, 없으면 "기타")도 같은 회색 라벨. 화면낭독기에는 "주제"를 붙여 읽힙니다.
+      (item.tags || []).forEach(function (tag) {
+        const label = make("span", "home-label home-topic-label");
+        label.append(make("span", "visually-hidden", "주제 "), document.createTextNode(tag));
+        meta.append(label);
+      });
       if (item.media) meta.append(make("span", "", item.media));
       const time = make("time", "", formatNewsDate(item.published_at));
       time.dateTime = item.published_at;
@@ -435,6 +486,7 @@
     news.list.hidden = items.length === 0;
     news.empty.hidden = items.length > 0;
     renderNewsFilter(items, media);
+    renderTopicFilter(items);
     applyNewsView();
     const allFailed = Object.keys(NEWS_ORIGINS).every(function (origin) { return media[origin].status !== "ok"; });
     news.emptyText.textContent = allFailed

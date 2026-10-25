@@ -158,6 +158,32 @@ EXCLUDED_MEDIA_DOMAINS = ("portugaltextil.com", "vietnam.vn")
 # 일일 브리핑 등 상위 N건을 고를 때 경로별 최소 건수(필터를 통과한 기사가 있을 때만 채움).
 NEWS_SOURCE_MINIMUM = {"kotra": 1}
 
+# 뉴스 주제 태그(코드 기반 분류, AI 없음). 위 관련성 필터(포함/제외)와 목적이 달라 키워드를 따로 둡니다.
+# 초안(2026-10-25): feature_spec에 (4-1) 키워드 표가 아직 없어 관련성 필터 낱말과 필수 검증 사례를 바탕으로 정함.
+# 표가 확정되면 이 상수만 바꿉니다. 순서 = 우선순위(여러 태그가 맞으면 앞쪽부터 최대 2개, 없으면 "기타").
+# 포르투갈어는 악센트·대소문자를 떼고 낱말 단위(여러 낱말은 구절 단위)로, 한국어(KOTRA 제목)는 글자 그대로 포함 여부로 봅니다.
+NEWS_TOPIC_ORDER = ("원사", "원단", "규제·무역", "리사이클·ESG", "패션·리테일")
+NEWS_TOPIC_OTHER = "기타"
+NEWS_TOPIC_MAX = 2
+NEWS_TOPIC_KEYWORDS = {
+    "원사": ("fio", "fios", "fiação", "filamento", "filamentos", "fibra", "fibras", "poliéster", "polyester",
+             "poliamida", "nylon", "elastano", "viscose", "algodão",
+             "원사", "화섬", "폴리에스터", "면화"),
+    "원단": ("tecido", "tecidos", "malha", "malhas", "malharia", "tecelagem", "tinturaria", "estamparia", "denim",
+             "원단", "직물", "편직"),
+    "규제·무역": ("exportação", "exportações", "importação", "importações", "cota", "cotas", "tarifa", "tarifas",
+               "imposto", "impostos", "tributária", "tributário", "antidumping", "dumping", "regulamenta",
+               "regulamentação", "mercosul", "acordo comercial", "comércio exterior",
+               "수출", "수입", "관세", "무역", "규제", "통관", "협정"),
+    "리사이클·ESG": ("reciclagem", "reciclado", "reciclada", "reciclados", "recicladas", "sustentabilidade",
+                  "sustentável", "sustentáveis", "esg", "circular", "economia circular", "resíduos", "carbono",
+                  "emissões", "rastreabilidade",
+                  "재활용", "리사이클", "친환경", "지속가능", "탄소"),
+    "패션·리테일": ("moda", "varejo", "vestuário", "confecção", "confecções", "coleção", "roupa", "roupas",
+                "desfile", "fashion", "loja", "lojas",
+                "패션", "의류", "소매", "유통", "브랜드"),
+}
+
 # KOTRA 해외시장뉴스 Open API(공공데이터포털 15034831). 요청 변수·응답 필드는 포털 Swagger 명세 기준이며,
 # 인증키가 없어 실제 데이터 응답은 아직 확인하지 못했습니다.
 KOTRA_URL = "https://apis.data.go.kr/B410001/kotra_overseasMarketNews/ovseaMrktNews/ovseaMrktNews"
@@ -247,6 +273,7 @@ def get_news(refresh=None):
     items = []
     for item in merge_news(lists):
         item = dict(item)
+        item["tags"] = news_topics(item["title"])  # 수집·정규화된 제목만 사용(발췌 없음)
         summary = news_summary.cached(item) if news_summary.is_target(item) else None
         if summary:
             item["summary_ko"] = summary
@@ -300,6 +327,44 @@ def _plain(text):
 
 _TEXTILE_WORDS = {_plain(word) for word in TEXTILE_NEWS_KEYWORDS}
 _TEXTILE_PHRASES = tuple(" ".join(re.findall(r"[a-z0-9]+", _plain(p))) for p in TEXTILE_NEWS_PHRASES)
+
+
+def _topic_rules(keywords):
+    """(라틴 낱말 집합, 라틴 구절, 한국어 낱말). 라틴 키워드는 판정용으로만 정규화합니다."""
+    words, phrases, hangul = set(), [], []
+    for keyword in keywords:
+        if re.search(r"[가-힣]", keyword):
+            hangul.append(keyword)
+            continue
+        tokens = re.findall(r"[a-z0-9]+", _plain(keyword))
+        if len(tokens) == 1:
+            words.add(tokens[0])
+        else:
+            phrases.append(" ".join(tokens))
+    return words, tuple(phrases), tuple(hangul)
+
+
+_TOPIC_RULES = {topic: _topic_rules(NEWS_TOPIC_KEYWORDS[topic]) for topic in NEWS_TOPIC_ORDER}
+
+
+def news_topics(title):
+    """제목만으로 주제 태그 1~2개(NEWS_TOPIC_ORDER 순). AI 요약·생성 문장은 쓰지 않습니다.
+
+    짧은 낱말은 낱말 단위라 "desafio" 안의 "fio"처럼 단어 일부로는 맞지 않습니다.
+    """
+    words = re.findall(r"[a-z0-9]+", _plain(title))
+    word_set = set(words)
+    joined = " " + " ".join(words) + " "
+    raw = title.casefold()
+    tags = []
+    for topic in NEWS_TOPIC_ORDER:
+        latin, phrases, hangul = _TOPIC_RULES[topic]
+        if (word_set & latin or any(" " + p + " " in joined for p in phrases)
+                or any(k in raw for k in hangul)):
+            tags.append(topic)
+            if len(tags) == NEWS_TOPIC_MAX:
+                break
+    return tags or [NEWS_TOPIC_OTHER]
 
 
 def _domain_matches(domain, rules):

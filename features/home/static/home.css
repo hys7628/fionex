@@ -615,3 +615,74 @@
   margin: 0;
   padding-left: var(--space-5);
 }
+
+/* ---------- 업계 소식: 필터 줄 이름(매체·주제) ---------- */
+.feature-home .home-news-filter-label {
+  flex: 0 0 2.25rem;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  align-self: center;
+}
+
+/* ---------- 다른 탭 바로가기 ---------- */
+/* 좁은 화면 2×2, 1100px(공통 2열 기준) 이상 한 줄 4개. 사이드바와 같은 #기능id 링크입니다. */
+.feature-home .home-shortcut-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 1100px) {
+  .feature-home .home-shortcut-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.feature-home .home-shortcut-list > li {
+  display: flex;
+}
+
+.feature-home .home-shortcut {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.feature-home .home-shortcut:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface-hover);
+}
+
+.feature-home .home-shortcut-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-bold);
+  word-break: keep-all;  /* 한국어를 낱말 단위로 줄바꿈("체/크"처럼 끊기지 않게) */
+}
+
+.feature-home .home-shortcut-arrow {
+  color: var(--color-primary-text);
+}
+
+.feature-home .home-shortcut-desc {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  word-break: keep-all;
+}

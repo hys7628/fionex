@@ -4,8 +4,10 @@
 - 상태: 브라질 국가 공휴일 → 주말 → 현지 09:00~18:00(가정값) 업무시간 → 업무시간 외.
 - 다음 업무 시작: 평일·국가 공휴일이 아닌 가장 가까운 날의 현지 09:00(오늘 09:00 전이면 오늘부터), 최대 31일 탐색.
 - 공휴일은 service.get_holidays(연도) 결과(서버 캐시)를 씁니다. 확인할 수 없으면 공휴일 없이 판단하고 그렇다고 표시합니다.
+- 다음 공휴일: 기준 도시 현지 날짜 이후(오늘 포함) 가장 가까운 국가 공휴일. 올해 남은 공휴일이 없을 때만 다음 해 목록을 봅니다.
+  그 연도 자료를 확인하지 못하면 추측하지 않고 None(화면·PDF "다음 공휴일 확인 불가").
 """
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 SEOUL = ZoneInfo("Asia/Seoul")
@@ -26,7 +28,7 @@ WEEKDAYS = ("월", "화", "수", "목", "금", "토", "일")  # date.weekday() �
 def buyer_time(city, now, holidays_for_year):
     """now: 시간대가 있는 datetime. holidays_for_year(연도) → {"source", "holidays": [{date, name}]}
 
-    반환 {"city", "city_name", "seoul", "local", "status", "next_start", "holidays", "holiday_info"}
+    반환 {"city", "city_name", "seoul", "local", "status", "next_start", "holidays", "next_holiday", "holiday_info"}
     """
     tz = ZoneInfo(city)
     local = now.astimezone(tz)
@@ -62,8 +64,33 @@ def buyer_time(city, now, holidays_for_year):
         "status": status,
         "next_start": next_start,
         "holidays": upcoming,
+        "next_holiday": next_holiday(today, lookup),
         "holiday_info": lookup.summary(),
     }
+
+
+def next_holiday(today, lookup):
+    """today 이후(오늘 포함) 가장 가까운 공휴일 {"date", "name", "days"}. 올해 남은 것이 없으면 다음 해 첫 공휴일.
+
+    필요한 연도의 자료를 확인하지 못하면 None. 다음 해 목록은 올해에 남은 공휴일이 없을 때만 가져옵니다.
+    """
+    for year in (today.year, today.year + 1):
+        dates = lookup.dates(year)
+        if dates is None:
+            return None
+        upcoming = [d for d in dates if d >= today]
+        if upcoming:
+            day = upcoming[0]
+            return {"date": day, "name": lookup.name(day), "days": (day - today).days}
+    return None
+
+
+def next_holiday_text(holiday):
+    """11/2(월) Finados · D-8 / 오늘이면 D-DAY. 공휴일 이름은 BrasilAPI 원문 그대로입니다."""
+    if holiday is None:
+        return "다음 공휴일 확인 불가"
+    d_day = "D-DAY" if holiday["days"] == 0 else f"D-{holiday['days']}"
+    return f"{format_day(holiday['date'])} {holiday['name']} · {d_day}"
 
 
 def _next_work_start(today, hour, tz, lookup):
@@ -104,6 +131,13 @@ class _HolidayLookup:
 
     def name(self, day):
         return self._year(day.year)["by_date"].get(day.isoformat())
+
+    def dates(self, year):
+        """그 해 공휴일 날짜(오름차순). 자료를 확인하지 못한 해는 None."""
+        entry = self._year(year)
+        if not entry["known"]:
+            return None
+        return sorted(date.fromisoformat(value) for value in entry["by_date"])
 
     def summary(self):
         return {year: {"source": v["source"], "fetched_at": v["fetched_at"]} for year, v in sorted(self._years.items())}

@@ -21,7 +21,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from features.home.buyer_time import CITIES, DEFAULT_CITY, SEOUL, buyer_time, format_day, format_day_time
+from features.home.buyer_time import CITIES, DEFAULT_CITY, SEOUL, buyer_time, format_day, format_day_time, next_holiday_text
 
 logger = logging.getLogger(__name__)
 
@@ -220,17 +220,16 @@ def _buyer_section(buyer, s, width):
             next_text += " · 공휴일 미반영"
     else:
         next_text = "업무시간 중" if buyer["status"] == "업무시간" else "계산할 수 없음"
-    if buyer["holidays"]:
-        holiday_text = ", ".join(
-            f"{format_day(h['date'])} {h['name']}" + (" (주말)" if h["weekend"] else " — 회신 지연 가능") for h in buyer["holidays"])
-    elif any(v["source"] == "none" for v in buyer["holiday_info"].values()):
-        holiday_text = "공휴일 정보 확인 불가"
-    else:
-        holiday_text = "7일 이내 국가 공휴일 없음"
+    # 다음 공휴일(화면과 같은 buyer_time.next_holiday_text). 7일 이내 공휴일은 같은 줄에 회신 영향과 함께 덧붙여 중복 행을 두지 않습니다.
+    holiday_text = next_holiday_text(buyer.get("next_holiday"))
+    within = [f"{format_day(h['date'])} {h['name']}" + (" (주말)" if h["weekend"] else " — 회신 지연 가능")
+              for h in buyer["holidays"]]
+    if within:
+        holiday_text += " · 7일 이내: " + ", ".join(within)
     rows = [
         [_p("현재 상태", s["head"]), _p(buyer["status"], s["cell"])],
         [_p("다음 업무 시작", s["head"]), _p(next_text, s["cell"])],
-        [_p("7일 이내 공휴일", s["head"]), _p(holiday_text, s["cell"])],
+        [_p("다음 공휴일", s["head"]), _p(holiday_text, s["cell"])],
     ]
     out.append(_table(rows, (38 * mm, width - 38 * mm), header=False))
     out.append(Spacer(1, 3))
@@ -304,8 +303,9 @@ def _news_section(news, s, width):
         domain = item.get("media_domain")
         if media and domain and domain not in media:
             media = f"{media}({domain})"
+        # 매체·날짜 줄 끝에 주제 태그(최대 2개)를 붙입니다.
         meta = " · ".join(x for x in (ORIGIN_LABELS.get(item["origin"], item["origin"]), media or domain,
-                                       _news_date(item["published_at"])) if x)
+                                       _news_date(item["published_at"]), " · ".join(item.get("tags") or ())) if x)
         block.append(_p(meta, s["small"]))
         block.append(Spacer(1, 3))
         out.append(KeepTogether(block))

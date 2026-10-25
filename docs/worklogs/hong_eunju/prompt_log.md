@@ -291,3 +291,24 @@
 - 검증: validation.md 2026-10-25 Home 화면 2차 조정 항목.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 2행은 stretch로 외곽선은 맞지만 뉴스(8건)가 길어 전시회 카드 안 아래쪽이 비어 있음(약 570px). 1행 환율 카드는 타일과 아래 안내 사이 약 100px 여백.
+
+## DEV-HOME-014 다음 공휴일 상시 표시·뉴스 주제 태그·다른 탭 바로가기
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 20:10~20:40경 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/home, 작업 전 미커밋 변경 없음, 직전 커밋 002ca25)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: 3개 기능만 추가. (A) 바이어 시간·PDF에 다음 브라질 공휴일 항상 표시(기준 도시 현지 날짜 D-day, 연말 다음 해, 실패 시 확인 불가, 기존 공휴일 캐시 재사용). (B) 뉴스 주제 태그 6종(코드 기반, 제목만, 정규화·낱말 단위, 최대 2개·표 순서, 없으면 기타), API items[].tags, 화면 주제 필터(매체 필터와 동시 적용, 클라이언트만), PDF 태그. (C) 출처 및 유의사항 위 다른 탭 바로가기 4개(사이드바와 같은 이동). feature_spec의 (4-1) 키워드 표·6절 문구를 그대로 쓰라는 지시. Git 작업 금지.
+- 문서 차이(사용자 확인): 로컬 feature_spec와 모든 브랜치(develop·main·origin/*)에 '(4-1) 뉴스 주제 태그' 표, '6. 다른 탭 바로가기' 문구, '다음 공휴일 항상 표시' 명세가 없음(저장소 .md 검색 0건). 사용자에게 확인 → "그냥 진행해".
+  - 키워드 표: 초안으로 작성(관련성 필터 낱말 + 필수 검증 사례 기준). 코드 상수와 feature_spec (4-1)에 "초안"으로 표시. 확정 표가 오면 NEWS_TOPIC_KEYWORDS만 교체.
+  - 바로가기 문구: 새로 쓰지 않고 각 탭 routes.py FEATURE의 label·description(사이드바·머리글 원본)을 템플릿에서 그대로 사용. 효율 수치 없음.
+- 판단:
+  - 다음 공휴일: 서버는 buyer_time.py `next_holiday`(기존 _HolidayLookup 연도 캐시, `dates()` 추가)·`next_holiday_text`, 화면은 home.js `nextHoliday`(기존 holidayYears·ensureYear). 같은 규칙·같은 표기. 다음 해는 올해에 남은 공휴일이 없을 때만 요청. 화면의 14일 안내 문구는 다음 공휴일로 교체, PDF는 '7일 이내 공휴일' 행을 '다음 공휴일' 행으로 합치고 7일 이내 공휴일(회신 지연 가능·주말)은 같은 줄에 덧붙여 정보 유지.
+  - 태그 키워드는 관련성 필터와 분리(B): 필터(포함/제외)와 분류의 목적이 다르고, 합치면 필터 결과가 바뀔 수 있음. 정규화 함수 `_plain`과 낱말 분리 방식만 재사용. KOTRA 한국어 제목은 _plain이 한글을 지우므로 한국어 키워드는 원문 포함 여부로 판정.
+  - 태그는 get_news의 병합 결과에 붙임(캐시·KOTRA·Google·ABIT 공통, PDF도 같은 값 사용).
+- 변경 파일: features/home/buyer_time.py, service.py, report.py, static/home.js, static/home.css, templates/home/panel.html, feature_spec.md, tests/test_home/test_report.py, test_holidays_news.py.
+- 발견 문제: 390px에서 바로가기 제목 '그린 클레임 체크'가 글자 단위로 끊김 → word-break: keep-all. 검증 스크립트 정규식 이스케이프·PDF 테스트 기대값(D-7 → 현지 날짜 기준 D-8) 오류는 테스트 쪽만 수정.
+- 외부 호출: 없음(BrasilAPI·OpenAI·KOTRA·한국수출입은행 0회, fixture 서버 urlopen 차단 기록 0건).
+- 서비스 프롬프트 실험: 해당 없음(AI 미사용).
+- 검증: validation.md 2026-10-25 다음 공휴일·주제 태그·바로가기 항목.
+- 담당자 판단: 미기재(담당자 검토 필요) — 특히 태그 키워드 초안과 바로가기 문구 원본 확인 필요
+- 남은 한계: 태그는 제목 키워드만 보므로 '섬유 일반' 기사는 기타가 많음(저장한 실제 RSS 33건 중 기타 19). 확정 키워드 표 반영 필요.

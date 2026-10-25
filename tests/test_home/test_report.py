@@ -53,6 +53,7 @@ def news_item(i, origin="google", summary=None, title=None):
         item.update(lang="ko", published_at="2026-07-27", media="KOTRA 해외시장뉴스 · 상파울루무역관", media_domain="dream.kotra.or.kr")
     if summary:
         item["summary_ko"] = summary
+    item["tags"] = service.news_topics(item["title"])  # get_news가 붙이는 태그와 같은 함수
     return item
 
 
@@ -120,6 +121,43 @@ class BuyerTimeTests(unittest.TestCase):
         self.assertEqual(b["holidays"], [])
         c = self.at("2026-10-27T13:00:00+00:00")  # 10/27 → 11/2는 6일 후
         self.assertEqual([(h["name"], h["days"], h["weekend"]) for h in c["holidays"]], [("Finados", 6, False)])
+
+    def next_text(self, iso, city="America/Sao_Paulo", holidays_fn=holidays):
+        b = buyer_time.buyer_time(city, datetime.fromisoformat(iso), holidays_fn)
+        return b["next_holiday"], buyer_time.next_holiday_text(b["next_holiday"])
+
+    def test_next_holiday_cases(self):
+        # A 같은 해: 현지 10/25 → 11/2 Finados D-8
+        h, text = self.next_text("2026-10-25T15:00:00+00:00")
+        self.assertEqual((h["date"].isoformat(), h["name"], h["days"]), ("2026-11-02", "Finados", 8))
+        self.assertEqual(text, "11/2(월) Finados · D-8")
+        # B 오늘이 공휴일 → D-DAY
+        self.assertEqual(self.next_text("2026-11-02T15:00:00+00:00")[1], "11/2(월) Finados · D-DAY")
+        # C 연말: 2026년 남은 공휴일 없음 → 2027년 첫 공휴일
+        h, text = self.next_text("2026-12-26T15:00:00+00:00")
+        self.assertEqual((h["date"].isoformat(), h["days"]), ("2027-01-01", 6))
+        self.assertEqual(text, "1/1(금) Confraternização mundial · D-6")
+        # D 다음 해 자료 없음 → 확인 불가(추측하지 않음)
+        only_2026 = lambda year: HOLIDAYS[2026] if year == 2026 else {"source": "none", "fetched_at": None, "holidays": []}
+        self.assertEqual(self.next_text("2026-12-26T15:00:00+00:00", holidays_fn=only_2026), (None, "다음 공휴일 확인 불가"))
+        none = lambda year: {"source": "none", "fetched_at": None, "holidays": []}
+        self.assertEqual(self.next_text("2026-10-25T15:00:00+00:00", holidays_fn=none)[1], "다음 공휴일 확인 불가")
+
+    def test_next_holiday_uses_city_local_date(self):
+        # E 2026-11-02 04:30Z: 상파울루 11/2 01:30(D-DAY) · 히우브랑쿠 11/1 23:30(D-1) · 서울은 11/2 13:30
+        self.assertEqual(self.next_text("2026-11-02T04:30:00+00:00")[1], "11/2(월) Finados · D-DAY")
+        self.assertEqual(self.next_text("2026-11-02T04:30:00+00:00", "America/Rio_Branco")[1], "11/2(월) Finados · D-1")
+        # 서울 날짜(11/2)가 아니라 현지 날짜(11/1)로 계산
+        self.assertEqual(self.next_text("2026-11-01T16:00:00+00:00")[0]["days"], 1)
+
+    def test_next_holiday_does_not_fetch_next_year_when_not_needed(self):
+        asked = []
+
+        def fetch(year):
+            asked.append(year)
+            return holidays(year)
+        buyer_time.next_holiday(datetime(2026, 10, 25).date(), buyer_time._HolidayLookup(fetch))
+        self.assertEqual(asked, [2026])
 
     def test_unknown_holidays(self):
         b = buyer_time.buyer_time("America/Sao_Paulo", datetime.fromisoformat("2026-11-02T13:00:00+00:00"),
@@ -211,6 +249,17 @@ class PdfLayoutTests(ReportTestBase):
         _, text, _ = self.pdf(data)
         self.assertIn("수집 0건 / 필터 후 0건 / 브리핑 선정 0건", text)
         self.assertIn("수집 53건 / 필터 후 13건", text)
+
+    def test_next_holiday_and_tags_in_pdf(self):
+        reader, text, _ = self.pdf()
+        self.assertIn("다음 공휴일", text)
+        self.assertIn("11/2(월) Finados · D-8", text)  # NOW = 서울 10/26 10:00 · 상파울루 10/25 22:00 → 현지 날짜 기준 D-8
+        self.assertNotIn("7일 이내 공휴일", text)  # 별도 행 대신 다음 공휴일 줄에 합침
+        for item in report.collect("America/Sao_Paulo", NOW)["news"]["items"]:
+            self.assertTrue(item["tags"])
+        self.assertIn("KST · 기타", text)  # 기본 제목(têxtil·Produção)은 태그 키워드가 없어 기타
+        self.assertIn("KST · 패션·리테일", text)  # Confecções 제목
+        self.assertLessEqual(len(reader.pages), 2)
 
     def test_kotra_minimum_in_briefing(self):
         news = news_ok()
