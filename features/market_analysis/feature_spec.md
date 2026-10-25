@@ -260,7 +260,15 @@
 - (2026-10-26 처리) 사용자가 requirements.txt에 python-dotenv를 추가 → python-dotenv==1.2.4로 고정·jasonenv 설치 완료. `python app.py`만으로 .env가 로드되어 5003 서버에서 ai.ready=true 확인. README의 python-dotenv 설명(‘requirements.txt에는 없음’) 갱신은 공통 문서라 담당 합의 필요.
 - K-stat(stat.kita.net): 사용하지 않음(2026-10-26 담당자 결정). 조사 결과는 브라질 품목별·국가별 회원사 전용, 제공기관 Trade Map, Open API 없음(worklogs sources.md).
 - (2026-10-26 연결 완료) NewsData.io를 PROVIDERS에 연결하고 대시보드에서 검증. 환경변수 NEWSDATA_API_KEY(.env.example에 이름만 추가, 공통 검토 필요). 브라질(country=br)·포르투갈어(language=pt) 검색어 4개, 검색어당 최대 2쪽. 무료 플랜 실측: /latest 200(0.7~1.2초), content·ai_summary 유료 전용, /archive 403 → 최근 48시간만 수집하고 나머지 기간은 '확보하지 못함'으로 안내. 요약 칸은 언론사 description 원문(길면 접기, 자르지 않음), AI 입력 허용(1,500자 상한), PDF는 제목·링크만, 'Powered by NewsData.io' 표기. 일반 뉴스 관련성: 제목·설명 앞 400자·키워드에서 제품 주제 + 산업·시장 맥락어(또는 무역 정책어) 필요(무관 생활·선거 기사 실측 후 추가). 대시보드 AI 실행 1회(SVC-MA-20261026-03)로 승인 3회 소진.
-- 일반 뉴스 공급자: NewsData.io로 결정(2026-10-26 담당자 결정). 키 없이 실제 확인: https://newsdata.io/api/1/latest·/api/1/archive, 키는 apikey 쿼리 인자, 키 없음·잘못된 키는 HTTP 401 + {"status":"error","results":{"code":"Unauthorized"}}. 무료 플랜은 최근 48시간·12시간 지연(요금표)이라 '최근 6개월' 조건과 맞지 않음 → 6개월 확보 방법(유료 Archive 등)·조건 조정은 담당자 확인 필요. 환경변수 이름 제안 NEWSDATA_API_KEY(.env.example 추가는 공통 합의).
+- 일반 뉴스 공급자: NewsData.io로 결정(2026-10-26 담당자 결정).
+- (2026-10-26 담당자 지시 반영)
+  - 공급국 목록: 원산지 브라질(재수입분)은 공급국 목록·순위·국가 수·선택 목록에서 제외. 전체 수입액과 비중 분모는 ComexStat 공식 합계 그대로이며 제외 금액·비중을 안내(담당자 선택 '목록에서만 제외').
+  - 출처 목록에서 한국무역협회(KITA) 행 삭제.
+  - 핵심 기사(구 '관련 기사'): 섬유 업계 주제가 제목·품목명(KOTRA) 또는 제목·설명 앞부분+산업 맥락어(일반 뉴스)에 있는 기사만. KOTRA 산업분류(indstCl)는 판단에 쓰지 않음. 정해진 건수(3건)로 채우지 않음.
+  - 검색 기간 제한 안내는 접힌 토글로 표시.
+  - 기사 표는 '기사 제목 | 원문 URL' 2열(핵심 요약 열 삭제, 화면·PDF 모두). 언론사 설명은 AI 입력에만 사용.
+  - 포르투갈어·스페인어 제목은 OpenAI로 한국어 번역을 붙여 'AI 번역'으로 표시(translation.py, prompts/news_title_translate_v1.md, 수집 1회당 1호출, 같은 날 같은 제목 재사용, 실패해도 원문 표시). 번역 실제 테스트 승인 최대 3회 중 1회 사용.
+  - 평균 수입단가 검증: 대만 4.18·불가리아 4.98 USD/kg가 ComexStat 원자료 직접 합산과 일치(worklogs validation.md). 키 없이 실제 확인: https://newsdata.io/api/1/latest·/api/1/archive, 키는 apikey 쿼리 인자, 키 없음·잘못된 키는 HTTP 401 + {"status":"error","results":{"code":"Unauthorized"}}. 무료 플랜은 최근 48시간·12시간 지연(요금표)이라 '최근 6개월' 조건과 맞지 않음 → 6개월 확보 방법(유료 Archive 등)·조건 조정은 담당자 확인 필요. 환경변수 이름 제안 NEWSDATA_API_KEY(.env.example 추가는 공통 합의).
 - 실제 휴대폰 브라우저 검증: 생략(2026-10-26 담당자 결정). 헤드리스 Chrome 390px 확인으로 대신함.
 - AI 해석 오류(SVC-MA-20261026-02): 근거의 점 표기 코드(5402.33.10)를 조회 코드(54023310)와 다른 범위로 해석. 코드 표기 동일성 안내·검사 추가 후보.
 - KITA: 자동 수집용 공식 API·RSS 미확인. kita.net 저작권 정책은 상업적 이용·자동 수집 금지. 자료 제공·제휴 여부는 KITA 문의 필요(문의 내용은 worklogs sources.md).

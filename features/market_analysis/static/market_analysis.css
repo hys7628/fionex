@@ -172,10 +172,9 @@
 .feature-market_analysis .ma-source-table th[scope="col"]:nth-child(2) { width: 22%; }
 .feature-market_analysis .ma-source-table td { overflow-wrap: anywhere; }
 
-/* 기사별 표: 기사 제목 | 핵심 요약 1줄 | 원문 URL */
+/* 기사별 표: 기사 제목 | 원문 URL */
 .feature-market_analysis .ma-news-table { table-layout: fixed; }
-.feature-market_analysis .ma-news-table th[scope="col"]:nth-child(1) { width: 40%; }
-.feature-market_analysis .ma-news-table th[scope="col"]:nth-child(2) { width: 34%; }
+.feature-market_analysis .ma-news-table th[scope="col"]:nth-child(1) { width: 68%; }
 .feature-market_analysis .ma-news-table tbody th {
   background: transparent;
   color: var(--color-text);
@@ -189,14 +188,16 @@
 .feature-market_analysis .ma-news-table .badge { white-space: normal; }
 .feature-market_analysis .ma-news-title { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
 .feature-market_analysis .ma-news-id { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
-.feature-market_analysis .ma-news-summary { font-size: var(--font-size-sm); }
-.feature-market_analysis .ma-news-none { color: var(--color-text-muted); font-size: var(--font-size-xs); }
-.feature-market_analysis .ma-news-more summary {
-  cursor: pointer;
-  color: var(--color-primary-text);
+.feature-market_analysis .ma-news-ko { margin-top: var(--space-1); font-size: var(--font-size-sm); }
+.feature-market_analysis .ma-news-ko-label {
+  margin-right: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-info-soft);
+  color: var(--color-info);
   font-size: var(--font-size-xs);
 }
-.feature-market_analysis .ma-news-more[open] summary { margin-bottom: var(--space-1); }
+.feature-market_analysis .ma-period-notes { display: flex; flex-direction: column; gap: var(--space-2); }
 .feature-market_analysis .ma-news-wrap + .field-hint a,
 .feature-market_analysis [data-ma-news] > .field-hint a { color: var(--color-primary-text); }
 .feature-market_analysis .ma-news-url a { color: var(--color-primary-text); word-break: break-all; font-size: var(--font-size-xs); }

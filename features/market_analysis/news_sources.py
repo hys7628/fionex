@@ -18,7 +18,7 @@
   artlist 최대 250건. 이용 조건: 상업적 이용 포함 무료, 사용·재배포 시 GDELT 표기와 링크 필요.
   기사 본문은 제공하지 않으며 기사 저작권은 각 언론사에 있으므로 원문을 가져오지 않습니다(제목·메타데이터만 사용).
   seendate는 GDELT가 기사를 처음 발견한 시각이며 기사 발행일로 쓰지 않습니다.
-- KITA: 시장뉴스·보고서용 공식 API·제휴 경로를 찾지 못해 '연결 확인 중' 상태만 표시합니다.
+- KITA: 시장뉴스·보고서용 공식 API·제휴 경로가 없어 2026-10-26 담당자 결정으로 출처 목록에서 뺐습니다(K-stat도 미사용).
 
 인증키는 서버 환경변수에서만 읽고 응답·로그·오류 문장에 넣지 않습니다. URL에 키가 들어가는 KOTRA는
 URL을 로그에 남기지 않습니다.
@@ -70,7 +70,8 @@ TOPICS = {
     "섬유·의류": ["섬유", "의류", "패션", "직물", "textile", "apparel", "garment", "clothing", "fashion industry",
               "têxtil", "têxteis", "texteis", "vestuário", "confecção", "confecções", "moda", "tecido", "tecelagem"],
     "폴리에스터·DTY": ["폴리에스터", "폴리에스테르", "원사", "dty", "polyester", "yarn", "textured yarn", "synthetic fiber",
-                    "poliéster", "fio têxtil", "fios têxteis", "fio de poliéster", "fios de poliéster", "fibra sintética", "filamento"],
+                    "poliéster", "fio têxtil", "fios têxteis", "fio de poliéster", "fios de poliéster", "fibra sintética", "filamento",
+                    "fibras têxteis", "fibra têxtil", "fibras sintéticas"],
     "재생 섬유·T2T": ["재생 섬유", "재생섬유", "리사이클", "재활용 섬유", "t2t", "recycled polyester", "textile recycling",
                   "textile-to-textile", "fiber-to-fiber", "fibre-to-fibre", "circular fashion", "poliéster reciclado",
                   "reciclagem têxtil", "fibra reciclada", "moda circular"],
@@ -311,7 +312,9 @@ def fetch_kotra(start, end, collected_at):
                 continue  # 제목이 없거나 http(s) 원문 주소가 아니면 표시하지 않음
             published = _parse_date(it.get("othbcDt"))
             body = _clean(it.get("newsBdt"))
-            text_meta = " ".join(_clean(it.get(k)) for k in ("kwrd", "indstCl", "cmdltNmKorn", "cmdltNmEng", "hsCdNm"))
+            # 관련성 판단용 메타. 산업분류(indstCl)는 여러 업종이 함께 붙어 섬유와 무관한 기사(예: 월드컵 소비 시장)도
+            # 섬유로 판정되므로 쓰지 않습니다(2026-10-26 실측). 품목명·HS명·키워드만 씁니다.
+            text_meta = " ".join(_clean(it.get(k)) for k in ("kwrd", "cmdltNmKorn", "cmdltNmEng", "hsCdNm"))
             out.append(NewsItem(
                 id="", source="kotra", source_name="KOTRA 해외시장뉴스" + (" · " + _clean(it.get("ovrofInfo")) if it.get("ovrofInfo") else ""),
                 title=title, url=url, published=published.isoformat() if published else None, collected_at=collected_at,
@@ -680,7 +683,7 @@ def other_items(raw, picked, limit=MAX_OTHER_ITEMS):
 PROVIDERS = {"kotra": fetch_kotra, "newsdata": fetch_newsdata}
 GENERAL_NEWS_PROVIDERS = ("newsdata", "gdelt")  # PROVIDERS에 이 중 하나가 있으면 일반 뉴스 공급자가 연결된 상태
 SOURCE_LABELS = {"kotra": "KOTRA 해외시장뉴스", "newsdata": "NewsData.io (일반 뉴스)", "gdelt": "GDELT (일반 뉴스 검색)",
-                 "kita": "한국무역협회(KITA)", "general": "일반 뉴스"}
+                 "general": "일반 뉴스"}
 # 검색어를 받는 출처: (기본 검색어, 근거 보강용 추가 검색어)
 PROVIDER_QUERIES = {"newsdata": (NEWSDATA_QUERIES, NEWSDATA_QUERIES_WIDE), "gdelt": (GDELT_QUERIES, GDELT_QUERIES_WIDE)}
 GENERAL_PENDING_MESSAGE = ("GDELT는 호출 간격 제한(5초에 1회)으로 수집이 계속 실패해 자동 호출을 중단했습니다. "
@@ -773,10 +776,7 @@ def collect(months=DEFAULT_MONTHS, widen=False, today=None, refresh=False):
         statuses.append({"source": "general", "label": SOURCE_LABELS["general"], "state": "pending",
                          "status_text": "공급자 선택 대기", "count": 0, "message": GENERAL_PENDING_MESSAGE, "usage_note": None,
                          "seconds": 0, "queries": [], "collected_at": None, "stale": False, "coverage": None})
-    statuses.append({"source": "kita", "label": SOURCE_LABELS["kita"], "state": "pending", "status_text": "연결 확인 중",
-                     "count": 0, "message": "시장뉴스·연구보고서를 자동으로 받을 공식 API·RSS를 확인하지 못했습니다(공공데이터포털 '한국무역협회' 오픈 API 0건, "
-                                            "kita.net 저작권 정책상 상업적 이용·무단 자동 수집 금지, 2026-10-26). 제공·제휴는 KITA 문의가 필요합니다.",
-                     "usage_note": None, "seconds": 0, "queries": [], "collected_at": None, "stale": False, "coverage": None})
+    # 한국무역협회(KITA)는 2026-10-26 담당자 결정으로 화면 출처 목록에서 뺐습니다(자동 수집 경로 없음, worklogs sources.md).
     items, candidates = select_items(raw)
     others = other_items(raw, items)
     gd = next((s for s in statuses if s["source"] == "gdelt"), None)

@@ -342,8 +342,6 @@
 
   /* ---------- 근거 자료(뉴스·보고서) ---------- */
   const ACCESS_TEXT = { full_text: "원문 확보", description: "제목·언론사 설명만 확인(본문 미확인)", title_only: "제목·메타데이터만 확인" };
-  const SUMMARY_LABEL = { kotra: "KOTRA 제공 요약(원문 그대로)", newsdata: "언론사 제공 설명(NewsData.io, 원문 그대로)" };
-  const SUMMARY_INLINE_MAX = 220;  // 이보다 긴 출처 요약은 자르지 않고 접어서 전체를 보여 줍니다
   const STATE_TONE = { ok: "success", pending: "info", config: "warning", auth: "danger", rate_limited: "warning",
     unavailable: "danger", bad_response: "danger", rejected: "danger" };
 
@@ -351,7 +349,7 @@
     const box = resultBox.querySelector("[data-ma-news]");
     if (!box || !lastResult) return;
     box.setAttribute("aria-busy", "true");
-    box.innerHTML = '<p class="field-hint"><span class="spinner" aria-hidden="true"></span> 근거 자료(KOTRA 해외시장뉴스·NewsData.io 일반 뉴스)를 불러오는 중입니다. 통계는 위에 먼저 표시했습니다.</p>';
+    box.innerHTML = '<p class="field-hint"><span class="spinner" aria-hidden="true"></span> 근거 자료(KOTRA 해외시장뉴스·NewsData.io 일반 뉴스)를 불러오고 포르투갈어·스페인어 제목을 번역하는 중입니다. 통계는 위에 먼저 표시했습니다.</p>';
     try {
       const res = await fetch("/api/market-analysis/news", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -382,17 +380,10 @@
     }).join(", ");
   }
 
-  // 핵심 요약 1줄: 출처가 제공한 요약만 원문 그대로 표시합니다. 자동으로 잘라 내거나 AI로 새로 만들지 않습니다.
-  function summaryCell(it) {
-    if (it.excerpt) {
-      const label = SUMMARY_LABEL[it.source] || "출처 제공 요약(원문 그대로)";
-      if (it.excerpt.length > SUMMARY_INLINE_MAX) {
-        return '<details class="ma-news-more"><summary>' + esc(label + " · " + it.excerpt.length + "자, 펼쳐 보기") + "</summary>" +
-          '<p class="ma-news-summary">' + esc(it.excerpt) + "</p></details>";
-      }
-      return '<p class="ma-news-summary">' + esc(it.excerpt) + '</p><p class="field-hint">' + esc(label) + "</p>";
-    }
-    return '<p class="ma-news-none">요약 제공 없음 · 원문 확인 필요</p>';
+  // 포르투갈어·스페인어 제목은 서버가 붙인 한국어 번역(title_ko)을 함께 표시합니다(AI 번역으로 명시).
+  function titleHtml(it) {
+    return '<p class="ma-news-title"><span class="ma-news-id">' + esc(it.id) + "</span> " + esc(it.title) + "</p>" +
+      (it.title_ko ? '<p class="ma-news-ko"><span class="ma-news-ko-label">AI 번역</span> ' + esc(it.title_ko) + "</p>" : "");
   }
 
   function articleMeta(it) {
@@ -403,17 +394,27 @@
       (it.ai_input ? "" : " " + badge("warning", "AI 입력·PDF 본문 미사용 · 이용 범위 확인 필요")) + "</p>";
   }
 
-  // 기사별 표: 기사 제목 | 핵심 요약 1줄 | 원문 URL. 좁은 화면에서는 CSS가 행을 카드로 바꿉니다.
+  // 기사별 표: 기사 제목 | 원문 URL. 좁은 화면에서는 CSS가 행을 카드로 바꿉니다.
   function articleTable(items, caption) {
     const rows = items.map(function (it) {
-      return '<tr><th scope="row" data-label="기사 제목"><p class="ma-news-title"><span class="ma-news-id">' + esc(it.id) + "</span> " + esc(it.title) + "</p>" +
-        articleMeta(it) + '</th><td data-label="핵심 요약 1줄">' + summaryCell(it) + '</td><td data-label="원문 URL" class="ma-news-url">' +
-        linkHtml(it.url) + "</td></tr>";
+      return '<tr><th scope="row" data-label="기사 제목">' + titleHtml(it) + articleMeta(it) +
+        '</th><td data-label="원문 URL" class="ma-news-url">' + linkHtml(it.url) + "</td></tr>";
     });
-    if (!rows.length) rows.push('<tr><td colspan="3">표시할 기사가 없습니다.</td></tr>');
+    if (!rows.length) rows.push('<tr><td colspan="2">표시할 기사가 없습니다.</td></tr>');
     return '<div class="table-wrap ma-news-wrap"><table class="table ma-news-table ma-stack-table"><caption>' + esc(caption) + "</caption><thead><tr>" +
-      '<th scope="col">기사 제목</th><th scope="col">핵심 요약 1줄</th><th scope="col">원문 URL</th></tr></thead><tbody>' +
+      '<th scope="col">기사 제목</th><th scope="col">원문 URL</th></tr></thead><tbody>' +
       rows.join("") + "</tbody></table></div>";
+  }
+
+  const TRANSLATION_TEXT = { ok: "", partial: "일부 제목은 번역하지 못했습니다.", skipped: "", failed: "" };
+
+  function translationHtml(t) {
+    if (!t || t.status === "none") return "";
+    if (t.status === "ok" || t.status === "partial") {
+      return '<p class="field-hint">포르투갈어·스페인어 제목 ' + t.count + "건에 한국어 AI 번역(OpenAI 기계 번역)을 붙였습니다. 번역은 이해를 돕기 위한 것이며 원문 제목이 기준입니다. " +
+        esc(TRANSLATION_TEXT[t.status]) + "</p>";
+    }
+    return '<p class="field-hint">' + esc(t.reason || "제목 번역을 하지 못해 원문 제목만 표시합니다.") + "</p>";
   }
 
   function newsHtml(n) {
@@ -430,9 +431,12 @@
     });
     if (!n.sources.length) html += '<tr><td colspan="3">출처 상태 정보가 없습니다.</td></tr>';
     html += "</tbody></table></div>";
-    (n.window.notes || []).forEach(function (note) {
-      html += '<div class="notice notice-warning"><p class="notice-title">검색 기간 제한</p><p>' + esc(note) + "</p></div>";
-    });
+    const notes = n.window.notes || [];
+    if (notes.length) {
+      // 검색 기간 제한 안내는 기본으로 접어 둡니다(펼치면 전체 문장).
+      html += '<details class="ma-details ma-period-notes"><summary>검색 기간 제한 안내 ' + notes.length + "건 보기</summary>" +
+        notes.map(function (note) { return '<div class="notice notice-warning"><p>' + esc(note) + "</p></div>"; }).join("") + "</details>";
+    }
     const failed = n.sources.filter(function (s) { return s.state !== "ok" && s.state !== "pending"; });
     if (failed.length) {
       html += '<div class="notice notice-warning"><p class="notice-title">일부 출처 누락</p><p>' +
@@ -444,16 +448,16 @@
     if (hasNewsdata) {
       html += '<p class="field-hint">일반 뉴스: <a href="https://newsdata.io" target="_blank" rel="noopener noreferrer">Powered by NewsData.io</a> · 무료 플랜이라 최근 48시간 기사만 검색하며(12시간 지연) 본문은 받지 않습니다. 기사 저작권은 각 언론사에 있습니다.</p>';
     }
-    html += '<p class="field-hint">관련 기사: 주제(브라질 섬유·의류, 폴리에스터 원사·DTY, 재생 섬유·T2T)에 맞는 상위 ' + items.length + "건 / 중복 제거 후 후보 " + n.candidates + "건." +
-      (hasGdelt ? " 일반 뉴스 출처: The GDELT Project — 제목·메타데이터만 확인했고 본문은 확인하지 않았습니다. GDELT 시각은 처음 발견한 시각이며 게시일이 아닙니다." : "") +
-      " 요약은 출처가 제공한 경우에만 원문 그대로 표시합니다.</p>";
+    html += '<p class="field-hint">핵심 기사: 섬유 업계 주제(섬유·의류 산업, 폴리에스터 원사·DTY, 재생 섬유·T2T)가 제목·품목·기사 앞부분에 있는 기사만 ' + items.length + "건 / 중복 제거 후 후보 " + n.candidates + "건." +
+      (hasGdelt ? " 일반 뉴스 출처: The GDELT Project — 제목·메타데이터만 확인했고 본문은 확인하지 않았습니다. GDELT 시각은 처음 발견한 시각이며 게시일이 아닙니다." : "") + "</p>";
+    html += translationHtml(n.translation);
     if (!items.length && !others.length) {
       const anyOk = n.sources.some(function (s) { return s.state === "ok"; });
       html += '<div class="empty-state"><p class="empty-state-title">' + (anyOk ? "조회 결과 없음" : "기사를 받지 못했습니다") + "</p><p>" +
         (anyOk ? "연결된 출처에서 조건에 맞는 기사를 찾지 못했습니다." : "모든 출처의 조회가 실패했거나 설정이 필요합니다. 위 상태 표를 확인해 주세요.") + "</p></div>";
     } else {
       if (items.length) {
-        html += articleTable(items, "관련 기사 " + items.length + "건 · N 번호는 AI 분석의 출처 ID");
+        html += articleTable(items, "핵심 기사 " + items.length + "건 · 섬유 업계 관련 · N 번호는 AI 분석의 출처 ID");
       } else {
         html += '<div class="empty-state"><p class="empty-state-title">주제에 맞는 기사 없음</p><p>수집한 기사 중 섬유·원사·재생 섬유 주제에 해당하는 기사가 없습니다. 아래 기타 기사를 참고하세요.</p></div>';
       }

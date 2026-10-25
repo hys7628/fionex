@@ -8,6 +8,7 @@
   사용자 입력·결과는 저장하지 않습니다.
 """
 import json
+import logging
 import re
 import secrets
 import statistics
@@ -17,9 +18,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from features.market_analysis import analysis, news_sources
+from features.market_analysis import analysis, news_sources, translation
 from features.market_analysis import comexstat_client as comex
 from features.market_analysis.comexstat_client import ComexStatError
+
+logger = logging.getLogger(__name__)
 
 KST = timezone(timedelta(hours=9))  # 한국은 서머타임이 없어 고정 오프셋 사용
 
@@ -30,6 +33,8 @@ MAX_MONTHS = 120
 MAX_COUNTRIES = 20
 FIRST_DATA_YEAR = 1997  # ComexStat 일반 통계 시작 연도
 KOREA_CODE = "190"
+# 대상 시장(브라질) 자신. 원산지가 브라질인 재수입분은 공급국 목록·순위·선택에서 빼고 전체 수입액(비중 분모)에는 둡니다(2026-10-26 담당자 결정).
+BRAZIL_CODE = "105"
 TOP_N = 10
 OUTLIER_LOW, OUTLIER_HIGH = 0.5, 2.0
 
@@ -97,8 +102,8 @@ def country_info(code=None, name_pt=None):
 
 
 def country_list():
-    """선택 목록: 한국어명이 있는 국가를 먼저, 한국어(없으면 원문) 이름순."""
-    return sorted((dict(c) for c in _COUNTRIES),
+    """선택 목록: 한국어명이 있는 국가를 먼저, 한국어(없으면 원문) 이름순. 대상 시장 브라질은 공급국이 아니므로 뺍니다."""
+    return sorted((dict(c) for c in _COUNTRIES if c["code"] != BRAZIL_CODE),
                   key=lambda c: (c["name_ko"] is None, c["name_ko"] or c["name_pt"]))
 
 
@@ -204,6 +209,9 @@ def validate_request(payload, latest_index):
     countries = []
     for value in raw_countries:
         value = str(value)
+        if value == BRAZIL_CODE:
+            fields["countries"] = "브라질은 대상 시장이라 공급국으로 선택할 수 없습니다."
+            break
         if value not in _BY_CODE:
             fields["countries"] = "알 수 없는 공급국이 포함되어 있습니다. 목록에서 다시 선택해 주세요."
             break
@@ -351,8 +359,11 @@ def compute(rows, req, code_name=None):
     for item in monthly:
         item["price_flag"] = flags.get(item["month"])
 
-    # 공급국
+    # 공급국(브라질 원산지 재수입분은 목록에서 제외, 전체 수입액에는 포함)
     names = sorted({name for (idx, name) in cells if start <= idx <= end})
+    brazil_names = [n for n in names if country_info(name_pt=n)["code"] == BRAZIL_CODE]
+    names = [n for n in names if n not in brazil_names]
+    brazil_fob = _sum(_period_totals(cells, start, end, n)["fob"] for n in brazil_names)
     per_country = []
     for name in names:
         cur = _period_totals(cells, start, end, name)
@@ -390,9 +401,12 @@ def compute(rows, req, code_name=None):
     if current["missing_rows"]:
         notes.append("조회 기간에 금액 또는 중량이 빠진 행이 %d건 있습니다. 수입액·수입량 합계에는 있는 값만 더했고, "
                      "평균 수입단가는 금액과 중량이 모두 있는 행만으로 계산했습니다. 합계가 실제보다 작을 수 있습니다." % current["missing_rows"])
-    if any(c["country"]["code"] == "105" for c in per_country):
-        notes.append("공급국에 브라질(Brasil)이 있습니다. ComexStat 수입 통계는 판매 회사 국가가 아니라 원산지 기준이라, "
-                     "브라질에서 만든 상품이 수리·반송 등으로 다시 들어오면 원산지가 브라질로 기록됩니다(MDIC 통계 이용 매뉴얼).")
+    if brazil_names:
+        share = (brazil_fob / current["fob"] * 100) if (brazil_fob is not None and current["fob"]) else None
+        notes.append("원산지가 브라질(Brasil)인 재수입분%s은 대상 시장 자신이라 공급국 목록·순위에서 제외했습니다. "
+                     "전체 수입액과 비중의 분모(ComexStat 공식 합계)에는 포함되어 있습니다. ComexStat 수입 통계는 원산지 기준이라 "
+                     "브라질에서 만든 상품이 수리·반송 등으로 다시 들어오면 원산지가 브라질로 기록됩니다(MDIC 통계 이용 매뉴얼)." % (
+                         " USD {:,}(전체의 {:.1f}%)".format(int(round(brazil_fob)), share) if share is not None else ""))
     unmapped = sorted({c["country"]["name_pt"] for c in per_country if c["country"]["code"] is None})
     if unmapped:
         notes.append("국가 코드표에 없는 공급국 이름이 있어 원문으로 표시했습니다: %s" % ", ".join(unmapped))
@@ -562,12 +576,22 @@ def _ai_usable(news):
     return sum(1 for it in news["items"] if it.get("ai_input"))
 
 
+def _translate(news):
+    """포르투갈어·스페인어 제목에 한국어 번역(title_ko)을 붙입니다. 실패해도 뉴스 표시는 그대로 진행합니다."""
+    try:
+        news["translation"] = translation.translate_titles(news["items"] + news.get("other_items", []), _today())
+    except Exception:  # 번역은 부가 기능이라 어떤 오류도 뉴스 응답을 막지 않습니다(원문·키는 로그에 남기지 않음).
+        logger.warning("제목 번역 중 예상하지 못한 오류")
+        news["translation"] = {"status": "failed", "count": 0, "calls": 0, "reason": "제목 번역 중 오류가 나 원문 제목만 표시합니다."}
+    return news
+
+
 def collect_news(bundle_id, refresh=False):
     """조회 묶음에 대한 뉴스 수집. 같은 묶음은 한 번 수집한 결과를 다시 씁니다(refresh=True면 다시 수집)."""
     b = get_bundle(bundle_id)
     if b["news"] is not None and not refresh:
         return b["news"]
-    news = _news_public(news_sources.collect(refresh=refresh))
+    news = _translate(_news_public(news_sources.collect(refresh=refresh)))
     b["news"] = news
     return news
 
@@ -588,6 +612,7 @@ def run_ai(bundle_id):
         def widen():
             news = _news_public(news_sources.collect(widen=True))
             if _ai_usable(news) > _ai_usable(b["news"]):
+                news = _translate(news)
                 b["news"] = news  # 근거가 늘었을 때만 교체(호출 한도 등으로 줄면 기존 유지)
             return b["news"]
 

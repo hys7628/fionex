@@ -384,7 +384,7 @@ def _news_section(news, W, st):
     out.append(_table(srows, [36 * mm, 28 * mm, W - 64 * mm], st))
     w = news.get("window") or {}
     items, others = news.get("items") or [], news.get("other_items") or []
-    out.append(_p("요청 수집 기간 %s~%s(최근 %s개월) · 주제에 맞는 관련 기사 %d건 / 중복 제거 후 후보 %d건 · 주제 기준 밖 수집 기사 %d건" % (
+    out.append(_p("요청 수집 기간 %s~%s(최근 %s개월) · 섬유 업계 핵심 기사 %d건 / 중복 제거 후 후보 %d건 · 주제 기준 밖 수집 기사 %d건" % (
         w.get("from", "?"), w.get("to", "?"), w.get("months", "?"), len(items), news.get("candidates", 0), len(others)), st["small"]))
     for n in w.get("notes") or []:
         out.append(_p(n, st["notice"]))
@@ -397,35 +397,30 @@ def _news_section(news, W, st):
     if any(it.get("source") == "gdelt" for it in items + others):
         out.append(_p("일반 뉴스 출처: The GDELT Project (https://www.gdeltproject.org/). 일반 뉴스는 제목·메타데이터만 확인했고 기사 본문은 확인하지 않았습니다. "
                       "GDELT 시각은 GDELT가 기사를 처음 발견한 시각이며 게시일이 아닙니다.", st["small"]))
-    out.append(_p("핵심 요약 1줄은 출처가 제공한 요약을 원문 그대로 쓰며, 자동 발췌나 AI 요약을 하지 않습니다. "
-                  "PDF 수록이 확인되지 않은 출처(KOTRA 등)의 요약은 PDF에 넣지 않습니다.", st["small"]))
+    if any(it.get("title_ko") for it in items + others):
+        out.append(_p("포르투갈어·스페인어 제목 아래의 'AI 번역'은 OpenAI 기계 번역이며 원문 제목이 기준입니다.", st["small"]))
     if items:
         out.append(_article_table(items, W, st))
     else:
-        out.append(_p("주제에 맞는 관련 기사를 확보하지 못했습니다.", st["small"]))
+        out.append(_p("섬유 업계 핵심 기사를 확보하지 못했습니다.", st["small"]))
     if others:
         out.append(_p("그 밖에 수집한 브라질 기사 (주제 기준 밖 · AI 분석에 쓰지 않음)", st["body"]))
         out.append(_article_table(others, W, st))
     return out
 
 
-def _summary_text(it):
-    if not it.get("excerpt"):
-        return "요약 제공 없음 · 원문 확인 필요"
-    if not it.get("pdf_text"):
-        return "출처 제공 요약 있음 · PDF 수록 범위 확인 전이라 화면에서만 표시"
-    return it["excerpt"] + " (출처 제공 요약)"
-
-
 def _article_table(items, W, st):
-    """기사 제목 | 핵심 요약 1줄 | 원문 URL (화면과 같은 구성). 제목 칸에 ID·출처·날짜를 함께 적습니다."""
-    rows = [["기사 제목", "핵심 요약 1줄", "원문 URL"]]
+    """기사 제목 | 원문 URL (화면과 같은 구성). 제목 칸에 ID·AI 번역 제목·출처·날짜를 함께 적습니다."""
+    rows = [["기사 제목", "원문 URL"]]
     access = {"full_text": "원문 확보(본문 미수록)", "description": "제목·언론사 설명만 확인", "title_only": "제목·메타데이터만 확인"}
     for it in items:
         date = ("게시일 " + it["published"]) if it.get("published") else (
             ("GDELT 최초 발견 " + it["seen_at"]) if it.get("seen_at") else "날짜 미확인")
         meta = " · ".join(filter(None, [it.get("source_name"), date, access.get(it.get("access"), it.get("access")),
                                         "" if it.get("pdf_text") else "이용 범위 확인 필요"]))
-        title = [_p("%s %s" % (it.get("id") or "", it["title"]), st["cell"]), _p(meta, st["small"])]
-        rows.append([title, _p(_summary_text(it), st["cell"]), _link(it.get("url"), st["small"])])
-    return _table(rows, [68 * mm, 56 * mm, W - 124 * mm], st)
+        title = [_p("%s %s" % (it.get("id") or "", it["title"]), st["cell"])]
+        if it.get("title_ko"):
+            title.append(_p("AI 번역: " + it["title_ko"], st["cell"]))
+        title.append(_p(meta, st["small"]))
+        rows.append([title, _link(it.get("url"), st["small"])])
+    return _table(rows, [110 * mm, W - 110 * mm], st)

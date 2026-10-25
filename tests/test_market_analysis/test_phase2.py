@@ -20,7 +20,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from common.errors import AIRateLimitError  # noqa: E402
-from features.market_analysis import analysis, news_sources, pdf_report, service  # noqa: E402
+from features.market_analysis import analysis, news_sources, pdf_report, service, translation  # noqa: E402
 from features.market_analysis import comexstat_client as comex  # noqa: E402
 
 FAKE_KEY = "FAKE+KEY/abc=="  # 디코딩 키 형태(특수문자 포함). 실제 키 아님
@@ -463,7 +463,7 @@ class CollectTest(NewsBase):
         with mock.patch.object(news_sources, "_transport", t):
             out = news_sources.collect(today=date(2026, 10, 25))
         states = {s["source"]: s["state"] for s in out["sources"]}
-        self.assertEqual(states, {"kotra": "config", "gdelt": "ok", "kita": "pending"})
+        self.assertEqual(states, {"kotra": "config", "gdelt": "ok"})  # KITA 행은 2026-10-26 삭제
         self.assertEqual(len(out["items"]), 1)  # 검색어·구간이 같은 기사 → 중복 제거
         gd = next(s for s in out["sources"] if s["source"] == "gdelt")
         self.assertEqual(gd["coverage"]["searched_from"], out["window"]["from"])  # 6개월 전체 조회
@@ -548,7 +548,7 @@ class DefaultCollectTest(NewsBase):
         self.assertEqual((nd["state"], nd["status_text"]), ("config", "설정 필요"))
         self.assertIn("NEWSDATA_API_KEY", nd["message"])
         self.assertEqual(out["window"]["notes"], [])  # 키 없음은 기간 누락 경고 대상 아님
-        self.assertEqual([s["source"] for s in out["sources"]], ["kotra", "newsdata", "kita"])
+        self.assertEqual([s["source"] for s in out["sources"]], ["kotra", "newsdata"])  # KITA 행 없음
 
     def test_general_pending_without_provider(self):
         with mock.patch.object(news_sources, "PROVIDERS", {"kotra": news_sources.fetch_kotra}):
@@ -556,7 +556,7 @@ class DefaultCollectTest(NewsBase):
             out, _ = self.collect([kotra_item(1)])
         general = next(s for s in out["sources"] if s["source"] == "general")
         self.assertEqual((general["state"], general["status_text"]), ("pending", "공급자 선택 대기"))
-        self.assertEqual([s["source"] for s in out["sources"]], ["kotra", "general", "kita"])
+        self.assertEqual([s["source"] for s in out["sources"]], ["kotra", "general"])
 
     def test_real_response_shape_without_summary_or_body(self):
         # 2026-10-25 실제 응답처럼 cntntSumar·newsBdt 필드가 없는 기사
@@ -593,6 +593,14 @@ class DefaultCollectTest(NewsBase):
         urls = [it["url"] for it in out["items"] + out["other_items"]]
         self.assertEqual(len(urls), len(set(urls)))
 
+    def test_industry_class_does_not_make_textile_article(self):
+        # 2026-10-26 실측: 산업분류(indstCl)에 섬유가 붙은 월드컵 소비 기사가 핵심 기사로 선정됐던 문제
+        fifa = {**kotra_item(1, title="2026 FIFA 월드컵, 브라질 소비 시장 전방위 확대", body=""), "indstCl": "섬유/의류,식품,기타"}
+        cotton = {**kotra_item(2, title="세계 1위 면화 수출국 브라질의 경쟁력 분석 및 섬유 산업 동향", body=""), "indstCl": "섬유/의류"}
+        out, _ = self.collect([fifa, cotton])
+        self.assertEqual([it["title"] for it in out["items"]], [cotton["newsTitl"]])
+        self.assertEqual([it["title"] for it in out["other_items"]], [fifa["newsTitl"]])
+
     def test_query_only_urls_are_different_articles(self):
         # 실제 KOTRA 주소는 기사 구분이 쿼리(dataIdx)에만 있음 → 서로 다른 기사로 유지
         base = "https://dream.kotra.or.kr/user/extra/kotranews/bbs/linkView/jsp/Page.do?dataIdx=%d"
@@ -612,6 +620,101 @@ class DefaultCollectTest(NewsBase):
                     'https://x.com/"onmouseover=x', "https://x.com/<a>"):
             self.assertIsNone(news_sources.safe_url(bad), bad)
         self.assertEqual(news_sources.safe_url(" https://dream.kotra.or.kr/a?b=1 "), "https://dream.kotra.or.kr/a?b=1")
+
+
+# ---------- 제목 번역 ----------
+class FakeTranslator:
+    """가짜 generate_structured. 입력 id마다 번역을 돌려주고 호출을 기록합니다."""
+
+    def __init__(self, extra=None, fail=None):
+        self.calls, self.extra, self.fail = [], extra or [], fail
+
+    def __call__(self, *, instructions, input_text, schema, max_output_tokens):
+        payload = json.loads(input_text)
+        self.calls.append({"instructions": instructions, "payload": payload})
+        if self.fail:
+            raise self.fail
+        items = [translation.TitleKo(id=i["id"], title_ko="번역:" + i["title"][:10]) for i in payload["items"]] + self.extra
+        return FakeResult(translation.Translations(items=items), "gpt-5.4-mini-2026-03-17", FakeUsage(100, 50, 150))
+
+
+def tr_item(i, title, language="portuguese"):
+    return {"id": "N%d" % i, "title": title, "language": language}
+
+
+class TranslationTest(unittest.TestCase):
+    def setUp(self):
+        translation.clear_cache()
+        self.addCleanup(translation.clear_cache)
+
+    def test_only_portuguese_spanish_translated_and_ids_mapped(self):
+        items = [tr_item(1, "Indústria têxtil cresce"), tr_item(2, "Industria textil crece", "spanish"),
+                 tr_item(3, "브라질 섬유 동향", "ko"), tr_item(4, "Brazil textile", "english")]
+        fake = FakeTranslator()
+        st = translation.translate_titles(items, "2026-10-26", generate=fake)
+        self.assertEqual((st["status"], st["count"], st["calls"]), ("ok", 2, 1))
+        self.assertEqual([i["title"] for i in fake.calls[0]["payload"]["items"]], ["Indústria têxtil cresce", "Industria textil crece"])
+        self.assertEqual(fake.calls[0]["instructions"], translation._prompt())
+        self.assertEqual(items[0]["title_ko"], "번역:Indústria")  # 앞뒤 공백 정리
+        self.assertNotIn("title_ko", items[2])
+        self.assertNotIn("title_ko", items[3])
+
+    def test_bad_outputs_ignored(self):
+        items = [tr_item(1, "Têxtil")]
+        fake = FakeTranslator(extra=[translation.TitleKo(id="T99", title_ko="없는 항목")])
+        fake_long = lambda **kw: FakeResult(translation.Translations(items=[translation.TitleKo(id="T1", title_ko="가" * 200)]), "m", None)
+        translation.translate_titles(items, "d", generate=fake)
+        self.assertEqual(items[0]["title_ko"], "번역:Têxtil")  # 없는 id는 무시
+        translation.clear_cache()
+        items = [tr_item(1, "Têxtil")]
+        st = translation.translate_titles(items, "d", generate=fake_long)
+        self.assertEqual((st["status"], st["missing"]), ("partial", 1))  # 설명을 덧붙인 듯한 긴 출력은 버림
+        self.assertNotIn("title_ko", items[0])
+
+    def test_cache_same_day_no_second_call_and_duplicate_titles(self):
+        fake = FakeTranslator()
+        a = [tr_item(1, "Têxtil"), tr_item(2, "Têxtil")]
+        translation.translate_titles(a, "2026-10-26", generate=fake)
+        b = [tr_item(5, "Têxtil")]
+        st = translation.translate_titles(b, "2026-10-26", generate=fake)
+        self.assertEqual((len(fake.calls), st["calls"], st["reused"]), (1, 0, 1))
+        self.assertEqual(len(fake.calls[0]["payload"]["items"]), 1)  # 같은 제목은 한 번만 보냄
+        self.assertEqual((a[1]["title_ko"], b[0]["title_ko"]), ("번역:Têxtil", "번역:Têxtil"))
+
+    def test_config_missing_and_failure_do_not_break(self):
+        items = [tr_item(1, "Têxtil")]
+        with mock.patch.dict(os.environ, {"OPENAI_API_KEY": "", "OPENAI_MODEL": ""}):
+            st = translation.translate_titles(items, "d")
+        self.assertEqual((st["status"], st["calls"]), ("skipped", 0))
+        st = translation.translate_titles(items, "d", generate=FakeTranslator(fail=AIRateLimitError()))
+        self.assertEqual((st["status"], st["code"]), ("failed", "AI_RATE_LIMITED"))
+        self.assertNotIn("title_ko", items[0])
+
+    def test_service_attaches_translation_and_pdf_shows_it(self):
+        from pypdf import PdfReader
+        service.clear_bundles()
+        self.addCleanup(service.clear_bundles)
+        bid = service.create_bundle(make_stats())
+        art = news_sources.NewsItem(id="", source="newsdata", source_name="NewsData.io · Valor", title="Indústria têxtil amplia produção",
+                                    url="https://valor.globo.com/n/1", published="2026-10-24", collected_at="t", language="portuguese",
+                                    excerpt="O setor têxtil brasileiro amplia a produção de fios de poliéster.", access="description",
+                                    usage_note="", ai_input=True, pdf_text=False, brazil_context=True)
+        collected = {"window": {"from": "2026-04-25", "to": "2026-10-25", "months": 6, "notes": []}, "items": [art], "other_items": [],
+                     "candidates": 1, "sources": [], "widened": False}
+        with mock.patch.object(news_sources, "collect", lambda **kw: collected), \
+                mock.patch.object(translation.ai_client, "generate_structured", FakeTranslator()), \
+                mock.patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-FAKE", "OPENAI_MODEL": "test-model"}):
+            news = service.collect_news(bid)
+        self.assertEqual((news["translation"]["status"], news["items"][0]["title_ko"]), ("ok", "번역:Indústria"))
+        text = "\n".join(p.extract_text() for p in PdfReader(io.BytesIO(pdf_report.build_pdf({"stats": make_stats(), "news": news, "ai": None}))).pages)
+        self.assertIn("AI 번역: 번역:Indústria", text)
+
+    def test_unexpected_error_in_translation_does_not_break_news(self):
+        news = {"items": [tr_item(1, "Têxtil")], "other_items": []}
+        with mock.patch.object(translation, "translate_titles", side_effect=RuntimeError("boom")):
+            out = service._translate(news)
+        self.assertEqual(out["translation"]["status"], "failed")
+        self.assertEqual(out["items"][0]["title"], "Têxtil")
 
 
 # ---------- AI 분석 ----------
@@ -970,6 +1073,24 @@ class EdgeTest(unittest.TestCase):
         req = service.validate_request({"code_system": "ncm", "code": "54023310", "from": "2026-01", "to": "2026-01"}, LATEST)
         self.assertIn("원산지", " ".join(service.compute(rows, req)["notes"]))
 
+    def test_brasil_excluded_from_supplier_list_but_kept_in_total(self):
+        rows = [row("2026-01", "China", 900, 900), row("2026-01", "Brasil", 100, 10), row("2026-01", "Coreia do Sul", 50, 20)]
+        req = service.validate_request({"code_system": "ncm", "code": "54023310", "from": "2026-01", "to": "2026-01"}, LATEST)
+        r = service.compute(rows, req)
+        names = [c["country"]["name_pt"] for c in r["suppliers"]["top"]]
+        self.assertEqual(names, ["China", "Coreia do Sul"])  # 브라질 제외, 순위 다시 매김
+        self.assertEqual((r["suppliers"]["count"], r["suppliers"]["korea"]["rank"]), (2, 2))
+        self.assertEqual(r["summary"]["fob"], 1050)  # 전체 수입액(공식 합계)은 브라질 포함
+        self.assertAlmostEqual(r["suppliers"]["top"][0]["share"], 900 / 1050 * 100)
+        self.assertIn("USD 100(전체의 9.5%)", " ".join(r["notes"]))
+
+    def test_brasil_not_selectable(self):
+        self.assertNotIn(service.BRAZIL_CODE, [c["code"] for c in service.country_list()])
+        with self.assertRaises(service.InputError) as ctx:
+            service.validate_request({"code_system": "ncm", "code": "54023310", "from": "2026-01", "to": "2026-01",
+                                      "countries": [service.BRAZIL_CODE]}, LATEST)
+        self.assertIn("대상 시장", ctx.exception.fields["countries"])
+
 
 class CacheDateTest(unittest.TestCase):
     def setUp(self):
@@ -1075,9 +1196,10 @@ class PdfTest(unittest.TestCase):
              "published": "2026-06-23", "access": "title_only", "excerpt": "", "ai_input": False, "pdf_text": False, "topics": []}]
         reader = PdfReader(io.BytesIO(pdf_report.build_pdf(p)))
         text = "\n".join(pg.extract_text() for pg in reader.pages)
-        for s in ("기사 제목", "핵심 요약 1줄", "원문 URL", "요약 제공 없음", "원문 주소 형식 오류", "브라질 섬유 <b>동향</b>", "그 밖에 수집한 브라질 기사", "브라질 와인 시장"):
+        for s in ("기사 제목", "원문 URL", "원문 주소 형식 오류", "브라질 섬유 <b>동향</b>", "그 밖에 수집한 브라질 기사", "브라질 와인 시장"):
             self.assertIn(s, text)
         self.assertNotIn("건수", text)
+        self.assertNotIn("핵심 요약 1줄", text)  # 요약 열 삭제(2026-10-26)
         self.assertNotIn("The GDELT Project", text)  # GDELT 기사가 없으면 GDELT 표기도 없음
         links = [a.get_object()["/A"]["/URI"] for pg in reader.pages for a in (pg.get("/Annots") or [])
                  if a.get_object().get("/A") and "/URI" in a.get_object()["/A"]]
