@@ -3,3 +3,37 @@
  * 공통 컴포넌트(.card, .btn, .input 등)를 복제·덮어쓰지 말고 tokens.css 변수를 사용합니다.
  * 예) .feature-green_claim .xxx-list { gap: var(--space-3); }
  */
+
+/* 여러 문장·문단을 붙여넣을 수 있도록 입력칸을 넉넉하게 */
+.feature-green_claim .green-claim-textarea {
+  min-height: 240px;
+}
+
+/* 20,000자 초과 시 글자 수도 오류 색으로(문장 안내는 .field-error가 담당) */
+.feature-green_claim .green-claim-count[data-state="over"] {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+}
+
+/* 준비 중인 선택지·파일 입력은 사용할 수 없음을 보이게 */
+.feature-green_claim .green-claim-choice-pending {
+  color: var(--color-text-muted);
+}
+
+.feature-green_claim .file-input:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.feature-green_claim .file-input:disabled::file-selector-button {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* 결과 카드 머리글: 비활성 버튼 바로 아래에 준비 중 안내 */
+.feature-green_claim .green-claim-header-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}

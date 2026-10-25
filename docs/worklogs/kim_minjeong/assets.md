@@ -20,3 +20,9 @@
 | 2026-10-25 | CONAR 원문 발췌(md) | features/green_claim/data/brazil_claim_criteria/conar_excerpt.md | 웹 확보본(16:31:51)에서 프로그램으로 줄 단위 추출 | prompt_log DEV-2026_10_25-03 | CONAR 저작물. 출처 표시함. 약관상 일부 복제 조건 있음. **AI 이용 허가 미확인**, 상업 목적 해당 여부 미확인 |
 | 2026-10-25 | CONAR 비공식 번역·검토 지침(md 내 절 추가) | features/green_claim/data/brazil_claim_criteria/review_criteria_ko.md | Claude Code 작성 | 같음 | 비공식 번역. 사람·전문가 검토 전. AI 이용 허가 미확인 |
 - 직전 항목의 "CONAR 사본 저장 보류" 기록은 그 시점 판단으로 유지한다. 웹·PDF·약관 사본 원본은 이번에도 저장소에 넣지 않았다(세션 임시 폴더에만 존재).
+
+## 2026-10-25 문구 직접 입력 화면 캡처 (DEV-2026_10_25-04)
+| 날짜 | 종류 | 경로 | 생성 도구 | 관련 기록 | 사용권·검토 상태 |
+|---|---|---|---|---|---|
+| 2026-10-25 | 화면 캡처 PNG(1440×900) | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/010a049a-1a72-42db-bb4c-cb26f412c3b5/scratchpad/green_claim_desktop_1440.png | Chrome 헤드리스 CDP | validation 2026-10-25 문구 직접 입력 | 자체 화면, 가상 입력 문구. 저장소에 넣지 않음(임시 파일이라 사라질 수 있음) |
+| 2026-10-25 | 화면 캡처 PNG(390×844) | 같은 폴더의 green_claim_mobile_390.png | 같음 | 같음 | 같음 |
