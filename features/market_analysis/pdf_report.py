@@ -21,6 +21,8 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle)
 
+from features.market_analysis.news_sources import safe_url
+
 FONT_DIR = Path(__file__).resolve().parent / "fonts"
 FONT, FONT_BOLD = "NotoSansKR", "NotoSansKR-Bold"
 KST = timezone(timedelta(hours=9))
@@ -71,7 +73,10 @@ def _p(text, style):
 
 
 def _link(url, style, label=None):
-    url = str(url or "")
+    """http(s) 절대 주소만 링크로 만듭니다. 형식이 틀리면 링크 없이 안내 문구만 넣습니다."""
+    url = safe_url(url)
+    if not url:
+        return _p("원문 주소 형식 오류(링크 미표시)", style)
     safe = escape(url, {'"': "&quot;"})
     return Paragraph('<a href="%s" color="#1a56bd">%s</a>' % (safe, escape(label or url)), style)
 
@@ -369,35 +374,55 @@ def _news_section(news, W, st):
     if not news:
         out.append(_p("뉴스·보고서는 수집하지 않았습니다.", st["small"]))
         return out
-    srows = [["출처", "상태", "건수", "안내"]]
+    # 출처별 연결 상태(화면과 같은 3열). 건수는 데이터(count)에만 남기고 표에는 넣지 않습니다.
+    srows = [["출처", "상태", "안내"]]
     for s in news.get("sources") or []:
-        srows.append([s["label"], s["status_text"], str(s.get("count", 0)), s.get("message") or s.get("usage_note") or ""])
+        srows.append([s["label"], s["status_text"], s.get("message") or s.get("usage_note") or ""])
+    if len(srows) == 1:
+        srows.append(["-", "-", "출처 상태 정보가 없습니다."])
     out.append(Spacer(1, 4))
-    out.append(_table(srows, [34 * mm, 26 * mm, 12 * mm, W - 72 * mm], st))
+    out.append(_table(srows, [36 * mm, 28 * mm, W - 64 * mm], st))
     w = news.get("window") or {}
-    out.append(_p("요청 수집 기간 %s~%s(최근 %s개월) · 관련성 상위 %d건 / 중복 제거 후 후보 %d건" % (
-        w.get("from", "?"), w.get("to", "?"), w.get("months", "?"), len(news.get("items") or []), news.get("candidates", 0)), st["small"]))
+    items, others = news.get("items") or [], news.get("other_items") or []
+    out.append(_p("요청 수집 기간 %s~%s(최근 %s개월) · 주제에 맞는 관련 기사 %d건 / 중복 제거 후 후보 %d건 · 주제 기준 밖 수집 기사 %d건" % (
+        w.get("from", "?"), w.get("to", "?"), w.get("months", "?"), len(items), news.get("candidates", 0), len(others)), st["small"]))
     for n in w.get("notes") or []:
         out.append(_p(n, st["notice"]))
     for s in news.get("sources") or []:
         if s.get("stale"):
             out.append(_p("%s: 새 조회 실패로 %s에 받은 이전 자료를 표시했습니다." % (s["label"], s.get("collected_at") or "?"), st["notice"]))
-    out.append(_p("일반 뉴스 출처: The GDELT Project (https://www.gdeltproject.org/). 일반 뉴스는 제목·메타데이터만 확인했고 기사 본문은 확인하지 않았습니다. "
-                  "GDELT 시각은 GDELT가 기사를 처음 발견한 시각이며 게시일이 아닙니다.", st["small"]))
-    rows = [["ID", "제목·발췌", "매체·출처", "날짜(기준)", "확보 범위"]]
-    access = {"full_text": "원문 확보(본문 미수록)", "title_only": "제목·메타데이터만 확인"}
-    for it in news.get("items") or []:
-        parts = [Paragraph(escape(it["title"]), st["cell"])]
-        if it.get("pdf_text") and it.get("excerpt"):
-            parts.append(_p(it["excerpt"], st["small"]))
-        parts.append(_link(it["url"], st["small"]))
-        date = ("게시일 " + it["published"]) if it.get("published") else (
-            ("GDELT 최초 발견 " + it["seen_at"]) if it.get("seen_at") else "미확인")
-        name = it["source_name"] + ((" · " + it["language"]) if it.get("language") else "")
-        rows.append([it["id"], parts, name, date,
-                     access.get(it["access"], it["access"]) + ("" if it.get("pdf_text") else " · 이용 범위 확인 필요")])
-    if len(rows) > 1:
-        out.append(_table(rows, [10 * mm, 76 * mm, 32 * mm, 26 * mm, W - 144 * mm], st))
+    if any(it.get("source") == "gdelt" for it in items + others):
+        out.append(_p("일반 뉴스 출처: The GDELT Project (https://www.gdeltproject.org/). 일반 뉴스는 제목·메타데이터만 확인했고 기사 본문은 확인하지 않았습니다. "
+                      "GDELT 시각은 GDELT가 기사를 처음 발견한 시각이며 게시일이 아닙니다.", st["small"]))
+    out.append(_p("핵심 요약 1줄은 출처가 제공한 요약을 원문 그대로 쓰며, 자동 발췌나 AI 요약을 하지 않습니다. "
+                  "PDF 수록이 확인되지 않은 출처(KOTRA 등)의 요약은 PDF에 넣지 않습니다.", st["small"]))
+    if items:
+        out.append(_article_table(items, W, st))
     else:
-        out.append(_p("관련 기사를 확보하지 못했습니다.", st["small"]))
+        out.append(_p("주제에 맞는 관련 기사를 확보하지 못했습니다.", st["small"]))
+    if others:
+        out.append(_p("그 밖에 수집한 브라질 기사 (주제 기준 밖 · AI 분석에 쓰지 않음)", st["body"]))
+        out.append(_article_table(others, W, st))
     return out
+
+
+def _summary_text(it):
+    if not it.get("excerpt"):
+        return "요약 제공 없음 · 원문 확인 필요"
+    if not it.get("pdf_text"):
+        return "출처 제공 요약 있음 · PDF 수록 범위 확인 전이라 화면에서만 표시"
+    return it["excerpt"] + " (출처 제공 요약)"
+
+
+def _article_table(items, W, st):
+    """기사 제목 | 핵심 요약 1줄 | 원문 URL (화면과 같은 구성). 제목 칸에 ID·출처·날짜를 함께 적습니다."""
+    rows = [["기사 제목", "핵심 요약 1줄", "원문 URL"]]
+    access = {"full_text": "원문 확보(본문 미수록)", "title_only": "제목·메타데이터만 확인"}
+    for it in items:
+        date = ("게시일 " + it["published"]) if it.get("published") else (
+            ("GDELT 최초 발견 " + it["seen_at"]) if it.get("seen_at") else "날짜 미확인")
+        meta = " · ".join(filter(None, [it.get("source_name"), date, access.get(it.get("access"), it.get("access")),
+                                        "" if it.get("pdf_text") else "이용 범위 확인 필요"]))
+        title = [_p("%s %s" % (it.get("id") or "", it["title"]), st["cell"]), _p(meta, st["small"])]
+        rows.append([title, _p(_summary_text(it), st["cell"]), _link(it.get("url"), st["small"])])
+    return _table(rows, [68 * mm, 56 * mm, W - 124 * mm], st)

@@ -322,11 +322,15 @@ class SelectTest(unittest.TestCase):
 
 
 class CollectTest(NewsBase):
+    """GDELT 어댑터가 공급자로 연결된 경우의 수집 동작(현재 기본값은 비활성, 선택 후 다시 쓸 수 있도록 유지)."""
     CALLS = None  # 검색어 수 × 구간 수(6개월 → 2구간)
 
     def setUp(self):
         super().setUp()
         self.CALLS = len(news_sources.GDELT_QUERIES) * 2
+        p = mock.patch.object(news_sources, "PROVIDERS", {"kotra": news_sources.fetch_kotra, "gdelt": news_sources.fetch_gdelt})
+        p.start()
+        self.addCleanup(p.stop)
 
     def test_partial_failure_kita_pending_and_gdelt_ok(self):
         self.env()  # KOTRA 키 없음
@@ -396,8 +400,84 @@ class CollectTest(NewsBase):
         self.assertEqual(len(out["items"]), 1)
 
     def test_no_naver_anywhere(self):
-        self.assertEqual(set(news_sources.PROVIDERS), {"kotra", "gdelt"})
         self.assertFalse(any("naver" in k.lower() for k in vars(news_sources)))
+
+
+class DefaultCollectTest(NewsBase):
+    """기본 설정: 일반 뉴스 공급자 선택 대기(GDELT 자동 호출 없음) + KOTRA 기사별 표시 자료."""
+
+    def collect(self, kotra_items):
+        self.env(DATA_GO_KR_SERVICE_KEY=FAKE_KEY)
+        t = Transport([http(200, kotra_doc(kotra_items))])
+        with mock.patch.object(news_sources, "_transport", t):
+            out = news_sources.collect(today=date(2026, 10, 25))
+        return service._news_public(out), t  # 화면 응답과 같은 공개 형식(dict)
+
+    def test_no_gdelt_call_and_general_pending(self):
+        self.assertEqual(set(news_sources.PROVIDERS), {"kotra"})
+        self.assertFalse(news_sources.has_general_provider())
+        out, t = self.collect([kotra_item(1)])
+        self.assertEqual(len(t.calls), 1)
+        self.assertTrue(all(url.startswith(news_sources.KOTRA_URL) for url, _ in t.calls))  # GDELT 호출 없음
+        general = next(s for s in out["sources"] if s["source"] == "general")
+        self.assertEqual((general["state"], general["status_text"]), ("pending", "공급자 선택 대기"))
+        self.assertEqual(out["window"]["notes"], [])  # GDELT 기간 경고 없음
+        self.assertEqual([s["source"] for s in out["sources"]], ["kotra", "general", "kita"])
+
+    def test_real_response_shape_without_summary_or_body(self):
+        # 2026-10-25 실제 응답처럼 cntntSumar·newsBdt 필드가 없는 기사
+        raw = {"newsTitl": "세계 1위 면화 수출국 브라질의 경쟁력 분석 및 섬유 산업 동향", "kotraNewsUrl": "https://dream.kotra.or.kr/n/1",
+               "othbcDt": "2026-07-27", "natn": "브라질", "dataType": "4유형", "indstCl": "섬유", "ovrofInfo": "상파울루무역관"}
+        out, _ = self.collect([raw])
+        it = out["items"][0]
+        self.assertEqual((it["access"], it["excerpt"], it["ai_input"], it["pdf_text"]), ("title_only", "", False, False))
+        self.assertEqual((it["id"], it["url"], it["published"]), ("N1", "https://dream.kotra.or.kr/n/1", "2026-07-27"))
+
+    def test_html_cleaned_bad_url_skipped_summary_not_truncated(self):
+        long_summary = "브라질 섬유 업계 요약 문장입니다. " * 40
+        items = [
+            kotra_item(1, title="<script>alert(1)</script>브라질 &lt;b&gt;폴리에스터&lt;/b&gt; 원사 &middot; 동향"),
+            {**kotra_item(2), "kotraNewsUrl": "javascript:alert(1)"},
+            {**kotra_item(3), "kotraNewsUrl": "dream.kotra.or.kr/no-scheme"},
+            {**kotra_item(4), "cntntSumar": long_summary},
+        ]
+        out, _ = self.collect(items)
+        titles = [it["title"] for it in out["items"]]
+        self.assertEqual(len(titles), 2)  # 잘못된 URL 2건 제외
+        self.assertTrue(any(t.endswith("브라질 폴리에스터 원사 · 동향 1") for t in titles))  # 태그 제거, 엔티티는 문자로
+        self.assertFalse(any("<" in t or ">" in t for t in titles))
+        summary = next(it for it in out["items"] if it["title"].endswith(" 4"))["excerpt"]
+        self.assertEqual(summary, news_sources._clean(long_summary))  # 자르지 않음
+
+    def test_other_items_listed_without_duplicates(self):
+        items = [kotra_item(1), kotra_item(1),  # 같은 기사 중복
+                 {**kotra_item(2, title="브라질 농기계 시장", body=""), "natn": "브라질"},
+                 {**kotra_item(3, title="브라질 와인 시장", body=""), "natn": "브라질"}]
+        out, _ = self.collect(items)
+        self.assertEqual([it["id"] for it in out["items"]], ["N1"])
+        self.assertEqual(sorted(it["id"] for it in out["other_items"]), ["R1", "R2"])
+        urls = [it["url"] for it in out["items"] + out["other_items"]]
+        self.assertEqual(len(urls), len(set(urls)))
+
+    def test_query_only_urls_are_different_articles(self):
+        # 실제 KOTRA 주소는 기사 구분이 쿼리(dataIdx)에만 있음 → 서로 다른 기사로 유지
+        base = "https://dream.kotra.or.kr/user/extra/kotranews/bbs/linkView/jsp/Page.do?dataIdx=%d"
+        items = [{**kotra_item(i, title="브라질 기사 %d" % i, body=""), "kotraNewsUrl": base % (244000 + i)} for i in range(5)]
+        items[0]["newsTitl"] = "브라질 섬유 산업 동향"
+        out, _ = self.collect(items)
+        self.assertEqual((len(out["items"]), len(out["other_items"])), (1, 4))
+        self.assertEqual(news_sources._norm_url("https://a.com/x?utm_source=y&id=1"), news_sources._norm_url("https://www.a.com/x/?id=1"))
+
+    def test_no_news_is_empty_not_failure(self):
+        out, _ = self.collect([])
+        kotra = next(s for s in out["sources"] if s["source"] == "kotra")
+        self.assertEqual((kotra["state"], kotra["status_text"], out["items"], out["other_items"]), ("ok", "결과 없음", [], []))
+
+    def test_safe_url(self):
+        for bad in ("", None, "javascript:alert(1)", "data:text/html,x", "ftp://x/a", "//x.com/a", "https://", "https://x.com/a b",
+                    'https://x.com/"onmouseover=x', "https://x.com/<a>"):
+            self.assertIsNone(news_sources.safe_url(bad), bad)
+        self.assertEqual(news_sources.safe_url(" https://dream.kotra.or.kr/a?b=1 "), "https://dream.kotra.or.kr/a?b=1")
 
 
 # ---------- AI 분석 ----------
@@ -571,6 +651,40 @@ class AnalysisTest(unittest.TestCase):
                               widen_fn=lambda: widened.append(1))
         self.assertEqual((st["status"], st["error"]["code"], widened), ("failed", "AI_CONFIG_MISSING", []))
 
+    def test_config_diagnostic_key_model_separately(self):
+        cases = [({"OPENAI_API_KEY": "", "OPENAI_MODEL": "m"}, "key_missing", ["OPENAI_API_KEY"]),
+                 ({"OPENAI_API_KEY": "sk-FAKE-secret", "OPENAI_MODEL": ""}, "model_missing", ["OPENAI_MODEL"]),
+                 ({"OPENAI_API_KEY": " ", "OPENAI_MODEL": ""}, "key_and_model_missing", ["OPENAI_API_KEY", "OPENAI_MODEL"])]
+        for env, kind, missing in cases:
+            with self.subTest(kind=kind), mock.patch.dict(os.environ, env):
+                st = analysis.run(analysis.new_state(), self.stats, news_for(self.stats))
+                err = st["result"]["error"]
+                self.assertEqual((err["diagnostic"]["kind"], err["diagnostic"]["env_missing"]), (kind, missing))
+                self.assertTrue(err["needs_restart"])
+                self.assertEqual(st["result"]["usage"]["calls"], 0)
+                self.assertNotIn("FAKE-secret", json.dumps(st["result"], ensure_ascii=False))  # 값은 담지 않음
+                self.assertEqual(analysis.config_status()["missing"], missing)
+
+    def test_provider_errors_diagnosed_separately(self):
+        from common.errors import AIAuthError, AIModelUnavailableError
+        for exc, kind in ((AIAuthError(status_code=401), "auth_failed"), (AIRateLimitError(status_code=429), "rate_limited"),
+                          (AIModelUnavailableError(status_code=404), "model_unavailable")):
+            def fail(**kwargs):
+                raise exc
+            with self.subTest(kind=kind):
+                res = self.run_with(fail)["result"]
+                d = res["error"]["diagnostic"]
+                self.assertEqual((d["kind"], d["status_code"], res["error"]["needs_restart"]), (kind, exc.status_code, False))
+                self.assertEqual(res["error"]["message"], exc.message)  # 공급자 오류는 설정 안내와 다른 문장
+
+    def test_pack_note_without_general_news(self):
+        news = news_for(self.stats, n=0, kotra=1)
+        pack, _, excluded = analysis.build_pack(self.stats, news["items"])
+        notes = " ".join(pack["context"]["notes"])
+        self.assertIn("일반 뉴스 공급자를 선택하기 전", notes)
+        self.assertNotIn("GDELT", notes)
+        self.assertEqual((pack["evidence"], excluded), ([], 1))
+
     def test_time_budget_stops(self):
         ticks = iter([0, 0, 1, 1, 2, 2, 999, 999, 999, 999, 999, 999, 999])
         st = self.run_with(FakeModel(self.good), clock=lambda: next(ticks))
@@ -649,10 +763,52 @@ class BundleTest(unittest.TestCase):
             st = analysis.new_state()
             st["result"] = {}
             return st
-        with mock.patch.object(service.news_sources, "collect", lambda **kw: poor),                 mock.patch.object(service, "_news_public", lambda n: n), mock.patch.object(service.analysis, "run", fake_run):
+        with mock.patch.object(service.news_sources, "collect", lambda **kw: poor), \
+                mock.patch.object(service.news_sources, "has_general_provider", lambda: True), \
+                mock.patch.object(service, "_news_public", lambda n: n), mock.patch.object(service.analysis, "run", fake_run):
             service.run_ai(self.bid)
         self.assertIs(seen["got"], good)
         self.assertIs(service.get_bundle(self.bid)["news"], good)
+
+    def test_config_missing_no_recollect_and_route_reports_diagnostic(self):
+        from app import create_app
+        b = service.get_bundle(self.bid)
+        b["news"] = news_for(b["stats"], n=1)
+
+        def no_collect(**kw):
+            raise AssertionError("설정 누락 시 뉴스를 다시 수집하면 안 됨")
+        with mock.patch.dict(os.environ, {"OPENAI_API_KEY": "", "OPENAI_MODEL": ""}), \
+                mock.patch.object(service.news_sources, "collect", no_collect), \
+                mock.patch.object(service.news_sources, "has_general_provider", lambda: True):
+            res = create_app().test_client().post("/api/market-analysis/ai", json={"bundle_id": self.bid})
+        body = res.get_json()
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(body["data"]["error"]["diagnostic"]["kind"], "key_and_model_missing")
+        self.assertEqual(body["data"]["usage"]["calls"], 0)
+
+    def test_no_widen_without_general_provider(self):
+        b = service.get_bundle(self.bid)
+        b["news"] = news_for(b["stats"], n=0, kotra=1)
+        seen = {}
+
+        def fake_run(state, stats, news, widen_fn=None):
+            seen["widen_fn"] = widen_fn
+            st = analysis.new_state()
+            st["result"] = {}
+            return st
+        with mock.patch.object(service.analysis, "run", fake_run):
+            service.run_ai(self.bid)
+        self.assertIsNone(seen["widen_fn"])
+
+    def test_meta_reports_presence_only(self):
+        service.clear_cache()
+        self.addCleanup(service.clear_cache)
+        with mock.patch.dict(os.environ, {"OPENAI_API_KEY": "sk-FAKE-secret", "OPENAI_MODEL": ""}), \
+                mock.patch.object(comex, "get_latest_month", return_value=(2026, 9, "2026-10-06")):
+            m = service.meta()
+        self.assertEqual(m["ai"], {"ready": False, "api_key_set": True, "model_set": False, "missing": ["OPENAI_MODEL"]})
+        self.assertEqual(m["general_news"], {"provider_selected": False})
+        self.assertNotIn("FAKE-secret", json.dumps(m, ensure_ascii=False))
 
     def test_news_collected_once_per_bundle(self):
         fake = {"window": {}, "items": [], "candidates": 0, "sources": [], "widened": False}
@@ -770,6 +926,28 @@ class PdfTest(unittest.TestCase):
         self.assertNotIn("KOTRA 요약", text)       # pdf_text False → 요약 미수록
         self.assertIn("이용 범위 확인 필요", text)
         self.assertIn("AI 분석을 실행하지 않았습니다", text)
+
+    def test_pdf_source_table_without_count_and_article_columns(self):
+        from pypdf import PdfReader
+        p = self.payload(ai=False)
+        p["news"]["sources"][0]["count"] = 28  # count 데이터는 남아 있어도 표에는 넣지 않음
+        p["news"]["items"] = [
+            {"id": "N1", "source": "kotra", "source_name": "KOTRA 해외시장뉴스", "title": "브라질 섬유 <b>동향</b>",
+             "url": "javascript:alert(1)", "published": "2026-07-27", "access": "title_only", "excerpt": "",
+             "ai_input": False, "pdf_text": False, "topics": []}]
+        p["news"]["other_items"] = [
+            {"id": "R1", "source": "kotra", "source_name": "KOTRA 해외시장뉴스", "title": "브라질 와인 시장", "url": "https://dream.kotra.or.kr/r1",
+             "published": "2026-06-23", "access": "title_only", "excerpt": "", "ai_input": False, "pdf_text": False, "topics": []}]
+        reader = PdfReader(io.BytesIO(pdf_report.build_pdf(p)))
+        text = "\n".join(pg.extract_text() for pg in reader.pages)
+        for s in ("기사 제목", "핵심 요약 1줄", "원문 URL", "요약 제공 없음", "원문 주소 형식 오류", "브라질 섬유 <b>동향</b>", "그 밖에 수집한 브라질 기사", "브라질 와인 시장"):
+            self.assertIn(s, text)
+        self.assertNotIn("건수", text)
+        self.assertNotIn("The GDELT Project", text)  # GDELT 기사가 없으면 GDELT 표기도 없음
+        links = [a.get_object()["/A"]["/URI"] for pg in reader.pages for a in (pg.get("/Annots") or [])
+                 if a.get_object().get("/A") and "/URI" in a.get_object()["/A"]]
+        self.assertFalse(any("javascript" in str(u) for u in links))
+        self.assertIn("https://dream.kotra.or.kr/r1", [str(u) for u in links])
 
     def test_route_pdf_and_errors(self):
         from app import create_app

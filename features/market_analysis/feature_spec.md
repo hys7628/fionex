@@ -1,6 +1,6 @@
 # 시장 분석
 담당: 한윤수
-상태: 사용자 협의 반영 최종 요구사항 명세(2026-10-25). 구현: 1단계(ComexStat 통계·계산·화면) 완료·실제 통계 대조 통과, 2단계(KOTRA·GDELT 수집, AI 분석·5차례 검토) 코드·모의 테스트 완료·실제 연결 미검증(KOTRA 키 미설정, GDELT는 2026-10-26 실제 호출에서 200 응답·필드 확인, 대부분 호출은 429 후 재시도). 일반 뉴스 검색 공급자는 GDELT로 통일(2026-10-26), 네이버 연결 제거, 3단계(PDF) 완료·실제 통계로 렌더링 확인. KITA는 공식 연계 경로 미확인으로 '연결 확인 중'. 새로고침 유지는 공통 합의 전 보류. 구현 결정과 실제 확인 결과는 맨 아래 '1단계 구현 현황'과 '2~3단계 구현 현황'을 봅니다. 최종 확인 담당자는 한윤수이며 별도 마감일 제약은 없습니다.
+상태: 사용자 협의 반영 최종 요구사항 명세(2026-10-25). 구현: 1단계(ComexStat 통계·계산·화면) 완료·실제 통계 대조 통과, 2단계(KOTRA 수집, AI 분석·5차례 검토) 코드·모의 테스트 완료. KOTRA는 실제 연결 확인(2026-10-26, 브라질 최근 6개월 28건 기사별 표시). OpenAI는 사용자 서버 프로세스에 키·모델이 없어 실패했고(원인 확인), 검증용 서버에서 1회 실제 분석 완료(2026-10-26, 6호출·44초, 품질 사람 검토 전). 일반 뉴스는 2026-10-26 GDELT 자동 호출 중단 → '공급자 선택 대기'(새 무료 공급자 사용자 선택 전). 네이버 제외. 3단계(PDF) 완료·실제 통계로 렌더링 확인. KITA는 자동 수집용 공식 API·RSS 미확인으로 '연결 확인 중'(문의 필요). 새로고침 유지는 공통 합의 전 보류. 구현 결정과 실제 확인 결과는 맨 아래 '1단계 구현 현황', '2~3단계 구현 현황', '뉴스 기사별 표시·일반 뉴스 선택 대기·AI 설정 진단'을 봅니다. 최종 확인 담당자는 한윤수이며 별도 마감일 제약은 없습니다.
 
 ## 목적/범위
 - 사용자: 효성티앤씨 해외영업·마케팅 담당자. 흩어진 브라질 시장 정보와 자료를 한 화면에서 확인하고 영업·마케팅 판단에 활용합니다.
@@ -66,7 +66,7 @@
   - 일반 뉴스: 공식 제공 API 또는 이용 가능한 뉴스·검색 API를 우선 검토합니다. 검색 결과의 제목·요약·링크 확보와 원문 전체 확보는 구분합니다. 2026-10-26 사용자 결정으로 일반 뉴스 검색 공급자는 GDELT DOC API 하나로 확정했습니다(네이버 뉴스 API·NAVER API HUB 계획과 연결 제거). 유료 뉴스 공급자는 추가하지 않습니다(2~3단계 현황 참고).
   - 처리 흐름: 서버가 기관별 공식 API에서 자료 수집 → 기간·품목·단위 정규화 및 중복 제거 → 코드로 통계 계산 → 사용이 허용된 근거 자료를 OpenAI에 전달해 한국어 분석 및 5차례 검토 → 출처와 함께 화면·PDF 출력. OpenAI 키를 기관별 데이터 접근 인증키 대신 사용할 수는 없습니다.
   - 현재 확인(2026-10-25): ComexStat 실제 호출·공식 합계 대조 통과. KOTRA는 2026-10-26 사용자가 설정한 공공데이터포털 키로 실제 호출 성공(resultCode 00, 최근 6개월 브라질 기사 28건·본문 포함, 관련성 필터 후 1건). 앱 서버는 python-dotenv가 없어 .env를 읽지 않으므로 키를 실행 환경변수로 넣어야 함. GDELT는 2026-10-26 실제 호출에서 응답 필드(url·title·seendate·domain·language·sourcecountry)를 확인했고, 약 120일 전 구간도 결과가 나옴(공식 안내 '최근 3개월'보다 넓음, 보장되지 않음). 대부분의 호출은 첫 시도에 429. KITA 연계 경로는 미확인.
-  - OpenAI 모델 최종 선정, 분석 1회 비용 한도, 5차례 검토를 포함한 소요 시간, 시간 초과·호출 제한 기준은 미정입니다. 과금 테스트 전 담당자에게 범위와 예상 비용을 제시해 기준을 확인합니다. → 2026-10-25 예상(1회 6호출, gpt-5.4-mini 기준 약 $0.15 이하)을 제시해 3회까지 승인받았으나, 실행 환경에 OPENAI_API_KEY가 없어 실제 호출은 하지 않았습니다.
+  - OpenAI 모델 최종 선정, 분석 1회 비용 한도, 5차례 검토를 포함한 소요 시간, 시간 초과·호출 제한 기준은 미정입니다. 과금 테스트 전 담당자에게 범위와 예상 비용을 제시해 기준을 확인합니다. → 2026-10-25 예상(1회 6호출, gpt-5.4-mini 기준 약 $0.15 이하)을 제시해 3회까지 승인받았으나, 실행 환경에 OPENAI_API_KEY가 없어 실제 호출은 하지 않았습니다. → 2026-10-26 사용자 '1회만 진행' 승인으로 1회 실행: gpt-5.4-mini-2026-03-17, 6호출, 44.0초, 입력 14,892·출력 6,411 토큰, 추정 USD 0.04(청구액 미확인). 결과는 worklogs experiments/SVC-MA-20261026-01.json. 모델 최종 선정·비용 한도는 여전히 미정.
   - 배포 환경은 미정이며 기존 설정 확인 후 제안합니다. 특정 배포 플랫폼을 임의로 확정하지 않습니다.
 - 자료 출처/갱신:
   - ComexStat: 브라질 수입 통계의 금액·순중량·기간·품목·공급국. 공식 API 명세에서 FOB 금액(USD)과 순중량(kg) 제공을 확인했으며 실제 응답 매핑과 값은 구현 시 대조합니다. 키 없이 공식 API를 사용하고 최신 제공 월을 확인한 뒤 조회합니다.
@@ -166,8 +166,8 @@
 ### 출처별 연결 (features/market_analysis/news_sources.py)
 | 출처 | 확인 근거 | 요청 | 확보 범위·사용 | 실제 연결 상태 |
 |---|---|---|---|---|
-| KOTRA 해외시장뉴스 | 공공데이터포털 15034831 페이지의 공식 swagger | GET https://apis.data.go.kr/B410001/kotra_overseasMarketNews/ovseaMrktNews/ovseaMrktNews, serviceKey(필수)·type=json·numOfRows(100)·pageNo(최대 3쪽)·search1=브라질·search4/search7=게시일 YYYYMMDD | 제목·URL·게시일·KOTRA 요약(cntntSumar) 화면 표시. 본문(newsBdt)은 관련성 판단에만 사용. 공공누리 제4유형이라 AI 입력·PDF 본문·캐시 끔 | 키 없음 → '설정 필요'. 키 없이 401/코드 20, 미등록 키 코드 30 실측. 기사 수신 미검증 |
-| GDELT DOC 2.0 (일반 뉴스 유일 공급자) | 공식 안내(blog.gdeltproject.org DOC 2.0, gdeltproject.org 이용 조건) | GET https://api.gdeltproject.org/api/v2/doc/doc, mode=artlist·format=json·maxrecords=250·sort=datedesc·startdatetime/enddatetime(6개월을 92일 구간 2개로 나눠 최근 구간부터 조회, 공식 안내 90일을 넘는 구간은 '보장 안 됨' 표시, 전체 시간 상한 180초), 영어 검색어 4개(기계 번역본 검색), 호출 간 6초, 250건 상한이면 기간을 반으로 나눠 1회 재조회 | 제목·URL·매체(domain)·언어·매체 국가·GDELT 최초 발견 시각(seendate, 게시일 아님). 본문 없음 → '제목·메타데이터만 확인'. 원문은 가져오지 않음 | 2026-10-26 실제 호출: 200 응답 필드 확인, 약 120일 전 구간 결과 있음, 대부분 첫 시도 429 |
+| KOTRA 해외시장뉴스 | 공공데이터포털 15034831 페이지의 공식 swagger | GET https://apis.data.go.kr/B410001/kotra_overseasMarketNews/ovseaMrktNews/ovseaMrktNews, serviceKey(필수)·type=json·numOfRows(100)·pageNo(최대 3쪽)·search1=브라질·search4/search7=게시일 YYYYMMDD | 제목·URL·게시일 기사별 표시. 요약(cntntSumar)은 제공될 때만 원문 그대로 표시, 본문(newsBdt)은 관련성 판단에만 사용. 공공누리 제4유형이라 AI 입력·PDF 요약·캐시 끔 | 2026-10-26 실제 수신 28건. 실제 응답에는 cntntSumar·newsBdt 필드가 없음(명세와 다름) → 전 기사 '요약 제공 없음·원문 확인 필요', 확보 범위 title_only |
+| GDELT DOC 2.0 (2026-10-26 자동 호출 중단, 어댑터만 보존) | 공식 안내(blog.gdeltproject.org DOC 2.0, gdeltproject.org 이용 조건) | GET https://api.gdeltproject.org/api/v2/doc/doc, mode=artlist·format=json·maxrecords=250·sort=datedesc·startdatetime/enddatetime(6개월을 92일 구간 2개로 나눠 최근 구간부터 조회, 공식 안내 90일을 넘는 구간은 '보장 안 됨' 표시, 전체 시간 상한 180초), 영어 검색어 4개(기계 번역본 검색), 호출 간 6초, 250건 상한이면 기간을 반으로 나눠 1회 재조회 | 제목·URL·매체(domain)·언어·매체 국가·GDELT 최초 발견 시각(seendate, 게시일 아님). 본문 없음 → '제목·메타데이터만 확인'. 원문은 가져오지 않음 | 2026-10-26 실제 호출: 200 응답 필드 확인, 약 120일 전 구간 결과 있음, 대부분 첫 시도 429 |
 | KITA | 공공데이터포털 '한국무역협회' 오픈 API 0건, kita.net 첫 화면 API 안내 없음 | 없음 | 없음 | '연결 확인 중' 고정 표시. 존재하지 않는 API·자료를 만들지 않음 |
 
 - 공통: 최근 6개월, 관련성(브라질 + 4개 주제 키워드) 점수 상위 20건, URL·제목 정규화로 중복 제거(원문 확보 자료 우선). 회복 가능한 실패(429·5xx·연결)만 최대 2회 재시도, 인증·권한 오류는 1회로 멈춤.
@@ -194,7 +194,7 @@
 
 ### 엔드포인트 (2~3단계 추가)
 - POST /api/market-analysis/analyze 응답에 bundle_id 추가. 조회 묶음(공개 통계·공개 기사·AI 진행 상태)은 서버 메모리에 3시간·최대 30개 보관, 서버 재시작 시 사라짐(디스크·DB 없음).
-- POST /api/market-analysis/news {bundle_id, refresh} → window{from,to,months,note}, items[{id, source, source_name, title, url, published, collected_at, language, excerpt, access, usage_note, ai_input, pdf_text, copyright_policy, topics, score}], candidates, sources[{source, label, state(ok|config|auth|rate_limited|unavailable|bad_response|rejected|pending), status_text, count, message, usage_note}]. 410 MA_BUNDLE_EXPIRED.
+- POST /api/market-analysis/news {bundle_id, refresh} → window{from,to,months,note}, items[{id, source, source_name, title, url, published, collected_at, language, excerpt, access, usage_note, ai_input, pdf_text, copyright_policy, topics, score}], other_items[같은 필드, id R번호](2026-10-26 추가), candidates, sources[{source(kotra|general|kita|gdelt), label, state(ok|config|auth|rate_limited|unavailable|bad_response|rejected|pending), status_text, count, message, usage_note}]. count는 응답에 유지하고 화면·PDF 표에서는 표시하지 않음. 410 MA_BUNDLE_EXPIRED.
 - POST /api/market-analysis/ai {bundle_id} → complete, has_draft, rows[{section, content, implication, status, model_status, source_ids, sources[{id,name,url,date}], flags}], gaps, remaining_findings, rounds[{number, title, checked, changes, evidence, unresolved, model_completed, code_findings_before, code_findings_after, rows_changed, status}], rounds_total, usage, prompt_versions, status, error, reused. 409 MA_NEWS_REQUIRED·MA_AI_RUNNING, 410.
 - POST /api/market-analysis/pdf {stats, news, ai} → application/pdf 첨부(market_analysis_<코드>_<시작>_<종료>_<생성일>.pdf). 요청 3 MiB 상한(413), 형식 오류 400, 생성 실패 500.
 
@@ -231,3 +231,34 @@
 - 실제 확인: 2026-10-26 소량 실제 호출(호출 간 10초 이상, 429 시 30초 대기) 결과는 worklogs validation.md 참고.
 - 남은 일: 다른 네트워크·시간대에서 GDELT 실제 응답 필드·검색 가능 기간 실측, 계속 429면 운영 가능성 재검토(GDELT 안내상 대량 사용자는 별도 데이터셋 권장).
 - 대체 공급자 조사(2026-10-26): 무료·호출 한도 없음·상업 이용·최근 6개월 검색을 모두 만족하는 공식 뉴스 API는 확인하지 못함. 일반 뉴스 공급자는 GDELT 유지(교체 미확정). 후보 비교는 worklogs sources.md 참고.
+- (2026-10-26 갱신) 사용자 지시로 GDELT 자동 호출을 중단하고 '공급자 선택 대기'로 전환(아래 절).
+
+## 뉴스 기사별 표시·일반 뉴스 선택 대기·AI 설정 진단 (2026-10-26)
+
+### 확정 내용 (사용자 지시)
+- 일반 뉴스: GDELT 자동 호출 중단. 새 무료 공급자는 사용자가 후보 중에서 선택한 뒤 연결한다. 선택 전에는 출처 상태에 '일반 뉴스 · 공급자 선택 대기'(오류 아님)를 표시한다. 네이버는 후보에서 제외. ComexStat·KOTRA·KITA 계획·OpenAI 분석은 유지.
+- GDELT 어댑터(fetch_gdelt)와 테스트는 선택 결과가 나올 때까지 호출되지 않는 상태로 보존(PROVIDERS에서 제외). 일반 뉴스 공급자가 없으면 근거 보강용 넓은 검색(재수집)도 하지 않는다.
+- 해외시장뉴스 기사별 표시: 표 '기사 제목 | 핵심 요약 1줄 | 원문 URL'. 640px 이하 화면에서는 행을 카드로 바꾸고 열 이름을 붙인다(내용을 자르지 않음).
+  - 핵심 요약 1줄은 출처가 제공한 요약을 원문 그대로 쓸 때만 채운다. 자동 발췌·AI 요약은 하지 않는다(KOTRA 공공누리 제4유형 변경금지, AI 요약 허용 미확인). 없으면 '요약 제공 없음 · 원문 확인 필요'.
+  - 주제 기준(제품·산업 주제 + 브라질)에 드는 기사는 '관련 기사'(N번호, AI 출처 ID), 그 밖에 수집한 기사는 접힌 '그 밖에 수집한 브라질 기사'(R번호, AI 입력 아님, 최대 50건)로 함께 표시한다. URL(쿼리 포함)·제목으로 중복 제거.
+  - 제목·요약은 서버에서 태그·엔티티를 정리하고 화면에서 다시 이스케이프한다. 링크는 http(s) 절대 주소만 허용하며 형식이 틀린 기사는 수집 단계에서 제외, 화면·PDF에서도 다시 검사한다.
+  - AI 분석이 실패해도 기사 목록과 통계는 독립적으로 표시된다.
+- 출처별 연결 상태 표는 '출처 | 상태 | 안내' 3열(‘건수’ 열 삭제). count 데이터는 응답에 유지. PDF도 같은 3열로 맞춤.
+- AI 설정 진단: GET /meta에 ai{ready, api_key_set, model_set, missing[환경변수 이름]}(값 없음)와 general_news{provider_selected}를 추가. 설정이 없으면 화면에서 AI 실행 버튼을 비활성화하고 설정 필요 안내 + 접힌 '개발자 진단'을 보여 준다.
+  - /ai 실패 응답 error에 needs_restart와 diagnostic{kind, label, env_missing, status_code, detail} 추가. kind: key_missing·model_missing·key_and_model_missing(설정), auth_failed·permission_denied·model_unavailable·rate_limited·timeout·connection_failed·provider_error·bad_request·refused·incomplete·output_invalid(공급자 오류).
+  - 설정 누락은 호출 0회로 즉시 멈추며 뉴스 재수집·재시도 버튼을 만들지 않는다(서버 재시작 필요 안내).
+
+### 실제 확인 (2026-10-26)
+- AI 오류 원인: `.env`에는 OPENAI_API_KEY·OPENAI_MODEL·DATA_GO_KR_SERVICE_KEY 값이 있으나(존재만 확인), jasonenv에 python-dotenv가 없고 앱도 .env를 읽지 않아 서버 프로세스에 전달되지 않음. Flask 시작 문구 "There are .env files present. Install python-dotenv to use them."로 재현.
+  - 5003 포트에 서버 2개가 동시에 LISTEN했다: PID 19460(이전 Claude 세션의 flask run, KOTRA 키만 있음)과 PID 10040(VS Code 터미널의 python app.py, 키 모두 없음). 프로세스 환경변수 존재 여부만 읽어 확인. 사용자 화면의 'KOTRA 연결됨 + AI 설정 없음'은 19460 조합과 일치. 확인 후 10040은 종료된 상태였고, 19460은 지시에 따라 종료하지 않음.
+- KOTRA 실제 응답 필드: bbsSn, bbstxSn, cmdltNmEng, cmdltNmKorn, dataType, fileLink, hsCdNm, indstCdList, indstCl, infoCl, jobSeNm, kotraNewsUrl, natn, newsTitl, newsWrterNm, othbcDt, ovrofInfo, regn. cntntSumar·newsBdt 없음. 기사 URL은 같은 경로에 dataIdx 쿼리만 다름.
+- 버그 수정: 중복 제거용 URL 키가 쿼리를 버려 KOTRA 28건이 한 기사로 묶이던 문제(관련 기사가 최대 1건만 남음)를 추적 파라미터만 빼고 쿼리를 유지하도록 수정. 수정 후 관련 2건 + 기타 26건 = 28건, KOTRA 원본 응답과 제목·URL·게시일 28/28 일치.
+
+### 남은 일
+- 일반 뉴스 공급자 선택(후보 비교는 worklogs sources.md 2026-10-26 절). 사용자 조건(2026-10-26): 최소 최근 6개월 기사 검색 가능. 이 조건과 무료·업무 사용을 함께 공식 확인한 후보는 아직 없음. 선택 후 이용 조건·키 발급·실제 호출 검증과 함께 연결.
+- AI 코드 검사 개선 후보(첫 실제 실행에서 확인): 'T2T 해석' 규칙이 부정·주의 문장도 잡는 오탐, 모델의 changes 진술과 실제 표 변경(rows_changed) 불일치 표시.
+- (2026-10-26 처리) 사용자가 requirements.txt에 python-dotenv를 추가 → python-dotenv==1.2.4로 고정·jasonenv 설치 완료. `python app.py`만으로 .env가 로드되어 5003 서버에서 ai.ready=true 확인. README의 python-dotenv 설명(‘requirements.txt에는 없음’) 갱신은 공통 문서라 담당 합의 필요.
+- K-stat(stat.kita.net) 활용 검토: 브라질 해외무역통계는 제공기관 'Trade Map', 품목별·국가별은 무역협회 회원사 전용, 엑셀 다운로드만 있고 Open API 없음(2026-10-26 조사, worklogs sources.md). 적용 여부는 담당자 검토 대기.
+- AI 해석 오류(SVC-MA-20261026-02): 근거의 점 표기 코드(5402.33.10)를 조회 코드(54023310)와 다른 범위로 해석. 코드 표기 동일성 안내·검사 추가 후보.
+- KITA: 자동 수집용 공식 API·RSS 미확인. kita.net 저작권 정책은 상업적 이용·자동 수집 금지. 자료 제공·제휴 여부는 KITA 문의 필요(문의 내용은 worklogs sources.md).
+- OpenAI 실제 분석(비용 승인 범위 안), KOTRA 요약·AI 사용 허용 범위 확인.

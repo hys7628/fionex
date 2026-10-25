@@ -1,6 +1,6 @@
 """시장 분석 service: 입력 검증, ComexStat 조회·캐시, 수치 계산(코드 계산, AI 미사용).
 
-1단계 범위: 브라질 수입 통계(ComexStat). KOTRA·KITA·뉴스·AI 분석·PDF는 다음 단계입니다.
+통계(ComexStat)와 함께 조회 묶음(뉴스 수집·AI 분석 진행 상태)을 관리합니다. 뉴스는 news_sources, AI는 analysis.
 - 평균 수입단가 = FOB 금액 합계(USD) ÷ 순중량 합계(kg). 월별·국가별 단가를 단순 평균하지 않습니다.
 - 행이 없는 월은 0으로 채우지 않고 '기록 없음'으로 둡니다.
 - 단가 '확인 필요': 같은 조회의 단가 중앙값 대비 ½배 미만 또는 2배 초과. 값은 삭제하지 않습니다.
@@ -442,6 +442,9 @@ def meta():
         "countries": country_list(),
         "latest": None,
         "error": None,
+        # OpenAI 설정 존재 여부(값 없음, 환경변수 이름만). 화면이 AI 실행 전에 안내할 수 있게 합니다.
+        "ai": analysis.config_status(),
+        "general_news": {"provider_selected": news_sources.has_general_provider()},
     }
     try:
         entry, stale = get_latest()
@@ -549,7 +552,9 @@ def clear_bundles():
 
 
 def _news_public(collected):
-    return {**{k: v for k, v in collected.items() if k != "items"}, "items": [it.public() for it in collected["items"]]}
+    lists = ("items", "other_items")
+    return {**{k: v for k, v in collected.items() if k not in lists},
+            **{k: [it.public() for it in collected.get(k) or []] for k in lists}}
 
 
 def _ai_usable(news):
@@ -585,7 +590,8 @@ def run_ai(bundle_id):
                 b["news"] = news  # 근거가 늘었을 때만 교체(호출 한도 등으로 줄면 기존 유지)
             return b["news"]
 
-        state = analysis.run(state, b["stats"], b["news"], widen_fn=widen)
+        # 일반 뉴스 공급자가 없으면 넓은 검색으로 AI 입력 가능 근거가 늘 수 없으므로 재수집하지 않습니다.
+        state = analysis.run(state, b["stats"], b["news"], widen_fn=widen if news_sources.has_general_provider() else None)
         b["ai"] = state
         return {**state["result"], "reused": False}
     finally:

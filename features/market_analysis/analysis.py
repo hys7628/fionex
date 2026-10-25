@@ -67,6 +67,51 @@ def _prompt(name):
     return (PROMPT_DIR / name).read_text(encoding="utf-8")
 
 
+# ---------- 설정·오류 진단 (값은 담지 않고 환경변수 이름·상태만) ----------
+CONFIG_MESSAGE = ("AI 분석에 필요한 서버 설정(OpenAI 키·텍스트 모델)이 없어 분석을 시작하지 않았습니다. "
+                  "통계와 근거 자료는 그대로 볼 수 있습니다. 관리자가 서버 실행 환경에 설정한 뒤 서버를 다시 시작해야 합니다.")
+
+# 공통 AIError 코드 → 개발자 진단 분류
+DIAGNOSTICS = {
+    "AI_AUTH_FAILED": ("auth_failed", "인증 실패", "OpenAI가 키를 거부했습니다(키 오류·폐기·다른 조직 키)."),
+    "AI_PERMISSION_DENIED": ("permission_denied", "권한 없음", "키에 이 모델·기능 사용 권한이 없습니다."),
+    "AI_MODEL_UNAVAILABLE": ("model_unavailable", "모델 사용 불가", "OPENAI_MODEL 값의 모델을 찾지 못했거나 접근할 수 없습니다."),
+    "AI_RATE_LIMITED": ("rate_limited", "한도 초과", "호출 한도 또는 사용 가능 금액(크레딧)을 넘었습니다."),
+    "AI_TIMEOUT": ("timeout", "시간 초과", "응답 시간이 초과되었습니다."),
+    "AI_CONNECTION_FAILED": ("connection_failed", "연결 실패", "OpenAI 서버에 연결하지 못했습니다(네트워크·프록시)."),
+    "AI_PROVIDER_ERROR": ("provider_error", "공급자 서버 오류", "OpenAI 서버 오류(5xx) 또는 실패 상태 응답입니다."),
+    "AI_BAD_REQUEST": ("bad_request", "요청 거부", "요청 형식·파라미터가 거부되었습니다."),
+    "AI_REFUSED": ("refused", "응답 거절", "모델이 요청을 거절했습니다."),
+    "AI_INCOMPLETE": ("incomplete", "응답 미완료", "출력 토큰 상한 등으로 응답이 끝나지 않았습니다."),
+    "AI_OUTPUT_INVALID": ("output_invalid", "응답 형식 오류", "응답을 결과 스키마로 해석하지 못했습니다."),
+}
+
+
+def config_status():
+    """OpenAI 설정 존재 여부(값 없음). missing: 비어 있는 환경변수 이름."""
+    key, model = bool(config.get_openai_api_key()), bool(config.get_text_model())
+    missing = [name for name, ok in ((config.ENV_OPENAI_API_KEY, key), (config.ENV_OPENAI_MODEL, model)) if not ok]
+    return {"ready": not missing, "api_key_set": key, "model_set": model, "missing": missing}
+
+
+def config_diagnostic(status):
+    if not status["missing"]:
+        # 미리 확인할 때는 있었는데 공통 연결이 설정 누락을 보고한 경우(호출 사이 환경 변경 등)
+        return {"kind": "config_missing", "label": "설정 누락", "env_missing": [], "status_code": None,
+                "detail": "공통 AI 연결이 설정 누락을 보고했습니다. 서버 로그의 'AI 설정 누락' 줄에서 환경변수 이름을 확인하세요."}
+    kind = ("key_and_model_missing" if len(status["missing"]) == 2
+            else "key_missing" if not status["api_key_set"] else "model_missing")
+    label = {"key_and_model_missing": "키·모델 미설정", "key_missing": "키 미설정", "model_missing": "모델 미설정"}[kind]
+    return {"kind": kind, "label": label, "env_missing": status["missing"], "status_code": None,
+            "detail": "서버 프로세스 환경변수에 %s 값이 없습니다. .env 파일은 앱이 직접 읽지 않으므로(python-dotenv 미설치 시) "
+                      "실행 셸에 설정한 뒤 서버를 다시 시작해야 합니다." % ", ".join(status["missing"])}
+
+
+def error_diagnostic(err):
+    kind, label, detail = DIAGNOSTICS.get(err.code, ("unknown", "알 수 없는 오류", "분류되지 않은 AI 오류입니다."))
+    return {"kind": kind, "label": label, "env_missing": [], "status_code": err.status_code, "detail": detail}
+
+
 # ---------- 근거 묶음 ----------
 def _fmt_int(v):
     return "{:,}".format(int(round(v)))
@@ -123,6 +168,9 @@ def build_pack(stats, news_items):
     facts = build_facts(stats)
     allowed = [it for it in news_items if it.get("ai_input")]
     excluded = [it for it in news_items if not it.get("ai_input")]
+    general_note = ("일반 뉴스는 GDELT 검색 결과의 제목·메타데이터만 있고 본문은 확인하지 않았다(access=title_only)."
+                    if any(it.get("source") == "gdelt" for it in news_items)
+                    else "일반 뉴스 공급자를 선택하기 전이라 일반 뉴스 근거는 없다. 기사 근거가 없으면 기사로 뒷받침되는 내용을 만들지 않는다.")
     evidence = [{"id": it["id"], "title": it["title"], "source": it["source_name"], "outlet": it.get("outlet"),
                  "language": it.get("language"), "date": evidence_date(it)[0], "date_basis": evidence_date(it)[1],
                  "access": it["access"], "summary": it.get("excerpt") or ""} for it in allowed]
@@ -136,7 +184,7 @@ def build_pack(stats, news_items):
                 "평균 수입단가는 FOB 기준이며 견적·판매가·도착가격이 아니다.",
                 "공급국은 ComexStat 기준 원산지(origin) 국가다.",
                 "사용 범위가 확인되지 않은 기사 %d건(KOTRA 등)은 AI 입력에서 제외했다." % len(excluded),
-                "일반 뉴스는 GDELT 검색 결과의 제목·메타데이터만 있고 본문은 확인하지 않았다(access=title_only).",
+                general_note,
             ],
         },
         "facts": [{"id": "S1", "items": facts}],
@@ -300,10 +348,12 @@ def run(state, stats, news, widen_fn=None, generate=None, clock=time.monotonic):
     state["error"] = None
     if generate is None:
         # 키·모델이 없으면 근거 재수집 등 다른 작업 없이 바로 멈춥니다(유료 호출 없음).
-        if not config.get_openai_api_key() or not config.get_text_model():
+        status = config_status()
+        if not status["ready"]:
             err = AIConfigError()
             state["status"] = "failed"
-            state["error"] = {"code": err.code, "message": err.message, "retryable": False, "failed_at": "초안"}
+            state["error"] = {"code": err.code, "message": CONFIG_MESSAGE, "retryable": False, "failed_at": "초안",
+                              "needs_restart": True, "diagnostic": config_diagnostic(status)}
             pack, sources, state["excluded_count"] = build_pack(stats, news["items"])
             return _finish(state, pack, sources)
         generate = ai_client.generate_structured
@@ -358,8 +408,11 @@ def run(state, stats, news, widen_fn=None, generate=None, clock=time.monotonic):
         state["status"] = "complete"
     except AIError as err:
         state["status"] = "failed"
-        state["error"] = {"code": err.code, "message": err.message, "retryable": err.retryable,
-                          "failed_at": "초안" if state["draft"] is None else "%d회차 검토" % (len(state["rounds"]) + 1)}
+        is_config = isinstance(err, AIConfigError)
+        state["error"] = {"code": err.code, "message": CONFIG_MESSAGE if is_config else err.message, "retryable": err.retryable,
+                          "failed_at": "초안" if state["draft"] is None else "%d회차 검토" % (len(state["rounds"]) + 1),
+                          "needs_restart": is_config,
+                          "diagnostic": config_diagnostic(config_status()) if is_config else error_diagnostic(err)}
     return _finish(state, pack, sources)
 
 

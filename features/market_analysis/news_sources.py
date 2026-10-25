@@ -5,7 +5,11 @@
   키 없이 호출 시 HTTP 401 + SERVICE_KEY_IS_NULL(20), 미등록 키는 SERVICE_KEY_IS_NOT_REGISTERED_ERROR(30) 실측.
   이용 조건: 공공누리 제4유형(출처표시·상업적 이용금지·변경금지). AI 요약·번역·PDF 본문 수록·캐시 허용 범위가
   확인되지 않아 제목·링크·게시일과 KOTRA 원문 요약 표시만 하고, AI 입력·PDF 본문·캐시는 끕니다.
-- GDELT DOC 2.0 API(일반 뉴스 검색의 유일한 공급자, 2026-10-26 사용자 결정): 인증키 없음.
+  2026-10-26 실제 응답(브라질 최근 6개월 28건)에는 명세의 요약(cntntSumar)·본문(newsBdt) 필드가 없어
+  기사별 확보 범위를 응답 내용으로 판단합니다(본문이 없으면 title_only).
+- 일반 뉴스: 2026-10-26 사용자 결정으로 GDELT 자동 호출을 중단하고 새 공급자 선택을 기다립니다(PROVIDERS에서 제외,
+  '공급자 선택 대기' 상태 표시). 아래 GDELT 어댑터는 선택 결과가 나올 때까지 호출되지 않는 상태로 둡니다.
+- GDELT DOC 2.0 API(2026-10-26 일반 뉴스 공급자로 통일했다가 같은 날 자동 호출 중단, 현재 비활성): 인증키 없음.
   공식 안내: 65개 언어 기사를 영어로 기계 번역해 영어 검색어로 찾고, 검색 범위는 최근 3개월이라고 안내하지만 2026-10-26 실측에서 120~150일 전 구간도 결과가 나와 구간을 나눠 6개월을 조회함,
   artlist 최대 250건. 이용 조건: 상업적 이용 포함 무료, 사용·재배포 시 GDELT 표기와 링크 필요.
   기사 본문은 제공하지 않으며 기사 저작권은 각 언론사에 있으므로 원문을 가져오지 않습니다(제목·메타데이터만 사용).
@@ -37,6 +41,7 @@ RETRY_WAIT_SECONDS = (3.0, 8.0)  # 최초 시도 이후 최대 2회(회복 가�
 
 DEFAULT_MONTHS = 6
 MAX_ITEMS = 20
+MAX_OTHER_ITEMS = 50  # 주제 기준 밖 수집 기사(화면 참고용) 표시 상한
 
 # 환경변수 이름. 값은 코드·저장소에 두지 않습니다.
 ENV_DATA_GO_KR_KEY = "DATA_GO_KR_SERVICE_KEY"
@@ -44,7 +49,8 @@ ENV_DATA_GO_KR_KEY = "DATA_GO_KR_SERVICE_KEY"
 # 기사별 사용 범위. access: full_text(원문 본문 확보) | title_only(제목·메타데이터만 확인)
 # ai_input·pdf_text: 확인되기 전에는 False. 사용 범위가 확정되면 이 표만 고칩니다.
 USAGE = {
-    "kotra": {"access": "full_text", "ai_input": False, "pdf_text": False, "cache": False,
+    # access는 기사별 응답 내용으로 정합니다(fetch_kotra).
+    "kotra": {"ai_input": False, "pdf_text": False, "cache": False,
               "note": "공공누리 제4유형(출처표시·상업적 이용금지·변경금지). 업무용 AI 요약·번역·PDF 수록·캐시 허용 여부 확인 필요"},
     "gdelt": {"access": "title_only", "ai_input": True, "pdf_text": True, "cache": True,
               "note": "GDELT 검색 결과의 제목·링크·매체·언어만 사용(본문 없음, 원문 미확인). 기사 저작권은 각 언론사. 출처 표기: The GDELT Project (gdeltproject.org)"},
@@ -120,9 +126,21 @@ def now_kst():
 
 
 def _clean(text):
-    """HTML 태그·엔티티 제거, 공백 정리."""
+    """HTML 태그·엔티티 제거, 공백 정리. 엔티티를 푼 뒤 생긴 태그 모양 문자열도 지웁니다."""
     text = html.unescape(re.sub(r"<[^>]+>", " ", str(text or "")))
+    text = re.sub(r"<[^>]+>", " ", text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def safe_url(value):
+    """화면·PDF 링크로 쓸 수 있는 http(s) 절대 주소면 그대로, 아니면 None."""
+    url = str(value or "").strip()
+    if not url or re.search(r"[\s\x00-\x1f\x7f<>\"']", url):
+        return None
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme.lower() not in ("http", "https") or not parts.netloc:
+        return None
+    return url
 
 
 def _transport(url, headers, timeout):
@@ -259,20 +277,24 @@ def fetch_kotra(start, end, collected_at):
         doc = _get_json("KOTRA", KOTRA_URL + "?serviceKey=" + key_param + "&" + query, classify=_kotra_classify)
         items, total = _kotra_items(doc)
         for it in items:
-            title = _clean(it.get("newsTitl"))
-            url = str(it.get("kotraNewsUrl") or "").strip()
-            if not title or not url:
+            if not isinstance(it, dict):
                 continue
+            title = _clean(it.get("newsTitl"))
+            url = safe_url(it.get("kotraNewsUrl"))
+            if not title or not url:
+                continue  # 제목이 없거나 http(s) 원문 주소가 아니면 표시하지 않음
             published = _parse_date(it.get("othbcDt"))
+            body = _clean(it.get("newsBdt"))
             text_meta = " ".join(_clean(it.get(k)) for k in ("kwrd", "indstCl", "cmdltNmKorn", "cmdltNmEng", "hsCdNm"))
             out.append(NewsItem(
                 id="", source="kotra", source_name="KOTRA 해외시장뉴스" + (" · " + _clean(it.get("ovrofInfo")) if it.get("ovrofInfo") else ""),
                 title=title, url=url, published=published.isoformat() if published else None, collected_at=collected_at,
-                language="ko", excerpt=_clean(it.get("cntntSumar"))[:400], access=policy["access"],
+                # 요약은 KOTRA가 제공한 문장을 자르지 않고 그대로 둡니다(변경금지 조건, 자동 발췌 금지).
+                language="ko", excerpt=_clean(it.get("cntntSumar")), access="full_text" if body else "title_only",
                 usage_note=policy["note"], ai_input=policy["ai_input"], pdf_text=policy["pdf_text"],
                 outlet="KOTRA", copyright_policy=_clean(it.get("dataType")) or None,
                 brazil_context="브라질" in _clean(it.get("natn")),
-                body=(_clean(it.get("newsBdt")) + " " + text_meta).strip(),
+                body=(body + " " + text_meta).strip(),
             ))
         if total is None or page * KOTRA_PAGE_SIZE >= total or not items:
             break
@@ -339,9 +361,9 @@ def _gdelt_call(q, start_dt, end_dt):
 def _gdelt_item(it, collected_at):
     if not isinstance(it, dict):
         return None
-    link = str(it.get("url") or "").strip()
+    link = safe_url(it.get("url"))
     title = _clean(it.get("title"))
-    if not link.startswith(("http://", "https://")) or not title:
+    if not link or not title:
         return None  # 필수 필드(URL·제목)가 없으면 버림
     policy = USAGE["gdelt"]
     domain = _clean(it.get("domain")) or urllib.parse.urlsplit(link).netloc
@@ -426,10 +448,17 @@ def fetch_gdelt(start, end, collected_at, queries=None, today=None):
 
 
 # ---------- 정리: 관련성·중복 ----------
+_TRACKING_PARAMS = ("utm", "fbclid", "gclid")
+
+
 def _norm_url(url):
+    """중복 판단용 URL 키. 추적용 파라미터(utm*·fbclid·gclid)만 빼고 쿼리는 유지합니다.
+    KOTRA처럼 기사 구분이 쿼리(dataIdx)에만 있는 주소를 같은 기사로 묶지 않기 위해서입니다."""
     p = urllib.parse.urlsplit(url.strip().lower())
     host = p.netloc[4:] if p.netloc.startswith("www.") else p.netloc
-    return host + p.path.rstrip("/")
+    query = sorted((k, v) for k, v in urllib.parse.parse_qsl(p.query, keep_blank_values=True)
+                   if not k.startswith(_TRACKING_PARAMS))
+    return host + p.path.rstrip("/") + ("?" + urllib.parse.urlencode(query) if query else "")
 
 
 def _norm_title(title):
@@ -496,9 +525,38 @@ def select_items(items, limit=MAX_ITEMS):
     return picked, len(unique)
 
 
+def other_items(raw, picked, limit=MAX_OTHER_ITEMS):
+    """관련성 기준(제품·산업 주제 + 브라질)에 들지 않았지만 수집된 기사. 화면 참고용이며 AI 입력에 넣지 않습니다.
+    URL·제목 중복과 선정 기사는 빼고 최근 순으로 limit건. id는 'R' 번호."""
+    seen = set()
+    for it in picked:
+        seen |= {"u:" + _norm_url(it.url), "t:" + _norm_title(it.title)}
+    out = []
+    for it in sorted(raw, key=lambda x: -_date_key(x)):
+        keys = {"u:" + _norm_url(it.url), "t:" + _norm_title(it.title)}
+        if keys & seen:
+            continue
+        seen |= keys
+        out.append(it)
+    out = out[:limit]
+    for i, it in enumerate(out, 1):
+        it.id = "R%d" % i
+    return out
+
+
 # ---------- 전체 수집 ----------
-PROVIDERS = {"kotra": fetch_kotra, "gdelt": fetch_gdelt}
-SOURCE_LABELS = {"kotra": "KOTRA 해외시장뉴스", "gdelt": "GDELT (일반 뉴스 검색)", "kita": "한국무역협회(KITA)"}
+# 자동으로 호출하는 출처. 일반 뉴스 공급자는 사용자 선택 전까지 비워 둡니다(GDELT 자동 호출 중단, 2026-10-26).
+PROVIDERS = {"kotra": fetch_kotra}
+GENERAL_NEWS_PROVIDERS = ("gdelt",)  # PROVIDERS에 이 중 하나가 있으면 일반 뉴스 공급자가 연결된 상태
+SOURCE_LABELS = {"kotra": "KOTRA 해외시장뉴스", "gdelt": "GDELT (일반 뉴스 검색)", "kita": "한국무역협회(KITA)",
+                 "general": "일반 뉴스"}
+GENERAL_PENDING_MESSAGE = ("GDELT는 호출 간격 제한(5초에 1회)으로 수집이 계속 실패해 자동 호출을 중단했습니다. "
+                           "새 무료 뉴스 공급자를 선택하기 전까지 일반 뉴스는 수집하지 않습니다(오류 아님).")
+
+
+def has_general_provider():
+    """일반 뉴스 공급자가 자동 수집에 연결돼 있는지. 없으면 근거 보강용 넓은 검색도 하지 않습니다."""
+    return any(name in PROVIDERS for name in GENERAL_NEWS_PROVIDERS)
 _STATUS_TEXT = {
     "config": "설정 필요", "auth": "인증·권한 확인 필요", "rate_limited": "호출 한도", "unavailable": "연결 실패·시간 초과",
     "bad_response": "응답 해석 실패", "rejected": "요청 거부",
@@ -527,7 +585,8 @@ def _copy(items):
 def collect(months=DEFAULT_MONTHS, widen=False, today=None, refresh=False):
     """모든 출처에서 수집. 일부 실패해도 나머지 결과를 돌려줍니다.
 
-    반환: {"window", "items": [NewsItem], "candidates", "raw_count", "sources": [상태], "widened", "collected_at"}
+    반환: {"window", "items": [NewsItem], "other_items": [NewsItem], "candidates", "raw_count", "sources": [상태],
+           "widened", "collected_at"}. other_items는 관련성 기준 밖의 수집 기사(화면 참고용, AI 입력 아님).
     widen=True: 근거 보강용 넓은 검색어 추가(호출하는 쪽에서 1회로 제한).
     refresh=True: 오늘 캐시를 쓰지 않고 다시 받습니다(실패하면 이전 자료로 대체).
     """
@@ -574,10 +633,16 @@ def collect(months=DEFAULT_MONTHS, widen=False, today=None, refresh=False):
                 statuses.append({**base, "state": err.kind, "status_text": _STATUS_TEXT.get(err.kind, "실패"), "count": 0,
                                  "message": message, "seconds": round(time.monotonic() - started, 1),
                                  "collected_at": None, "stale": False, "coverage": None})
+    if not has_general_provider():
+        statuses.append({"source": "general", "label": SOURCE_LABELS["general"], "state": "pending",
+                         "status_text": "공급자 선택 대기", "count": 0, "message": GENERAL_PENDING_MESSAGE, "usage_note": None,
+                         "seconds": 0, "queries": [], "collected_at": None, "stale": False, "coverage": None})
     statuses.append({"source": "kita", "label": SOURCE_LABELS["kita"], "state": "pending", "status_text": "연결 확인 중",
-                     "count": 0, "message": "시장뉴스·연구보고서용 공식 API 또는 허용된 제공·제휴 경로를 확인하지 못했습니다(공공데이터포털 '한국무역협회' 오픈 API 0건, 2026-10-25).",
+                     "count": 0, "message": "시장뉴스·연구보고서를 자동으로 받을 공식 API·RSS를 확인하지 못했습니다(공공데이터포털 '한국무역협회' 오픈 API 0건, "
+                                            "kita.net 저작권 정책상 상업적 이용·무단 자동 수집 금지, 2026-10-26). 제공·제휴는 KITA 문의가 필요합니다.",
                      "usage_note": None, "seconds": 0, "queries": [], "collected_at": None, "stale": False, "coverage": None})
     items, candidates = select_items(raw)
+    others = other_items(raw, items)
     gd = next((s for s in statuses if s["source"] == "gdelt"), None)
     gd_cov = gd and gd.get("coverage")
     notes = []
@@ -595,6 +660,7 @@ def collect(months=DEFAULT_MONTHS, widen=False, today=None, refresh=False):
     return {
         "window": {"from": start.isoformat(), "to": today.isoformat(), "months": months, "notes": notes},
         "items": items,
+        "other_items": others,
         "candidates": candidates,
         "raw_count": len(raw),
         "sources": statuses,

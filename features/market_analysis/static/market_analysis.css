@@ -167,24 +167,59 @@
   gap: var(--space-3);
 }
 
-.feature-market_analysis .ma-news {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: 0;
-  list-style: none;
-}
+/* 출처별 연결 상태: 출처 | 상태 | 안내 */
+.feature-market_analysis .ma-source-table th[scope="col"]:nth-child(1) { width: 26%; }
+.feature-market_analysis .ma-source-table th[scope="col"]:nth-child(2) { width: 22%; }
+.feature-market_analysis .ma-source-table td { overflow-wrap: anywhere; }
 
-.feature-market_analysis .ma-news-item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--color-border);
+/* 기사별 표: 기사 제목 | 핵심 요약 1줄 | 원문 URL */
+.feature-market_analysis .ma-news-table { table-layout: fixed; }
+.feature-market_analysis .ma-news-table th[scope="col"]:nth-child(1) { width: 40%; }
+.feature-market_analysis .ma-news-table th[scope="col"]:nth-child(2) { width: 34%; }
+.feature-market_analysis .ma-news-table tbody th {
+  background: transparent;
+  color: var(--color-text);
+  font-weight: var(--font-weight-regular);
 }
-
+.feature-market_analysis .ma-news-table th,
+.feature-market_analysis .ma-news-table td { vertical-align: top; overflow-wrap: anywhere; }
+/* 공통 .table th는 nowrap이라 긴 제목·출처명이 옆 칸으로 넘칩니다. 이 표의 행 머리글과 배지만 줄바꿈을 허용합니다. */
+.feature-market_analysis .ma-news-table tbody th,
+.feature-market_analysis .ma-source-table tbody th,
+.feature-market_analysis .ma-news-table .badge { white-space: normal; }
 .feature-market_analysis .ma-news-title { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
-.feature-market_analysis .ma-news-title a { color: var(--color-primary-text); }
 .feature-market_analysis .ma-news-id { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
-.feature-market_analysis .ma-news-excerpt { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.feature-market_analysis .ma-news-summary { font-size: var(--font-size-sm); }
+.feature-market_analysis .ma-news-none { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.feature-market_analysis .ma-news-url a { color: var(--color-primary-text); word-break: break-all; font-size: var(--font-size-xs); }
 .feature-market_analysis [data-ma-ai] .table td a { color: var(--color-primary-text); }
+
+/* 좁은 화면: 기사 표·출처 상태 표의 각 행을 카드로 바꾸고 열 이름을 앞에 붙입니다(내용을 자르지 않음). */
+@media (max-width: 640px) {
+  .feature-market_analysis .ma-stack-table,
+  .feature-market_analysis .ma-stack-table caption,
+  .feature-market_analysis .ma-stack-table tbody,
+  .feature-market_analysis .ma-stack-table tr,
+  .feature-market_analysis .ma-stack-table th,
+  .feature-market_analysis .ma-stack-table td { display: block; width: 100%; }
+  .feature-market_analysis .ma-stack-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .feature-market_analysis .ma-stack-table tr { border-bottom: 1px solid var(--color-border); }
+  .feature-market_analysis .ma-stack-table tr:last-child { border-bottom: 0; }
+  .feature-market_analysis .ma-stack-table tbody th,
+  .feature-market_analysis .ma-stack-table td { border-bottom: 0; padding: var(--space-2) var(--space-3); }
+  .feature-market_analysis .ma-stack-table [data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: var(--space-1);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+  }
+}
