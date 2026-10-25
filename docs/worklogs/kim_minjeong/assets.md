@@ -86,3 +86,10 @@
 | 날짜 | 종류 | 경로 | 생성 도구 | 관련 기록 | 사용권·검토 상태 |
 |---|---|---|---|---|---|
 | 2026-10-26 | 조항 단위 비교 범위 JSON(단위 이름·full/partial/unbounded만, 원문 없음) | features/green_claim/data/brazil_claim_criteria/comparison_units.json | 저장소 밖 스크립트(scratchpad/tools/make_comparison_units.py)가 criteria_check.measure_coverage로 2026-10-25 사본 판정 | validation DEV-2026_10_26-02 후속 | CONAR 조항 이름 포함(원문 텍스트 없음). CONAR AI 이용 허가 미확인 유지 |
+
+## 2026-10-26 검수 실행·결과 화면 확인 자료 (DEV-2026_10_26-04)
+| 날짜 | 종류 | 경로 | 생성 도구 | 관련 기록 | 사용권·검토 상태 |
+|---|---|---|---|---|---|
+| 2026-10-26 | 모의 결과 화면 캡처(1440px·390px) | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/c1b73469-0709-47ec-9be6-9389670902ea/scratchpad/review_desktop_1440.png, review_mobile_390.png | 헤드리스 Chrome CDP 캡처 | validation DEV-2026_10_26-04 | 가상 문구·가짜 응답 화면(실제 검수 결과 아님). 저장소에 넣지 않음 |
+| 2026-10-26 | 검수 화면 확인 스크립트·외부 통신 차단 서버 실행 파일 | 같은 폴더 tools/cdp_check_review_flow.mjs, net_guard.py, real_server.py | 직접 작성 | 같음 | 저장소에 넣지 않음 |
+| 2026-10-26 | 회귀 스크립트·모의 판독 서버 복사본 | 같은 폴더 tools/cdp_check_{green_claim,pdf_flow,word_flow,ocr_flow,image_flow}.mjs, mock_ocr_server.py, mock_image_ocr_server.py (원본: 세션 010a049a… scratchpad/tools, 원본은 수정하지 않음) | 복사 후 검수 버튼 기대값·차단 장치만 수정 | 같음 | 공개·가상 fixture만 사용(같은 원본 세션 fixtures 복사) |

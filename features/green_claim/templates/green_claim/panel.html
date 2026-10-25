@@ -1,5 +1,5 @@
-{# 그린 클레임 체크 작업 영역. 문구 직접 입력 + 일반 PDF·Word(.docx) 글자 추출 + PDF·이미지(JPG·JPEG·PNG) AI 글자 판독(사용자 선택)·확인·수정(feature_spec.md).
-   AI 그린워싱 검수·결과 PDF는 아직 연결되지 않았습니다.
+{# 그린 클레임 체크 작업 영역. 문구 직접 입력 + 일반 PDF·Word(.docx) 글자 추출 + PDF·이미지(JPG·JPEG·PNG) AI 글자 판독(사용자 선택)·확인·수정
+   + 그린워싱 표현 위험 검수 실행·결과 표시(feature_spec.md "검수 실행·결과 화면"). 결과 PDF는 아직 연결되지 않았습니다.
    검수 결과는 제공 근거 범위의 표현 스크리닝이며 법적 적합성 보장이 아닙니다(docs/data_contracts.md). #}
 <div class="workspace">
   <form class="card" aria-labelledby="green_claim-input-title" autocomplete="off" novalidate>
@@ -105,26 +105,59 @@
       </div>
     </div>
 
-    <div class="btn-row">
-      <button type="submit" class="btn btn-primary" disabled aria-describedby="green_claim-pending">검수 실행</button>
-      <span class="field-hint" id="green_claim-pending">준비 중: AI 검수 연결 전이라 아직 실행할 수 없습니다. 글자 추출 완료는 검수 완료가 아닙니다.</span>
+    <div class="green-claim-review-run">
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" id="green_claim-review" aria-describedby="green_claim-review-hint">검수 실행</button>
+        <span class="field-hint green-claim-extract-status" id="green_claim-review-status" role="status"></span>
+      </div>
+      <p class="field-hint" id="green_claim-review-hint">누를 때만 실행됩니다. 지금 선택한 입력 방식의 문구(직접 입력 문구 또는 확인·수정한 추출 문구)가 OpenAI로 전송되어 AI가 표현 위험을 검토하며 요금이 발생할 수 있습니다.
+        파일 원본은 다시 보내지 않습니다. 검수 전에 공식 출처(CDC) 변경 확인을 시도하며, 모두 합쳐 최대 100초 걸릴 수 있습니다.
+        글자 추출·판독 완료는 검수 완료가 아닙니다.</p>
+      <div id="green_claim-review-message" aria-live="polite"></div>
     </div>
+
+    <section class="green-claim-review-source-box" id="green_claim-review-source-box" aria-labelledby="green_claim-review-source-title" hidden>
+      <h3 class="green-claim-subtitle" id="green_claim-review-source-title">검수한 원문 (검수 시점 사본 · 편집 불가)</h3>
+      <p class="field-hint" id="green_claim-review-source-hint">위 입력칸이 아니라 실제로 검수에 보낸 문구입니다. 표시된 구절의 번호(R1 등)를 누르면 오른쪽(모바일은 아래) 결과 항목으로 이동합니다.
+        여러 항목이 겹치는 부분은 점선 밑줄로 표시합니다.</p>
+      <div id="green_claim-review-source-error"></div>
+      <div class="green-claim-review-source" id="green_claim-review-source"></div>
+    </section>
   </form>
 
-  <section class="card" aria-labelledby="green_claim-result-title">
+  <section class="card" id="green_claim-result-card" aria-labelledby="green_claim-result-title" aria-busy="false">
     <div class="card-header">
       <div>
         <h2 class="card-title" id="green_claim-result-title">검수 결과</h2>
-        <p class="card-description">문구별 검토 의견·관련 브라질 기준·수정 방향을 표시할 예정입니다.</p>
+        <p class="card-description">문구별 검토 의견·관련 브라질 기준·수정 방향입니다. 표현 위험 스크리닝이며 적법성·사실·인증을 보장하지 않습니다.</p>
       </div>
       <div class="green-claim-header-action">
         <button type="button" class="btn btn-secondary" disabled aria-describedby="green_claim-pdf-pending">PDF 다운로드</button>
-        <span class="field-hint" id="green_claim-pdf-pending">준비 중: PDF 생성 연결 전</span>
+        <span class="field-hint" id="green_claim-pdf-pending">PDF 다운로드 연결 준비 중</span>
       </div>
     </div>
-    <div class="empty-state">
+    <div class="empty-state" id="green_claim-review-empty">
       <p class="empty-state-title">아직 결과가 없습니다</p>
-      <p>AI 검수 기능이 연결되면 결과가 이곳에 표시됩니다.</p>
+      <p>문구를 확인한 뒤 '검수 실행'을 누르면 결과가 이곳에 표시됩니다.</p>
+    </div>
+    <div id="green_claim-review-stale" class="notice notice-warning" role="status" hidden>
+      <p class="notice-title">입력 내용이 바뀌었습니다. 다시 검수해 주세요.</p>
+      <p id="green_claim-review-stale-text">아래는 이전 문구의 결과입니다. 지금 입력한 문구에 대한 결과가 아닙니다.</p>
+    </div>
+    <div class="stack green-claim-review-result" id="green_claim-review-result" hidden>
+      <p class="green-claim-result-label" id="green_claim-review-result-label"></p>
+      <section aria-labelledby="green_claim-review-summary-title">
+        <h3 class="green-claim-subtitle" id="green_claim-review-summary-title">전체 요약</h3>
+        <div id="green_claim-review-summary"></div>
+      </section>
+      <section aria-labelledby="green_claim-review-items-title">
+        <h3 class="green-claim-subtitle" id="green_claim-review-items-title">검토 항목</h3>
+        <ol class="green-claim-review-items" id="green_claim-review-items"></ol>
+      </section>
+      <section aria-labelledby="green_claim-review-criteria-title">
+        <h3 class="green-claim-subtitle" id="green_claim-review-criteria-title">사용 기준과 확인 상태</h3>
+        <div id="green_claim-review-criteria"></div>
+      </section>
     </div>
   </section>
 </div>

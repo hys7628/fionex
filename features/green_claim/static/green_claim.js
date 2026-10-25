@@ -1,6 +1,6 @@
 // 그린 클레임 체크 탭 스크립트. 이 탭 패널 내부만 다룹니다. 공통 API 사용법: docs/design_system.md
-// 현재 단계: 문구 직접 입력 + 일반 PDF·Word(.docx) 글자 추출 + 사용자가 선택한 PDF·이미지(JPG·JPEG·PNG) AI 글자 판독·확인·수정.
-// AI 그린워싱 검수·결과 PDF는 아직 연결하지 않습니다.
+// 현재 단계: 문구 직접 입력 + 일반 PDF·Word(.docx) 글자 추출 + 사용자가 선택한 PDF·이미지(JPG·JPEG·PNG) AI 글자 판독·확인·수정
+// + 그린워싱 표현 위험 검수 실행·결과 표시(feature_spec.md "검수 실행·결과 화면"). 결과 PDF는 아직 연결하지 않습니다.
 (function () {
   "use strict";
 
@@ -134,6 +134,12 @@
         refresh("input");
         AppShell.work.recheckInputs(FEATURE_ID);
       },
+      // 검수 실행을 막았을 때 입력칸에도 빈 입력·초과 안내를 바로 표시합니다(입력칸을 떠날 때와 같은 기준).
+      showProblem: function () {
+        touched = true;
+        composing = false;
+        refresh("blur");
+      },
     };
   }
 
@@ -154,6 +160,7 @@
       // 처리 중 입력 방식을 바꾸면 진행 중 추출을 취소하고 그 응답을 반영하지 않습니다(문구는 그대로).
       if (busy) cancelExtraction("입력 방식을 바꿔 진행 중인 추출을 취소했습니다");
       showMode(radio.value);
+      reviewInputChanged("mode");
     });
   });
   const checkedMode = modeRadios.find(function (r) { return r.checked; });
@@ -272,6 +279,7 @@
     const canceled = busy;
     if (canceled) cancelExtraction("파일을 바꿔 이전 추출을 취소했습니다");
     clearPending();
+    reviewInputChanged("file");
     const file = fileInput.files[0];
     const problem = file ? checkFile(file) : "";
     setFileError(problem);
@@ -409,6 +417,7 @@
 
   function applyResult(data) {
     clearPending();
+    reviewInputChanged("extracted");  // 새 추출·판독 문구로 바꾸면 이전 검수 결과는 현재 입력의 결과가 아님
     extractedField.setValue(data.text);
     appliedText = extractedField.textarea.value;
     editedNote.hidden = true;
@@ -514,6 +523,486 @@
   extractButton.addEventListener("click", function () { runRequest("extract"); });
   ocrButton.addEventListener("click", function () { runRequest("ocr"); });
 
-  // 결과를 만들지 않으므로 AppShell.work.setResult는 호출하지 않습니다.
-  // 입력 작성 상태와 이탈 경고는 공통 shell의 자동 감지가 처리합니다. 탭 재방문 시 추출을 다시 실행하지 않습니다.
+  /* ---------- 그린워싱 표현 위험 검수 실행·결과 ---------- */
+  // 서버 기준 확인 최대 30초 + 공통 텍스트 AI timeout 60초 + 여유(feature_spec.md "검수 실행·결과 화면")
+  const REVIEW_URL = "/api/green-claim/review";
+  const REVIEW_TIMEOUT_MS = 100000;
+  const REVIEW_BUSY_TEXT = " 검수 중입니다. 공식 출처 확인과 AI 검수로 최대 100초 걸릴 수 있습니다. "
+    + "화면에서 기다림을 멈춰도 이미 보낸 요청의 처리·요금은 취소되지 않을 수 있습니다.";
+  const ACTION_LABELS = { revise_recommended: "수정 권고", needs_review: "검토 필요", judgment_withheld: "판단 보류" };
+  const ACTION_TONES = { revise_recommended: "danger", needs_review: "warning", judgment_withheld: "info" };
+  const LANGUAGE_LABELS = { ko: "한국어", en: "영어", "pt-BR": "브라질 포르투갈어", mixed: "여러 언어 혼합", unknown: "언어 판단 보류" };
+  const NATURE_LABELS = { law: "법률", advertising_self_regulation: "광고 자율규제" };
+  const CHECK_LABELS = {
+    no_change_found: "대상 조항 전체를 비교해 변경을 발견하지 못함",
+    partial_checked: "부분 확인(일부 조항은 발췌 문장만 확인)",
+    change_detected: "원문 변경 감지 · 검토 전(기준에 반영 안 됨)",
+    failed: "확인 실패",
+    deferred: "조회 보류(이용 조건 등)",
+    baseline_missing: "비교 기준 부족",
+    not_checked: "확인 기록 없음",
+    not_checked_this_request: "이번 요청에서 확인하지 못함",
+  };
+  const CHECK_MODE_LABELS = {
+    checked: "이번 요청에서 확인 시도",
+    status_only_busy: "이번 요청 확인 못 함(다른 확인 진행 중)",
+    status_only_error: "이번 요청 확인 못 함(확인 단계 오류)",
+  };
+
+  const reviewButton = byId("green_claim-review");
+  const reviewStatusEl = byId("green_claim-review-status");
+  const reviewMessageEl = byId("green_claim-review-message");
+  const sourceBox = byId("green_claim-review-source-box");
+  const sourceEl = byId("green_claim-review-source");
+  const sourceErrorEl = byId("green_claim-review-source-error");
+  const resultCard = byId("green_claim-result-card");
+  const emptyEl = byId("green_claim-review-empty");
+  const staleEl = byId("green_claim-review-stale");
+  const resultEl = byId("green_claim-review-result");
+  const resultLabelEl = byId("green_claim-review-result-label");
+  const reviewSummaryEl = byId("green_claim-review-summary");
+  const itemsEl = byId("green_claim-review-items");
+  const criteriaEl = byId("green_claim-review-criteria");
+
+  let reviewSeq = 0;            // 가장 최근 검수 요청 번호. 다른 번호의 응답은 반영하지 않습니다.
+  let reviewController = null;
+  let reviewRunning = null;     // 진행 중 요청 정보 {seq, mode, text}
+  let reviewResult = null;      // 마지막 성공 결과 {data, mode, at}
+  let reviewStale = false;      // 마지막 성공 결과가 현재 입력의 결과가 아닌지(한 번 true면 되돌리지 않음)
+
+  function currentMode() {
+    const checked = modeRadios.find(function (r) { return r.checked; });
+    return checked ? checked.value : "text";
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = text;
+    return node;
+  }
+
+  function showReviewMessage(type, title, text) {
+    reviewMessageEl.replaceChildren();
+    if (!title) return;
+    const box = el("div", "notice notice-" + type);
+    box.setAttribute("role", type === "danger" ? "alert" : "status");
+    box.append(el("p", "notice-title", title));
+    if (text) box.append(el("p", null, text));
+    reviewMessageEl.append(box);
+  }
+
+  function setReviewBusy(on) {
+    reviewButton.disabled = on;
+    resultCard.setAttribute("aria-busy", on ? "true" : "false");
+    reviewStatusEl.replaceChildren();
+    if (on) {
+      const spinner = el("span", "spinner");
+      spinner.setAttribute("aria-hidden", "true");
+      reviewStatusEl.append(spinner, REVIEW_BUSY_TEXT);
+    }
+  }
+
+  // 결과 유효 여부를 화면·공통 작업 상태에 반영합니다(PDF가 없어 다운로드 요청 상태는 만들지 않음).
+  function syncResultState() {
+    const valid = !!reviewResult && !reviewStale;
+    staleEl.hidden = !(reviewResult && reviewStale);
+    resultLabelEl.textContent = !reviewResult ? ""
+      : (reviewStale ? "이전 문구의 결과 · " : "현재 입력에 대한 결과 · ") + "검수 시각 " + reviewResult.at
+        + " · " + (reviewResult.mode === "file" ? "파일 추출·판독 문구" : "직접 입력 문구");
+    resultLabelEl.dataset.state = reviewStale ? "stale" : "valid";
+    AppShell.work.setResult(FEATURE_ID, valid);
+  }
+
+  function cancelReview(title) {
+    reviewSeq += 1;
+    if (reviewController) reviewController.abort();
+    reviewController = null;
+    reviewRunning = null;
+    setReviewBusy(false);
+    showReviewMessage("info", title, "입력 문구는 그대로입니다. 필요하면 다시 '검수 실행'을 눌러 주세요. "
+      + "이미 보낸 검수 요청의 처리·요금이 취소되었는지는 보장할 수 없습니다.");
+  }
+
+  // 검수 입력이 바뀜. kind: "text" | "extracted" | "mode" | "file"
+  function reviewInputChanged(kind) {
+    const affects = function (mode) {
+      if (kind === "mode") return true;
+      if (kind === "text") return mode === "text";
+      return mode === "file";  // extracted·file
+    };
+    if (reviewRunning && affects(reviewRunning.mode)) {
+      cancelReview("입력이 바뀌어 진행 중인 검수를 취소했습니다");
+    }
+    if (reviewResult && !reviewStale && affects(reviewResult.mode)) {
+      reviewStale = true;
+      syncResultState();
+    }
+  }
+
+  textField.textarea.addEventListener("input", function () { reviewInputChanged("text"); });
+  extractedField.textarea.addEventListener("input", function () { reviewInputChanged("extracted"); });
+
+  /* ----- 원문 강조: 서버 위치는 Unicode 코드 포인트(Array.from 기준) ----- */
+  function validSpan(item, chars) {
+    return Number.isInteger(item.start) && Number.isInteger(item.end) && item.start >= 0
+      && item.start < item.end && item.end <= chars.length
+      && chars.slice(item.start, item.end).join("") === item.quote;
+  }
+
+  function focusTarget(target) {
+    if (!target) return;
+    target.scrollIntoView({ block: "center" });
+    target.focus();
+  }
+
+  function renderSource(data) {
+    const chars = Array.from(data.text);
+    const good = [];
+    const bad = [];
+    data.items.forEach(function (item) { (validSpan(item, chars) ? good : bad).push(item); });
+    sourceErrorEl.replaceChildren();
+    if (bad.length) {
+      const box = el("div", "notice notice-danger");
+      box.setAttribute("role", "alert");
+      box.append(el("p", "notice-title", "결과 위치 표시 오류"),
+        el("p", null, "다음 항목은 원문 위치가 맞지 않아 원문에 강조하지 않았습니다: "
+          + bad.map(function (item) { return item.id; }).join(", ") + ". 항목 내용은 오른쪽 결과에서 확인할 수 있습니다."));
+      sourceErrorEl.append(box);
+    }
+    // 모든 시작·끝 위치로 원문을 나눠 조각마다 한 번만 출력합니다(겹치는 구간도 중복·누락 없음).
+    const cuts = new Set([0, chars.length]);
+    good.forEach(function (item) { cuts.add(item.start); cuts.add(item.end); });
+    const points = Array.from(cuts).sort(function (a, b) { return a - b; });
+    const starts = {};
+    good.forEach(function (item) { (starts[item.start] = starts[item.start] || []).push(item); });
+    sourceEl.replaceChildren();
+    for (let i = 0; i < points.length - 1; i++) {
+      const from = points[i];
+      (starts[from] || []).forEach(function (item) {
+        const mark = el("button", "green-claim-mark-label", item.id);
+        mark.type = "button";
+        mark.id = "green_claim-mark-" + item.id;
+        mark.dataset.tone = ACTION_TONES[item.action] || "info";
+        mark.setAttribute("aria-label", item.id + " " + (ACTION_LABELS[item.action] || "") + " 결과 항목으로 이동");
+        mark.addEventListener("click", function () { focusTarget(byId("green_claim-item-" + item.id)); });
+        sourceEl.append(mark);
+      });
+      const piece = chars.slice(from, points[i + 1]).join("");
+      const covering = good.filter(function (item) { return item.start <= from && from < item.end; });
+      if (!covering.length) {
+        sourceEl.append(document.createTextNode(piece));
+      } else {
+        const mark = el("mark", "green-claim-mark", piece);
+        mark.dataset.tone = ACTION_TONES[covering[0].action] || "info";
+        mark.dataset.overlap = covering.length > 1 ? "true" : "false";
+        mark.title = covering.map(function (item) { return item.id; }).join("·");
+        sourceEl.append(mark);
+      }
+    }
+  }
+
+  /* ----- 결과 항목 ----- */
+  function safeUrl(value) {
+    try {
+      const url = new URL(value);
+      return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function field(parent, label, text, className) {
+    if (text === undefined || text === null || text === "") return;
+    const block = el("div", "green-claim-field" + (className ? " " + className : ""));
+    block.append(el("p", "green-claim-field-label", label), el("p", "green-claim-field-text", text));
+    parent.append(block);
+  }
+
+  function sourceKind(ref) {
+    const org = ref.source_id && ref.source_id.indexOf("SRC-CONAR") === 0 ? "CONAR" : ref.source_id === "SRC-CDC" ? "CDC" : "";
+    return (org ? org + " " : "") + (NATURE_LABELS[ref.legal_nature] || "구분 미확인");
+  }
+
+  function formatTime(value) {
+    return value ? value.replace("T", " ").replace("+09:00", " (한국 시간)") : null;
+  }
+
+  function renderCriterion(id, ref) {
+    const box = el("details", "green-claim-criterion");
+    const summary = el("summary", null, ref
+      ? sourceKind(ref) + " · " + ref.provisions + " · " + ref.title_ko + " (" + id + ")"
+      : id + " · 기준 정보를 찾지 못함");
+    box.append(summary);
+    if (!ref) return box;
+    field(box, "원문 요구(원문이 정한 내용)", ref.requirement_ko);
+    field(box, "서비스 검토 해석(우리 서비스의 검토 관점, 원문과 같은 효력 없음)", ref.review_guidance_ko);
+    field(box, "적용 범위·해석 한계", ref.scope_limits_ko);
+    field(box, "저장된 원문 발췌(포르투갈어)", ref.excerpt_pt, "green-claim-pre");
+    field(box, "한국어 번역(이해를 돕는 비공식 번역" + (ref.translation_official === false ? "" : ", 공식 여부 미확인") + ")",
+      ref.translation_ko, "green-claim-pre");
+    field(box, "자료 확보 시각", formatTime(ref.retrieved_at));
+    const href = safeUrl(ref.official_url);
+    const linkLine = el("p", "green-claim-field-text");
+    if (href) {
+      const a = el("a", null, "공식 출처 열기(새 창)");
+      a.href = href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      linkLine.append(a);
+    } else {
+      linkLine.textContent = "공식 출처 주소 형식이 안전하지 않아 링크를 표시하지 않았습니다.";
+    }
+    box.append(linkLine);
+    if (ref.usage_rights_status === "ai_use_permission_unconfirmed") {
+      box.append(el("p", "field-hint", "이 자료의 AI 이용 허가는 확인되지 않았습니다(기준 자료 기록)."));
+    }
+    return box;
+  }
+
+  function renderAlternative(parent, item) {
+    const box = el("div", "green-claim-alternative");
+    box.append(el("p", "green-claim-field-label", "대체 예시 (적용 승인 아님 · 사람 확인 필요)"));
+    const alt = item.alternative;
+    if (alt && (alt.original_text || alt.pt_br_text)) {
+      if (alt.original_text) {
+        field(box, "원문 언어 예시(" + (LANGUAGE_LABELS[item.quote_language] || "언어 미확인") + ")", alt.original_text);
+      }
+      if (alt.pt_br_text) field(box, "브라질 포르투갈어 예시", alt.pt_br_text);
+      if (alt.ko_interpretation) field(box, "한국어 해석", alt.ko_interpretation);
+    } else {
+      box.append(el("p", "green-claim-field-text", item.alternative_note_ko || "대체 예시를 제공하지 않았습니다."));
+    }
+    if (alt && item.alternative_note_ko) box.append(el("p", "field-hint", item.alternative_note_ko));
+    parent.append(box);
+  }
+
+  function renderItem(item, refs, chars) {
+    const li = el("li", "green-claim-item");
+    li.id = "green_claim-item-" + item.id;
+    li.tabIndex = -1;
+    li.dataset.tone = ACTION_TONES[item.action] || "info";
+    const head = el("div", "green-claim-item-head");
+    head.append(el("span", "green-claim-item-id", item.id));
+    const badge = el("span", "badge badge-" + (ACTION_TONES[item.action] || "info"), ACTION_LABELS[item.action] || "조치 미확인");
+    head.append(badge);
+    if (validSpan(item, chars)) {
+      const back = el("button", "btn btn-ghost green-claim-item-back", "원문 위치 보기");
+      back.type = "button";
+      back.setAttribute("aria-label", item.id + " 원문 위치 보기");
+      back.addEventListener("click", function () { focusTarget(byId("green_claim-mark-" + item.id)); });
+      head.append(back);
+    } else {
+      head.append(el("span", "field-hint", "원문 위치 표시 오류"));
+    }
+    li.append(head);
+    field(li, "대상 구절 (" + (LANGUAGE_LABELS[item.quote_language] || "언어 미확인") + ")", item.quote, "green-claim-quote");
+    field(li, "한국어 해석", item.interpretation_ko);
+    field(li, "이유", item.reason_ko);
+    field(li, "수정 방향", item.direction_ko);
+    renderAlternative(li, item);
+    const criteriaBox = el("div", "green-claim-field");
+    criteriaBox.append(el("p", "green-claim-field-label", "관련 기준"));
+    if (item.criteria_ids && item.criteria_ids.length) {
+      item.criteria_ids.forEach(function (id) { criteriaBox.append(renderCriterion(id, refs[id])); });
+    } else {
+      criteriaBox.append(el("p", "green-claim-field-text", "연결된 기준 없음(판단 보류)"));
+    }
+    li.append(criteriaBox);
+    return li;
+  }
+
+  function jumpButton(id) {
+    const button = el("button", "btn btn-ghost green-claim-jump", id);
+    button.type = "button";
+    button.setAttribute("aria-label", id + " 결과 항목으로 이동");
+    button.addEventListener("click", function () { focusTarget(byId("green_claim-item-" + id)); });
+    return button;
+  }
+
+  // 추출 요약 renderSummary와 이름이 겹치면 같은 함수 범위에서 뒤 선언이 덮어쓰므로 이름을 구분합니다.
+  function renderReviewSummary(data) {
+    const s = data.summary;
+    reviewSummaryEl.replaceChildren();
+    const counts = el("p", "green-claim-summary-counts", "전체 " + numberFormat.format(s.total) + "개 항목");
+    reviewSummaryEl.append(counts);
+    const list = el("ul", "green-claim-summary-list");
+    Object.keys(ACTION_LABELS).forEach(function (action) {
+      const li = el("li", null);
+      li.append(el("span", "badge badge-" + ACTION_TONES[action], ACTION_LABELS[action]),
+        document.createTextNode(" " + numberFormat.format((s.by_action || {})[action] || 0) + "개 "));
+      ((s.item_ids_by_action || {})[action] || []).forEach(function (id) { li.append(jumpButton(id)); });
+      list.append(li);
+    });
+    reviewSummaryEl.append(list);
+    if (s.no_items_message) {
+      const none = el("div", "notice notice-info");
+      none.append(el("p", "notice-title", s.no_items_message),
+        el("p", null, "항목이 없어도 안전하거나 적법하다는 뜻이 아닙니다."));
+      reviewSummaryEl.append(none);
+    }
+    field(reviewSummaryEl, "AI 작성 요약", s.model_summary_ko);
+    if (data.model_limitations && data.model_limitations.length) {
+      const box = el("div", "green-claim-field");
+      box.append(el("p", "green-claim-field-label", "AI가 보고한 이번 검토의 한계"));
+      const ul = el("ul", "green-claim-notice-list");
+      data.model_limitations.forEach(function (text) { ul.append(el("li", null, text)); });
+      box.append(ul);
+      reviewSummaryEl.append(box);
+    }
+    const notices = el("ul", "green-claim-notice-list");
+    (data.notices || []).forEach(function (text) { notices.append(el("li", null, text)); });
+    const noticeBox = el("div", "green-claim-field");
+    noticeBox.append(el("p", "green-claim-field-label", "판단 한계와 확인하지 않은 범위"), notices);
+    reviewSummaryEl.append(noticeBox);
+  }
+
+  function renderCriteriaStatus(data) {
+    const c = data.criteria;
+    criteriaEl.replaceChildren();
+    field(criteriaEl, "사용 기준", "기준 버전 " + c.bundle_version + " · "
+      + (c.active_version === "base" ? "기본 기준" : "활성화된 기준 " + c.active_version)
+      + " · 저장된 기준 사용(최신 개정 전체를 확인한 것이 아님)");
+    field(criteriaEl, "검수 모델", (data.model || "모델 정보 없음") + " · 서비스 프롬프트 " + data.prompt_version);
+    if (c.warnings && c.warnings.length) {
+      const warn = el("div", "notice notice-warning");
+      warn.append(el("p", "notice-title", "기준 확인 경고"));
+      const ul = el("ul", "green-claim-notice-list");
+      c.warnings.forEach(function (text) { ul.append(el("li", null, text)); });
+      warn.append(ul);
+      criteriaEl.append(warn);
+    }
+    if (c.unresolved_changes && c.unresolved_changes.length) {
+      const box = el("div", "notice notice-warning");
+      box.append(el("p", "notice-title", "공식 원문 변경이 감지됐지만 아직 기준에 반영하지 않았습니다"));
+      const ul = el("ul", "green-claim-notice-list");
+      c.unresolved_changes.forEach(function (change) {
+        ul.append(el("li", null, change.source_id + " · 감지 " + (formatTime(change.detected_at) || "시각 없음")
+          + " · 관련 기준 " + ((change.criteria_ids || []).join(", ") || "없음")));
+      });
+      box.append(ul);
+      criteriaEl.append(box);
+    }
+    const list = el("ul", "green-claim-source-list");
+    (c.sources || []).forEach(function (source) {
+      const li = el("li", "green-claim-source");
+      li.append(el("p", "green-claim-field-label", source.title + " (" + (NATURE_LABELS[source.legal_nature] || "구분 미확인") + ")"));
+      const lines = [
+        "자료 확보 시각: " + (formatTime(source.retrieved_at) || "기록 없음"),
+        "이번 검수의 확인: " + (CHECK_LABELS[source.check_status] || "알 수 없는 상태")
+          + (source.check_attempted_at ? " · 시도 " + formatTime(source.check_attempted_at) : ""),
+        "마지막 성공 확인(조항 비교 완료): " + (formatTime(source.check_last_success_at) || "기록 없음"),
+      ];
+      if (source.check_reason) lines.push("이유: " + source.check_reason);
+      if (source.previous_check_status) {
+        lines.push("이전 확인 기록(이번 요청 아님): " + (CHECK_LABELS[source.previous_check_status] || "알 수 없는 상태")
+          + (source.previous_check_attempted_at ? " · " + formatTime(source.previous_check_attempted_at) : ""));
+      }
+      if (source.usage_rights_status === "ai_use_permission_unconfirmed") lines.push("AI 이용 허가: 확인되지 않음");
+      lines.forEach(function (text) { li.append(el("p", "green-claim-field-text", text)); });
+      list.append(li);
+    });
+    criteriaEl.append(list);
+    const details = el("details", "green-claim-pages");
+    details.append(el("summary", null, "기준 상세 정보"));
+    [
+      "기준 묶음: " + c.bundle_id + " (형식 " + c.schema_version + ")",
+      "내용 해시: " + c.content_hash,
+      "확인 방식: " + (CHECK_MODE_LABELS[c.check_mode] || c.check_mode),
+      "기준 상태 확인 결과: " + (c.check_overall || "없음"),
+    ].forEach(function (text) { details.append(el("p", "green-claim-field-text", text)); });
+    criteriaEl.append(details);
+  }
+
+  function looksLikeResult(data) {
+    return data && typeof data.text === "string" && Array.isArray(data.items) && data.summary && data.criteria
+      && typeof data.criteria_refs === "object";
+  }
+
+  function renderReview(data) {
+    const chars = Array.from(data.text);
+    renderSource(data);
+    renderReviewSummary(data);
+    itemsEl.replaceChildren();
+    data.items.forEach(function (item) { itemsEl.append(renderItem(item, data.criteria_refs || {}, chars)); });
+    renderCriteriaStatus(data);
+    emptyEl.hidden = true;
+    resultEl.hidden = false;
+    sourceBox.hidden = false;
+  }
+
+  function nowLabel() {
+    const d = new Date();
+    const pad = function (n) { return String(n).padStart(2, "0"); };
+    return pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  }
+
+  async function runReview() {
+    if (reviewRunning) return;  // 중복 실행 방지
+    const mode = currentMode();
+    if (mode === "file" && busy) {
+      showReviewMessage("warning", "글자 추출·판독이 끝난 뒤 검수해 주세요", "진행 중인 작업이 끝나면 문구를 확인한 뒤 다시 눌러 주세요.");
+      return;
+    }
+    const inputField = mode === "file" ? extractedField : textField;
+    const text = normalize(inputField.textarea.value);
+    const check = inspect(text);
+    if (check.problem) {
+      inputField.showProblem();  // 입력칸 오류 안내 갱신(문구는 그대로)
+      showReviewMessage("warning", "검수를 실행하지 않았습니다", MESSAGES[check.problem]);
+      inputField.textarea.focus();
+      return;
+    }
+    const seq = ++reviewSeq;
+    reviewRunning = { seq: seq, mode: mode, text: text };
+    reviewController = new AbortController();
+    const localController = reviewController;
+    let timedOut = false;
+    const timer = setTimeout(function () { timedOut = true; localController.abort(); }, REVIEW_TIMEOUT_MS);
+    showReviewMessage(null);
+    setReviewBusy(true);
+    try {
+      const res = await fetch(REVIEW_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text }),
+        signal: localController.signal,
+      });
+      let body = null;
+      try { body = await res.json(); } catch (err) { body = null; }
+      if (seq !== reviewSeq) return;  // 취소됐거나 오래된 응답
+      const previous = reviewResult && !reviewStale ? " 아래 결과는 이전에 성공한 검수 결과입니다(검수 시각 " + reviewResult.at + ")." : "";
+      if (!body || typeof body.ok !== "boolean") {
+        showReviewMessage("danger", "검수에 실패했습니다", "서버 응답을 읽지 못했습니다. 입력 문구는 그대로이며 다시 실행할 수 있습니다." + previous);
+      } else if (!body.ok) {
+        showReviewMessage("danger", "검수에 실패했습니다", body.error.message + " 입력 문구는 그대로이며 다시 실행할 수 있습니다." + previous);
+      } else if (!looksLikeResult(body.data)) {
+        showReviewMessage("danger", "결과 표시 오류", "검수 결과 형식을 표시할 수 없습니다. 다시 실행해 주세요." + previous);
+      } else {
+        reviewResult = { data: body.data, mode: mode, at: nowLabel() };
+        reviewStale = false;
+        renderReview(body.data);
+        syncResultState();
+        showReviewMessage("success", "검수를 마쳤습니다", "결과는 표현 위험 스크리닝이며 적법성·사실·인증을 보장하지 않습니다.");
+      }
+    } catch (err) {
+      if (seq !== reviewSeq) return;
+      const previous = reviewResult && !reviewStale ? " 아래 결과는 이전에 성공한 검수 결과입니다(검수 시각 " + reviewResult.at + ")." : "";
+      showReviewMessage("danger", "검수에 실패했습니다",
+        (timedOut ? "응답이 100초 안에 오지 않아 기다림을 멈췄습니다." : "서버에 연결하지 못했습니다.")
+        + " 이미 보낸 요청의 처리·요금이 취소되었는지는 보장할 수 없습니다. 입력 문구는 그대로이며 다시 실행할 수 있습니다." + previous);
+    } finally {
+      clearTimeout(timer);
+      if (seq === reviewSeq) {
+        reviewRunning = null;
+        reviewController = null;
+        setReviewBusy(false);
+      }
+    }
+  }
+
+  reviewButton.addEventListener("click", runReview);
+
+  // 입력 작성 상태와 이탈 경고는 공통 shell의 자동 감지와 setResult가 처리합니다(중복 구현 없음).
+  // 탭 재방문 시 추출·판독·검수를 다시 실행하지 않고 결과를 무효화하지 않습니다.
 })();

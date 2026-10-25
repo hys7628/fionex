@@ -116,3 +116,10 @@
 | 기준 묶음(활성 base, 2026-10-26.1) | features/green_claim/data/brazil_claim_criteria/ | 원문 확보 2026-10-25, 최신성 재확인 없음, CONAR AI 이용 허가 미확인 |
 | 기준 확인·상태 | criteria_check.check_sources·criteria_status | 2026-10-26 구현, 가짜 응답으로만 확인 |
 | 공통 텍스트 연결 | common/ai_client.py generate_structured, common/config.py TEXT_* | 로컬 코드 읽기 전용 확인: timeout 60초, 재시도 0, 출력 상한 4,096, store=False. 공통 문서상 텍스트 함수 실제 호출은 사용자 실행으로 확인됨, 이 기능의 실제 호출은 미검증 |
+
+## 2026-10-26 검수 실행·결과 화면 재사용 자료 (DEV-2026_10_26-04)
+- 실제 조회: 없음(공식 사이트·OpenAI 모두). 새 외부 출처 없음
+| 재사용 | 위치 | 확인 상태 |
+|---|---|---|
+| 검수 응답 계약 | features/green_claim/review_service.py run_review_request, criteria_check.py 상태값, service.py 오류 문장 | 2026-10-26 로컬 코드 읽기 전용 확인. 화면 표시 값의 출처(공식 링크·조항·발췌·번역)는 서버가 기준 묶음에서 붙인 값이며 화면은 새 출처를 만들지 않음 |
+| 공통 화면 규칙 | docs/design_system.md, static/js/app_shell.js·leave_guard.js | 읽기 전용 확인(수정 없음) |
