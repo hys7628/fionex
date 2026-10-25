@@ -34,3 +34,12 @@
 | CONAR 코드 PDF | CONAR | https://conar.wpenginepowered.com/wp-content/uploads/2026/08/Codigo_CONAR_2026.pdf | 2026-10-25 16:33:58(직전 확보본 사용) | 저장소에 넣지 않음(대조용) | 같음 | 같음 |
 | CONAR 이용약관 | CONAR | https://www.conar.org.br/termos-de-uso | 2026-10-25 16:34:00(직전 확보본, 재확인 안 함) | source_register.md 요약 | 2026년 5월 제정 | - |
 - 담당자의 요구사항 유지 결정은 이용 허가가 아님
+
+## 2026-10-25 일반 PDF 추출 구현 참고 (DEV-2026_10_25-05)
+| 자료 | 위치 | 확인 시각(KST) | 확인 내용 | 상태 |
+|---|---|---|---|---|
+| pypdf 6.21.2 패키지 메타데이터 | PyPI(pip index·pip install --dry-run --report), https://files.pythonhosted.org/packages/1b/4d/c9d2d67f204eff463237a1a8f5e25a6923b7b1043982b91fcaf104c8ef60/pypdf-6.21.2-py3-none-any.whl | 2026-10-25 17:40 무렵 | Requires-Python >=3.9, Python 3.11 필수 의존성 없음(typing_extensions는 3.11 미만만), crypto extra 선택 | pip로 직접 확인. 공식 문서 웹페이지는 조회하지 않음 |
+| pypdf 설치본 API | jasonenv site-packages/pypdf (inspect) | 2026-10-25 17:43 무렵 | PdfReader(strict, password), is_encrypted, extract_text, PdfWriter.encrypt(algorithm), errors 목록 | 설치본에서 직접 확인 |
+| Werkzeug 3.1.9 소스 | jasonenv site-packages/werkzeug/formparser.py, sansio/multipart.py, wsgi.py | 2026-10-25 17:38~17:48 | default_stream_factory가 500KB 초과 시 SpooledTemporaryFile, FormDataParser(stream_factory, max_content_length, max_form_memory_size, max_form_parts), max_form_memory_size가 수신 버퍼에도 적용 | 설치본 소스 직접 확인 |
+| Flask 3.1.2 소스 | jasonenv site-packages/flask/wrappers.py | 2026-10-25 17:38 무렵 | Request.max_content_length 요청별 설정 가능(이번에는 FormDataParser로 처리) | 설치본 소스 직접 확인 |
+- 사용권: pypdf 라이선스는 이번에 확인하지 않음(미확인)

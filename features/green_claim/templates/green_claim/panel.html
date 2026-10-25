@@ -1,5 +1,5 @@
-{# 그린 클레임 체크 작업 영역. 1단계 문구 직접 입력 화면(입력·글자 수·입력 상태 안내).
-   AI 검수·파일 추출·PDF 생성은 아직 연결되지 않았습니다(feature_spec.md).
+{# 그린 클레임 체크 작업 영역. 문구 직접 입력 + 일반 PDF 글자 추출·확인·수정(feature_spec.md).
+   AI 검수·스캔 PDF 글자 인식·Word·이미지·결과 PDF는 아직 연결되지 않았습니다.
    검수 결과는 제공 근거 범위의 표현 스크리닝이며 법적 적합성 보장이 아닙니다(docs/data_contracts.md). #}
 <div class="workspace">
   <form class="card" aria-labelledby="green_claim-input-title" autocomplete="off" novalidate>
@@ -10,40 +10,86 @@
       </div>
     </div>
 
-    <fieldset class="fieldset">
+    {# 입력 방식 전환만으로 '작성 중' 상태가 되지 않도록 자동 감지에서 제외합니다. #}
+    <fieldset class="fieldset" data-work-ignore>
       <legend class="field-label">입력 방식</legend>
       <label class="choice">
         <input type="radio" name="input_mode" value="text" checked>
         문구 직접 입력
       </label>
-      <label class="choice green-claim-choice-pending">
-        <input type="radio" name="input_mode" value="file" disabled aria-describedby="green_claim-file-pending">
-        홍보물 파일 업로드 (준비 중)
+      <label class="choice">
+        <input type="radio" name="input_mode" value="file">
+        홍보물 파일 업로드 (현재 일반 PDF만)
       </label>
     </fieldset>
 
-    <div class="field">
-      <label class="field-label" for="green_claim-claims">문구<span class="field-required">필수</span></label>
-      <textarea class="textarea green-claim-textarea" id="green_claim-claims" name="claims" rows="10"
-                autocomplete="off"
-                aria-describedby="green_claim-claims-hint green_claim-claims-count green_claim-claims-error"
-                placeholder="소개서·이메일·광고에 쓸 문장을 앞뒤 문맥과 함께 그대로 붙여넣어 주세요."></textarea>
-      <p class="field-hint" id="green_claim-claims-hint">한국어·영어·브라질 포르투갈어로 작성하거나 붙여넣을 수 있습니다. 문구는 저장하지 않습니다.</p>
-      <p class="field-hint green-claim-count" id="green_claim-claims-count">0 / 20,000자 (공백·줄바꿈 포함)</p>
-      <p class="field-error" id="green_claim-claims-error" hidden></p>
-      <p class="visually-hidden" id="green_claim-claims-live" aria-live="polite"></p>
+    <div class="stack" data-mode-panel="text">
+      <div class="field">
+        <label class="field-label" for="green_claim-claims">문구<span class="field-required">필수</span></label>
+        <textarea class="textarea green-claim-textarea" id="green_claim-claims" name="claims" rows="10"
+                  autocomplete="off"
+                  aria-describedby="green_claim-claims-hint green_claim-claims-count green_claim-claims-error"
+                  placeholder="소개서·이메일·광고에 쓸 문장을 앞뒤 문맥과 함께 그대로 붙여넣어 주세요."></textarea>
+        <p class="field-hint" id="green_claim-claims-hint">한국어·영어·브라질 포르투갈어로 작성하거나 붙여넣을 수 있습니다. 문구는 저장하지 않습니다.</p>
+        <p class="field-hint green-claim-count" id="green_claim-claims-count">0 / 20,000자 (공백·줄바꿈 포함)</p>
+        <p class="field-error" id="green_claim-claims-error" hidden></p>
+        <p class="visually-hidden" id="green_claim-claims-live" aria-live="polite"></p>
+      </div>
     </div>
 
-    <div class="field">
-      <label class="field-label" for="green_claim-file">홍보물 파일</label>
-      <input class="file-input" id="green_claim-file" name="promo_file" type="file" disabled
-             aria-describedby="green_claim-file-pending">
-      <p class="field-hint" id="green_claim-file-pending">준비 중: 홍보물 파일에서 글자를 추출하는 기능은 후속 작업입니다. 지금은 파일을 선택할 수 없습니다.</p>
+    <div class="stack" data-mode-panel="file" id="green_claim-file-section" hidden>
+      <div class="field">
+        <label class="field-label" for="green_claim-file">홍보물 PDF</label>
+        <input class="file-input" id="green_claim-file" name="promo_file" type="file" accept=".pdf,application/pdf"
+               aria-describedby="green_claim-file-hint green_claim-file-error">
+        <p class="field-hint" id="green_claim-file-hint">일반 PDF 1개, 10,000,000바이트(약 10MB)·20페이지 이하. PDF 안의 텍스트만 읽으며 원본 PDF는 수정하지 않습니다.
+          Word·이미지 파일과 스캔 PDF 글자 인식(OCR)은 준비 중입니다.</p>
+        <p class="field-error" id="green_claim-file-error" hidden></p>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" id="green_claim-extract">글자 추출</button>
+        <span class="field-hint green-claim-extract-status" id="green_claim-extract-status" role="status"></span>
+      </div>
+
+      <div id="green_claim-extract-message" aria-live="polite"></div>
+
+      <div class="notice notice-warning" id="green_claim-replace" hidden>
+        <p class="notice-title">새로 추출한 문구가 있습니다</p>
+        <p>아래 입력칸의 문구를 새 추출 결과로 바꿀까요? 바꾸면 지금 입력칸의 문구와 수정한 내용은 사라집니다.</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="green_claim-replace-apply">새 결과로 바꾸기</button>
+          <button type="button" class="btn btn-secondary" id="green_claim-replace-keep">지금 문구 유지</button>
+        </div>
+      </div>
+
+      <div class="notice notice-info" id="green_claim-extract-summary" hidden>
+        <p class="notice-title" id="green_claim-extract-summary-title"></p>
+        <p id="green_claim-extract-summary-text"></p>
+        <ul class="green-claim-notice-list" id="green_claim-extract-notices"></ul>
+        <details class="green-claim-pages">
+          <summary>페이지별 추출 범위</summary>
+          <ul class="green-claim-notice-list" id="green_claim-extract-pages"></ul>
+        </details>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="green_claim-extracted">추출 문구 확인·수정<span class="field-required">필수</span></label>
+        <textarea class="textarea green-claim-textarea" id="green_claim-extracted" name="extracted" rows="10"
+                  autocomplete="off"
+                  aria-describedby="green_claim-extracted-hint green_claim-extracted-count green_claim-extracted-error green_claim-extracted-edited"
+                  placeholder="PDF를 선택하고 '글자 추출'을 누르면 추출한 문구가 여기에 표시됩니다."></textarea>
+        <p class="field-hint" id="green_claim-extracted-hint">추출 결과를 원본과 비교해 빠지거나 잘못 읽힌 부분을 고쳐 주세요. 수정은 검수 입력만 바꾸며 원본 PDF는 바뀌지 않습니다.</p>
+        <p class="field-hint green-claim-count" id="green_claim-extracted-count">0 / 20,000자 (공백·줄바꿈 포함)</p>
+        <p class="field-error" id="green_claim-extracted-error" hidden></p>
+        <p class="field-hint" id="green_claim-extracted-edited" hidden>추출 후 문구를 수정했습니다. 위 페이지별 추출 범위는 수정 전 기준이라 정확하지 않을 수 있습니다.</p>
+        <p class="visually-hidden" id="green_claim-extracted-live" aria-live="polite"></p>
+      </div>
     </div>
 
     <div class="btn-row">
       <button type="submit" class="btn btn-primary" disabled aria-describedby="green_claim-pending">검수 실행</button>
-      <span class="field-hint" id="green_claim-pending">준비 중: AI 검수 연결 전이라 아직 실행할 수 없습니다.</span>
+      <span class="field-hint" id="green_claim-pending">준비 중: AI 검수 연결 전이라 아직 실행할 수 없습니다. 글자 추출 완료는 검수 완료가 아닙니다.</span>
     </div>
   </form>
 

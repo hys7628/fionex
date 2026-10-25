@@ -15,19 +15,23 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* 준비 중인 선택지·파일 입력은 사용할 수 없음을 보이게 */
-.feature-green_claim .green-claim-choice-pending {
-  color: var(--color-text-muted);
+/* 글자 추출 진행 표시(스피너 + 문장) */
+.feature-green_claim .green-claim-extract-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.feature-green_claim .file-input:disabled {
-  color: var(--color-text-muted);
-  cursor: not-allowed;
+/* 추출 안내·페이지별 범위 목록 */
+.feature-green_claim .green-claim-notice-list {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-text);
 }
 
-.feature-green_claim .file-input:disabled::file-selector-button {
-  color: var(--color-text-muted);
-  cursor: not-allowed;
+.feature-green_claim .green-claim-pages summary {
+  color: var(--color-text);
+  cursor: pointer;
 }
 
 /* 결과 카드 머리글: 비활성 버튼 바로 아래에 준비 중 안내 */
