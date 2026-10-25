@@ -18,6 +18,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from features.home.buyer_time import CITIES, DEFAULT_CITY, SEOUL, buyer_time, format_day, format_day_time
@@ -71,7 +72,10 @@ def collect(city=DEFAULT_CITY, now=None):
 
     try:
         news = service.get_news()
-        data["news"] = {"items": news["items"][:NEWS_LIMIT], "media": news["media"], "total": len(news["items"])}
+        # 최신순 상위 8건. 필터를 통과한 KOTRA 기사가 있으면 최소 1건은 넣습니다(service.NEWS_SOURCE_MINIMUM).
+        top, selected = service.select_top_news(news["items"], NEWS_LIMIT, service.NEWS_SOURCE_MINIMUM)
+        data["news"] = {"items": top, "media": news["media"], "total": len(news["items"]), "selected": selected}
+        logger.info("브리핑 뉴스 선정: %s", ", ".join(f"{k}={selected.get(k, 0)}" for k in ORIGIN_LABELS))
         for key, info in news["media"].items():
             if info["status"] != "ok":
                 failures.append(f"뉴스 {ORIGIN_LABELS[key]}({info['error']['message']})")
@@ -116,7 +120,8 @@ def _styles():
         "body": base,
         "small": ParagraphStyle("small", parent=base, fontSize=8, leading=11.5, textColor=MUTED),
         "title": ParagraphStyle("title", parent=base, fontName=FONT_BOLD, fontSize=18, leading=24, spaceAfter=2),
-        "h2": ParagraphStyle("h2", parent=base, fontName=FONT_BOLD, fontSize=12.5, leading=17, spaceBefore=10, spaceAfter=5),
+        "h2": ParagraphStyle("h2", parent=base, fontName=FONT_BOLD, fontSize=12.5, leading=17, spaceBefore=10, spaceAfter=5,
+                             keepWithNext=1),  # 제목만 쪽 끝에 남지 않게
         "item": ParagraphStyle("item", parent=base, fontName=FONT_BOLD, fontSize=9.5, leading=13.5),
         "cell": ParagraphStyle("cell", parent=base, fontSize=8.8, leading=12.5),
         "head": ParagraphStyle("head", parent=base, fontName=FONT_BOLD, fontSize=8.8, leading=12.5),
@@ -174,17 +179,33 @@ def render(data):
     buf = BytesIO()
     generated = data["generated_at"].strftime("%Y-%m-%d %H:%M KST")
 
-    def footer(canvas, doc):
-        canvas.saveState()
-        canvas.setFont(FONT, 7.5)
-        canvas.setFillColor(MUTED)
-        canvas.drawString(18 * mm, 10 * mm, f"fionex 일일 브리핑 · {generated} 생성")
-        canvas.drawRightString(A4[0] - 18 * mm, 10 * mm, f"{doc.page}쪽")
-        canvas.restoreState()
+    class FooterCanvas(Canvas):
+        """쪽마다 꼬리말을 미뤄 두었다가 저장할 때 전체 쪽 수를 알고 'n / N'으로 찍습니다."""
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._pages = []
+
+        def showPage(self):
+            self._pages.append(dict(self.__dict__))
+            self._startPage()
+
+        def save(self):
+            total = len(self._pages)
+            for page in self._pages:
+                self.__dict__.update(page)
+                self.saveState()
+                self.setFont(FONT, 7.5)
+                self.setFillColor(MUTED)
+                self.drawString(18 * mm, 10 * mm, f"fionex 일일 브리핑 · {generated} 생성")
+                self.drawRightString(A4[0] - 18 * mm, 10 * mm, f"{self._pageNumber} / {total}")
+                self.restoreState()
+                super().showPage()
+            super().save()
 
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm,
                             bottomMargin=18 * mm, title="fionex 일일 브리핑", author="fionex")
-    doc.build(story, onFirstPage=footer, onLaterPages=footer)
+    doc.build(story, canvasmaker=FooterCanvas)
     return buf.getvalue()
 
 
@@ -241,15 +262,25 @@ def _fx_section(fx, s, width):
     derived = fx.get("brl_krw")
     if derived:
         rows.append([_p("BRL/KRW", s["cell"]), _p(f"1 BRL = {derived['rate']:,.2f} KRW", s["cell"]),
-                     _p(f"USD/KRW {derived['usd_krw_date']}\nUSD/BRL {derived['usd_brl_date']}".replace("\n", " · "), s["cell"]),
+                     _p(derived_date_text(derived["usd_krw_date"], derived["usd_brl_date"]), s["cell"]),
                      _p("-", s["cell"]), _p("USD 경유 계산값 · 공식 고시 환율 아님", s["cell"])])
     else:
         rows.append([_p("BRL/KRW", s["cell"]), _p("계산 불가", s["cell"]), _p("-", s["cell"]),
                      _p("USD/KRW와 USD/BRL이 모두 있어야 계산", s["cell"]), _p("USD 경유 계산값", s["cell"])])
-    out.append(_table(rows, (18 * mm, 38 * mm, 30 * mm, 42 * mm, width - 128 * mm)))
+    # 값·고시일·전일 대비가 보통 한 줄에 들어가는 너비(2026-10-25 글자 폭 측정).
+    out.append(_table(rows, (17 * mm, 34 * mm, 38 * mm, 47 * mm, width - 136 * mm)))
     out.append(Spacer(1, 3))
     out.append(_p("BRL/KRW = USD/KRW ÷ USD/BRL (USD 경유 계산값). 주말·공휴일에는 최근 고시일 값입니다. 전망·해석 없음.", s["small"]))
     return out
+
+
+def derived_date_text(krw_date, brl_date):
+    """BRL/KRW 고시일 칸. 같으면 '2026-10-23 (두 환율 동일)', 다르면 'KRW 10-23 / BRL 10-24'(연도가 다르면 전체 날짜)."""
+    if krw_date == brl_date:
+        return f"{krw_date} (두 환율 동일)"
+    if krw_date[:4] == brl_date[:4]:
+        return f"KRW {krw_date[5:]} / BRL {brl_date[5:]}"
+    return f"KRW {krw_date} / BRL {brl_date}"
 
 
 def _news_date(value):
@@ -265,14 +296,18 @@ def _news_section(news, s, width):
             m["status"] != "ok" for m in news["media"].values()) else "수집 기간 안에 해당하는 소식이 없습니다", s["body"])]
     out.append(_p(f"최신순 상위 {len(news['items'])}건(수집 {news['total']}건 중). 원문 제목 그대로 표시합니다.", s["small"]))
     for index, item in enumerate(news["items"], 1):
+        # 제목이 원문 링크입니다. 긴 주소(Google News 경유 URL)는 본문에 쓰지 않고 매체 도메인만 보입니다.
         block = [_link(item["url"], f"{index}. {item['title']}", s["item"])]
         if item.get("summary_ko") and item["origin"] in ("google", "abit"):
             block.append(_p("[AI 요약] " + item["summary_ko"], s["body"]))
-        meta = " · ".join(x for x in (ORIGIN_LABELS.get(item["origin"], item["origin"]), item.get("media"),
+        media = item.get("media")
+        domain = item.get("media_domain")
+        if media and domain and domain not in media:
+            media = f"{media}({domain})"
+        meta = " · ".join(x for x in (ORIGIN_LABELS.get(item["origin"], item["origin"]), media or domain,
                                        _news_date(item["published_at"])) if x)
         block.append(_p(meta, s["small"]))
-        block.append(_link(item["url"], item["url"], s["small"]))
-        block.append(Spacer(1, 5))
+        block.append(Spacer(1, 3))
         out.append(KeepTogether(block))
     return out
 
@@ -307,9 +342,14 @@ def _notes_section(data, s):
             info = fx[key]
             lines.append(f"{info['pair']}: {info['source_name']}, 조회 {info['fetched_at'][:16].replace('T', ' ')}")
     if news:
+        # 수집(응답에서 읽은 건수) → 필터 후(관련성) → 브리핑 선정(상위 8건 안). KOTRA 0건이 어느 단계인지 구분됩니다.
         for key, info in news["media"].items():
-            when = f"수집 {info['fetched_at'][:16].replace('T', ' ')}" if info.get("fetched_at") else "수집 기록 없음"
-            lines.append(f"뉴스 {ORIGIN_LABELS[key]}: {when}")
+            if info.get("collected") is None:
+                reason = info.get("error", {}).get("message")
+                lines.append(f"뉴스 {ORIGIN_LABELS[key]}: 수집 기록 없음" + (f"({reason})" if reason else ""))
+                continue
+            lines.append(f"뉴스 {ORIGIN_LABELS[key]}: 수집 {info['collected']}건 / 필터 후 {info['after_filter']}건 / "
+                         f"브리핑 선정 {news.get('selected', {}).get(key, 0)}건 · {info['fetched_at'][:16].replace('T', ' ')} 수집")
     if fairs:
         lines.append(f"전시회: 담당자 확인 정적 자료(자료 확인일 {fairs.get('data_checked_at') or '미확인'})")
     lines += [

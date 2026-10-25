@@ -16,8 +16,8 @@ from time import monotonic
 logger = logging.getLogger(__name__)
 
 PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
-# 채택 버전. v1(규칙만)·v2(규칙+few-shot) 비교 기록: docs/worklogs/hong_eunju/prompt_log.md
-PROMPT_FILE = "news_summary_v1.md"
+# 채택 버전. v1(규칙만)·v2(규칙+few-shot)·v3(용어 보존 규칙+few-shot 4개) 기록: docs/worklogs/hong_eunju/prompt_log.md
+PROMPT_FILE = "news_summary_v3.md"
 PROMPT_MARKER = "## instructions"
 
 TARGET_ORIGINS = ("google", "abit")

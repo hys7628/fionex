@@ -234,3 +234,22 @@
 - 발견 사항: jasonenv에 develop의 pypdf 6.21.2가 미설치 → requirements.txt 그대로 설치. common/ai_client.py가 pdf_utils(pypdf)를 모듈 상단에서 import하므로 미설치 환경에서는 Home AI 요약이 ImportError 처리로 "사용할 수 없음"이 됨(코드 판독, 실행 확인 안 함) → 팀원은 병합 후 `pip install -r requirements.txt` 필요. requirements.txt 20번째 줄 "PDF 출력 도구는 기능 개발 단계에서 선정·검증 후 추가한다"는 reportlab 추가와 맞지 않음(수정 금지 대상, 보고만). README ".env 로딩"의 `flask --app app run` 동작은 Flask 소스 기준이며 직접 실행 확인은 안 함.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: decisions.md 갱신은 팀 합의 후.
+
+## DEV-HOME-011 PR 리뷰 7건 반영(뉴스 관련성·KOTRA 노출·AI 용어 보존·PDF 가독성)
+- 유형: development_instruction
+- 날짜/시간: 2026-10-25 18:55~19:20경 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/home, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 실제 호출 없음
+- 지시 요약: 새 기능·큰 리팩터링 없이 리뷰 7건 수정. [필수] 1 뉴스 관련성(섬유 키워드, .pt 매체 제외는 RSS source 도메인 기준, 상수 상단 분리, 검색어는 근거 있을 때만) 2 KOTRA 0건 원인 구분(경로별 수집/필터 후/선정 건수 화면·PDF·로그, 상위 N건 KOTRA 최소 1건, 가짜 기사 금지) 3 AI 요약 용어 보존 규칙 + few-shot 정확히 4개(정상·수치 함정·정보 부족·용어 보존), 버전 파일. [개선] 4 PDF 뉴스 제목 링크·URL 문자열 제거·2쪽 이내 5 BRL/KRW 고시일 칸 6 쪽 번호 n / N 7 Tecnotêxtil 일정 대조. Git 작업 금지, 유료 호출 금지.
+- 변경 파일: features/home/service.py(관련성 필터·제외 매체·건수·select_top_news), report.py(뉴스 선정·제목 링크·도메인 표시·고시일 칸·열 너비·n / N 캔버스·경로별 건수·제목 다음 내용과 같은 쪽), news_summary.py(PROMPT_FILE v3), prompts/news_summary_v3.md(신규), static/home.js(경로별 건수), feature_spec.md(뉴스·AI·PDF·전시회 표 전체 날짜), tests/test_home 4개 파일.
+- 판단:
+  - 필터 기준은 저장한 실제 RSS 4개(2026-10-25 18:56)로 정함. Google 현재 검색어 53건 중 키워드 없는 제목 28·.pt 5. 브라질로 좁힌 검색어 후보(31건)는 'moda' 단독 등 일반 노이즈가 남아 검색어는 바꾸지 않음. ABIT 사이트 공식 글은 섬유 낱말 없는 제목(세제·수출·총회)이 많아 abit.org.br는 키워드 면제. 'moda' 단독은 오탐이 있어 구문('indústria da moda' 등)만 허용.
+  - portugaltextil.com(.com이지만 포르투갈 매체)·vietnam.vn은 실제 RSS 근거로 EXCLUDED_MEDIA_DOMAINS에 넣음 → 리뷰어 확인 필요.
+  - KOTRA 최소 노출은 PDF 상위 8건 선정에만 적용(화면은 경로별 최대 20건 그대로 모두 표시).
+  - 프롬프트는 v1·v2를 고치지 않고 v3 신규. 수치 함정 예시는 v2의 ex4, 용어 보존 예시는 'resíduos florestais → 산림 부산물'(테스트 문장과 다른 가상 제목).
+- 발견 문제: 헤딩('4. 다가오는 전시회')이 1쪽 끝에 홀로 남음 → h2 keepWithNext. 출처 안내의 '수집 기록 없음(수집 기록 없음)' 중복 문구 → 사유가 있을 때만 괄호. 검증 스크립트 작성 중 셸 heredoc의 \n 처리로 테스트 파일 문자열이 깨진 것 2건 → 편집 도구로 수정(코드 결함 아님).
+- 외부 호출: Google News RSS 공개 요청 4회(현재·후보 검색어·ABIT 2종 저장, 필터 근거), Tecnotêxtil 공식 사이트 1회. OpenAI·KOTRA·수출입은행 0회. 계획에 없던 호출 없음.
+- 서비스 프롬프트 실험: **v3 실제 호출 실험 미실행**(사용자 요청 없음, 유료 호출 금지). 모의 테스트로 규칙·예시 4개·예시 출력의 코드 검증 통과만 확인.
+- 검증: validation.md 2026-10-25 PR 리뷰 반영 항목.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 제목 키워드 필터의 누락(섬유 낱말 없는 관련 기사), v3 실제 요약 품질, 실제 KOTRA 응답에서 최소 노출 동작(모의만).

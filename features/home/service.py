@@ -7,7 +7,9 @@ import hashlib
 import json
 import logging
 import os
+import re
 import socket
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -137,6 +139,25 @@ GOOGLE_QUERY = '("fio de poliéster" OR "fios têxteis" OR "indústria têxtil" 
 # abit.org.br 결과만 돌아와, 공식 발표(site:)와 ABIT를 인용한 보도를 나눠 검색해 합칩니다.
 ABIT_QUERIES = ("site:abit.org.br when:30d", '"ABIT" têxtil when:30d')
 
+# Google News·ABIT 관련성 필터(2026-10-25 실제 RSS 4건으로 조정, 근거: docs/worklogs/hong_eunju/validation.md).
+# 제목에 아래 낱말(악센트·대소문자 무시, 낱말 단위) 또는 구절이 하나 이상 있어야 남깁니다. RSS description은 제목 반복이라 보지 않습니다.
+TEXTILE_NEWS_KEYWORDS = (
+    "têxtil", "têxteis", "tecido", "tecidos", "fio", "fios", "fibra", "fibras", "malha", "malharia",
+    "confecção", "confecções", "vestuário", "poliéster", "polyester", "algodão",
+    "reciclado", "reciclada", "reciclados", "recicladas", "reciclagem",
+)
+# "moda" 단독은 패션·생활 기사까지 통과시켜(예: "Encontro exclusivo une moda, mulheres e bem-estar") 구절로만 인정합니다.
+TEXTILE_NEWS_PHRASES = ("indústria da moda", "setor da moda", "cadeia da moda")
+# 섬유 업계 단체 공식 사이트. 제목에 섬유 낱말이 없어도 업계 소식(세제·수출 쿼터·총회 등)이라 키워드 검사를 면제합니다.
+TEXTILE_TRUSTED_DOMAINS = ("abit.org.br",)
+# 브라질 시장용 목록이라 포르투갈 매체를 뺍니다. RSS <source url>의 매체 도메인으로 판단합니다(링크는 news.google.com).
+EXCLUDED_MEDIA_TLDS = (".pt",)
+# .pt가 아니어도 매체를 확인해 브라질 시장과 무관하다고 본 곳(2026-10-25 실제 RSS 기준):
+# portugaltextil.com = 포르투갈 섬유 업계지, vietnam.vn = 베트남 산업 기사 포르투갈어판(필터 통과 21건 중 6건).
+EXCLUDED_MEDIA_DOMAINS = ("portugaltextil.com", "vietnam.vn")
+# 일일 브리핑 등 상위 N건을 고를 때 경로별 최소 건수(필터를 통과한 기사가 있을 때만 채움).
+NEWS_SOURCE_MINIMUM = {"kotra": 1}
+
 # KOTRA 해외시장뉴스 Open API(공공데이터포털 15034831). 요청 변수·응답 필드는 포털 Swagger 명세 기준이며,
 # 인증키가 없어 실제 데이터 응답은 아직 확인하지 못했습니다.
 KOTRA_URL = "https://apis.data.go.kr/B410001/kotra_overseasMarketNews/ovseaMrktNews/ovseaMrktNews"
@@ -156,7 +177,8 @@ NEWS_ERRORS = {
     "invalid_response": "응답 형식을 확인할 수 없습니다.",
 }
 
-# 경로 → 마지막 성공 {"items", "fetched_at", "expires"}. 갱신에 실패해도 지우지 않아 이전 수집분을 계속 보여 줍니다.
+# 경로 → 마지막 성공 {"items", "collected", "after_filter", "fetched_at", "expires"}.
+# 갱신에 실패해도 지우지 않아 이전 수집분을 계속 보여 줍니다.
 _news_cache = {}
 
 
@@ -167,9 +189,10 @@ class NewsFetchError(Exception):
 
 
 def get_news(refresh=None):
-    """{"items": [...최신순], "media": {경로: {status, fetched_at, count, stale[, error]}}}
+    """{"items": [...최신순], "media": {경로: {status, fetched_at, collected, after_filter, count, stale[, error]}}}
 
     status: ok | error | not_configured(KOTRA 인증키 없음, 설정 필요. 다른 경로에는 영향 없음)
+    collected: 응답에서 읽은 건수(형식이 맞는 항목, 경로 안 중복 제외) · after_filter: 관련성 필터 후 · count: 표시(최대 20)
     refresh로 지정한 경로는 캐시를 무시하고 다시 가져옵니다. 만료된 경로도 다시 가져옵니다.
     """
     now = monotonic()
@@ -181,7 +204,7 @@ def get_news(refresh=None):
             futures = {m: pool.submit(_NEWS_FETCHERS[m]) for m in pending}
         for medium, future in futures.items():
             try:
-                items = future.result()
+                result = future.result()
             except NewsFetchError as err:
                 errors[medium] = err.code
                 continue
@@ -189,11 +212,18 @@ def get_news(refresh=None):
                 logger.exception("뉴스 수집 중 오류(%s)", medium)
                 errors[medium] = "fetch_failed"
                 continue
+            if isinstance(result, list):  # 건수 없이 목록만 돌려주는 수집 함수(테스트 대역 등)
+                result = {"items": result, "collected": len(result), "after_filter": len(result)}
             _news_cache[medium] = {
-                "items": items,
+                "items": result["items"],
+                "collected": result["collected"],
+                "after_filter": result["after_filter"],
                 "fetched_at": _now_kst(),
                 "expires": monotonic() + NEWS_CACHE_SECONDS,
             }
+            # 집계만 남깁니다(제목·본문·키 없음). KOTRA 0건 원인: collected=0 응답 0건 / filtered=0 필터 후 0건.
+            logger.info("뉴스 %s: collected=%d filtered=%d shown=%d", medium, result["collected"],
+                        result["after_filter"], len(result["items"]))
 
     lists = {}
     media = {}
@@ -204,6 +234,8 @@ def get_news(refresh=None):
         info = {
             "status": "ok" if code is None else ("not_configured" if code == "key_missing" else "error"),
             "fetched_at": cached["fetched_at"] if cached else None,
+            "collected": cached["collected"] if cached else None,
+            "after_filter": cached["after_filter"] if cached else None,
             "count": len(lists[medium]),
             # 이번 갱신은 실패했고 이전 수집분을 보여 주는 중
             "stale": medium in errors and cached is not None,
@@ -236,6 +268,65 @@ def merge_news(lists):
     return _sort_news(dedupe_news(combined))
 
 
+def select_top_news(items, limit, source_minimum=None):
+    """최신순 목록에서 limit건을 고릅니다. source_minimum={"kotra": 1}이면 그 경로 기사가 있을 때 최신 n건을 먼저 넣고
+    나머지를 최신순으로 채웁니다. 없는 경로를 채우지 않고, 결과는 다시 최신순입니다.
+
+    반환 (선정 목록, {경로: 선정 건수})
+    """
+    chosen = []
+    for origin, minimum in (source_minimum or {}).items():
+        chosen += [item for item in items if item["origin"] == origin][:minimum]
+    chosen = chosen[:limit]
+    ids = {id(item) for item in chosen}
+    for item in items:
+        if len(chosen) >= limit:
+            break
+        if id(item) not in ids:
+            chosen.append(item)
+            ids.add(id(item))
+    order = {id(item): index for index, item in enumerate(items)}
+    chosen.sort(key=lambda item: order[id(item)])
+    counts = {}
+    for item in chosen:
+        counts[item["origin"]] = counts.get(item["origin"], 0) + 1
+    return chosen, counts
+
+
+def _plain(text):
+    """악센트를 떼고 소문자로(têxtil = textil = TÊXTIL)."""
+    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii").casefold()
+
+
+_TEXTILE_WORDS = {_plain(word) for word in TEXTILE_NEWS_KEYWORDS}
+_TEXTILE_PHRASES = tuple(" ".join(re.findall(r"[a-z0-9]+", _plain(p))) for p in TEXTILE_NEWS_PHRASES)
+
+
+def _domain_matches(domain, rules):
+    return any(domain == rule or domain.endswith("." + rule) for rule in rules)
+
+
+def is_relevant_news(item):
+    """Google News·ABIT 항목 관련성. 제외 매체(.pt 등) → 제외, 섬유 단체 공식 도메인 → 통과, 그 밖은 제목 키워드."""
+    domain = item.get("media_domain") or ""
+    if domain and (domain.endswith(EXCLUDED_MEDIA_TLDS) or _domain_matches(domain, EXCLUDED_MEDIA_DOMAINS)):
+        return False
+    if domain and _domain_matches(domain, TEXTILE_TRUSTED_DOMAINS):
+        return True
+    words = re.findall(r"[a-z0-9]+", _plain(item["title"]))
+    if _TEXTILE_WORDS.intersection(words):
+        return True
+    joined = " " + " ".join(words) + " "
+    return any(" " + phrase + " " in joined for phrase in _TEXTILE_PHRASES)
+
+
+def _collected(items, keep=None):
+    """{"items": 최신 20건, "collected", "after_filter"}. 경로 안 중복을 먼저 없앤 뒤 셉니다."""
+    unique = _sort_news(dedupe_news(items))
+    kept = [item for item in unique if keep(item)] if keep else unique
+    return {"items": _limit(kept), "collected": len(unique), "after_filter": len(kept)}
+
+
 def dedupe_news(items):
     """URL이 같거나, 공백·대소문자를 정리한 제목이 같으면 먼저 나온 항목만 남깁니다.
 
@@ -262,16 +353,23 @@ def _sort_news(items):
     return sorted(items, key=key, reverse=True)
 
 
-def _news_item(title, url, media, published_at, origin, lang):
+def _news_item(title, url, media, published_at, origin, lang, media_domain=None):
     return {
         "id": hashlib.sha1(url.encode("utf-8")).hexdigest()[:16],
         "title": title,
         "url": url,
         "media": media,
+        # 원문 매체 도메인(RSS <source url>, KOTRA는 원문 링크). Google 링크가 경유 주소라 PDF·필터에 씁니다.
+        "media_domain": media_domain,
         "published_at": published_at,
         "origin": origin,
         "lang": lang,
     }
+
+
+def _domain_of(url):
+    host = (urllib.parse.urlsplit(url or "").hostname or "").lower()
+    return host[4:] if host.startswith("www.") else host or None
 
 
 def _http_get(url, accept):
@@ -303,14 +401,14 @@ def _is_http_url(url):
 
 # Google News RSS (비공식, 형식 변경·차단 가능성 전제)
 def _fetch_google():
-    return _limit(_sort_news(dedupe_news(_fetch_google_rss(GOOGLE_QUERY, "google"))))
+    return _collected(_fetch_google_rss(GOOGLE_QUERY, "google"), is_relevant_news)
 
 
 def _fetch_abit():
     # 두 검색 중 하나라도 실패하면 이 경로 전체를 실패로 보고합니다(일부 결과만 성공으로 표시하지 않음).
     with ThreadPoolExecutor(max_workers=len(ABIT_QUERIES)) as pool:
         results = list(pool.map(lambda q: _fetch_google_rss(q, "abit"), ABIT_QUERIES))
-    return _limit(_sort_news(dedupe_news([item for items in results for item in items])))
+    return _collected([item for items in results for item in items], is_relevant_news)
 
 
 def _fetch_google_rss(query, origin):
@@ -335,6 +433,7 @@ def parse_google_rss(body, origin):
         published_at = _parse_rfc822(node.findtext("pubDate"))
         source = node.find("source")
         media = (source.text or "").strip() if source is not None else ""
+        media_domain = _domain_of(source.get("url")) if source is not None else None
         if not title or not url or not published_at or not _is_http_url(url):
             continue
         # Google News 제목 끝의 " - 매체명"을 떼어 원문 제목만 남깁니다.
@@ -342,7 +441,7 @@ def parse_google_rss(body, origin):
         if media and title.endswith(suffix):
             title = title[: -len(suffix)].rstrip()
         # description은 제목과 매체명만 반복해(2026-10-25 확인) 쓰지 않습니다.
-        items.append(_news_item(title, url, media or None, published_at, origin, lang))
+        items.append(_news_item(title, url, media or None, published_at, origin, lang, media_domain))
     return items
 
 
@@ -374,11 +473,18 @@ def _fetch_kotra():
         "search7": today.strftime("%Y%m%d"),
     }
     body = _http_get(KOTRA_URL + "?" + urllib.parse.urlencode(params), "application/json")
-    return _limit(_sort_news(dedupe_news(parse_kotra(body))))
+    raw = _kotra_raw_items(body)
+    result = _collected(_kotra_items(raw))
+    result["collected"] = len(raw)  # KOTRA는 API 응답 건수(국가·섬유 필터 전)를 수집 건수로 셉니다.
+    return result
 
 
 def parse_kotra(body):
     """Swagger 명세의 response.body.itemList.item을 정리하고 브라질·섬유 관련 항목만 남깁니다."""
+    return _kotra_items(_kotra_raw_items(body))
+
+
+def _kotra_raw_items(body):
     try:
         data = json.loads(body)
         payload = data["response"]["body"]
@@ -391,7 +497,10 @@ def parse_kotra(body):
         raw = [raw]
     if not isinstance(raw, list):
         raise NewsFetchError("invalid_response")
+    return raw
 
+
+def _kotra_items(raw):
     items = []
     for it in raw:
         if not isinstance(it, dict):
@@ -409,7 +518,7 @@ def parse_kotra(body):
             continue
         office = str(it.get("ovrofInfo") or "").strip()
         media = "KOTRA 해외시장뉴스" + (" · " + office if office else "")
-        items.append(_news_item(title, url, media, published_at, "kotra", "ko"))
+        items.append(_news_item(title, url, media, published_at, "kotra", "ko", _domain_of(url)))
     return items
 
 

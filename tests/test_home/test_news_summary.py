@@ -144,6 +144,24 @@ class ValidationTests(unittest.TestCase):
         self.assertIn("예시", news_summary.load_prompt("news_summary_v2.md"))
         self.assertNotIn("예시", news_summary.load_prompt("news_summary_v1.md"))
 
+    def test_prompt_v3_rules_and_examples(self):
+        self.assertEqual(news_summary.PROMPT_FILE, "news_summary_v3.md")
+        text = news_summary.load_prompt()
+        self.assertIn("의미 범위를 임의로 넓히거나 일반화하지 않습니다", text)
+        self.assertIn("title에 없는 숫자", text)  # 기존 규칙 유지
+        requested = json.loads(text.split("입력:\n", 1)[1].split("\n출력:", 1)[0])
+        output = json.loads(text.split("출력:\n", 1)[1])["items"]
+        self.assertEqual([r["id"] for r in requested], ["ex1", "ex2", "ex3", "ex4"])  # 정확히 4개
+        self.assertEqual([o["id"] for o in output], ["ex1", "ex2", "ex3", "ex4"])
+        self.assertIn("12,5%", requested[1]["title"])  # 수치 함정
+        self.assertEqual(output[2]["summary_ko"], "")  # 정보 부족
+        self.assertIn("resíduos florestais", requested[3]["title"])  # 용어 보존
+        self.assertIn("산림 부산물", output[3]["summary_ko"])
+        # 예시 출력도 코드 검증(숫자·id·형식)을 통과해야 합니다.
+        summaries, reasons = news_summary.validate_summaries(requested, output)
+        self.assertEqual(dict(reasons), {"empty": 1})
+        self.assertEqual(summaries["ex2"], output[1]["summary_ko"])
+
 
 class SummarizeTests(SummaryTestBase):
     ITEMS = [

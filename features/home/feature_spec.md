@@ -81,7 +81,7 @@ BrasilAPI timeout 5초. 실패 시 대체 자료 `features/home/data/holidays_br
 없음(자동 수집). 실패한 수집 경로별 재시도 버튼.
 
 ### 화면 표시
-- 수집 경로별 상태 배지: `KOTRA`·`Google News`·`ABIT` + `정상`/`실패`/`설정 필요`, 갱신 시각·건수.
+- 수집 경로별 상태 배지: `KOTRA`·`Google News`·`ABIT` + `정상`/`실패`/`설정 필요`, 갱신 시각과 `수집 N · 필터 후 M · 표시 K`(수집 기록이 없으면 `수집 기록 없음`).
 - 실패 안내(notice)와 `○○ 다시 시도` 버튼(재시도 가능한 오류만), 이전 수집분이 있으면 `… 수집분을 계속 표시합니다.`
 - 목록(최신순, 카드 안 세로 스크롤): 원문 제목 링크(새 탭, `rel="noopener noreferrer"`), `AI 요약` 배지 + 한국어 한 줄(있을 때만), 수집 경로 배지, 매체명, 날짜(시각 있으면 KST, KOTRA는 날짜만), 언어.
 - 모든 경로 실패 시 빈 상태 `모든 수집 경로에서 뉴스를 불러오지 못했습니다…`.
@@ -95,12 +95,14 @@ BrasilAPI timeout 5초. 실패 시 대체 자료 `features/home/data/holidays_br
 
 ### 작동 방식
 - 세 경로를 병렬로 가져오고(요청 timeout 10초, 응답 2MB 상한) 경로별 최신 20건.
-- 정규화 `{id, title, url, media, published_at, origin, lang}`. Google 제목 끝 ` - 매체명` 제거. 날짜·링크(http/https)가 없거나 날짜를 해석할 수 없으면 제외. RSS description은 제목·매체명 반복이라 쓰지 않는다(`snippet` 없음).
+- 정규화 `{id, title, url, media, media_domain, published_at, origin, lang}`(media_domain: RSS `<source url>` 또는 KOTRA 링크의 호스트, `www.` 제거). Google 제목 끝 ` - 매체명` 제거. 날짜·링크(http/https)가 없거나 날짜를 해석할 수 없으면 제외. RSS description은 제목·매체명 반복이라 쓰지 않는다(`snippet` 없음).
+- 관련성 필터(Google News·ABIT, 상수는 service.py 상단): 매체 도메인은 news.google.com 링크가 아니라 RSS `<source url>`로 판단. `.pt` 도메인과 `EXCLUDED_MEDIA_DOMAINS`(portugaltextil.com·vietnam.vn, 2026-10-25 실제 RSS 근거)는 제외, `abit.org.br`는 키워드 검사 면제, 그 밖은 제목에 섬유 낱말(`TEXTILE_NEWS_KEYWORDS`, 악센트·대소문자 무시, 낱말 단위) 또는 구문(`indústria da moda` 등, `moda` 단독 제외)이 있어야 통과. KOTRA는 기존 섬유 낱말 필터. Google 검색어는 좁힌 후보가 일반 노이즈를 줄이지 못해 바꾸지 않음.
+- 건수: `collected`(응답에서 읽은 건수, 경로 안 중복 제외, KOTRA는 API 응답 건수) → `after_filter` → `count`(표시, 최대 20). 로그에 `collected=… filtered=… shown=…` 집계만 남겨 KOTRA 0건이 응답 0건/필터 후 0건인지 구분한다.
 - 중복 제거: 같은 URL 또는 공백·대소문자를 정리한 같은 제목이면 하나만(abit → kotra → google 순으로 남김, 버린 항목의 URL·제목도 기억). 최신순 정렬.
 
 ### API
 - `GET /api/home/news?refresh=kotra|google|abit` (잘못된 값 400 `invalid_refresh`)
-  → `{"items": [...], "media": {경로: {"status": "ok|error|not_configured", "fetched_at", "count", "stale", "error"?: {"code","message","retryable"}}}, "summary": {"pending": n}}`
+  → `{"items": [...], "media": {경로: {"status": "ok|error|not_configured", "fetched_at", "collected", "after_filter", "count", "stale", "error"?: {"code","message","retryable"}}}, "summary": {"pending": n}}`
   항목의 `summary_ko`는 이미 만든 요약이 있을 때만 붙는다.
 - `POST /api/home/news/summaries` → `{"status": "ok|unavailable|error", "message"?, "summaries": {id: 요약}}` (서버에 수집된 뉴스만 대상, 클라이언트 문장을 받지 않음)
 
@@ -113,7 +115,7 @@ BrasilAPI timeout 5초. 실패 시 대체 자료 `features/home/data/holidays_br
 ### AI 사용 — 포르투갈어 제목 한국어 한 줄 요약
 - 대상: origin `google`·`abit`, `lang`이 `pt…`, 세 낱말 이상 제목. **KOTRA는 요약하지 않는다.** 입력은 id·제목만(본문 크롤링 없음).
 - 호출: 공통 `common.ai_client.generate_structured`(Responses API 구조화 출력, store=False), 모델은 `OPENAI_MODEL` 환경변수(코드 고정 없음), 최대 40건씩 묶어 1회 요청.
-- 프롬프트: features/home/prompts/news_summary_v1.md(규칙만) 채택. v2(규칙+가상 few-shot)는 비교 실험(SPE-HOME-NEWS-001)에서 근거가 약해 채택하지 않음.
+- 프롬프트: features/home/prompts/news_summary_v3.md 사용(2026-10-25 PR 리뷰 반영). v1 규칙 + 용어 의미 범위 보존 규칙(전문 용어·소재명을 넓히거나 일반화하지 않음) + 가상 few-shot 정확히 4개(정상·수치 함정·정보 부족·용어 보존). v1(규칙만)·v2(규칙+few-shot)는 기록용으로 유지. **v3 실제 호출 실험은 미실행**(모의 테스트로 규칙·예시·예시 출력의 코드 검증 통과만 확인).
 - 코드 검증: 요청한 id만, 같은 id가 다른 값으로 중복되면 폐기, 문자열·한 줄·80자 이하(자르지 않음)·한글 포함, 제목에 없는 숫자가 하나라도 있으면 폐기(쉼표·점 소수 구분은 같게 봄). 탈락·빈 값은 요약 없음.
 - 캐시: (id, 제목) 기준 1시간(빈 값·탈락 포함). AI 오류는 캐시하지 않는다. 같은 기사를 다시 수집해도 재요약하지 않는다.
 - 실패: 키 없음 → `unavailable`, API·JSON 오류 → `error`, 둘 다 원문 제목만 표시하고 안내 한 줄. 목록을 먼저 보여 준 뒤 요약을 따로 요청한다(목록 지연 없음).
@@ -122,7 +124,8 @@ BrasilAPI timeout 5초. 실패 시 대체 자료 `features/home/data/holidays_br
 ### 검증 상태
 - 확인함: Google News RSS·ABIT 검색 실제 응답 구조(2026-10-25), 서버 38건(실제 RSS)·모의 9건(test_holidays_news), 브라우저 20건, KOTRA 키 없음·잘못된 키(403) 실제 응답, KOTRA 실제 데이터 2건 정상 수집(1회, 계획에 없던 호출로 기록됨), AI 요약 실제 호출(v1·v2 각 1회, gpt-5.4-mini, 30건)·모의 18건·브라우저 18건, 통합 검증(정상·실패 모드).
 - 미검증: KOTRA 응답의 다양한 실제 형식(게시일 형식·필터 결과), Google RSS 요청 제한·차단 조건, 앱 경로(POST summaries)의 실제 OpenAI 호출, 같은 입력 반복 실험, 요약 사실 정확성 체계 평가.
-- 알려진 한계: Google 결과에 포르투갈·베트남 매체 등 노이즈, 링크가 Google News 경유 주소, 서수 번역(예: terceiro trimestre → 3분기)은 숫자 검증에서 탈락(보수적).
+- 관련성 필터 확인(2026-10-25 저장한 실제 RSS): Google 53 → 필터 후 13(.pt·portugaltextil.com·vietnam.vn·무관 제목 제외), ABIT 53 → 45(표시 20). 모의 테스트: 필터·도메인·KOTRA A~E.
+- 알려진 한계: 키워드 필터는 제목만 보므로 섬유 낱말 없는 관련 기사는 빠질 수 있음, 링크가 Google News 경유 주소, 서수 번역(예: terceiro trimestre → 3분기)은 숫자 검증에서 탈락(보수적).
 
 ### 완료 기준
 세 경로 정상 시 최신순·중복 없는 목록, 한 경로 실패 시 나머지 유지·해당 경로만 재시도, 키 없음은 설정 필요, AI 요약 실패·키 없음에도 원문 목록 유지, KOTRA 요약 없음.
@@ -140,8 +143,8 @@ BrasilAPI timeout 5초. 실패 시 대체 자료 `features/home/data/holidays_br
 
 ### PDF 구성(순서)
 머리말(fionex 일일 브리핑, 생성 시각, 서울 시각, 선택 도시 시각) → 1. 바이어 시간(상태·다음 업무 시작·7일 이내 공휴일·가정값 안내) →
-2. 환율(값·고시일·전일 대비·출처, BRL/KRW는 USD 경유 계산값) → 3. 최신 뉴스(최신순 상위 8건: 제목 링크, `[AI 요약]`(Google·ABIT, 있을 때만), 경로·매체·날짜, 원문 URL 링크) →
-4. 다가오는 전시회(3건: 행사·기간·D-day·도시·장소·확인 상태·출처 링크) → 5. 출처 및 유의사항(출처별 조회 시각, 가정값·계산값·AI 요약 안내, 확인 필요 전시회, 수집 실패·확인 불가 항목 목록). 쪽마다 생성 시각·쪽 번호.
+2. 환율(값·고시일·전일 대비·출처, BRL/KRW는 USD 경유 계산값) → 3. 최신 뉴스(최신순 상위 8건, KOTRA 필터 통과 기사가 있으면 최소 1건 포함(`NEWS_SOURCE_MINIMUM`, 없으면 채우지 않음, 중복·최대 건수 유지): 제목이 원문 링크, `[AI 요약]`(Google·ABIT, 있을 때만), 경로·매체(도메인)·날짜. 긴 URL 문자열은 쓰지 않음) →
+4. 다가오는 전시회(3건: 행사·기간·D-day·도시·장소·확인 상태·출처 링크) → 5. 출처 및 유의사항(출처별 조회 시각, 뉴스 경로별 `수집 N건 / 필터 후 M건 / 브리핑 선정 K건`, 가정값·계산값·AI 요약 안내, 확인 필요 전시회, 수집 실패·확인 불가 항목 목록). 쪽마다 생성 시각·쪽 번호 `n / N`(전체 쪽 수를 아는 사용자 정의 캔버스). BRL/KRW 고시일 칸은 두 고시일이 같으면 `2026-10-23 (두 환율 동일)`, 다르면 `KRW 10-23 / BRL 10-24`. 뉴스 8건 기준 A4 2쪽 이내.
 
 ### 데이터 출처
 기존 service 함수와 캐시: get_holidays · get_fx · get_news · get_upcoming_fairs(3). PDF 요청당 각 1회, 캐시 우선(만료 영역만 각 정책대로 갱신). AI 요약은 이미 만든 것만 사용(PDF로 OpenAI를 부르지 않음).
@@ -167,6 +170,7 @@ PDF 생성에는 없음(캐시된 뉴스 요약 표시만).
 ### 검증 상태
 - 확인함: 서버 9건(test_report: 바이어 시간 사례, 부분 실패, 파일명·디스크 무저장, 라우트 200/400/500), PDF 열어 확인(PyMuPDF: 쪽 수 1~2, Noto Sans KR 임베드, 한글·포르투갈어 악센트·▲▼·`<>&` 정상, 링크 21~38개, 깨진 글자 0, 긴 제목 줄바꿈·표 겹침 없음), 브라우저 16건(연타 1회 요청, Blob 다운로드, 도시 전달, 오류·재시도), 통합 검증 반복 다운로드(아래).
 - 반복 다운로드: 같은 페이지에서 두 번 받으면 두 응답 모두 200·새 Blob·Chrome `downloadWillBegin`→`completed`가 확인됐다. 이전에 두 번째 파일이 "없던" 것은 파일명이 분 단위라 같은 분에 같은 이름이 되고 헤드리스 검증 환경(`allow`)이 덮어쓴 것으로, GUID 저장(`allowAndName`)에서는 두 파일 모두 저장됐다(2026-10-25 통합 검증).
+- 리뷰 반영 확인(2026-10-25): test_report PDF 5건(pypdf: 뉴스 링크 8개·본문 URL 없음·`n / N`·고시일 칸·경로별 건수·KOTRA 최소 포함), PyMuPDF로 PDF 4종(fixture, 고시일 다름, 저장한 실제 RSS, 부분 실패) 열어 확인: 모두 2쪽, `1 / 2`·`2 / 2`, 본문 URL 0, .pt 매체 0, Tecnotêxtil 2027-04-27 ~ 2027-04-30.
 - 미검증: 실제 사용자 Chrome·Edge·Safari·모바일에서 같은 분 두 번 저장 시 파일명 처리(보통 `(1)`이 붙는지), 실제 AI 요약이 들어간 실데이터 PDF, 흑백 인쇄, Adobe Reader 등 다른 뷰어, 화면낭독기.
 
 ### 완료 기준
@@ -276,9 +280,10 @@ USD를 중심 통화로 쓰는 것은 가정(실제 거래 통화 확인 전)이
 features/home/data/br_textile_fairs.json(자료 확인일 2026-10-25, 출처 URL·문구는 docs/worklogs/hong_eunju/sources.md).
 | 행사 | 기간 | 도시 · 장소 | verified |
 |---|---|---|---|
-| Inspiramais | 2027-01-26~27 | Porto Alegre/RS · Centro de Eventos FIERGS | false(공식 사이트 페이지 간 연도 표기 불일치) |
-| Tecnotêxtil Brasil 2027 | 2027-04-27~30 | Americana/SP · Fidam | true |
-| Febratex Summit 2027 | 2027-08-24~26 | Blumenau/SC · Parque Vila Germânica | true |
+| Inspiramais | 2027-01-26 ~ 2027-01-27 | Porto Alegre/RS · Centro de Eventos FIERGS | false(공식 사이트 페이지 간 연도 표기 불일치) |
+| Tecnotêxtil Brasil 2027 | 2027-04-27 ~ 2027-04-30 | Americana/SP · Fidam | true |
+| Febratex Summit 2027 | 2027-08-24 ~ 2027-08-26 | Blumenau/SC · Parque Vila Germânica | true |
+표의 기간은 JSON의 start·end와 같은 전체 날짜로 쓴다(test_fairs가 대조). Tecnotêxtil Brasil 2027은 2026-10-25 공식 사이트 재확인("de 27 a 30 de abril de 2027").
 제외: Inspiramais 2027-08(사이트 머리글 표기와 충돌), Febratex 본 박람회 2028(공식 문구가 지난 행사 문구와 섞여 신뢰 불가).
 필드: 필수 `name`·`start`·`end`(YYYY-MM-DD)·`url`(http/https)·`source`·`verified`(bool)·`checked_at`, 선택 `city`·`venue`·`focus`·`note`(없으면 null). verified=true는 공식 사이트에서 일정·장소를 확인한 경우.
 

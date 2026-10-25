@@ -309,10 +309,13 @@
       const info = media[origin];
       const state = SOURCE_STATES[info.status] || SOURCE_STATES.error;
       const li = make("li", "home-news-source");
+      // 수집 → 필터 후 → 표시. KOTRA 0건이 응답 0건인지 필터 후 0건인지 화면에서 구분됩니다.
+      const counts = info.collected == null ? info.count + "건"
+        : "수집 " + info.collected + " · 필터 후 " + info.after_filter + " · 표시 " + info.count;
       li.append(
         make("span", "badge " + state.tone, NEWS_ORIGINS[origin] + " · " + state.text),
         make("span", "home-news-source-meta",
-          info.fetched_at ? formatKst(info.fetched_at) + " 갱신 · " + info.count + "건" : "수집 기록 없음"));
+          info.fetched_at ? formatKst(info.fetched_at) + " 갱신 · " + counts : "수집 기록 없음"));
       return li;
     }));
   }

@@ -24,17 +24,20 @@ from features.home import news_summary, service  # noqa: E402
 
 
 def rss(*items, lang="pt-BR"):
+    """items: (제목, 링크, 날짜, 매체[, 매체 주소]). 매체 주소 기본값은 https://jornal.com.br."""
     body = "".join(
-        f"<item><title>{t} - {m}</title><link>{u}</link><pubDate>{d}</pubDate><source url=\"https://x\">{m}</source>"
-        f"<description>&lt;a&gt;{t}&lt;/a&gt; {m}</description></item>" for t, u, d, m in items)
+        f"<item><title>{t} - {m}</title><link>{u}</link><pubDate>{d}</pubDate>"
+        f"<source url=\"{(rest or ['https://jornal.com.br'])[0]}\">{m}</source>"
+        f"<description>&lt;a&gt;{t}&lt;/a&gt; {m}</description></item>" for t, u, d, m, *rest in items)
     return f'<?xml version="1.0"?><rss><channel><language>{lang}</language>{body}</channel></rss>'.encode()
 
 
 GOOGLE_RSS = rss(("Indústria têxtil amplia Produção", "https://news.google.com/a1", "Wed, 21 Oct 2026 10:00:00 GMT", "Jornal A"),
-                 ("Mesma notícia ABIT", "https://news.google.com/dup", "Tue, 20 Oct 2026 10:00:00 GMT", "Jornal B"),
+                 ("Mesma notícia ABIT sobre fios", "https://news.google.com/dup", "Tue, 20 Oct 2026 10:00:00 GMT", "Jornal B"),
                  ("Sem data", "https://news.google.com/x", "", "Jornal C"))
-ABIT_SITE_RSS = rss(("Mesma notícia ABIT", "https://news.google.com/dup", "Tue, 20 Oct 2026 10:00:00 GMT", "Associação Brasileira da Indústria Têxtil e de Confecção"))
-ABIT_PRESS_RSS = rss(("Abit alerta para importações", "https://news.google.com/a2", "Thu, 22 Oct 2026 10:00:00 GMT", "Poder360"))
+ABIT_SITE_RSS = rss(("Mesma notícia ABIT sobre fios", "https://news.google.com/dup", "Tue, 20 Oct 2026 10:00:00 GMT",
+                      "Associação Brasileira da Indústria Têxtil e de Confecção", "https://www.abit.org.br"))
+ABIT_PRESS_RSS = rss(("Abit alerta para importações de vestuário", "https://news.google.com/a2", "Thu, 22 Oct 2026 10:00:00 GMT", "Poder360"))
 KOTRA_JSON = json.dumps({"response": {"body": {"itemList": {"item": [
     {"newsTitl": "TEST 브라질 섬유 시장 동향", "kotraNewsUrl": "https://dream.kotra.or.kr/TEST/1", "othbcDt": "2026-10-19", "natn": "브라질", "ovrofInfo": "상파울루무역관"},
     {"newsTitl": "TEST 브라질 자동차", "kotraNewsUrl": "https://dream.kotra.or.kr/TEST/2", "othbcDt": "2026-10-19", "natn": "브라질"},
@@ -42,16 +45,17 @@ KOTRA_JSON = json.dumps({"response": {"body": {"itemList": {"item": [
 
 
 class FakeHttp:
-    def __init__(self, fail=()):
+    def __init__(self, fail=(), **bodies):
         self.fail = set(fail)
         self.calls = []
+        self.bodies = {"kotra": KOTRA_JSON, "abit_site": ABIT_SITE_RSS, "abit_press": ABIT_PRESS_RSS, "google": GOOGLE_RSS, **bodies}
 
     def __call__(self, url, accept):
         self.calls.append(url)
         kind = "kotra" if "apis.data.go.kr" in url else "abit_site" if "site%3Aabit" in url else "abit_press" if "%22ABIT%22" in url else "google"
         if kind in self.fail or (kind.startswith("abit") and "abit" in self.fail):
             raise service.NewsFetchError("timeout")
-        return {"kotra": KOTRA_JSON, "abit_site": ABIT_SITE_RSS, "abit_press": ABIT_PRESS_RSS, "google": GOOGLE_RSS}[kind]
+        return self.bodies[kind]
 
 
 class NewsTestBase(unittest.TestCase):
@@ -78,8 +82,8 @@ class NewsTests(NewsTestBase):
         self.assertEqual(len(fake.calls), 4)  # kotra 1 + google 1 + abit 2
         self.assertTrue(all(v["status"] == "ok" for v in data["media"].values()))
         titles = [(i["origin"], i["title"]) for i in data["items"]]
-        self.assertEqual(titles, [("abit", "Abit alerta para importações"), ("google", "Indústria têxtil amplia Produção"),
-                                  ("abit", "Mesma notícia ABIT"), ("kotra", "TEST 브라질 섬유 시장 동향")])  # 중복은 abit 유지, 최신순
+        self.assertEqual(titles, [("abit", "Abit alerta para importações de vestuário"), ("google", "Indústria têxtil amplia Produção"),
+                                  ("abit", "Mesma notícia ABIT sobre fios"), ("kotra", "TEST 브라질 섬유 시장 동향")])  # 중복은 abit 유지, 최신순
         kotra = data["items"][-1]
         self.assertEqual((kotra["media"], kotra["published_at"], kotra["lang"]), ("KOTRA 해외시장뉴스 · 상파울루무역관", "2026-10-19", "ko"))
         self.assertFalse(any("snippet" in i or "summary_ko" in i for i in data["items"]))
@@ -126,6 +130,92 @@ class NewsTests(NewsTestBase):
         self.assertTrue(client.get("/api/home/news").get_json()["ok"])
         for q in ("?refresh=bad", "?refresh="):
             self.assertEqual(client.get("/api/home/news" + q).status_code, 400)
+
+
+def kotra_json(*items):
+    return json.dumps({"response": {"body": {"itemList": {"item": list(items)}}}}, ensure_ascii=False).encode()
+
+
+def item(title, origin="google", published_at="2026-10-20T10:00:00-03:00", domain="jornal.com.br"):
+    return {"title": title, "url": "https://news.google.com/" + title, "origin": origin, "published_at": published_at,
+            "media_domain": domain}
+
+
+class RelevanceTests(unittest.TestCase):
+    def test_keyword_filter(self):
+        for title in ("Indústria têxtil brasileira amplia uso de poliéster reciclado",
+                      "Novos fios reciclados chegam ao setor de confecção",
+                      "Setor TEXTIL sem acento também passa",  # 악센트·대소문자 무시
+                      "Exportações da indústria da moda crescem"):  # 'moda'는 구문으로만
+            self.assertTrue(service.is_relevant_news(item(title)), title)
+        for title in ("Como a IA está transformando empregos no Brasil", "Conheça uma bela vila italiana",
+                      "Semana de moda movimenta São Paulo", "Fiocruz anuncia vacina"):  # 'moda' 단독, 단어 일부(fio)
+            self.assertFalse(service.is_relevant_news(item(title)), title)
+
+    def test_media_domain_rules(self):
+        title = "Indústria têxtil amplia produção"
+        self.assertFalse(service.is_relevant_news(item(title, domain="welectric.pt")))  # .pt 매체
+        self.assertFalse(service.is_relevant_news(item(title, domain="www.jornal.pt")))
+        self.assertFalse(service.is_relevant_news(item(title, domain="portugaltextil.com")))  # EXCLUDED_MEDIA_DOMAINS
+        self.assertTrue(service.is_relevant_news(item("Reforma tributária e exportações", domain="abit.org.br")))  # 공식 도메인
+        self.assertTrue(service.is_relevant_news(item(title, domain="ptnews.com.br")))  # .pt로 끝나지 않음
+
+    def test_source_domain_from_rss_not_google_link(self):
+        body = rss(("Indústria têxtil portuguesa", "https://news.google.com/p1", "Wed, 21 Oct 2026 10:00:00 GMT",
+                    "Portugal Têxtil", "https://www.portugaltextil.com"),
+                   ("Indústria têxtil cresce", "https://news.google.com/p2", "Wed, 21 Oct 2026 09:00:00 GMT", "Jornal A"))
+        items = service.parse_google_rss(body, "google")
+        self.assertEqual([i["media_domain"] for i in items], ["portugaltextil.com", "jornal.com.br"])
+        self.assertEqual([service.is_relevant_news(i) for i in items], [False, True])
+
+    def test_counts_in_media(self):
+        NewsTestBase.setUp(self)
+        NewsTestBase.use(self, FakeHttp())
+        media = service.get_news()["media"]
+        self.assertEqual({m: (v["collected"], v["after_filter"], v["count"]) for m, v in media.items()},
+                         {"kotra": (2, 1, 1), "google": (2, 2, 2), "abit": (2, 2, 2)})
+
+
+class KotraExposureTests(NewsTestBase):
+    """A 응답 0건 · B 필터 후 0건 · C 최소 노출 · D 강제 포함 없음 · E 중복 없음."""
+
+    def kotra_media(self, body):
+        self.use(FakeHttp(kotra=body))
+        with self.assertLogs(service.logger, "INFO") as logs:
+            media = service.get_news()["media"]["kotra"]
+        return media, [line for line in logs.output if "뉴스 kotra" in line]
+
+    def test_a_response_zero(self):
+        media, logs = self.kotra_media(kotra_json())
+        self.assertEqual((media["status"], media["collected"], media["after_filter"], media["count"]), ("ok", 0, 0, 0))
+        self.assertIn("collected=0 filtered=0", logs[0])
+
+    def test_b_filter_zero(self):
+        media, logs = self.kotra_media(kotra_json(
+            {"newsTitl": "TEST 브라질 자동차", "kotraNewsUrl": "https://dream.kotra.or.kr/TEST/2", "othbcDt": "2026-10-19", "natn": "브라질"}))
+        self.assertEqual((media["collected"], media["after_filter"], media["count"]), (1, 0, 0))
+        self.assertIn("collected=1 filtered=0", logs[0])
+
+    def test_c_minimum_includes_older_kotra(self):
+        news = [item(f"têxtil {n}", published_at=f"2026-10-2{n}T10:00:00-03:00") for n in range(9, -1, -1)]
+        news.append(item("KOTRA 섬유", origin="kotra", published_at="2026-10-01"))
+        top, counts = service.select_top_news(news, 8, {"kotra": 1})
+        self.assertEqual(len(top), 8)
+        self.assertEqual(top[-1]["origin"], "kotra")  # 선정 후에도 최신순
+        self.assertEqual(counts, {"google": 7, "kotra": 1})
+        self.assertEqual(service.select_top_news(news, 8)[1], {"google": 8})  # 최소 노출 없으면 C(선정 0건)
+
+    def test_d_no_kotra_no_fake(self):
+        news = [item(f"têxtil {n}") for n in range(3)]
+        top, counts = service.select_top_news(news, 8, {"kotra": 1})
+        self.assertEqual((top, counts), (news, {"google": 3}))
+
+    def test_e_no_duplicate_when_already_selected(self):
+        news = [item("KOTRA 섬유", origin="kotra", published_at="2026-10-25")] + [item(f"têxtil {n}") for n in range(9)]
+        top, counts = service.select_top_news(news, 8, {"kotra": 1})
+        self.assertEqual(len(top), 8)
+        self.assertEqual(len({id(i) for i in top}), 8)
+        self.assertEqual(counts, {"kotra": 1, "google": 7})
 
 
 class HolidayTests(unittest.TestCase):

@@ -74,3 +74,7 @@
 - Nanum Gothic — 같은 저장소 ofl/nanumgothic, 조회일 2026-10-25. 포르투갈어 악센트 글리프가 없어 채택하지 않음(비교용).
 - ReportLab 5.1.0 — PyPI 패키지 메타데이터(License: BSD), 2026-10-25 설치. 적용 범위: PDF 생성.
 - fpdf2 2.8.9 — PyPI 패키지 메타데이터(LGPL-3.0-only), 2026-10-25 임시 설치·비교만(채택 안 함).
+
+## 뉴스 관련성 필터 근거·전시회 재확인 (2026-10-25 PR 리뷰 반영)
+- Google News RSS 검색 결과 — https://news.google.com/rss/search (현재 검색어, 브라질로 좁힌 후보, site:abit.org.br when:30d, "ABIT" têxtil when:30d), 조회 2026-10-25 18:56~18:57. 적용 범위: TEXTILE_NEWS_KEYWORDS·EXCLUDED_MEDIA_TLDS(.pt)·EXCLUDED_MEDIA_DOMAINS(portugaltextil.com, vietnam.vn)·TEXTILE_TRUSTED_DOMAINS(abit.org.br) 결정. 본문은 저장소에 두지 않음(scratchpad에 RSS만 임시 저장).
+- Tecnotêxtil Brasil 공식 사이트(tecnotextilbrasil.com.br, 위 Tecnotêxtil 항목의 공식 페이지) 1회 재조회, 2026-10-25 18:56. 문구 "A Tecnotêxtil Brasil retorna a Americana, de 27 a 30 de abril de 2027". 적용 범위: br_textile_fairs.json(변경 없음, 일치)·feature_spec 표 전체 날짜.

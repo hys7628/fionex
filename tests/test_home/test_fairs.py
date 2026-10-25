@@ -115,6 +115,13 @@ class RealDataTests(unittest.TestCase):
         names = {f["name"]: f for f in listed}
         self.assertIs(names["Inspiramais"]["verified"], False)  # 공식 사이트 연도 표기 불일치
         self.assertIsNotNone(names["Inspiramais"]["note"])
+        tecno = names["Tecnotêxtil Brasil 2027"]  # 공식 사이트 "de 27 a 30 de abril de 2027"(2026-10-25 재확인)
+        self.assertEqual((str(tecno["start"]), str(tecno["end"]), tecno["verified"]), ("2027-04-27", "2027-04-30", True))
+
+    def test_feature_spec_table_matches_data(self):
+        spec = (ROOT / "features" / "home" / "feature_spec.md").read_text(encoding="utf-8")
+        for f in fairs.load_fairs(fairs.DATA_FILE)[0]:
+            self.assertIn(f"| {f['name']} | {f['start']} ~ {f['end']} |", spec)
 
 
 class RouteTests(FairsTestBase):

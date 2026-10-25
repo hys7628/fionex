@@ -388,3 +388,22 @@ JS 예외 0. 콘솔 오류 favicon 404(기존)만. fixture 서버가 막은 외�
 | `python -m unittest discover -s tests/test_common` | OK | 56 OK(병합된 test_pdf 포함) | 통과 |
 | 앱 import·GET /, common.ai_client import | 200 | 200 | 통과 |
 테스트를 다시 돌린 이유: 문서 변경 때문이 아니라 develop 병합으로 공통 코드(ai_client·pdf_utils)가 바뀌었기 때문. 브라우저 검증은 이번에 다시 하지 않음(Home 코드·화면 변경 없음). 외부 API·AI 호출 없음.
+
+## 2026-10-25 PR 리뷰 반영 (DEV-HOME-011)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| 저장한 실제 RSS에 필터 적용(Q0 현재 검색어·ABIT 2종, 2026-10-25 18:56) | .pt·무관 제목 제외 | Google 수집 53 → 필터 후 13(브라질 매체·섬유 관련, vietnam.vn 6·portugaltextil.com 2 포함 제외), ABIT 53 → 45(표시 20) | 통과 |
+| 검색어 후보(브라질로 좁힘) 비교 | 노이즈 감소 근거 | 31건 중 남은 19건에 'moda'·공예 등 일반 노이즈 → 검색어 변경 안 함 | 근거 없음(미변경) |
+| test_holidays_news 관련성·KOTRA A~E | 통과 | 필터 통과/제외 문장, .pt·portugaltextil.com·abit.org.br 면제, 악센트 무시, RSS source 도메인 기준, 경로별 건수, A 응답 0(collected=0 filtered=0 로그)·B 필터 0·C 최소 포함·D 없으면 채우지 않음·E 중복 없음 | 통과 |
+| test_news_summary v3 | 규칙·예시 4개 | 채택 파일 v3, 용어 보존 규칙, ex1~ex4, 예시 출력이 validate_summaries 통과(빈 값 1건만 empty) | 통과 |
+| test_report PDF | 링크·URL·쪽 번호 등 | pypdf 추출: 뉴스 링크 8개, 본문 https:// 없음, 쪽마다 'n / N', '2026-10-23 (두 환율 동일)', 'KRW 10-23 / BRL 10-24', 경로별 '수집/필터 후/브리핑 선정', KOTRA 최소 1건 | 통과 |
+| test_fairs 자료·명세 대조 | 일치 | Tecnotêxtil 2027-04-27~2027-04-30 verified, feature_spec 표 3행이 JSON start·end와 같음 | 통과 |
+| PDF 4종 PyMuPDF로 열어 확인(fixture 8건 혼합·고시일 다름·저장한 실제 RSS+KOTRA 0·부분 실패) | 2쪽 이내 | 모두 2쪽, '1 / 2'·'2 / 2', 본문 URL 0, .pt 도메인 0, Noto Sans KR 임베드, Tecnotêxtil 2027-04-27 ~ 2027-04-30, 고시일 칸 한 줄, 부분 실패 목록(USD/KRW 키·Google 시간 초과) | 통과 |
+| PDF 이미지 육안(80dpi) | 겹침·잘림 없음 | 1차: '4. 다가오는 전시회' 제목이 1쪽 끝에 홀로 남음 → keepWithNext 후 2쪽 첫머리로 이동 확인 | 수정 후 통과 |
+| 브라우저(fixture 서버, 외부 요청 차단) 390/1024/1440 | 경로별 건수, 가로 넘침 없음 | 정상: 'KOTRA 수집 2 · 필터 후 1 · 표시 1'. KOTRA 0+Google 실패: '수집 0 · 필터 후 0 · 표시 0', Google '수집 기록 없음'+재시도 안내, ABIT 2건 유지. 7/7, JS 예외 0, 막힌 외부 요청 0 | 통과 |
+| `python -m unittest discover -s tests/test_home` (FLASK_SKIP_DOTENV=1) | OK | 76 OK | 통과 |
+| `python -m unittest discover -s tests/test_common` | OK | 56 OK | 통과 |
+생성한 PDF·스크린샷은 저장소 밖 scratchpad에만 있음. 외부 호출: Google News RSS 4회·Tecnotêxtil 공식 사이트 1회(공개). OpenAI·KOTRA·수출입은행 0회.
+
+### 미검증
+v3 프롬프트 실제 OpenAI 호출(미실행), 실제 KOTRA 응답에서의 최소 노출, 실제 키 기반 USD/KRW가 들어간 PDF, 실제 사용자 브라우저.

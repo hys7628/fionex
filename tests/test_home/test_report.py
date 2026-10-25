@@ -4,13 +4,16 @@
     python -m unittest discover -s tests/test_home -v
 
 뉴스·환율·전시회 값은 모두 가상(fixture)이며 실제 사용자 데이터가 아닙니다.
-PDF 글자 렌더링은 PDF 텍스트 추출 도구가 requirements에 없어 이 테스트에서 보지 않습니다(검증 기록 참고).
+PDF 글자·링크·쪽 수는 requirements의 pypdf로 추출해 확인합니다. 눈으로 본 배치는 검증 기록을 참고하세요.
 """
 import sys
 import unittest
 from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
 from unittest import mock
+
+from pypdf import PdfReader
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -44,10 +47,10 @@ def fx_ok():
 
 def news_item(i, origin="google", summary=None, title=None):
     item = {"id": f"n{i}", "title": title or f"TEST Indústria têxtil amplia Produção em São Paulo nº {i}",
-            "url": f"https://example.com/news/{i}?a=1&b=2", "media": "TEST Jornal",
+            "url": f"https://example.com/news/{i}?a=1&b=2", "media": "TEST Jornal", "media_domain": "example.com",
             "published_at": f"2026-10-{24 - i % 3:02d}T1{i % 10}:00:00+00:00", "origin": origin, "lang": "pt-BR"}
     if origin == "kotra":
-        item.update(lang="ko", published_at="2026-07-27", media="KOTRA 해외시장뉴스 · 상파울루무역관")
+        item.update(lang="ko", published_at="2026-07-27", media="KOTRA 해외시장뉴스 · 상파울루무역관", media_domain="dream.kotra.or.kr")
     if summary:
         item["summary_ko"] = summary
     return item
@@ -57,7 +60,8 @@ def news_ok():
     items = [news_item(1, summary="상파울루 섬유업계, 생산 확대"), news_item(2, "abit", summary="ABIT, 수출 지원 프로그램 발표"),
              news_item(3, "kotra", title="TEST 브라질 섬유 시장 동향 <특집> & 전망"), news_item(4), news_item(5), news_item(6),
              news_item(7, title="TEST " + "Confecções brasileiras apostam em recuperação das vendas " * 4), news_item(8), news_item(9), news_item(10)]
-    media = {k: {"status": "ok", "fetched_at": "2026-10-25T09:00:00+09:00", "count": 3, "stale": False} for k in ("kotra", "google", "abit")}
+    media = {k: {"status": "ok", "fetched_at": "2026-10-25T09:00:00+09:00", "count": 3, "stale": False,
+                 "collected": 4, "after_filter": 3} for k in ("kotra", "google", "abit")}
     return {"items": items, "media": media, "summary": {"pending": 0}}
 
 
@@ -164,6 +168,59 @@ class CollectTests(ReportTestBase):
         self.assertGreater(len(pdf), 1000)
         self.assertEqual(filename, "fionex_daily_briefing_20261026_1000.pdf")  # 서울 시각
         self.assertEqual(set(ROOT.rglob("*.pdf")), before)  # 프로젝트 폴더에 파일을 만들지 않음
+
+
+class PdfLayoutTests(ReportTestBase):
+    def pdf(self, data=None):
+        reader = PdfReader(BytesIO(report.render(data or report.collect("America/Sao_Paulo", NOW))))
+        text = "\n".join(page.extract_text() for page in reader.pages)
+        links = [a.get_object()["/A"]["/URI"] for page in reader.pages for a in page.get("/Annots", [])
+                 if a.get_object().get("/Subtype") == "/Link"]
+        return reader, text, links
+
+    def test_news_title_links_without_url_text_within_two_pages(self):
+        reader, text, links = self.pdf()
+        self.assertLessEqual(len(reader.pages), 2)
+        news_links = {u for u in links if "/news/" in u}  # 여러 줄 제목은 줄마다 같은 링크 영역이 생김
+        self.assertEqual(len(news_links), report.NEWS_LIMIT)  # 뉴스 제목마다 링크
+        self.assertIn("https://example.com/news/1?a=1&b=2", links)
+        self.assertNotIn("https://", text)  # 긴 URL 문자열은 본문에 없음
+        self.assertIn("example.com", text)  # 짧은 도메인만
+
+    def test_page_numbers_n_of_total(self):
+        reader, text, _ = self.pdf()
+        total = len(reader.pages)
+        for n, page in enumerate(reader.pages, 1):
+            self.assertIn(f"{n} / {total}", page.extract_text())
+
+    def test_derived_date_cell(self):
+        self.assertEqual(report.derived_date_text("2026-10-23", "2026-10-23"), "2026-10-23 (두 환율 동일)")
+        self.assertEqual(report.derived_date_text("2026-10-23", "2026-10-24"), "KRW 10-23 / BRL 10-24")
+        self.assertEqual(report.derived_date_text("2026-12-31", "2027-01-02"), "KRW 2026-12-31 / BRL 2027-01-02")
+        _, text, _ = self.pdf()
+        self.assertIn("2026-10-23 (두 환율 동일)", text)
+
+    def test_notes_show_source_counts(self):
+        news = news_ok()
+        news["media"]["kotra"].update(collected=0, after_filter=0)
+        news["items"] = [i for i in news["items"] if i["origin"] != "kotra"]
+        news["media"]["google"].update(collected=53, after_filter=13)
+        self.mocks["get_news"].side_effect = lambda: news
+        data = report.collect("America/Sao_Paulo", NOW)
+        self.assertEqual(data["news"]["selected"].get("kotra", 0), 0)  # 가짜 기사 없음
+        _, text, _ = self.pdf(data)
+        self.assertIn("수집 0건 / 필터 후 0건 / 브리핑 선정 0건", text)
+        self.assertIn("수집 53건 / 필터 후 13건", text)
+
+    def test_kotra_minimum_in_briefing(self):
+        news = news_ok()
+        kotra = news_item(11, "kotra", title="TEST 브라질 원사 시장")  # 가장 오래된 기사
+        news["items"] = [i for i in news["items"] if i["origin"] != "kotra"] + [kotra]
+        self.mocks["get_news"].side_effect = lambda: news
+        data = report.collect("America/Sao_Paulo", NOW)
+        self.assertEqual(len(data["news"]["items"]), report.NEWS_LIMIT)
+        self.assertIn(kotra, data["news"]["items"])
+        self.assertEqual(data["news"]["selected"]["kotra"], 1)
 
 
 class RouteTests(ReportTestBase):
