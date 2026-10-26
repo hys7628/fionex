@@ -1,5 +1,5 @@
 # 홈
-담당: ghddm
+담당: 홍은주
 상태: 구현 완료(2026-10-25). 아래 내용은 현재 코드(features/home/) 기준이며, 검증 근거는 docs/worklogs/hong_eunju/validation.md.
 
 ## 목적/범위
