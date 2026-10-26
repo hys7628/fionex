@@ -874,12 +874,15 @@
 
 .feature-product_brochure .pb-guide[open] summary { margin-bottom: var(--space-2); }
 
-/* 2단계: 항목 묶음은 상자 없이 제목 줄(이름 + "확인 x/y" 칩)만 두고, 항목마다 유리 카드 */
+/* 2단계: 묶음 하나 = 유리 카드 한 장, 항목 하나 = 카드 안 한 줄(이름·배지 | 입력 | 토글).
+   칸(grid)에 끼워 넣지 않아 항목 수가 홀수여도 빈칸이 생기지 않음 */
 .feature-product_brochure .pb-pane .product_brochure-group {
-  gap: var(--space-3);
-  padding: 0;
-  border: 0;
-  background: none;
+  gap: 0;
+  padding: var(--space-4) var(--space-5) var(--space-1);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .feature-product_brochure .pb-pane .product_brochure-group > legend {
@@ -889,7 +892,7 @@
   gap: var(--space-2);
   width: 100%;
   margin: 0;
-  padding: 0;
+  padding: 0 0 var(--space-3);
   color: var(--color-text);
   font-size: var(--font-size-md);
 }
@@ -906,7 +909,7 @@
   padding: 2px var(--space-2);
   border: 1px solid var(--color-glass-edge);
   border-radius: var(--radius-pill);
-  background: var(--color-glass-card-strong);
+  background: var(--color-surface);
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
@@ -921,66 +924,66 @@
   color: var(--color-success);
 }
 
-/* 항목 칸: 폭을 고정한 열(auto-fill)이라 항목이 적은 묶음도 카드가 가로로 늘어나지 않음. 긴 글(제품 설명)만 전체 폭 */
 .feature-product_brochure .pb-pane .product_brochure-items {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-  align-items: start;  /* 옆 카드(제품 설명) 높이에 맞춰 늘어나 빈 공간이 생기지 않게 */
-  gap: var(--space-4);
-}
-
-/* 항목 카드(표시명 칸도 같은 모양) */
-.feature-product_brochure .pb-item,
-.feature-product_brochure .pb-pane [data-display-name] > .field {
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border: 1px solid var(--color-glass-edge);
-  border-radius: var(--radius-md);
-  background: var(--color-glass-card-strong);
-  box-shadow: var(--shadow-sm);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.feature-product_brochure .pb-item:focus-within,
-.feature-product_brochure .pb-pane [data-display-name] > .field:focus-within {
-  border-color: var(--color-info-border);
-  box-shadow: var(--shadow-hover);
-}
-
-.feature-product_brochure .pb-item-confirmed {
-  border-color: var(--color-success-border);
-  box-shadow: inset 3px 0 0 var(--color-accent), var(--shadow-sm);
-}
-
-.feature-product_brochure .pb-item-head {
   display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* 항목 한 줄 */
+.feature-product_brochure .pb-item {
+  display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-3);
+  gap: var(--space-2) var(--space-4);
+  margin: 0 calc(var(--space-3) * -1);
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.feature-product_brochure .pb-item:focus-within { background: var(--color-surface-hover); }
+
+.feature-product_brochure .pb-item-confirmed {
+  background: var(--color-accent-soft);
+  box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
 .feature-product_brochure .pb-item-title {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
+  flex: 0 0 140px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
   min-width: 0;
 }
-.feature-product_brochure .pb-item .field-hint,
-.feature-product_brochure .pb-item .field-error { margin: 0; }
 
-/* 확인·가상 토글 칩(카드 머리 오른쪽. 체크박스는 그대로, 체크 상태를 칩 색으로도 표시) */
+.feature-product_brochure .pb-item > .input,
+.feature-product_brochure .pb-item > .textarea { flex: 1 1 180px; min-width: 0; }
+
+.feature-product_brochure .pb-item > .textarea { min-height: 88px; }
+
+.feature-product_brochure .pb-item > .field-hint,
+.feature-product_brochure .pb-item > .field-error,
+.feature-product_brochure .pb-item > .product_brochure-details {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+/* 확인·가상 토글 칩(체크박스는 그대로, 체크 상태를 칩 색으로도 표시) */
 .feature-product_brochure .pb-pane .product_brochure-choices {
+  flex: none;
   gap: var(--space-2);
-  margin-left: auto;
 }
 
 .feature-product_brochure .pb-toggle {
   padding: 2px var(--space-3);
-  font-size: var(--font-size-xs);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
+  font-size: var(--font-size-xs);
   cursor: pointer;
   transition: border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
 }
@@ -1008,8 +1011,18 @@
   background: var(--color-danger-soft);
 }
 
-/* 표시명 칸: 확인 토글을 카드 아래에 */
-.feature-product_brochure .pb-pane [data-display-name] > .pb-toggle { align-self: flex-start; }
+
+/* 표시명 묶음: 같은 카드 안에 입력 블록 + 확인 토글 */
+.feature-product_brochure .pb-pane [data-display-name] > .field {
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.feature-product_brochure .pb-pane [data-display-name] > .pb-toggle {
+  align-self: flex-start;
+  margin-bottom: var(--space-3);
+}
 
 /* 2단계 배치: 왼쪽 항목 카드 + 오른쪽 검토 현황 패널(넓을 때 스크롤을 따라옴). 폭이 모자라면 패널이 아래로 */
 .feature-product_brochure .pb-review-layout {
@@ -1023,12 +1036,10 @@
   display: flex;
   flex: 3 1 560px;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-4);
   min-width: 0;
 }
 
-/* 2열 칸에서는 제품 설명도 한 칸(제품명과 나란히, 빈칸 없이) */
-.feature-product_brochure .pb-review-main .product_brochure-item-wide { grid-column: auto; }
 
 .feature-product_brochure .pb-review-main .product_brochure-group { scroll-margin-top: var(--space-6); }
 

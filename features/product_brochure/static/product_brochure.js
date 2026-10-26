@@ -1512,12 +1512,10 @@
     });
 
     sync();
-    // 항목 카드: 머리(왼쪽 이름 + 상태 배지, 오른쪽 확인·가상 토글) → 입력 → 안내·경고 → 근거
-    const head = el("div", "pb-item-head");
+    // 항목 한 줄: 이름·상태 배지 → 입력 → 확인·가상 토글, 그 아래 안내·경고·근거(좁으면 자연스럽게 줄바꿈)
     const title = el("div", "pb-item-title");
     title.append(label, badges);
-    head.append(title, choices);
-    wrap.append(head, input, hint, error);
+    wrap.append(title, input, choices, hint, error);
     const details = renderDetails(field);
     if (details) wrap.append(details);
     return wrap;
