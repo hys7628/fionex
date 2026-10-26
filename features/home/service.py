@@ -48,8 +48,11 @@ MAX_YEAR = 2199
 
 FALLBACK_DIR = Path(__file__).resolve().parent / "data"
 
-# 연도 → 결과. BrasilAPI 성공 결과만 담아 실패한 연도는 다음 요청에서 다시 시도합니다.
+# 연도 → 결과. BrasilAPI 성공 결과는 계속 담아 둡니다(공휴일은 해마다 고정).
 _cache = {}
+# 연도 → {"result", "expires"}. BrasilAPI 실패 시 대체 결과(fallback·none)를 10분만 담아 요청마다 API를 다시 부르지 않게 합니다.
+HOLIDAY_FAILURE_CACHE_SECONDS = 10 * 60
+_holiday_failures = {}
 
 
 def get_holidays(year):
@@ -57,6 +60,9 @@ def get_holidays(year):
     cached = _cache.get(year)
     if cached:
         return cached
+    failed = _holiday_failures.get(year)
+    if failed and failed["expires"] > monotonic():
+        return failed["result"]
 
     try:
         result = {
@@ -71,9 +77,10 @@ def get_holidays(year):
         logger.warning("BrasilAPI 공휴일 조회 실패(year=%s): %s", year, err)
 
     fallback = _load_fallback(year)
-    if fallback is not None:
-        return {"source": "fallback", "fetched_at": None, "holidays": fallback}
-    return {"source": "none", "fetched_at": None, "holidays": []}
+    result = ({"source": "fallback", "fetched_at": None, "holidays": fallback} if fallback is not None
+              else {"source": "none", "fetched_at": None, "holidays": []})
+    _holiday_failures[year] = {"result": result, "expires": monotonic() + HOLIDAY_FAILURE_CACHE_SECONDS}
+    return result
 
 
 def _now_kst():
@@ -129,7 +136,8 @@ def _parse_holidays(data, year):
 # 기사 본문은 가져오지 않습니다. 원문 제목·매체·날짜·원문 링크만 다룹니다.
 NEWS_MEDIA = ("kotra", "google", "abit")
 NEWS_TIMEOUT_SECONDS = 10
-NEWS_CACHE_SECONDS = 60 * 60
+NEWS_CACHE_SECONDS = 6 * 60 * 60  # 2026-10-27 1시간 → 6시간
+NEWS_REFRESH_MIN_SECONDS = 60  # 성공 수집 후 이 시간 안의 refresh는 다시 가져오지 않음(실패한 경로는 바로 재시도)
 NEWS_MAX_ITEMS_PER_MEDIUM = 20
 NEWS_MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 
@@ -232,11 +240,15 @@ def get_news(refresh=None):
 
     status: ok | error | not_configured(KOTRA 인증키 없음, 설정 필요. 다른 경로에는 영향 없음)
     collected: 응답에서 읽은 건수(형식이 맞는 항목, 경로 안 중복 제외) · after_filter: 관련성 필터 후 · count: 표시(최대 20)
-    refresh로 지정한 경로는 캐시를 무시하고 다시 가져옵니다. 만료된 경로도 다시 가져옵니다.
+    refresh로 지정한 경로는 캐시를 무시하고 다시 가져옵니다(마지막 성공 수집 후 1분 안이면 캐시 사용). 만료된 경로도 다시 가져옵니다.
     """
     now = monotonic()
+
+    def recent(m):
+        return m in _news_cache and now - _news_cache[m]["at"] < NEWS_REFRESH_MIN_SECONDS
+
     pending = [m for m in NEWS_MEDIA
-               if m == refresh or m not in _news_cache or _news_cache[m]["expires"] <= now]
+               if (m == refresh and not recent(m)) or m not in _news_cache or _news_cache[m]["expires"] <= now]
     errors = {}
     if pending:
         with ThreadPoolExecutor(max_workers=len(pending)) as pool:
@@ -258,6 +270,7 @@ def get_news(refresh=None):
                 "collected": result["collected"],
                 "after_filter": result["after_filter"],
                 "fetched_at": _now_kst(),
+                "at": monotonic(),
                 "expires": monotonic() + NEWS_CACHE_SECONDS,
             }
             # 집계만 남깁니다(제목·본문·키 없음). KOTRA 0건 원인: collected=0 응답 0건 / filtered=0 필터 후 0건.

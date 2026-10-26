@@ -7,6 +7,7 @@
 - 공개 통계 캐시는 서버 메모리에만 둡니다(서버 재시작 시 비워짐). 같은 날(KST) 같은 조건은 재사용합니다.
   사용자 입력·결과는 저장하지 않습니다.
 """
+import hashlib
 import json
 import re
 import secrets
@@ -105,20 +106,27 @@ def country_list():
 
 
 # ---------- 캐시 ----------
+# 서버 메모리만 씁니다(디스크·DB 저장 없음, 서버를 다시 시작하면 사라짐). 성공한 조회 결과만 담고,
+# 조회가 실패하면 기존 캐시를 stale(이전 자료)로 돌려줍니다.
+CACHE_TTL_SECONDS = 6 * 3600       # 최신 제공 월·통계 행 재사용 시간(ComexStat은 월 단위로 갱신)
+REFRESH_MIN_SECONDS = 10 * 60      # '다시 불러오기'라도 이 시간 안에 받은 자료는 다시 조회하지 않음(호출 한도 보호)
+MAX_ROWS_CACHE = 20                # 품목코드별 통계 행 캐시 최대 개수(넘치면 가장 오래 쓰지 않은 것부터 삭제)
 _cache_lock = threading.Lock()
-_latest_cache = {}   # {"day": "YYYY-MM-DD", "value": (y, m, updated), "checked_at": iso}
-_rows_cache = {}     # (system, code) → {"day", "year_from", "year_to", "rows", "fetched_at"}
+_latest_cache = {}   # {"at": monotonic, "value": (y, m, updated), "checked_at": iso}
+_rows_cache = {}     # (system, code) → {"at", "used", "year_from", "year_to", "rows", "fetched_at"}
 
 
-def _today():
-    return now_kst().date().isoformat()
+def _usable(entry, refresh):
+    """캐시를 그대로 쓸지: 6시간 안이고, 다시 불러오기여도 받은 지 10분 안이면 재사용."""
+    age = _monotonic() - entry["at"]
+    return age < (REFRESH_MIN_SECONDS if refresh else CACHE_TTL_SECONDS)
 
 
 def get_latest(refresh=False):
-    """최신 제공 월. 같은 날에는 재사용하고, 실패 시 이전 값이 있으면 그 값을 stale로 돌려줍니다."""
+    """최신 제공 월. 6시간 동안 재사용하고, 실패 시 이전 값이 있으면 그 값을 stale로 돌려줍니다."""
     with _cache_lock:
         cached = dict(_latest_cache) if _latest_cache else None
-    if cached and cached["day"] == _today() and not refresh:
+    if cached and _usable(cached, refresh):
         return cached, False
     try:
         value = comex.get_latest_month()
@@ -126,7 +134,7 @@ def get_latest(refresh=False):
         if cached:
             return cached, True
         raise
-    entry = {"day": _today(), "value": value, "checked_at": now_kst().isoformat(timespec="seconds")}
+    entry = {"at": _monotonic(), "value": value, "checked_at": now_kst().isoformat(timespec="seconds")}
     with _cache_lock:
         _latest_cache.clear()
         _latest_cache.update(entry)
@@ -138,8 +146,10 @@ def _get_rows(code_system, code, year_from, year_to, refresh):
     key = (code_system, code)
     with _cache_lock:
         cached = _rows_cache.get(key)
+        if cached:
+            cached["used"] = _monotonic()
     covers = cached and cached["year_from"] <= year_from and cached["year_to"] >= year_to
-    if covers and cached["day"] == _today() and not refresh:
+    if covers and _usable(cached, refresh):
         return cached["rows"], "cached", cached["fetched_at"]
     try:
         rows = comex.query_imports(code_system, code, year_from, year_to)
@@ -147,10 +157,13 @@ def _get_rows(code_system, code, year_from, year_to, refresh):
         if covers:
             return cached["rows"], "stale", cached["fetched_at"]
         raise
-    entry = {"day": _today(), "year_from": year_from, "year_to": year_to, "rows": rows,
+    now = _monotonic()
+    entry = {"at": now, "used": now, "year_from": year_from, "year_to": year_to, "rows": rows,
              "fetched_at": now_kst().isoformat(timespec="seconds")}
     with _cache_lock:
         _rows_cache[key] = entry
+        while len(_rows_cache) > MAX_ROWS_CACHE:
+            del _rows_cache[min(_rows_cache, key=lambda k: _rows_cache[k]["used"])]
     return rows, "fresh", entry["fetched_at"]
 
 
@@ -158,6 +171,8 @@ def clear_cache():
     with _cache_lock:
         _latest_cache.clear()
         _rows_cache.clear()
+    with _ai_cache_lock:
+        _ai_cache.clear()
 
 
 # ---------- 입력 검증 ----------
@@ -559,20 +574,63 @@ def get_bundle(bundle_id):
 def clear_bundles():
     with _bundles_lock:
         _bundles.clear()
+    with _ai_cache_lock:  # 서버 재시작과 같은 효과: AI 결과 캐시도 비움
+        _ai_cache.clear()
+
+
+# 같은 통계(새 '분석 실행'으로 묶음이 달라도 수치가 같으면)의 완료된 AI 결과. 유료 재호출을 막습니다.
+AI_CACHE_TTL_SECONDS = 6 * 3600
+MAX_AI_CACHE = 10
+_ai_cache = {}   # 통계 서명 → {"at", "state"}
+_ai_cache_lock = threading.Lock()
+
+
+def stats_signature(stats):
+    """AI 입력이 되는 통계 내용의 서명. 받은 시각·캐시 상태·묶음 번호처럼 수치와 무관한 값은 뺍니다."""
+    body = {k: v for k, v in stats.items() if k not in ("sources", "bundle_id")}
+    return hashlib.sha256(json.dumps(body, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+
+def _cached_ai(sig):
+    with _ai_cache_lock:
+        hit = _ai_cache.get(sig)
+        if hit and _monotonic() - hit["at"] > AI_CACHE_TTL_SECONDS:
+            del _ai_cache[sig]
+            hit = None
+        return hit["state"] if hit else None
+
+
+def _store_ai(sig, state):
+    with _ai_cache_lock:
+        now = _monotonic()
+        for k in [k for k, v in _ai_cache.items() if now - v["at"] > AI_CACHE_TTL_SECONDS]:
+            del _ai_cache[k]
+        _ai_cache[sig] = {"at": now, "state": state}
+        while len(_ai_cache) > MAX_AI_CACHE:
+            del _ai_cache[min(_ai_cache, key=lambda k: _ai_cache[k]["at"])]
 
 
 def run_ai(bundle_id):
-    """AI 분석(초안+5차례 검토). 이미 끝난 묶음은 저장된 결과를 돌려주고 다시 호출하지 않습니다.
-    실패·중단된 묶음은 끝난 단계 다음부터 이어서 진행합니다. 같은 묶음이 실행 중이면 409."""
+    """AI 분석(초안+5차례 검토). 이미 끝난 묶음, 또는 같은 통계로 6시간 안에 끝난 결과가 있으면 저장된 결과를 돌려주고
+    다시 호출하지 않습니다. 실패·중단된 묶음은 끝난 단계 다음부터 이어서 진행합니다(미완료 결과는 공유 캐시에 넣지 않음).
+    같은 묶음이 실행 중이면 409."""
     b = get_bundle(bundle_id)
     if not b["lock"].acquire(blocking=False):
         raise BundleError("MA_AI_RUNNING", "이 조회의 AI 분석이 이미 진행 중입니다. 끝날 때까지 기다려 주세요.", 409)
     try:
         if b["ai"] is not None and b["ai"]["status"] == "complete":
             return {**b["ai"]["result"], "reused": True}
+        sig = stats_signature(b["stats"])
+        if b["ai"] is None:
+            done = _cached_ai(sig)
+            if done is not None:
+                b["ai"] = done
+                return {**done["result"], "reused": True}
         state = b["ai"] or analysis.new_state()
         state = analysis.run(state, b["stats"])
         b["ai"] = state
+        if state["status"] == "complete":
+            _store_ai(sig, state)
         return {**state["result"], "reused": False}
     finally:
         b["lock"].release()

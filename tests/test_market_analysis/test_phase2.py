@@ -278,6 +278,36 @@ class BundleTest(unittest.TestCase):
         self.assertFalse(first["reused"])
         self.assertTrue(second["reused"])
 
+    def _good(self, stats):
+        return [{"section": "핵심 요약", "content": "수입액(FOB) USD {:,}".format(stats["summary"]["fob"]), "implication": "x",
+                 "status": "사실", "source_ids": ["S1"]}]
+
+    def test_same_stats_new_bundle_reuses_ai_without_call(self):
+        stats = service.get_bundle(self.bid)["stats"]
+        m = FakeModel(self._good(stats))
+        with mock.patch.object(analysis.ai_client, "generate_structured", m),                 mock.patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-FAKE", "OPENAI_MODEL": "test-model"}):
+            service.run_ai(self.bid)
+            calls = len(m.calls)
+            again = dict(make_stats(), sources=[{"fetched_at": "다른 시각", "cache_status": "cached"}])  # 수치 같고 받은 시각만 다름
+            second = service.run_ai(service.create_bundle(again))
+            other = make_stats()
+            other["summary"] = dict(other["summary"], fob=other["summary"]["fob"] + 1)  # 수치가 다르면 새로 호출
+            service.run_ai(service.create_bundle(other))
+        self.assertTrue(second["reused"])
+        self.assertGreater(len(m.calls), calls)
+        self.assertEqual(len(m.calls), calls * 2)
+
+    def test_ai_cache_expires_after_six_hours(self):
+        stats = service.get_bundle(self.bid)["stats"]
+        m = FakeModel(self._good(stats))
+        clock = [1000.0]
+        with mock.patch.object(service, "_monotonic", lambda: clock[0]),                 mock.patch.object(analysis.ai_client, "generate_structured", m),                 mock.patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-FAKE", "OPENAI_MODEL": "test-model"}):
+            service.run_ai(self.bid)
+            calls = len(m.calls)
+            clock[0] += service.AI_CACHE_TTL_SECONDS + 1
+            self.assertFalse(service.run_ai(service.create_bundle(make_stats()))["reused"])
+        self.assertEqual(len(m.calls), calls * 2)
+
     def test_concurrent_run_blocked(self):
         b = service.get_bundle(self.bid)
         b["lock"].acquire()
@@ -353,15 +383,17 @@ class CacheDateTest(unittest.TestCase):
         service.clear_cache()
         self.addCleanup(service.clear_cache)
 
-    def test_kst_date_change_refetches(self):
-        days = iter([datetime(2026, 10, 25, 23, 59, tzinfo=service.KST)] * 6 + [datetime(2026, 10, 26, 0, 1, tzinfo=service.KST)] * 10)
+    def test_cache_is_time_based_not_date_based(self):
+        """2026-10-27부터 '같은 날' 대신 받은 뒤 6시간 기준. 자정을 넘겨도 6시간 안이면 재사용."""
+        clock = [1000.0]
         payload = {"code_system": "ncm", "code": "54023310", "from": "2026-01", "to": "2026-03"}
-        with mock.patch.object(service, "now_kst", lambda: next(days)), \
-                mock.patch.object(comex, "get_latest_month", return_value=(2026, 9, "2026-10-06")) as latest, \
-                mock.patch.object(comex, "query_imports", return_value=[row("2026-01", "China", 10, 5)]) as q:
+        days = iter([datetime(2026, 10, 25, 23, 59, tzinfo=service.KST)] * 6 + [datetime(2026, 10, 26, 0, 1, tzinfo=service.KST)] * 10)
+        with mock.patch.object(service, "now_kst", lambda: next(days)),                 mock.patch.object(service, "_monotonic", lambda: clock[0]),                 mock.patch.object(comex, "get_latest_month", return_value=(2026, 9, "2026-10-06")) as latest,                 mock.patch.object(comex, "query_imports", return_value=[row("2026-01", "China", 10, 5)]) as q:
             service.analyze(payload)
-            service.analyze(payload)  # 같은 날: 재사용
-            service.analyze(payload)  # 날짜 바뀜: 다시 조회
+            clock[0] += 120
+            service.analyze(payload)  # 날짜가 바뀌었어도 6시간 안: 재사용
+            clock[0] += service.CACHE_TTL_SECONDS
+            service.analyze(payload)  # 6시간 지남: 다시 조회
         self.assertEqual(q.call_count, 2)
         self.assertEqual(latest.call_count, 2)
 

@@ -25,7 +25,7 @@ MIN_TITLE_WORDS = 3
 BATCH_SIZE = 40
 TARGET_CHARS = 60  # 프롬프트 목표
 MAX_CHARS = 80     # 이보다 길면 자르지 않고 버립니다(자르면 뜻이 바뀔 수 있음).
-CACHE_SECONDS = 60 * 60
+CACHE_SECONDS = 6 * 60 * 60  # 같은 기사 제목의 요약 재사용(2026-10-27 1시간 → 6시간)
 
 STATUS_MESSAGES = {
     "unavailable": "AI 요약을 사용할 수 없습니다. 원문 제목만 표시합니다.",

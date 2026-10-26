@@ -177,15 +177,48 @@ class AnalyzeTest(unittest.TestCase):
         self.assertEqual(r2["sources"][0]["cache_status"], "cached")
         self.assertEqual(self.latest.call_count, 1)
 
-    def test_refresh_bypasses_cache(self):
+    def clock(self, start=1000.0):
+        """service._monotonic를 손으로 움직이는 시계로 바꿉니다."""
+        now = [start]
+        p = mock.patch.object(service, "_monotonic", lambda: now[0])
+        p.start()
+        self.addCleanup(p.stop)
+        return now
+
+    def test_refresh_within_ten_minutes_uses_cache(self):
+        now = self.clock()
         with mock.patch.object(comex, "query_imports", return_value=[row("2026-01", "China", 10, 5)]) as q:
             service.analyze(self.payload())
+            now[0] += service.REFRESH_MIN_SECONDS - 1
+            r = service.analyze(self.payload(refresh=True))
+            self.assertEqual((q.call_count, r["sources"][0]["cache_status"]), (1, "cached"))
+            now[0] += 2  # 10분이 지나면 다시 불러오기가 실제로 다시 조회
             service.analyze(self.payload(refresh=True))
         self.assertEqual(q.call_count, 2)
 
+    def test_cache_lasts_six_hours(self):
+        now = self.clock()
+        with mock.patch.object(comex, "query_imports", return_value=[row("2026-01", "China", 10, 5)]) as q:
+            service.analyze(self.payload())
+            now[0] += service.CACHE_TTL_SECONDS - 1
+            service.analyze(self.payload())
+            self.assertEqual((q.call_count, self.latest.call_count), (1, 1))
+            now[0] += 2
+            service.analyze(self.payload())
+        self.assertEqual((q.call_count, self.latest.call_count), (2, 2))
+
+    def test_rows_cache_limited(self):
+        self.clock()
+        with mock.patch.object(comex, "query_imports", return_value=[]), mock.patch.object(comex, "lookup_code", return_value="x"):
+            for i in range(service.MAX_ROWS_CACHE + 3):
+                service.analyze(self.payload(code="5402%04d" % i))
+        self.assertEqual(len(service._rows_cache), service.MAX_ROWS_CACHE)
+
     def test_stale_on_failure(self):
+        now = self.clock()
         with mock.patch.object(comex, "query_imports", return_value=[row("2026-01", "China", 10, 5)]):
             service.analyze(self.payload())
+        now[0] += service.REFRESH_MIN_SECONDS + 1
         fail = ComexStatError("MA_SOURCE_RATE_LIMITED", "한도", 429, True)
         with mock.patch.object(comex, "query_imports", side_effect=fail):
             r = service.analyze(self.payload(refresh=True))

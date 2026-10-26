@@ -150,14 +150,44 @@ class FxTests(FxTestBase):
         self.assertEqual(fake.count(fx.EXIM_URL), 5)
         self.assertEqual(fake.count("https://olinda"), 2)
 
+    def clock(self):
+        now = [1000.0]
+        p = mock.patch.object(fx, "monotonic", lambda: now[0])
+        p.start()
+        self.addCleanup(p.stop)
+        return now
+
     def test_refresh_one_source(self):
+        now = self.clock()
         fake = self.use(FakeHttp(exim=NORMAL_EXIM, ptax=NORMAL_PTAX))
         fx.get_fx()
         before = list(fake.calls)
+        now[0] += fx.REFRESH_MIN_SECONDS
         fx.get_fx(refresh="usd_brl")
         new = fake.calls[len(before):]
         self.assertEqual(len(new), 1)
         self.assertTrue(new[0].startswith("https://olinda"))
+
+    def test_refresh_within_a_minute_uses_cache(self):
+        now = self.clock()
+        fake = self.use(FakeHttp(exim=NORMAL_EXIM, ptax=NORMAL_PTAX))
+        fx.get_fx()
+        before = len(fake.calls)
+        now[0] += fx.REFRESH_MIN_SECONDS - 1
+        fx.get_fx(refresh="usd_brl")
+        self.assertEqual(len(fake.calls), before)  # 1분 안 연타: 다시 조회하지 않음
+
+    def test_cache_three_hours(self):
+        now = self.clock()
+        fake = self.use(FakeHttp(exim=NORMAL_EXIM, ptax=NORMAL_PTAX))
+        fx.get_fx()
+        before = len(fake.calls)
+        now[0] += fx.CACHE_SECONDS - 1
+        fx.get_fx()
+        self.assertEqual(len(fake.calls), before)
+        now[0] += 2
+        fx.get_fx()
+        self.assertGreater(len(fake.calls), before)
 
     def test_no_rate_within_7_days(self):
         self.use(FakeHttp(exim={"20261017": [exim_item("1,390.0")]}, ptax=ptax_rows(("2026-10-17", 5.1))))
