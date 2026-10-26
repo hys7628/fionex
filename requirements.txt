@@ -22,9 +22,9 @@ python-docx==1.2.0
 # reportlab 요구 pillow>=9.0.0을 만족하므로 reportlab 설치 시에도 이 버전을 유지한다.
 pillow==13.0.0
 # PDF 출력(생성). BSD. 공통 PDF 입력 검사(pypdf)와는 별개 기능이다. 2026-10-25 공통 담당 합의(한윤수 확인) 후 추가.
-# 설치 시 pillow·charset-normalizer(3.5.2, MIT)가 함께 설치된다. 기능별 사용처와 글꼴:
-# - 홈 일일 브리핑(features/home): 메모리(BytesIO)에서 생성, features/home/fonts의 Noto Sans KR(OFL). jasonenv 생성·렌더링 확인(2026-10-25).
-# - 시장 분석(features/market_analysis/pdf_report.py): features/market_analysis/fonts의 Noto Sans KR(OFL).
-# - 그린 클레임 검수 보고서(features/green_claim/report_worker.py): 라틴 문자는 reportlab 포함 Bitstream Vera, 한글은 features/green_claim/fonts의 나눔고딕(OFL).
+# 설치 시 pillow·charset-normalizer(3.5.2, MIT)가 함께 설치된다. 기능별 사용처:
+# - 홈 일일 브리핑(features/home/report.py), 시장 분석(features/market_analysis/pdf_report.py),
+#   그린 클레임 검수 보고서(features/green_claim/report_worker.py).
+# - 글꼴: 세 PDF 모두 공통 Pretendard(static/fonts/pretendard/, SIL OFL 1.1, common/config.py PDF_FONT_FILES). 2026-10-26 통일.
 #   jasonenv(Python 3.11.17) 설치, pip check 정상(2026-10-26).
 reportlab==5.1.0

@@ -44,6 +44,32 @@ class ShellA11yTest(unittest.TestCase):
         self.assertNotIn("brand-mark", self.html)
         self.assertTrue((ROOT / "static" / "assets" / "fionex_logo.png").is_file())
 
+    def test_pretendard_is_the_single_local_font(self):
+        css = (ROOT / "static" / "css" / "common.css").read_text(encoding="utf-8")
+        urls = re.findall(r'url\("\.\./fonts/([^"]+)"\)', css)
+        self.assertEqual(urls, ["pretendard/Pretendard-%s.woff2" % w for w in ("Regular", "Medium", "SemiBold", "Bold")])
+        for url in urls:
+            self.assertTrue((ROOT / "static" / "fonts" / url).is_file(), url)
+        self.assertNotRegex(css + self.html, r"fonts\.googleapis|fonts\.gstatic|cdn\.jsdelivr|@import")
+        tokens = (ROOT / "static" / "css" / "tokens.css").read_text(encoding="utf-8")
+        self.assertIn('--font-sans: "Pretendard", ', tokens)
+
+    def test_all_pdfs_use_common_pretendard(self):
+        from common import config
+        from features.green_claim import report_worker
+        from features.home import report as home_report
+        from features.market_analysis import pdf_report
+
+        for path in config.PDF_FONT_FILES.values():
+            self.assertTrue(path.is_file(), path)
+            self.assertEqual(path.parent, ROOT / "static" / "fonts" / "pretendard")
+        self.assertEqual((home_report.FONT, home_report.FONT_BOLD), ("Pretendard", "Pretendard-Bold"))
+        self.assertEqual((pdf_report.FONT, pdf_report.FONT_BOLD), ("Pretendard", "Pretendard-Bold"))
+        self.assertEqual(report_worker.LATIN_FONTS, config.PDF_FONT_FILES)
+        self.assertEqual(report_worker.KO_FONTS, config.PDF_FONT_FILES)
+        for feature in ("home", "market_analysis", "green_claim"):
+            self.assertFalse((ROOT / "features" / feature / "fonts").exists(), feature)  # 기능별 글꼴 폴더 없음
+
     def test_each_tab_has_one_h1_focus_target(self):
         for feature in ("home", "market_analysis", "product_brochure", "green_claim", "promotion_studio"):
             h1 = tag(self.html, 'id="title-%s"' % feature)

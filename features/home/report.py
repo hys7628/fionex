@@ -3,12 +3,11 @@
 - 데이터는 기존 service 함수와 그 캐시를 그대로 씁니다: 공휴일(get_holidays), 환율(get_fx), 뉴스(get_news),
   전시회(get_upcoming_fairs). 뉴스 AI 요약은 이미 만든 요약만 씁니다(PDF 때문에 OpenAI를 부르지 않음).
 - 영역별로 실패를 나눕니다. 실패한 영역은 "확인 불가"로 두고 마지막 유의사항에 목록으로 적습니다. 값을 채워 넣지 않습니다.
-- 폰트: features/home/fonts/Noto Sans KR(OFL). 한글·포르투갈어 악센트 포함.
+- 폰트: 공통 Pretendard(static/fonts/pretendard/, OFL, common/config.py PDF_FONT_FILES). 한글·포르투갈어 악센트 포함.
 """
 import logging
 from datetime import datetime
 from io import BytesIO
-from pathlib import Path
 from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
@@ -21,15 +20,15 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from common.config import PDF_FONT_FILES, PDF_FONT_NAMES
 from features.home.buyer_time import CITIES, DEFAULT_CITY, SEOUL, buyer_time, format_day, format_day_time, next_holiday_text
 
 logger = logging.getLogger(__name__)
 
 NEWS_LIMIT = 8
 FAIRS_LIMIT = 3
-FONT_DIR = Path(__file__).resolve().parent / "fonts"
-FONT = "NotoSansKR"
-FONT_BOLD = "NotoSansKR-Bold"
+FONT = PDF_FONT_NAMES["regular"]
+FONT_BOLD = PDF_FONT_NAMES["bold"]
 ORIGIN_LABELS = {"kotra": "KOTRA", "google": "Google News", "abit": "ABIT"}
 SOURCE_NAMES = {"brasilapi": "BrasilAPI 국가 공휴일", "fallback": "대체 공휴일 자료", "none": "확인 불가"}
 
@@ -110,8 +109,8 @@ _fonts_ready = False
 def _register_fonts():
     global _fonts_ready
     if not _fonts_ready:
-        pdfmetrics.registerFont(TTFont(FONT, str(FONT_DIR / "NotoSansKR-Regular.ttf")))
-        pdfmetrics.registerFont(TTFont(FONT_BOLD, str(FONT_DIR / "NotoSansKR-Bold.ttf")))
+        pdfmetrics.registerFont(TTFont(FONT, str(PDF_FONT_FILES["regular"])))
+        pdfmetrics.registerFont(TTFont(FONT_BOLD, str(PDF_FONT_FILES["bold"])))
         _fonts_ready = True
 
 

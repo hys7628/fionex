@@ -1,6 +1,6 @@
 """시장 분석 PDF 출력(A4 세로). 화면에 표시된 결과 dict를 그대로 받아 그립니다. 통계·AI를 다시 호출하지 않습니다.
 
-- ReportLab 5.1.0 + Noto Sans KR(fonts/, OFL). 공통 PDF 입력 검사(common/pdf_utils.py, pypdf)와는 별개입니다.
+- ReportLab 5.1.0 + 공통 Pretendard(static/fonts/pretendard/, OFL, common/config.py PDF_FONT_FILES). 공통 PDF 입력 검사(common/pdf_utils.py, pypdf)와는 별개입니다.
 - 모든 문자열은 XML 이스케이프 후 Paragraph에 넣습니다(외부 문자열·AI 출력의 마크업 해석 방지).
 - 긴 한글·URL은 CJK 줄바꿈으로 칸 안에서 나눕니다. 긴 표는 머리글 행을 페이지마다 반복합니다.
 - 결과는 메모리 bytes로만 만들고 디스크에 쓰지 않습니다.
@@ -9,7 +9,6 @@ import io
 import re
 import urllib.parse
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from xml.sax.saxutils import escape
 
 from reportlab.graphics.shapes import Drawing, Line, PolyLine, Rect, String, Circle
@@ -22,11 +21,11 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle)
 
+from common.config import PDF_FONT_FILES, PDF_FONT_NAMES
 from features.market_analysis import buyers
 
 
-FONT_DIR = Path(__file__).resolve().parent / "fonts"
-FONT, FONT_BOLD = "NotoSansKR", "NotoSansKR-Bold"
+FONT, FONT_BOLD = PDF_FONT_NAMES["regular"], PDF_FONT_NAMES["bold"]
 KST = timezone(timedelta(hours=9))
 
 # 화면 디자인 토큰(static/css/tokens.css) 값 참고
@@ -45,8 +44,8 @@ _registered = False
 def _register_fonts():
     global _registered
     if not _registered:
-        pdfmetrics.registerFont(TTFont(FONT, str(FONT_DIR / "NotoSansKR-Regular.ttf")))
-        pdfmetrics.registerFont(TTFont(FONT_BOLD, str(FONT_DIR / "NotoSansKR-Bold.ttf")))
+        pdfmetrics.registerFont(TTFont(FONT, str(PDF_FONT_FILES["regular"])))
+        pdfmetrics.registerFont(TTFont(FONT_BOLD, str(PDF_FONT_FILES["bold"])))
         _registered = True
 
 

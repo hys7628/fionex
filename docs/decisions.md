@@ -39,6 +39,7 @@
 - 콘티 출력 형식·이미지 생성 포함 여부·공동 담당 세부 분담.
 - OpenAI 모델 최종 선정(위 후보의 실제 호출 검증 전), 비용 한도·호출 제한 운영 기준, 배포 환경.
 - (확정 2026-10-25) PDF 출력 도구: ReportLab 5.1.0(BSD), 글꼴 Noto Sans KR(OFL, features/market_analysis/fonts). 공통 담당 합의는 한윤수 확인. 공통 PDF 입력 검사(pypdf)와 별개.
+  - (변경 2026-10-26, 홍은주 지시) 글꼴을 웹 화면·모든 탭 PDF 공통 Pretendard 1.3.9(SIL OFL 1.1, static/fonts/pretendard/)로 통일. 기능별 fonts/ 폴더(Noto Sans KR·나눔고딕) 삭제. 도구는 ReportLab 그대로.
 - PDF 입력 detail(high 유지 여부)·크기·페이지 상한의 실제 호출 기반 조정, 업로드 라우트의 요청 전체 크기 제한.
 - 이미지 생성을 사용할 탭과 이미지 용도·출력 방식.
 - PR 승인/병합 담당.

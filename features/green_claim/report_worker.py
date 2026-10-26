@@ -3,20 +3,19 @@
 - 시간 제한·프로세스 종료는 report_service.py가 담당합니다. 이 모듈은 Flask를 import하지 않으며 reportlab은 실행할 때만 불러옵니다.
 - 입력은 report_service가 형식·일관성을 확인한 검수 결과입니다. 내용을 고치거나 기준 자료로 보충하지 않습니다.
 - 모든 사용자·AI·기준 문자열은 ReportLab 문단 마크업으로 해석되지 않게 이스케이프합니다.
-- 글꼴: 라틴 문자는 reportlab에 포함된 Bitstream Vera, 한글 등은 fonts/의 나눔고딕(OFL). 글자마다 글리프가 있는 글꼴을 고르고,
-  두 글꼴에 모두 없는 문자(이모지·제어문자 등)는 지우지 않고 [U+XXXX]로 대신 표시합니다.
+- 글꼴: 공통 Pretendard(static/fonts/pretendard/, OFL, common/config.py PDF_FONT_FILES). 한글·라틴·포르투갈어 악센트를 한 글꼴로 그립니다.
+  글자마다 글리프가 있는 글꼴을 고르는 구조(latin → ko)는 유지하며 지금은 두 자리 모두 Pretendard입니다.
+  글꼴에 없는 문자(이모지·제어문자 등)는 지우지 않고 [U+XXXX]로 대신 표시합니다.
 - PDF는 메모리(BytesIO)에서 만들며 디스크에 쓰지 않습니다. 외부 이미지·글꼴·링크 대상을 가져오지 않고 스크립트·첨부를 넣지 않습니다.
 """
 import io
 import json
-import os
 import unicodedata
 from datetime import datetime
-from pathlib import Path
+from common.config import PDF_FONT_FILES
 
-FONT_DIR = Path(__file__).resolve().parent / "fonts"
-KO_FONTS = {"regular": FONT_DIR / "NanumGothic-Regular.ttf", "bold": FONT_DIR / "NanumGothic-Bold.ttf"}
-LATIN_FILES = {"regular": "Vera.ttf", "bold": "VeraBd.ttf"}
+LATIN_FONTS = dict(PDF_FONT_FILES)
+KO_FONTS = dict(PDF_FONT_FILES)
 FONT_NAMES = {"latin": {"regular": "GCLatin", "bold": "GCLatin-Bold"}, "ko": {"regular": "GCKo", "bold": "GCKo-Bold"}}
 
 TITLE = "그린 클레임 문구 검수 보고서"
@@ -60,14 +59,12 @@ class _Fonts:
     """등록한 글꼴과 글자별 글리프 표(cmap)."""
 
     def __init__(self):
-        import reportlab
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
 
-        latin_dir = Path(os.path.dirname(reportlab.__file__)) / "fonts"
         self.cmaps = {}
         for weight in ("regular", "bold"):
-            for family, path in (("latin", latin_dir / LATIN_FILES[weight]), ("ko", KO_FONTS[weight])):
+            for family, path in (("latin", LATIN_FONTS[weight]), ("ko", KO_FONTS[weight])):
                 if not path.is_file():
                     raise FileNotFoundError("font")
                 name = FONT_NAMES[family][weight]

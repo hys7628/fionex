@@ -4,7 +4,7 @@
 이미지에서는 색감(흰 카드·옅은 블루그레이 배경·블루·아쿠아·민트 포인트·네이비 숫자), 카드 질감(얇은 테두리·은은한 그림자), 버튼, 상태 표현, 인터랙션 분위기만 참고했다. 배치는 복제하지 않는다.
 이미지 속 이름·로고·슬로건·메뉴·수치·차트는 사용하지 않는다. 이미지를 배경으로 붙이지 않고 HTML/CSS로 구성한다.
 서비스명은 `fionex`(2026-10-24 확정, common/config.py의 SERVICE_NAME). 화면과 브라우저 제목은 이 값을 사용한다.
-로그인·프로필·계정 메뉴는 두지 않는다. 웹폰트 사용권이 미정이라 시스템 글꼴을 쓴다.
+로그인·프로필·계정 메뉴는 두지 않는다. 웹 화면·모든 PDF 글꼴은 Pretendard(아래 Typography).
 
 ## 화면 구조
 ```
@@ -81,7 +81,7 @@
 | 모서리 | `--radius-sm` 8(입력·안내·작은 요소) / `--radius-md` 10(버튼·메뉴·표 틀·빈 상태) / `--radius-lg` 16(카드·머리글) / `--radius-pill`(배지·상태 칩만) |
 | 그림자 | `--shadow-sm`(머리글·보조 버튼), `--shadow-md`(카드), `--shadow-hover`(누를 수 있는 카드 hover), `--shadow-lg`(모바일 메뉴·팝오버), `--shadow-primary`/`-hover`(주 버튼) |
 | 초점 | `--focus-ring`(흰 틈 + 블루 2px), `--focus-halo`(입력칸 옅은 블루 3px 링) |
-| 글꼴 | `--font-sans`, `--font-size-xs` ~ `--font-size-2xl`, `--font-weight-regular/medium/semibold/bold` |
+| 글꼴 | `--font-sans`(Pretendard), `--font-size-xs` ~ `--font-size-2xl`, `--font-weight-regular`(400)·`medium`(500)·`semibold`(600)·`bold`(700) |
 | 움직임 | `--transition-fast` 150ms, `--transition-base` 200ms, `--duration-enter` 220ms, `--ease-out` |
 
 ## 글자 위계
@@ -96,6 +96,19 @@
 | 숫자 데이터 | 기능별 크기, `.num`/`.tabular-nums`(tabular-nums), 표 숫자 칸 medium | `--color-text` |
 
 시간·환율·금액·KPI·D-day·퍼센트는 `font-variant-numeric: tabular-nums`로 자릿수를 맞추고 설명보다 크게·진하게 둔다.
+
+## Typography (2026-10-26 DEV-COMMON-008, Pretendard로 통일)
+- **글꼴 하나로 통일**: 웹 화면 전체와 모든 탭 PDF(Home 일일 브리핑·시장 분석·그린 클레임 검수 보고서)가 Pretendard 1.3.9(SIL OFL 1.1)를 쓴다. 파일은 `static/fonts/pretendard/` 한 곳(공식 파일명 `Pretendard-<굵기>.woff2|ttf`, 목록·출처·해시는 그 폴더 README.md). 기능별 `fonts/` 폴더는 없다(2026-10-26 삭제). 이전 Brand New Hyosung(DEV-COMMON-007)은 쓰지 않는다.
+- **웹**: `static/css/common.css` 맨 앞 `@font-face` 4개 — Regular 400·Medium 500·SemiBold 600·Bold 700 woff2, `font-display: swap`, 상대경로 `../fonts/pretendard/…`. 실제로 쓰는 굵기 파일만 내려받는다(4개 합계 약 3.1MB).
+- **굵기 토큰**: 파일과 1:1 — `--font-weight-regular` 400·`medium` 500·`semibold` 600·`bold` 700(합성 굵기 없음). 이 밖의 굵기 값은 쓰지 않는다.
+- **fallback**: `"Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif` — 폰트를 못 불러온 경우에만 쓰인다.
+- **글리프(fontTools 확인)**: 한글 완성형 11,172자, ASCII, 포르투갈어 악센트(á ã â à ç é ê í ó õ ô ú ü·대문자), `· • – — … € ₩ ▲ ▼ ①~⑥ ※` 모두 포함 → 한국어·영어·포르투갈어가 한 글꼴로 그려진다. `ⓘ`만 없음(웹 도움말 버튼, 시스템 글꼴로 대체).
+- **PDF**: `common/config.py`의 `PDF_FONT_FILES`(Pretendard-Regular.ttf·Pretendard-Bold.ttf, TrueType 외곽선 — ReportLab은 CFF .otf를 못 써서 배포본 `alternative/` TTF 사용)와 `PDF_FONT_NAMES`(Pretendard·Pretendard-Bold)를 세 PDF가 같이 쓴다. 그린 클레임의 글자별 글꼴 선택·`[U+XXXX]` 대체 구조는 유지(두 자리 모두 Pretendard). PDF 리소스의 `/Helvetica`는 ReportLab 캔버스 기본 선언(그리는 글자 없음).
+- **상속**: 모든 요소는 `--font-sans`를 상속한다. `button, input, select, textarea { font: inherit }`, `::file-selector-button`도 `font: inherit`. 기능 CSS에서 `font-family`를 직접 쓰지 않는다(코드·고정폭은 `--font-mono`). 차트 SVG `<text>`·툴팁도 상속으로 같은 글꼴.
+- **숫자**: 별도 고정폭 글꼴 없이 `tabular-nums` 유지.
+- **로고**: 로고 이미지 안 글자는 이미지 그대로(CSS 글꼴 적용 안 함).
+- **네트워크**: 외부 CDN·Google Fonts 요청 없음. 같은 서버 `/static/fonts/pretendard/`에서 200으로 제공.
+- **사용권**: SIL OFL 1.1 — 웹 제공·PDF 임베딩·재배포 허용, 글꼴 단독 판매 금지, `LICENSE.txt` 동봉, 예약 이름 Pretendard. OS/2 fsType 0.
 
 ## 공통 컴포넌트
 | 용도 | 클래스 |
@@ -282,7 +295,7 @@
 다운로드는 `fetch` → Blob → `downloadBlob`을 권장한다. `location.href`로 다운로드 주소에 이동하면 브라우저가 페이지 이탈로 보고 종료 경고를 띄울 수 있다.
 
 ## PDF
-PDF 디자인은 화면 디자인과 별도 검증: 한글/포르투갈어 글꼴·페이지 나눔·이미지 품질. 화면 토큰 값을 참고할 수 있으나 PDF 도구는 미정.
+PDF 디자인은 화면 디자인과 별도 검증: 한글/포르투갈어·페이지 나눔·이미지 품질. 도구 ReportLab 5.1.0, 글꼴은 화면과 같은 Pretendard(Typography 참고). 화면 토큰 값을 참고할 수 있다.
 
 ## 금지
 공통 디자인과 다른 독자 테마, 공통 CSS 복제, 탭 CSS의 전역 덮어쓰기, 꾸민 데이터 표시, 작동하지 않는 버튼을 활성 상태로 두기.

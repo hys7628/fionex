@@ -874,10 +874,9 @@ AppShell·PDF
 - 실제 결과에 없는 파일명·입력 정보·판독 정보·내부 경로·개발 로그·API 키는 넣지 않는다.
 
 글꼴과 지원하지 않는 문자
-- 라틴 문자(영어·포르투갈어 악센트, Latin-1 전체): ReportLab 패키지에 포함된 Bitstream Vera(Vera.ttf·VeraBd.ttf, Bitstream Vera 라이선스: 재배포·묶음 배포 허용). 저장소에 넣지 않고 설치된 reportlab에서 읽는다.
-- 한글·그 밖 기호: 담당 기능 폴더 `features/green_claim/fonts/`의 나눔고딕 Regular·Bold(SIL OFL 1.1, Google Fonts 공식 저장소 배포본, 원본 그대로). 출처·해시는 fonts/README.md.
-- 나눔고딕·IBM Plex Sans KR(Google Fonts 배포본)은 포르투갈어 악센트(á·ã·ç 등)가 없어 단독 사용 불가로 확인(2026-10-26). 그래서 글자마다 Vera → 나눔고딕 순으로 글리프가 있는 글꼴을 고른다. Windows 시스템 글꼴은 쓰지 않는다.
-- 두 글꼴 모두 없는 문자(이모지, 일부 기호·문자, 탭·제어문자)는 지우지 않고 회색 배경의 `[U+XXXX]`(코드 포인트) 표시로 바꾼다. 결합 문자(예: e + U+0301)는 화면 표시용으로만 합성형(é)이 글꼴에 있으면 합성형으로 그린다. 보고서 첫머리 범례에 "[U+…]는 글꼴에 없는 원문 글자를 대신 표시한 것, ▶R1은 보고서가 붙인 번호이며 원문 글자가 아님"을 적는다.
+- (2026-10-26 DEV-COMMON-008 변경) 한글·라틴·포르투갈어 악센트 모두 공통 Pretendard Regular·Bold(`static/fonts/pretendard/`, SIL OFL 1.1, `common/config.py` `PDF_FONT_FILES`)로 그린다. 글자마다 글리프가 있는 글꼴을 고르는 구조(latin → ko 자리)는 유지하며 두 자리 모두 Pretendard다. Windows 시스템 글꼴은 쓰지 않는다.
+- (이전 구성, 삭제) 라틴은 reportlab 포함 Bitstream Vera, 한글은 `features/green_claim/fonts/`의 나눔고딕. 나눔고딕·IBM Plex Sans KR은 포르투갈어 악센트가 없어 단독 사용 불가였다.
+- Pretendard에 없는 문자(이모지, 일부 기호·문자, 탭·제어문자)는 지우지 않고 회색 배경의 `[U+XXXX]`(코드 포인트) 표시로 바꾼다. 결합 문자(예: e + U+0301)는 화면 표시용으로만 합성형(é)이 글꼴에 있으면 합성형으로 그린다. 보고서 첫머리 범례에 "[U+…]는 글꼴에 없는 원문 글자를 대신 표시한 것, ▶R1은 보고서가 붙인 번호이며 원문 글자가 아님"을 적는다.
 - 모든 사용자·AI·기준 문자열은 ReportLab 문단 마크업으로 해석되지 않게 `&`·`<`·`>`·따옴표를 이스케이프한다. 링크는 검증한 http/https만 넣는다. 외부 이미지·글꼴·첨부를 가져오지 않고, 파일 실행·스크립트·추적 요소를 넣지 않는다.
 
 레이아웃

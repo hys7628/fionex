@@ -190,7 +190,7 @@ Home 맨 위 `일일 브리핑` 바(첫 화면): 한 줄 안내 `바이어 시�
 기존 service 함수와 캐시: get_holidays · get_fx · get_news · get_upcoming_fairs(3). PDF 요청당 각 1회, 캐시 우선(만료 영역만 각 정책대로 갱신). AI 요약은 이미 만든 것만 사용(PDF로 OpenAI를 부르지 않음).
 
 ### 작동 방식
-features/home/report.py가 ReportLab 5.1.0으로 BytesIO에 생성(임시 파일 없음). 폰트 features/home/fonts/ Noto Sans KR Regular·Bold(SIL OFL 1.1, 출처·sha256은 fonts/README.md).
+features/home/report.py가 ReportLab 5.1.0으로 BytesIO에 생성(임시 파일 없음). 폰트는 공통 Pretendard Regular·Bold(static/fonts/pretendard/, SIL OFL 1.1, common/config.py PDF_FONT_FILES, 출처·sha256은 그 폴더 README.md). 2026-10-26 Noto Sans KR(features/home/fonts/, 삭제)에서 변경(DEV-COMMON-008).
 화면은 fetch → Blob → `AppShell.work.downloadBlob`(새 Blob URL, `<a download>` 클릭, 60초 뒤 revoke, `markDownloadRequested`)으로 내려받는다. 버튼은 생성 중 disabled·aria-busy.
 
 ### API

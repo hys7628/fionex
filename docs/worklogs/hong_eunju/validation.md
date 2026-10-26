@@ -782,3 +782,78 @@ Firefox·Safari·모바일 기기·화면낭독기 실제 낭독, Firefox에서 
 
 ### 미검증
 실제 사용자 브라우저(Edge·Safari·모바일 기기)·고해상도 실제 모니터, 1배율 화면에서 슬로건 가독성(약 5px로 판독 어려움 — 원본 축소 그대로), 큰 PNG 첫 로딩 시간.
+
+## 2026-10-26 브랜드 폰트 Brand New Hyosung 적용 (DEV-COMMON-007)
+변경: static/css/common.css, static/css/tokens.css, docs/design_system.md, tests/test_common/test_shell_a11y.py (폰트 파일 static/fonts/brand/*.ttf는 사용자 제공 그대로)
+환경: jasonenv Python 3.11.17, fontTools 4.55.3(세션 임시 폴더), 검증 서버 127.0.0.1:5013(모의 실행기, urlopen 차단), Chrome + playwright-core 1.48.2. 실제 렌더링 글꼴은 CDP CSS.getPlatformFontsForNode(요소별 실제 사용 글꼴·글자 수)로 측정.
+
+### 폰트 파일
+| 파일 | usWeightClass | 한글 | ASCII | 포르투갈어 악센트 | 기타 |
+|---|---|---|---|---|---|
+| Brand New Hyosung Light.ttf | 300 | 11,172 | 전부 | 없음 | – — • € 없음 |
+| Brand New Hyosung Medium.ttf | 500 | 11,172 | 전부 | 없음 | 동일 |
+| Brand New Hyosung Bold.ttf | 700 | 11,172 | 전부 | 없음 | 동일 |
+
+### 실제 렌더링 글꼴(27/27 통과)
+body 본문·사이드바 메뉴(활성/일반)·버튼·select·Home KPI(현재 시각)·카드 제목·badge·notice 제목·필터 칩·그린 클레임 안내문·input(품목코드)·시장 분석 KPI·표 td.num·표 th·차트 SVG text.ma-axis·차트 툴팁 → 모두 "Brand New Hyosung(웹폰트)"만 사용.
+포르투갈어: 시장 분석 품목명 'Fios texturizados de poliésteres' → Brand New Hyosung 90자 + Malgun Gothic 1자(é). textarea 입력('… Nosso fio é 100% sustentável e não causa …')은 CDP로 측정 불가 → font-family "Brand New Hyosung" + 캡처 육안(é·á·ã만 대체 글꼴로 조금 가늘고 a 모양 다름, 글자 누락 없음).
+file 선택 버튼: 수정 전 Arial → 수정 후 "Brand New Hyosung". 화면 요소 굵기: 수정 전 400·500·700 → body 굵기 지정 후 500·700만(OS가 그리는 select option 제외).
+표 숫자 tabular-nums 유지, SVG text font-family 상속 "Brand New Hyosung".
+폰트 face: 500 loaded·700 loaded·300 unloaded(미사용이라 요청 안 함).
+
+### 네트워크
+| 요청 | 결과 |
+|---|---|
+| /static/fonts/brand/Brand New Hyosung Medium.ttf | 200 (application/octet-stream) |
+| /static/fonts/brand/Brand New Hyosung Bold.ttf | 200 (application/octet-stream) |
+| 그 외 글꼴 요청 | 없음 |
+| 127.0.0.1:5013 밖 요청 | 0건 |
+
+### 회귀
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 5개 탭 × 1440/1024/390 | 15/15, 가로 스크롤·화면 밖 요소 없음, JS 예외 0. 캡처 육안: 사이드바 메뉴·버튼·칩·표 머리·badge·notice·placeholder·KPI·그린 클레임 긴 안내문 줄바꿈·잘림 이상 없음 | 통과 |
+| 공통 상호작용 / 키보드·초점 / 로딩·오류 UX / 로고 | 26/26 / 41/41 / 36/36 / 15/15 | 통과 |
+| `-s tests/test_common` | 64 OK(폰트 로컬 파일·외부 CDN 없음 테스트 추가) | 통과 |
+| PDF 관련 파일 diff(features/*/pdf*·report*·fonts, common/pdf_utils.py) | 변경 없음 | 통과 |
+포르투갈어 대체 글꼴 비교 캡처(현재 스택 vs Segoe UI 우선 vs Malgun만): 차이 작음 → 스택 유지.
+
+### 미검증
+macOS·iOS·Android 실제 렌더링(대체 글꼴 다름), 실제 사용자 브라우저·고해상도 모니터, 웹 사용권, 느린 네트워크에서 swap 전환 체감.
+
+## 2026-10-26 웹·모든 탭 PDF Pretendard 통일 (DEV-COMMON-008)
+변경: static/fonts/pretendard/(신규), common/config.py, static/css/common.css·tokens.css, features/home/report.py, features/market_analysis/pdf_report.py, features/green_claim/report_worker.py·tests/test_report.py, tests/test_common/test_shell_a11y.py, 기능별 fonts/ 3곳 삭제, 문서
+환경: jasonenv Python 3.11.17, fontTools 4.55.3·PyMuPDF 1.24.14(세션 임시 폴더 설치, 저장소·requirements 미변경), 검증 서버 127.0.0.1:5013(모의, urlopen 차단), Chrome + playwright-core 1.48.2.
+
+### 파일
+| 확인 | 결과 |
+|---|---|
+| 복사본과 배포본 바이트 비교(cmp) | woff2 4·ttf 2·LICENSE.txt 모두 동일 |
+| TTF 형식·굵기·임베딩 | glyf(TrueType), Regular 400·Bold 700, fsType 0, Version 1.309 |
+| 글리프 | 한글 11,172/11,172, ASCII 전부, 포르투갈어 악센트 누락 없음, ⓘ만 없음 |
+
+### PDF 실제 생성(가상 데이터, PyMuPDF로 열기·렌더링)
+| PDF | 쪽수·크기 | 포함 글꼴 | 포르투갈어 문자(추출) | 대체·깨짐 |
+|---|---|---|---|---|
+| Home 일일 브리핑(build_daily, 외부 수집 차단) | 2쪽, 47,657 bytes | Pretendard-Regular·Bold (+ ReportLab 기본 선언 Helvetica) | ê ú | U+FFFD 0, 실제 [U+] 대체 0 |
+| 시장 분석(ComexStat 가상 수치, 품목명 'poliésteres … ação têxtil') | 53쪽, 254,942 bytes | Pretendard-Regular·Bold | Í á ã ç é ê | 0, 0 |
+| 그린 클레임(통합 테스트 가상 사례, POST /api/green-claim/report 별도 프로세스) | 6쪽, 94,562 bytes | Pretendard-Regular·Bold | É Í à á â ã ç é ê í ó õ ú | 0, 0('[U+XXXX]'는 범례 고정 문장) |
+페이지 이미지 육안(Home 1쪽, 시장 분석 1쪽, 그린 클레임 2쪽): 표 넘침·잘림·겹침 없음, não·Código·§1º·poliésteres 정상. 시장 분석 차트 축 라벨 반올림 겹침은 기존 표기 규칙(글꼴 무관).
+/Helvetica 확인: Pretendard만 쓰는 최소 ReportLab 문서도 페이지 리소스에 Helvetica(/F1 12 Tf 선언 1회, 그린 글자 없음) 포함.
+
+### 웹(27/27 통과, CDP 실제 렌더링 글꼴)
+body·사이드바(Medium/SemiBold)·버튼·select·Home KPI·카드 제목·badge·notice·필터 칩·그린 클레임 안내문·input·시장 분석 KPI·표 th/td.num·차트 SVG text·툴팁·file 선택 버튼 → 모두 Pretendard 웹폰트만. 포르투갈어(Perú·Tecnotêxtil·poliésteres 91자)도 대체 글꼴 없음. 화면 굵기 400·500·600·700, face 4개 loaded.
+네트워크: /static/fonts/pretendard/Pretendard-{Regular,Medium,SemiBold,Bold}.woff2 각 200, Brand New Hyosung·외부 요청 0건.
+
+### 테스트·회귀
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| `-s tests/test_common` | 65 OK(Pretendard 단일 로컬 글꼴·모든 PDF 공통 경로·기능별 fonts 폴더 없음 테스트) | 통과 |
+| `-s tests/test_home` / `test_market_analysis` | 94 / 71 OK | 통과 |
+| `-s features/green_claim/tests` | 첫 실행 1 실패(/Helvetica) → 기대값 수정 후 178 OK | 통과 |
+| 5개 탭 × 1440/1024/390 | 15/15, 가로 스크롤·JS 예외 0, 캡처 육안 줄바꿈 이상 없음 | 통과 |
+| 공통 상호작용 / 키보드·초점 / 로딩·오류 UX / 로고 | 26/26 / 41/41 / 36/36 / 15/15 | 통과 |
+외부 호출 0건.
+
+### 미검증
+실제 외부 데이터(긴 뉴스 제목·실제 AI 분석 표)로 만든 PDF의 줄바꿈, macOS·모바일 렌더링, PDF 뷰어별(Acrobat·브라우저) 표시.

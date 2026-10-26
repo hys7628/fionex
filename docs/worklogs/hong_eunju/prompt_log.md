@@ -525,3 +525,44 @@
 - 검증: validation.md 2026-10-26 DEV-COMMON-006.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 사이드바 168px에서 슬로건 글자 높이가 약 5px라 1배율 화면에서는 읽기 어려움(원본 축소 지시대로 유지). 870KB PNG를 작은 크기로 표시(첫 로딩 부담) — 표시 크기 2배 정도로 줄인 최적화 사본은 담당자 결정 필요. 로고 사용권·출처 기록(assets.md)은 사용자 제공 파일이라는 사실만 기록.
+
+## DEV-COMMON-007 웹 UI 브랜드 폰트(Brand New Hyosung) 적용
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통(common_setup) (브랜치 feature/common_setup, 작업 전 상태: 사용자가 만든 미추적 static/fonts/ 외 변경 없음, 최근 커밋 cdec84d)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: static/fonts/brand/의 실제 파일로 @font-face 등록(파일명 그대로, 없는 굵기 가정 금지), --font-sans를 Brand New Hyosung 우선으로, 400/600 합성 점검·토큰 정리, 개별 font-family 정리, 버튼·입력·file 버튼·표·KPI·차트 SVG 글꼴 확인, 한·영·포 글리프 확인, 줄바꿈 회귀, PDF 변경 금지, 외부 CDN 금지, 실제 computed font·HTTP 200 확인. Git 작업 금지.
+- 현재 구조 조사: 글꼴은 tokens.css --font-sans 한 곳 + common.css body만 사용, 기능 CSS의 font-family 0건(font: inherit 4곳은 컨트롤 상속용), 굵기는 모두 토큰 경유(직접 숫자 0건), @font-face 없음.
+- 폰트 확인(fontTools 4.55.3, 세션 임시 폴더 설치 — 저장소·requirements 미변경): Light/Medium/Bold usWeightClass 300/500/700, family 'Brand New Hyosung', 한글 11,172/11,172, ASCII 전부, 숫자 폭 균일. 포르투갈어 악센트 문자 전부 없음(á ã â à ç é ê í ó õ ô ú ü 대·소문자), – — • € 없음. 저작권 'Copyright (c) 2023 by HYOSUNG CORPORATION. All rights reserved.', 라이선스 문구 없음, fsType 4.
+- 판단:
+  - @font-face는 공통 CSS 맨 앞(common.css), 경로 ../fonts/brand/<원본 파일명>(공백 포함, 따옴표 URL). 매핑은 메타데이터 그대로 300/500/700.
+  - 굵기: 400 요청 시 브라우저가 500을, 600 요청 시 700을 고르므로 합성은 없지만, 토큰을 실제 파일에 맞춰 명시(regular·medium 500, semibold·bold 700) + body font-weight 지정. 화면이 지나치게 굵어지지 않는지 1440/1024/390 캡처로 확인(본문 Medium이 데이터 화면 가독성에 적합). 이전 시스템 글꼴(Malgun: 400/700만)에서도 600은 이미 700으로 그려졌으므로 강조 굵기 체감 변화는 작음.
+  - fallback 순서는 기존 스택 앞에 브랜드 폰트만 추가. 포르투갈어 악센트 대체 글꼴로 Segoe UI를 앞에 두는 안을 캡처로 비교했으나 Malgun과 차이가 작아 지시 스택 유지.
+  - ::file-selector-button이 Arial로 그려짐(실측) → font: inherit. body 기본 굵기 400 요청(실측) → 토큰 지정. select의 option 목록은 OS가 그리는 드롭다운이라 400 그대로(측정 제외).
+  - 차트 SVG text는 HTML 상속으로 이미 브랜드 폰트(실측) → .ma-svg text 규칙 추가 안 함. 기능 CSS 변경 없음.
+- 변경 파일: static/css/common.css(@font-face 3개, body 굵기, file 버튼 font), static/css/tokens.css(--font-sans, 굵기 토큰), docs/design_system.md(Typography), tests/test_common/test_shell_a11y.py(폰트 로컬 파일·외부 CDN 없음 테스트). static/fonts/brand/*.ttf 3개는 사용자가 넣은 파일 그대로(변경 없음, 미추적 상태).
+- PDF: 변경 없음(features/*/fonts, report·pdf 코드 diff 0).
+- 외부 호출: 0건(브라우저 외부 요청 0, 서버 urlopen 차단).
+- 검증: validation.md 2026-10-26 DEV-COMMON-007.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 포르투갈어 악센트·– — • €는 시스템 글꼴 대체(모양·굵기 섞임), 웹 사용권 미확인(fsType 4·라이선스 문구 없음), 폰트 2.6MB 첫 로딩(서브셋·woff2 변환은 사용권 확인 후 검토), Flask가 .ttf를 application/octet-stream으로 응답(브라우저 로드는 정상), macOS·모바일 실제 렌더링 미확인.
+
+## DEV-COMMON-008 웹·모든 탭 PDF 글꼴을 Pretendard로 통일
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통 + home·market_analysis·green_claim PDF (브랜치 feature/common_setup, 작업 전 미커밋: DEV-COMMON-007 브랜드 폰트 변경 7개 파일·미추적 static/fonts/)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "글꼴 C:\Users\user\Documents\AX2\fionex\static\fonts\Pretendard-1.3.9 여기있는걸로 통일해주고 파일명도 리드미에 맞춰서 통일해주고 우리 전체탭 pdf 도 이 글꼴로 해줘"
+- 판단:
+  - '리드미'는 Pretendard 폴더에 README가 없어(LICENSE.txt만), 공식 배포본 파일명 규칙(`Pretendard-<굵기>`)을 그대로 쓰고 새 공통 폴더에 README.md(파일·용도·원본 경로·SHA-256·라이선스·글리프)를 만들어 이름을 그 표와 일치시키는 것으로 해석.
+  - 배포본(67MB) 전체를 쓰지 않고 필요한 파일만 `static/fonts/pretendard/`로 복사(원본과 바이트 동일 확인): 웹 woff2 Regular·Medium·SemiBold·Bold(약 3.1MB), PDF TTF Regular·Bold(약 5.4MB), LICENSE.txt.
+  - PDF: ReportLab은 CFF(.otf)를 못 쓰므로 배포본 `public/static/alternative/*.ttf`(glyf 외곽선) 사용. fontTools 확인: 한글 11,172·ASCII·포르투갈어 악센트·· • – — … € ₩ ▲ ▼ ①~⑥ ※ 포함, ⓘ만 없음, fsType 0, OFL 1.1.
+  - 공통화: `common/config.py`에 FONT_DIR·PDF_FONT_FILES·PDF_FONT_NAMES 추가 → Home report.py·시장 분석 pdf_report.py는 등록 경로·이름만 교체, 그린 클레임 report_worker.py는 글자별 글꼴 선택·[U+XXXX] 구조를 유지하고 latin·ko 두 자리 모두 Pretendard(Vera·나눔고딕 제거, 사용하지 않게 된 os import 삭제).
+  - 웹: Brand New Hyosung @font-face → Pretendard woff2 4개, --font-sans 맨 앞 Pretendard, 굵기 토큰 400·500·600·700 원복(파일 1:1). DEV-COMMON-007의 file 버튼 font: inherit·body 굵기 지정은 유지.
+  - 정리: 쓰지 않게 된 기능별 fonts/ 폴더 3곳(home·market_analysis Noto Sans KR+OFL+README, green_claim 나눔고딕+OFL+README) 삭제(Git 이력에 남음). 사용자가 넣은 static/fonts/brand/(Brand New Hyosung)·static/fonts/Pretendard-1.3.9/(배포본)은 삭제하지 않음 — 커밋 제외 권장.
+  - 그린 클레임 테스트 기대값 변경: 'NanumGothic·Vera 포함' → '포함 글꼴 모두 Pretendard'. 처음 실패(/Helvetica 포함) → 최소 PDF로 ReportLab 캔버스 기본 선언(/F1 12 Tf, 그리는 글자 없음)임을 확인하고 /Helvetica만 허용.
+- 변경 파일: static/fonts/pretendard/(신규: woff2 4·ttf 2·LICENSE.txt·README.md), common/config.py, static/css/common.css, static/css/tokens.css, features/home/report.py, features/market_analysis/pdf_report.py, features/green_claim/report_worker.py, features/green_claim/tests/test_report.py, tests/test_common/test_shell_a11y.py, 삭제 features/{home,market_analysis,green_claim}/fonts/*(12개), docs/design_system.md, docs/decisions.md, README.md, requirements.txt(주석), features/{home,market_analysis,green_claim}/feature_spec.md.
+- 외부 호출: 0건(PDF 생성·브라우저 검증 모두 urlopen 차단·가상 데이터).
+- 검증: validation.md 2026-10-26 DEV-COMMON-008.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 시장 분석 PDF 차트 축 라벨이 작은 값에서 반올림으로 겹침(1500→"2K", 0.x→"1/0") — 글꼴과 무관한 기존 표기 규칙, 이번 미수정. PDF 글꼴 크기 변화로 실제 데이터(긴 뉴스 제목·AI 표)의 줄바꿈은 가상 데이터로만 확인. Flask가 woff2를 application/octet-stream으로 응답(로드는 정상). 미추적 원본 폴더 2곳(약 71MB) 처리 결정 필요.
