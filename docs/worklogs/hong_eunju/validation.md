@@ -640,3 +640,13 @@ fixture 서버(5013 many·5014 kotra0, FLASK_SKIP_DOTENV=1, urlopen 차단), 브
 
 ### 미검증
 실제 사용자 브라우저(Edge·Safari·Firefox·모바일 기기), 화면낭독기, Windows 고대비 모드, 실제 외부 데이터가 들어온 상태의 표·뉴스·환율 화면(이번 검증은 외부 차단 상태의 오류·설정 필요 화면), 그린 클레임·시장 분석의 실제 분석 결과 화면(유료/외부 호출 필요해 미실행), PDF 출력물(화면 CSS와 별개라 영향 없음으로 판단, 미확인).
+
+## 2026-10-26 시장 분석 분류 배지 정리 (DEV-COMMON-003)
+변경: features/market_analysis/templates/market_analysis/panel.html (badge-info → badge-neutral)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| 시장 분석 1440 배지 계산 스타일·캡처 | badge-neutral, 블루그레이, 점 없음, 문구 동일 | bg rgb(238,242,247), 글자 rgb(71,86,110), ::before none, "브라질 · 수입" | 통과 |
+| `python -m unittest discover -s tests/test_market_analysis` | OK | 71 OK | 통과 |
+| 5개 탭 × 1440/1024/390 재캡처(검증 서버 5013, 외부 차단) | 가로 스크롤 없음, JS 예외 0 | 15/15, 예외 0 | 통과 |
+| 공통 상호작용 재실행 | 26/26 | 26/26 | 통과 |
+외부 호출 0건.

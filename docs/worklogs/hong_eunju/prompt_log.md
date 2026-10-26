@@ -438,3 +438,18 @@
 - 검증: validation.md 2026-10-26 공통 대시보드 UI 항목.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 실제 사용자 브라우저(Edge·Safari·모바일 기기)·화면낭독기·Windows 고대비 모드 미확인. 다른 담당자 탭은 공통 토큰 변경으로 색·모서리가 함께 바뀜(팀 공유 필요). 시장 분석의 '브라질 · 수입'은 분류 성격이지만 기능 코드가 badge-info를 써서 블루로 남음(담당자 판단 필요).
+
+## DEV-COMMON-003 시장 분석 '브라질 · 수입' 분류 배지 정리 (DEV-COMMON-002 후속)
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통 + market_analysis (브랜치 feature/common_setup)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: 홍은주가 공통 UI와 5개 탭(Home·시장 분석·제품소개서·그린 클레임 체크·홍보 스튜디오)을 모두 담당하기로 확정. features/ 직접 수정 가능, 공통 디자인과 의미가 맞지 않는 부분은 직접 정리.
+- 정정: DEV-COMMON-002 '남은 한계'의 "담당자 판단 필요"는 담당 범위 확정으로 해소. 아래처럼 직접 수정함.
+- 변경: features/market_analysis/templates/market_analysis/panel.html — 고정 대상 시장 라벨 `badge badge-info` → `badge badge-neutral`.
+  - 기존 동작: 상태(정보) 배지처럼 블루 + 점 표시.
+  - 변경 동작: 분류 라벨(블루그레이 rgb(71,86,110) / rgb(238,242,247), 점 없음). 문구·위치·JS·API·PDF(pdf_report.py의 같은 문구) 변경 없음.
+  - 이유: 상태가 아닌 단순 분류 라벨에 상태색을 쓰지 않는다는 design_system 배지 규칙에 맞춤.
+- API contract 변경: 없음.
+- 검증: validation.md 2026-10-26 DEV-COMMON-003.
+- 담당자 판단: 미기재(담당자 검토 필요)
