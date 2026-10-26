@@ -121,6 +121,81 @@ class RenderTests(unittest.TestCase):
         self.assertIn("1.000.000.000 kg", flat(pages_text(build_pdf(d))[3]))
 
 
+def _regions(page):
+    """쪽별 글자 영역(CSS px: 왼쪽, 위, 오른쪽, 아래). 기준선이 위·아래 사이이고 가로가 좌우 안에 있어야 함."""
+    pc = pdf_catalog
+    right = pc.PAD + pc.CONTENT_W
+    footer = (pc.PAD, pc.CONTENT_BOTTOM, right, pc.PAGE_H - pc.FOOTER_BOTTOM)
+    if page == 1:
+        return [(pc.PAD, pc.PAD, pc.PAD + pc.COVER_TEXT_W, pc.COVER_TEXT_BOTTOM),
+                (pc.PAD, pc.COVER_FIGURE_H, right, pc.CONTENT_BOTTOM), footer]
+    if page == 2:
+        return [(pc.PAD, pc.PAD, right, pc.CONTENT_BOTTOM), footer]
+    if page == 3:
+        return [(24, pc.DETAIL_FIGURE_H, 24 + 300, pc.CONTENT_BOTTOM),
+                (pc.DETAIL_TEXT_X, pc.PAD, right, pc.CONTENT_BOTTOM), footer]
+    col_w = (pc.CONTENT_W - pc.TERM_GAP * 2) / 3
+    cards = [(pc.PAD + n * (col_w + pc.TERM_GAP) + pc.TERM_PAD_X, 170,
+              pc.PAD + n * (col_w + pc.TERM_GAP) + col_w - pc.TERM_PAD_X, pc.CONTENT_BOTTOM) for n in range(3)]
+    closing_x = pc.PAD + (pc.CONTENT_W - pc.GAP) * 6 / 11 + pc.GAP
+    return [(pc.PAD, pc.PAD, right, 170),              # 머리말·제목
+            (pc.PAD + 3 + 24, 170, right - 24, pc.CONTENT_BOTTOM)] + cards + [  # 빈 상태 상자·카드
+           (closing_x, 170, right, pc.CONTENT_BOTTOM), footer]
+
+
+class GeometryTests(unittest.TestCase):
+    """내용 스트림에서 실제로 그려진 글자 줄의 가로 범위를 계산해(pdf_geometry) 쪽별 영역과 대조합니다.
+    2026-10-26 후속 시각 검증(외부 전달)에서 발견된 가로 넘침의 회귀 테스트: 머리말 자간(Tc)이 같은 쪽 본문에 남아
+    측정보다 넓게 그려졌음. 이 검사는 수정 전 코드에서 2쪽 최대 644~666pt(쪽 폭 595pt)로 실패했습니다."""
+
+    def assertInsideRegions(self, data):
+        import pdf_geometry
+        pc = pdf_catalog
+        runs = pdf_geometry.text_runs(build_pdf(data))
+        self.assertTrue(runs)
+        for page, x0, x1, y, chars, _size in runs:
+            left, right, base = x0 / pc.PX, x1 / pc.PX, pc.PAGE_H - y / pc.PX
+            ok = any(l - 0.5 <= left and right <= r + 0.5 and t <= base <= b + 0.5 for l, t, r, b in _regions(page))
+            self.assertTrue(ok, f"{page}쪽 글자 줄이 영역 밖: x {left:.1f}~{right:.1f}px, 기준선 {base:.1f}px, {chars}자")
+
+    def test_text_stays_inside_regions(self):
+        for case in ("base", "edited", "empty_info", "virtual_all", "long_max", "max_paragraphs", "wide_words"):
+            with self.subTest(case=case):
+                self.assertInsideRegions(getattr(pdf_fixtures, case)())
+
+    def test_kicker_spacing_does_not_leak(self):
+        """머리말의 글자 간격은 q/Q 안에만 있고, 그 뒤 본문 줄의 실제 폭은 글꼴 측정 폭과 같아야 함."""
+        import pdf_geometry
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+        pdf = build_pdf(pdf_fixtures.base())
+        text = pdf_fixtures.base()["intro"]["paragraphs"][0]["text"]
+        runs = [r for r in pdf_geometry.text_runs(pdf) if r[0] == 2]
+        size = pdf_catalog.FONT_PX["lg"] * pdf_catalog.PX
+        body = [r for r in runs if abs(r[5] - size) < 0.01]  # 2쪽 본문 크기(lg) 줄만, 위에서부터
+        body.sort(key=lambda r: -r[3])
+        self.assertGreaterEqual(len(body), 2)
+        consumed = 0
+        for line in body:  # 줄마다 실제 그려진 폭 = 같은 글자의 글꼴 측정 폭(자간 누적 없음)
+            chunk = text[consumed:consumed + line[4]]
+            consumed += line[4] + 1  # 줄바꿈 자리의 공백
+            expected = stringWidth(chunk, pdf_catalog.FONT_NAMES["regular"], size)
+            self.assertAlmostEqual(line[2] - line[1], expected, delta=0.5, msg=chunk)
+        stream = PdfReader(io.BytesIO(pdf)).pages[1].get_contents().get_data().decode("latin-1")
+        depth, tc_outside = 0, []
+        for token_line in stream.split("\n"):
+            for part in token_line.split(" Tc")[:-1]:
+                if depth == 0 and float(part.split()[-1]) != 0:
+                    tc_outside.append(part.split()[-1])
+            depth += token_line.split().count("q") - token_line.split().count("Q")
+        self.assertEqual(tc_outside, [])
+
+    def test_wide_words_wrap_without_loss(self):
+        d = pdf_fixtures.wide_words()
+        joined = "".join(flat(t).replace(" ", "") for t in pages_text(build_pdf(d)))
+        for value in (d["cover"]["tagline"]["text"], d["details"]["items"][0]["value"], d["supply"]["items"][0]["value"]):
+            self.assertIn(value.replace(" ", ""), joined)  # 줄바꿈만 생기고 글자는 빠지지 않음
+
+
 class OverflowTests(unittest.TestCase):
     def assertOverflow(self, data, page):
         with self.assertRaises(CatalogPdfOverflowError) as ctx:

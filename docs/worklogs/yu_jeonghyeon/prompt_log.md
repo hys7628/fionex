@@ -393,3 +393,19 @@
   - Edge headless 스크린샷으로 쪽 렌더링 시도 → 빈 화면(PDF 뷰어 미렌더) → 시각 검증 미실행으로 남김
 - 변경: features/product_brochure/pdf_catalog.py(신규), fonts/(신규 3파일), feature_spec.md §25, requirements.txt(reportlab·pillow), tests/test_product_brochure/test_pdf_catalog.py·pdf_fixtures.py·make_pdf_samples.py(신규)
 - 남은 한계: 쪽별 육안 확인 전, 화면 미리보기 라벨(AI)과 PDF 라벨(상수) 불일치 [미정], 다운로드 API·동시 실행 제한 미구현
+
+## DI-2026_10_26-04 카탈로그 PDF 가로 넘침·글자 잘림 수정
+- 유형: development_instruction / **서비스 프롬프트 실험 없음, OpenAI 호출 없음**
+- 날짜/시간: 2026-10-26 01:48 (Asia/Seoul, 기록 시각) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure
+- 도구·모델: Claude Code (Opus 5.5)
+- 사전 확인: HEAD c8b076b(렌더러 커밋), 작업 트리 깨끗, 병합 중 아님, stash@{0} 미조작
+- 계기(외부 전달, Claude 미관찰): 사용자가 ChatGPT로 catalog_base.pdf·catalog_max_paragraphs.pdf 8쪽을 렌더링해 확인 — 1쪽 정상, 2쪽 본문이 오른쪽 경계에서 잘림(긴 문단형은 여러 줄이 쪽 밖), 3쪽 일부 문장 오른쪽 여백 침범, 4쪽 상담 문구 일부 영역 이탈
+- 원인 확인(Claude 직접): 2쪽 내용 스트림에 `1.469446 Tc`(머리말 자간 0.14em)가 q/Q 밖에 기록되고 이후 BT 블록이 Tc를 다시 설정하지 않음. PDF 글자 간격은 그래픽 상태라 BT/ET로 초기화되지 않아, 같은 쪽의 이후 본문·하단 쪽 번호가 글자마다 약 1.47pt 넓게 그려짐. 줄바꿈 측정(Paragraph)은 자간 0 기준이라 불일치. Tw·Tz는 사용 안 함, 글꼴·크기·좌표(cm은 q/Q 안)는 일치. 쪽이 바뀌면 상태가 초기화되므로 머리말 이전에 그린 문구(1쪽 이미지 띠·3쪽 캡션)는 영향 없음
+  - 1쪽도 표지 머리말 자간이 제목에 남아 제목 줄이 표지 문구 칸(504px)을 4.6px 넘었음(외부 보고에는 "정상", 쪽 경계 안이라 눈에 띄지 않았던 것으로 보임)
+- 수정: 머리말 그리기를 saveState/restoreState로 가두고 끝에 setCharSpace(0), 하단 안내도 상태 격리 + charSpace=0 명시. 머리말 폭(자간 포함)이 영역을 넘으면 넘침 오류. 배치·글자 크기·문구 변경 없음(자르기·축소 없음)
+- 회귀 테스트: tests/test_product_brochure/pdf_geometry.py(내용 스트림의 q/Q·cm·Tc·Tw·Tz·Tf·Tm/Td/T*와 글꼴 /Widths로 실제 줄 폭 계산) + GeometryTests 3개(쪽별 영역 대조 7개 예시, 2쪽 본문 줄 폭 = 글꼴 측정 폭·Tc가 q/Q 밖에 없음, 긴 단어 줄바꿈 시 글자 누락 없음). 새 예시 wide_words(띄어쓰기 없는 긴 단어·악센트·기호·URL 형태)
+- 수정 전 재현: HEAD 버전 pdf_catalog.py를 저장소 밖에 복사해 같은 테스트 실행 → 영역 검사 실패(1쪽 제목 508.6px), 줄 폭 검사 실패(2쪽 첫 줄 592.2pt vs 측정 482.0pt). 수정 전 측정: 2쪽 최대 x 644.0pt(기본)·666.5pt(긴 문단), 쪽 폭 595.3pt
+- 테스트 실패와 수정(작성 중): 줄 폭 테스트가 캡션 줄을 본문으로 잘못 고름 → 글꼴 크기로 본문 줄 선택
+- 변경: features/product_brochure/pdf_catalog.py, feature_spec.md §25 후속 메모, tests/test_product_brochure/test_pdf_catalog.py·pdf_fixtures.py·make_pdf_samples.py, pdf_geometry.py(신규)
+- 이전 기록(DI-2026_10_26-03·validation의 103개 통과)은 당시 상태로 보존. 당시 테스트는 텍스트·페이지 수·자체 측정만 확인해 실제 그려진 폭의 누적 자간을 잡지 못했음
+- 남은 한계: 수정 후 쪽별 육안 확인 미실행(렌더링 도구 없음)

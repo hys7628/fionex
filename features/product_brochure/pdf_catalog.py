@@ -340,21 +340,31 @@ class _Page:
         self.c.drawImage(reader, dx * PX, (PAGE_H - dy - dh) * PX, dw * PX, dh * PX)
         self.c.restoreState()
 
-    def kicker(self, text, x, top):
-        """대문자·자간 0.14em 한 줄(고정 문구)."""
+    def kicker(self, text, x, top, width):
+        """대문자·자간 0.14em 한 줄(고정 문구).
+        PDF 글자 간격(Tc)은 BT/ET로 초기화되지 않는 그래픽 상태라, saveState/restoreState(q/Q)로 가두고 끝에 0으로 되돌립니다.
+        (가두지 않으면 같은 쪽의 이후 본문에 자간이 남아 측정보다 넓게 그려짐 — 2026-10-26 가로 넘침 원인)"""
+        from reportlab.pdfbase.pdfmetrics import stringWidth
         size = FONT_PX["sm"] * PX
+        text = text.upper()
+        spacing = size * 0.14
+        if stringWidth(text, FONT_NAMES["regular"], size) + spacing * len(text) > width * PX + 0.01:
+            raise CatalogPdfOverflowError(self.number, "머리말")
+        line_h = FONT_PX["sm"] * 1.6
+        self.c.saveState()
         t = self.c.beginText()
         t.setFont(FONT_NAMES["regular"], size)
-        t.setCharSpace(size * 0.14)
+        t.setCharSpace(spacing)
         t.setFillColor(_hex("green_mid"))
-        line_h = FONT_PX["sm"] * 1.6
         t.setTextOrigin(x * PX, (PAGE_H - top - line_h + (line_h - FONT_PX["sm"]) / 2 + FONT_PX["sm"] * 0.2) * PX)
-        t.textLine(text.upper())
+        t.textLine(text)
+        t.setCharSpace(0)
         self.c.drawText(t)
+        self.c.restoreState()
         return top + line_h
 
     def header(self, top=PAD, x=PAD, width=CONTENT_W):
-        bottom = self.kicker(KICKERS[self.number], x, top)
+        bottom = self.kicker(KICKERS[self.number], x, top, width)
         return self.draw(self.para(HEADINGS[self.number], "heading", width, "제목"), x, bottom + 8)
 
     def copy(self, item, style, x, top, width, area, measure_only=False):
@@ -380,10 +390,12 @@ class _Page:
         self.rect(PAD, top, CONTENT_W, line_h + FOOTER_PAD_TOP, "paper")
         self.hline(PAD, top, CONTENT_W, 1, "line")
         base = (FOOTER_BOTTOM + (line_h - FONT_PX["sm"]) / 2 + FONT_PX["sm"] * 0.2) * PX
+        self.c.saveState()  # 글꼴·색·글자 간격을 이 블록 안에 가둠(측정한 stringWidth와 같은 조건으로 그림)
         self.c.setFont(FONT_NAMES["regular"], size)
         self.c.setFillColor(_hex("muted"))
-        self.c.drawString(PAD * PX, base, NOTICE_UNOFFICIAL)
-        self.c.drawRightString((PAD + CONTENT_W) * PX, base, no)
+        self.c.drawString(PAD * PX, base, NOTICE_UNOFFICIAL, charSpace=0)
+        self.c.drawRightString((PAD + CONTENT_W) * PX, base, no, charSpace=0)
+        self.c.restoreState()
         return top
 
     @staticmethod
@@ -395,7 +407,7 @@ class _Page:
 # ---------- 페이지 ----------
 def _page_cover(pg, data, images):
     pg.image(images["cover"], "cover", 0, 0, PAGE_W, COVER_FIGURE_H)
-    top = pg.kicker(KICKER_COVER, PAD, PAD)
+    top = pg.kicker(KICKER_COVER, PAD, PAD, COVER_TEXT_W)
     title = pg.para(data["product_name"]["text"], "title", COVER_TEXT_W, "카탈로그 표시명")
     height = 16 + 12 + title.px_height + 16 + pg.copy(data["tagline"], "lead", 0, 0, COVER_TEXT_W, "소개 문구", True)
     if data["product_name"]["virtual"]:

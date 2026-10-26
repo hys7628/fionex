@@ -430,3 +430,21 @@
   - 사람이 열어 볼 파일: C:\Users\user\AppData\Local\Temp\claude\C--Users-user-Desktop-fionex\36d7c2bf-67d2-469c-9a14-643e83056de0\scratchpad\pdf_samples_v3\catalog_*.pdf
 - 겹침 여부는 측정 기반 배치 계산으로만 확인(실제 그림 비교 아님), 다른 뷰어·인쇄 결과, 실제 생성 결과 데이터, 동시 요청 시 메모리·시간
 - 삭제 시도 기록: `rm -f $S/*.pdf`는 사용자 승인 거부로 실행되지 않음. 이후 ls로 pdf_samples의 6개 파일(크기·시각 동일) 보존 확인
+
+## 2026-10-26 카탈로그 PDF 가로 넘침 수정 — 후속 검증
+### 외부 전달 결과(Claude 미관찰)
+- 사용자가 ChatGPT로 이전 검증 PDF(catalog_base, catalog_max_paragraphs) 8쪽을 렌더링해 확인: 2쪽 본문 오른쪽 잘림·쪽 밖 이탈, 3쪽 여백 침범, 4쪽 상담 문구 영역 이탈, 1쪽 정상
+- 이전 항목(렌더러 103개 테스트 통과)은 텍스트·페이지 수·자체 측정 기반이라 이 문제를 잡지 못했음. 이 후속 시각 검증에서 잘림이 발견됨
+
+### Claude가 직접 실행한 검증
+- 내용 스트림 확인: 머리말의 `1.469446 Tc`가 q/Q 밖에 남는 것을 확인(원인)
+- 내용 스트림 기반 줄 폭 계산(pdf_geometry): 수정 전 2쪽 최대 644.0pt(기본)·666.5pt(긴 문단), 쪽 폭 595.3pt, 1·3·4쪽도 오른쪽 여백선(547.3pt) 초과 줄 있음 → 수정 후 모든 예시 최대 547.3pt(쪽 번호 오른쪽 정렬 끝), 최소 18.0pt(3쪽 캡션 시작)
+- 수정 전 코드(HEAD 복사본)에 새 회귀 테스트 적용 → 2개 실패(1쪽 제목 508.6px > 504px, 2쪽 줄 592.2pt vs 482.0pt). 수정 후 통과
+- `unittest discover -s tests/test_product_brochure` → 106개 OK(신규 GeometryTests 3개, 영역 대조 예시 7개: base·edited·empty_info·virtual_all·long_max·max_paragraphs·wide_words)
+- `unittest discover -s tests/test_common` → 56개 OK, pip check 이상 없음
+- 새 검증 PDF 생성(새 폴더, 기존 파일 삭제·덮어쓰기 없음): 정상 7건 각 약 877 KB, 넘침 예시 2건은 의도대로 실패
+  - C:\Users\user\AppData\Local\Temp\claude\C--Users-user-Desktop-fionex\36d7c2bf-67d2-469c-9a14-643e83056de0\scratchpad\pdf_samples_v4_fix_hoverflow
+
+### 미실행·미검증
+- **수정 후 쪽별 육안 확인 미실행**: 렌더링 도구 없음(pdftoppm 미설치, Edge headless는 이전에 빈 화면). 새 패키지 미설치. 영역 대조는 글자 줄의 가로 범위·기준선만 보며 글자 높이·이미지와의 겹침·시각 품질은 확인하지 않음
+- 이전 검증 PDF 폴더(pdf_samples, _v2, _v3)는 삭제하지 않고 보존(수정 전 코드로 만든 파일이라 잘림 포함)

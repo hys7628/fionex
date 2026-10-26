@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pdf_fixtures  # noqa: E402
 from features.product_brochure import pdf_catalog  # noqa: E402
 
-CASES = ("base", "edited", "empty_info", "virtual_all", "long_max", "max_paragraphs", "overflow_details", "overflow_title")
+CASES = ("base", "edited", "empty_info", "virtual_all", "long_max", "max_paragraphs", "wide_words", "overflow_details", "overflow_title")
 
 
 def main(out_dir):

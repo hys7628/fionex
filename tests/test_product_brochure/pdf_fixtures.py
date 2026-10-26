@@ -96,3 +96,19 @@ def overflow_title():
     d = base()
     d["cover"]["product_name"]["text"] = "Superpoliésterregeneradoexemplo"
     return d
+
+
+def wide_words():
+    """긴 단어·악센트·기호: 띄어쓰기 없는 긴 단어가 칸 폭 안에서 줄바꿈되는지(가로 넘침 회귀 확인용)."""
+    d = base()
+    long_word = "Superpoliésterregeneradodemonstraçãoextraordinária"
+    d["cover"]["tagline"]["text"] = f"{long_word} & <têxtil> — ação/coração «exemplo»"
+    d["intro"]["paragraphs"] = [
+        {"text": (f"{long_word}{long_word} — símbolos & < > \" ' / % (ã, õ, ç, é, ê, á, í, ó, ú, à). " * 2).strip(),
+         "virtual": False},
+        {"text": "Linha com URLsemespaçoshttps://exemplo.invalid/caminho/muito/longo/para/teste/de/quebra", "virtual": True},
+    ]
+    d["details"]["items"][0]["value"] = "75D/36F/" + "Ç" * 40 + " & <> — " + long_word
+    d["supply"]["items"][0]["value"] = "Pedido-mínimo-de-demonstração-sem-espaços-ãçé"
+    d["supply"]["items"][1]["value"] = "1.000.000.000 kg"
+    return d
