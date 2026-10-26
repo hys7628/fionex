@@ -35,3 +35,12 @@
 - 개발 검증 PDF(가상 데이터, 서비스 사용자 결과 아님)는 저장소 밖 세션 임시 폴더에 생성, Git 추적 대상 아님:
   C:\Users\user\AppData\Local\Temp\claude\C--Users-user-Desktop-fionex\36d7c2bf-67d2-469c-9a14-643e83056de0\scratchpad\pdf_samples_v3\
   (pdf_samples·pdf_samples_v2는 이전 코드로 만든 파일. 삭제하지 않고 보존)
+
+## 2026-10-26 스캔 PDF 검증용 이미지 전용 테스트 자료(준비만, API 미호출)
+| 날짜 | 자산 | 위치 | 형식·크기 | 출처·제작 | 용도 | 사용권·주의 |
+|---|---|---|---|---|---|---|
+| 2026-10-25(작성일) | 한국어 더미 원본(텍스트 PDF) | 사용자 다운로드 폴더 fionex_regen_t2t_source_ko.pdf(저장소 밖, 수정 없음) | PDF 3쪽 A4 세로, 104,195 bytes, sha256 501860d9…bcb96e3e, 글꼴 내장·선택 가능한 텍스트, 이미지 없음 | 사용자 제작 시연용 재구성 문서(매 쪽 "공식 카탈로그·사양서 아님" 표시) | 텍스트 PDF 추출 검증(기존 SPE와 같은 크기의 파일) | 원문·검증표 저장소 미복사 |
+| 2026-10-26 | 이미지 전용 스캔형 테스트본 | 세션 임시 폴더 scratchpad/scan_prep_20261026/out/fionex_regen_t2t_source_ko_scan150_imageonly_v3.pdf(저장소 밖, Git 미추적) | PDF 3쪽, 각 쪽 595.28×841.89pt(원본과 동일), 쪽마다 JPEG 1240×1754px(150dpi, 품질 90) 1장, 817,318 bytes, sha256 1b09807b…ad14d6d72 | 원본을 Windows 내장 WinRT PDF 렌더러로 150dpi 렌더링 → ReportLab·Pillow로 이미지만 배치 → pypdf로 초기 글꼴 설정·미참조 글꼴 객체 제거 | 스캔 PDF 판독 검증 입력 | **실제 종이 스캔이 아닌 디지털 원본 이미지화 자료**. OCR·숨김 텍스트 없음. 흐림·회전 변형 없음 |
+
+- 같은 폴더의 중간 산출물(삭제하지 않고 보존): render_src(배율 보정 전 187.5dpi 렌더링), render_src_150(150dpi 원본 렌더링), render_scan(스캔형 재렌더링), out/…_scan150.pdf(초기 글꼴 설정 남음), out/…_imageonly.pdf(미참조 글꼴 객체 남음), out/…_imageonly_v2.pdf(동일), checklist_temp.md(임시 검증표), render_pdf.ps1·make_scan_pdf.py(준비 스크립트)
+- 검증 입력으로는 v3만 사용. 세션 임시 폴더라 장기 보관이 필요하면 담당자가 저장 위치를 정해 옮겨야 함(tests/fixtures 공개·허가 자료 규칙 확인 필요)
