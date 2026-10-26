@@ -707,3 +707,16 @@
 - 검증: validation.md DEV-MA-STATS-008.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 실제 ComexStat·실제 AI 분석 화면 미확인(모의 서버).
+
+## DEV-PB-REQ-001 제품소개서 필수 확인 항목 빨간 경고
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / product_brochure (브랜치 feature/common_setup, 최근 커밋 74f5893, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "제품소개서 부분 필수확인요소를 확인하게 해주고 안적히면 빨간색으로 경고해줘"
+- 판단: 필수 기준은 서버 생성 조건(제품명·제품 설명 값+확인, 표시명 값+확인)과 동일하게 Review 모듈의 순수 함수로 두고 Node 점검 추가. 처음부터 빨갛게 하지 않고 적용 시점(및 빈 칸에서 나갈 때)부터 표시, 고치면 즉시 해제. 공통 .field-error·aria-invalid 사용, 체크 누락은 체크 줄 빨강(문구로 뜻 전달). 기존 적용 스냅샷 동작은 유지.
+- 변경 파일: features/product_brochure/static/product_brochure.js·css, templates/product_brochure/panel.html, feature_spec.md, tests/test_product_brochure/review_logic_check.js. Python·API 변경 없음.
+- 외부 호출: 0건.
+- 검증: validation.md DEV-PB-REQ-001.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 PDF 분석(OpenAI) 결과로는 확인하지 않음(가짜 응답 주입).

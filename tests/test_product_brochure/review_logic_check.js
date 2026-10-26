@@ -991,6 +991,26 @@ check("표지 PDF 오류: 413에서도 이미지 오류 코드 보존, 서버 �
   }
 });
 
+check("필수 확인: 제품명·제품 설명 빈 값/미확인, 표시명 빈 값·형식·미확인 순서와 종류", () => {
+  const fs = R.createFields(R.EXAMPLE_FIELDS);
+  const f = (k) => fs.filter((x) => x.key === k)[0];
+  R.setValue(f("product_name"), "  ");
+  let p = R.requiredProblems(fs, { value: "", confirmed: false }, true);
+  assert.deepEqual(p.map((x) => x.key + ":" + x.kind), ["product_name:empty", "description:unconfirmed", "display_name:empty"]);
+  assert.ok(p.every((x) => typeof x.message === "string" && x.message));
+  // 예시(표시명 칸 없음)는 표시명을 검사하지 않음
+  assert.deepEqual(R.requiredProblems(fs, null, false).map((x) => x.key), ["product_name", "description"]);
+  R.setValue(f("product_name"), "regen T2T");
+  R.setConfirmed(f("product_name"), true);
+  R.setConfirmed(f("description"), true);
+  p = R.requiredProblems(fs, { value: "리젠", confirmed: true }, true);
+  assert.deepEqual(p.map((x) => x.key + ":" + x.kind), ["display_name:invalid"]);
+  p = R.requiredProblems(fs, { value: "regen T2T", confirmed: false }, true);
+  assert.deepEqual(p.map((x) => x.key + ":" + x.kind), ["display_name:unconfirmed"]);
+  assert.deepEqual(R.requiredProblems(fs, { value: "regen T2T", confirmed: true }, true), []);
+  assert.deepEqual(R.REQUIRED_KEYS, ["product_name", "description"]);
+});
+
 (async () => {
   let failed = 0;
   for (const [name, fn] of checks) {

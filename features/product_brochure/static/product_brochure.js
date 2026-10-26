@@ -347,6 +347,27 @@
       return { ok: true, reason: null, message: "" };
     }
 
+    // 필수 확인 항목 점검(화면 경고용, 서버 GENERATE_REQUIRED_MISSING·GENERATE_DISPLAY_NAME_REQUIRED와 같은 기준).
+    // 제품명·제품 설명: 값 + 사용자 확인. 카탈로그 표시명(withDisplayName일 때): 유효한 값 + 확인.
+    // 반환 [{key, kind: "empty"|"invalid"|"unconfirmed", message}] — 순서는 화면 순서(제품명 → 제품 설명 → 표시명).
+    function requiredProblems(fields, displayName, withDisplayName) {
+      const out = [];
+      REQUIRED_KEYS.forEach(function (k) {
+        const f = (fields || []).filter(function (x) { return x.key === k; })[0];
+        if (!f) return;
+        if (!String(f.value).trim()) out.push({ key: k, kind: "empty", message: FIELD_LABEL[k] + "을 입력하세요. 필수 항목입니다." });
+        else if (!f.confirmed) out.push({ key: k, kind: "unconfirmed", message: "내용을 확인한 뒤 \"사용자 확인\"을 체크하세요. 필수 확인 항목입니다." });
+      });
+      if (withDisplayName) {
+        const dn = displayName || { value: "", confirmed: false };
+        const check = validateDisplayName(dn.value);
+        if (check.reason === "empty") out.push({ key: "display_name", kind: "empty", message: "카탈로그 표시명을 입력하세요. 필수 항목입니다." });
+        else if (!check.ok) out.push({ key: "display_name", kind: "invalid", message: check.message });
+        else if (!dn.confirmed) out.push({ key: "display_name", kind: "unconfirmed", message: "표시명을 확인한 뒤 \"카탈로그 표시명 확인\"을 체크하세요. 필수 확인 항목입니다." });
+      }
+      return out;
+    }
+
     function inputSignature(fields, displayName) {
       const dn = displayName || { value: "", confirmed: false };
       return JSON.stringify({
@@ -910,6 +931,7 @@
       GENERATE_URL: GENERATE_URL, MAX_VALUE_CHARS: MAX_VALUE_CHARS, FIELD_LABEL: FIELD_LABEL, REGENERATE_MESSAGE: REGENERATE_MESSAGE,
       originOf: originOf, inputSignature: inputSignature, createSnapshot: createSnapshot,
       suggestDisplayName: suggestDisplayName, validateDisplayName: validateDisplayName,
+      REQUIRED_KEYS: REQUIRED_KEYS, requiredProblems: requiredProblems,
       REGENERATE_EDITED_MESSAGE: REGENERATE_EDITED_MESSAGE, OUTPUT_LIMITS: OUTPUT_LIMITS,
       cloneData: cloneData, editableEntries: editableEntries, editValues: editValues, validateEdits: validateEdits,
       applyEdits: applyEdits, editedIds: editedIds, isEditDirty: isEditDirty, describeUserEdits: describeUserEdits,
@@ -984,10 +1006,15 @@
   const displayNameBox = panel.querySelector("[data-display-name]");
   const displayNameInput = panel.querySelector("#product_brochure-display-name");
   const displayNameConfirm = panel.querySelector("#product_brochure-display-name-confirm");
+  const displayNameConfirmLabel = displayNameConfirm.closest("label");
+  const displayNameError = panel.querySelector("[data-display-name-error]");
   const displayNameHint = panel.querySelector("[data-display-name-hint]");
 
   let fields = null;          // 현재 검토 중인 항목(브라우저 메모리)
   let fieldsSource = null;    // "example" | "analysis"
+  let requiredUi = {};        // 필수 항목 key → {input, confirmBox, confirmLabel, error, sync}
+  let requiredTouched = {};   // 빈 칸에서 나간 필수 항목
+  let requiredChecked = false; // '확인 내용 적용'을 눌러 필수 확인을 점검했는지
   let fieldsVersion = 0;      // 파일 교체·새 분석·예시 불러오기마다 증가(이전 적용·결과 재사용 방지)
   let applied = null;         // "확인 내용 적용" 시점의 요약
   let snapshot = null;        // "확인 내용 적용" 시점의 생성 입력 스냅샷(독립 복사본)
@@ -1360,8 +1387,10 @@
   function renderField(field) {
     const id = FEATURE_ID + "-field-" + field.key;
     const wrap = el("div", "field product_brochure-item" + (field.multiline ? " product_brochure-item-wide" : ""));
+    const required = Review.REQUIRED_KEYS.indexOf(field.key) >= 0;
     const label = el("label", "field-label", field.label);
     label.htmlFor = id;
+    if (required) label.append(el("span", "field-required", "필수"));
     const input = field.multiline ? el("textarea", "textarea") : el("input", "input");
     if (!field.multiline) input.type = "text";
     input.id = id;
@@ -1371,13 +1400,16 @@
     badges.setAttribute("aria-live", "polite");
     const hint = el("p", "field-hint");
     hint.id = id + "-hint";
+    const error = el("p", "field-error");  // 필수 확인 경고(빨간 글자). 확인 내용 적용 뒤·빈 칸에서 나갈 때 표시
+    error.id = id + "-error";
+    error.hidden = true;
 
     const choices = el("div", "product_brochure-choices");
     const confirmBox = el("input");
     confirmBox.type = "checkbox";
     confirmBox.id = FEATURE_ID + "-confirm-" + field.key;
     const confirmLabel = el("label", "choice");
-    confirmLabel.append(confirmBox, document.createTextNode("사용자 확인"));
+    confirmLabel.append(confirmBox, document.createTextNode(required ? "사용자 확인(필수)" : "사용자 확인"));
     const virtualBox = el("input");
     virtualBox.type = "checkbox";
     virtualBox.id = FEATURE_ID + "-virtual-" + field.key;
@@ -1392,9 +1424,14 @@
       const text = hintText(field);
       hint.textContent = text;
       hint.hidden = !text;
-      if (text) input.setAttribute("aria-describedby", hint.id);
+      const describedBy = [text ? hint.id : "", error.hidden ? "" : error.id].filter(Boolean).join(" ");
+      if (describedBy) input.setAttribute("aria-describedby", describedBy);
       else input.removeAttribute("aria-describedby");
       renderBadges(field, badges);
+    }
+    if (required) {
+      requiredUi[field.key] = { input: input, confirmBox: confirmBox, confirmLabel: confirmLabel, error: error, sync: sync };
+      input.addEventListener("blur", function () { requiredTouched[field.key] = true; showRequired(); });
     }
 
     input.addEventListener("input", function () {
@@ -1413,7 +1450,7 @@
     });
 
     sync();
-    wrap.append(label, badges, input, hint);
+    wrap.append(label, badges, input, hint, error);
     const details = renderDetails(field);
     if (details) wrap.append(details);
     wrap.append(choices);
@@ -1440,6 +1477,7 @@
 
   function renderReview(meta) {
     groupsRoot.replaceChildren();
+    requiredUi = {};
     Review.GROUPS.forEach(function (g) {
       const groupFields = fields.filter(function (f) { return f.group === g.key; });
       if (!groupFields.length) return;
@@ -1473,6 +1511,43 @@
     displayNameHint.className = displayName.value.trim() && !check.ok ? "field-error" : "field-hint";
     if (displayName.value.trim() && !check.ok) displayNameInput.setAttribute("aria-invalid", "true");
     else displayNameInput.removeAttribute("aria-invalid");
+    showRequired();
+  }
+
+  /* 필수 확인 항목 경고: 제품명·제품 설명(값 + 사용자 확인), 카탈로그 표시명(값 + 확인).
+     '확인 내용 적용'을 한 번 누른 뒤에는 모든 문제를, 그 전에는 비워 둔 채 나간 칸의 '빈 값'만 빨갛게 표시합니다. 고치면 바로 사라집니다. */
+  function setRequiredState(ui, problem) {
+    const show = !!problem && (requiredChecked || (problem.kind === "empty" && requiredTouched[ui.key]));
+    ui.error.textContent = show ? problem.message : "";
+    ui.error.hidden = !show;
+    if (show && problem.kind !== "unconfirmed") ui.input.setAttribute("aria-invalid", "true");
+    else if (ui.ownsInvalid) ui.input.removeAttribute("aria-invalid");
+    if (show && problem.kind === "unconfirmed") ui.confirmBox.setAttribute("aria-invalid", "true");
+    else ui.confirmBox.removeAttribute("aria-invalid");
+    ui.confirmLabel.classList.toggle("product_brochure-choice-invalid", show && problem.kind === "unconfirmed");
+    if (ui.sync) ui.sync();
+  }
+
+  function showRequired() {
+    if (!fields) return [];
+    const withDn = fieldsSource === "analysis";
+    const problems = Review.requiredProblems(fields, displayName, withDn);
+    const find = function (k) { return problems.filter(function (p) { return p.key === k; })[0]; };
+    Review.REQUIRED_KEYS.forEach(function (k) {
+      const ui = requiredUi[k];
+      if (ui) setRequiredState(Object.assign({ key: k, ownsInvalid: true }, ui), find(k));
+    });
+    // 표시명의 형식 오류(한글 등)는 위 안내 문장이 이미 빨갛게 보여 주므로 여기서는 빈 값·미확인만 표시합니다.
+    const dnProblem = withDn ? find("display_name") : null;
+    setRequiredState({ key: "display_name", input: displayNameInput, confirmBox: displayNameConfirm, confirmLabel: displayNameConfirmLabel,
+      error: displayNameError, ownsInvalid: false }, dnProblem && dnProblem.kind !== "invalid" ? dnProblem : null);
+    if (dnProblem && dnProblem.kind === "empty" && (requiredChecked || requiredTouched.display_name)) displayNameInput.setAttribute("aria-invalid", "true");
+    return problems;
+  }
+
+  function resetRequired() {
+    requiredTouched = {};
+    requiredChecked = false;
   }
 
   function productNameValue() {
@@ -1515,9 +1590,12 @@
     changed();
   });
 
+  displayNameInput.addEventListener("blur", function () { requiredTouched.display_name = true; showRequired(); });
+
   function changed() {
     resuggestDisplayName();
     if (applied && snapshot && currentSignature() !== snapshot.signature) {
+      applyStatus.setAttribute("role", "status");
       applyStatus.className = "notice notice-warning";
       applyStatus.replaceChildren(
         el("p", "notice-title", "다시 적용 필요: 적용 이후 수정된 내용이 있습니다"),
@@ -1525,6 +1603,7 @@
     }
     syncGenerate();
     syncWork();
+    showRequired();
   }
 
   function resetApplied() {
@@ -1539,6 +1618,7 @@
     fieldsSource = null;
     fieldsVersion++; // 이전 적용·생성 결과를 새 입력으로 재사용하지 않음(생성 결과는 지우지 않고 "다를 수 있음" 표시)
     resetApplied();
+    resetRequired();
     resetDisplayName();
     groupsRoot.replaceChildren();
     review.hidden = true;
@@ -1553,6 +1633,7 @@
     fieldsSource = source;
     fieldsVersion++;
     resetApplied();
+    resetRequired();    // 새 분석·예시에는 이전 필수 경고를 남기지 않음
     resetDisplayName(); // 새 분석·예시마다 표시명 제안을 다시 계산(이전 확인 재사용 없음)
     renderReview(meta);
     syncControls();
@@ -1674,6 +1755,31 @@
     // 브라우저 메모리의 검토 상태만 갱신합니다. 서버 전송·저장·카탈로그 생성은 하지 않습니다.
     applied = Review.summarize(fields);
     snapshot = Review.createSnapshot(fields, fieldsSource, fieldsVersion, displayName);
+    // 필수 확인 항목이 비었거나 미확인이면 각 칸을 빨갛게 표시하고, 위 안내도 빨간 경고로 바꾼 뒤 첫 문제 칸으로 이동합니다.
+    requiredChecked = true;
+    const problems = showRequired();
+    if (problems.length) {
+      const NAMES = { product_name: "제품명", description: "제품 설명", display_name: "카탈로그 표시명" };
+      const KIND = { empty: "입력 필요", invalid: "형식 확인 필요", unconfirmed: "확인 체크 필요" };
+      const list = el("ul", "product_brochure-list");
+      problems.forEach(function (p) { list.append(el("li", "", NAMES[p.key] + ": " + KIND[p.kind])); });
+      applyStatus.setAttribute("role", "alert");
+      applyStatus.className = "notice notice-danger";
+      applyStatus.replaceChildren(
+        el("p", "notice-title", "필수 확인 항목 " + problems.length + "개를 채워 주세요"),
+        el("p", "", "아래 빨간 표시 칸을 고친 뒤 다시 \"확인 내용 적용\"을 누르세요. 그 전에는 카탈로그를 생성할 수 없습니다."), list);
+      applyStatus.hidden = false;
+      const first = problems[0];
+      const ui = first.key === "display_name" ? { input: displayNameInput, confirmBox: displayNameConfirm } : requiredUi[first.key];
+      if (ui) {
+        const target = first.kind === "unconfirmed" ? ui.confirmBox : ui.input;
+        target.focus({ preventScroll: true });
+        target.scrollIntoView({ block: "center", behavior: "auto" });
+      }
+      syncGenerate();
+      return;
+    }
+    applyStatus.setAttribute("role", "status");
     const title = fieldsSource === "analysis"
       ? "AI 추출 결과의 검토 상태를 이 화면에 반영했습니다"
       : "개발용 예시의 검토 상태를 이 화면에 반영했습니다";

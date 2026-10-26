@@ -602,3 +602,13 @@
 .feature-product_brochure .catalog-page-no {
   font-variant-numeric: tabular-nums;
 }
+
+/* 필수 확인 경고: 확인 체크가 빠진 항목의 체크 줄을 빨갛게(글자만으로 뜻을 전하고 색은 보조) */
+.feature-product_brochure .product_brochure-choice-invalid {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-semibold);
+}
+.feature-product_brochure .product_brochure-choice-invalid input[type="checkbox"] {
+  outline: 2px solid var(--color-danger);
+  outline-offset: 2px;
+}
