@@ -893,19 +893,33 @@
       reviewSummaryEl.append(none);
     }
     field(reviewSummaryEl, "AI 작성 요약", s.model_summary_ko);
+    // AI 보고 한계·판단 한계는 내용 그대로 접어 두는 상자 하나로(ⓘ 아이콘 + 펼쳐보기). 항목 0개 안내는 위에 그대로 보임
+    const limits = el("details", "green-claim-limits");
+    const limitsSummary = el("summary", null);
+    limitsSummary.append(helpIcon(), document.createTextNode("판단 한계와 확인하지 않은 범위 보기"));
+    limits.append(limitsSummary);
     if (data.model_limitations && data.model_limitations.length) {
       const box = el("div", "green-claim-field");
       box.append(el("p", "green-claim-field-label", "AI가 보고한 이번 검토의 한계"));
       const ul = el("ul", "green-claim-notice-list");
       data.model_limitations.forEach(function (text) { ul.append(el("li", null, text)); });
       box.append(ul);
-      reviewSummaryEl.append(box);
+      limits.append(box);
     }
     const notices = el("ul", "green-claim-notice-list");
     (data.notices || []).forEach(function (text) { notices.append(el("li", null, text)); });
     const noticeBox = el("div", "green-claim-field");
     noticeBox.append(el("p", "green-claim-field-label", "판단 한계와 확인하지 않은 범위"), notices);
-    reviewSummaryEl.append(noticeBox);
+    limits.append(noticeBox);
+    reviewSummaryEl.append(limits);
+  }
+
+  // 도움말 버튼과 같은 "i" 아이콘(장식). 패널의 SVG를 복제해 모양을 한곳에서만 관리
+  function helpIcon() {
+    const source = panel.querySelector(".green-claim-help-icon");
+    const icon = source ? source.cloneNode(true) : el("span", null);
+    icon.setAttribute("aria-hidden", "true");
+    return icon;
   }
 
   function renderCriteriaStatus(data) {

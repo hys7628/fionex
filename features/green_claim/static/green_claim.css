@@ -951,3 +951,48 @@
     backdrop-filter: none;
   }
 }
+
+/* 검수 결과 요약의 판단 한계: ⓘ 아이콘이 있는 접힘 상자(기본 닫힘, 내용은 그대로) */
+.feature-green_claim .green-claim-limits {
+  border: 1px solid var(--color-glass-edge);
+  border-left: 3px solid var(--color-info-border);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-inner);
+}
+
+.feature-green_claim .green-claim-limits > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-info);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  list-style: none;
+}
+
+.feature-green_claim .green-claim-limits > summary::-webkit-details-marker { display: none; }
+
+.feature-green_claim .green-claim-limits > summary::after {
+  content: "펼치기";
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.feature-green_claim .green-claim-limits[open] > summary::after { content: "접기"; }
+
+.feature-green_claim .green-claim-limits[open] > summary {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.feature-green_claim .green-claim-limits > .green-claim-field {
+  padding: var(--space-3) var(--space-4);
+}
+
+.feature-green_claim .green-claim-limits .green-claim-notice-list {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
