@@ -97,3 +97,15 @@
 | Chrome headless + 가짜 AI 서버(5013), 가상 제품 사진, 내려받은 PDF를 pypdf로 열어 장면 페이지 확인 | 사진 없음: 선택 창 없이 텍스트 PDF / 사진 있음: 선택 창(장면 수·약 $0.085·약 20초/장) → '첨부 사진': 6쪽 모두 사진 / 'AI 생성 후 PDF': 생성 후 자동 다운로드, 실패 장면 3은 사진 / 취소: 다운로드 없음 | A: 6쪽 EMPTY / B: 6쪽 PHOTO / C: AI·AI·PHOTO·AI·AI·AI / D: 다운로드 없음. JS 예외 없음 | 성공 |
 
 미검증: 실제 AI 6장면 전체 생성 후 PDF(가짜 서버로만 확인), 담당자 브라우저 직접 확인.
+
+## 2026-10-26 · develop 병합 충돌 해결과 PDF 도구 reportlab 전환
+
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| `git status`·`git diff --diff-filter=U`(develop 1adc8a2 병합 중) | 충돌 파일 확인 | requirements.txt 1개만 충돌(내 fpdf2 vs develop의 python-dotenv·python-docx·pillow·reportlab 5.1.0). 공통 참조 이미지 함수·decisions.md 기록은 자동 병합 후 유지 | 확인 |
+| requirements.txt를 develop 쪽으로 정리(fpdf2 제거, reportlab 사용처에 홍보 스튜디오 추가) 후 `pip install -r requirements.txt` | 설치·pip check 정상 | 추가: charset-normalizer 3.5.2, lxml 6.1.3, python-docx 1.2.0, python-dotenv 1.2.4, reportlab 5.1.0. pip check 정상. 이후 fpdf2 제거 → `import fpdf` 실패 확인(코드에 fpdf 의존 없음) | 성공 |
+| pdf_builder.py를 reportlab으로 재작성 후 `unittest discover -s tests/test_promotion_studio` | 기존 PDF 테스트(텍스트 추출·쪽 수·이미지·로고·□ 치환·긴 문구 한 쪽·오류 코드) 수정 없이 통과 | 68개 OK(테스트 코드 변경 없음) | 성공 |
+| 실제 생성 이미지(EXP-PS-2026_10_25-02)·가상 사진·가상 로고로 병기본·전용본 PDF 생성 후 페이지 이미지 확인 | 표지·장면·확인 페이지 배치와 쪽 번호 n/8, 이미지 크롭, 사진 대체, □ 안내 유지 | 모두 유지. 생성 시간 0.12~0.23초(fpdf2 0.5~0.7초), 311KB/281KB | 성공 |
+| 병합 후 전체 테스트 폴더 | 통과 | 공통 61·홈 94·시장 분석 71·제품소개서 156·홍보 스튜디오 68 OK, 그린 클레임은 테스트 파일 없음 | 성공 |
+
+미검증: 병합 커밋 이후 실제 브라우저 PDF 다운로드(담당자 확인 필요), 다른 PDF 뷰어 표시.

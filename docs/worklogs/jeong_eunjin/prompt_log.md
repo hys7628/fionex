@@ -169,3 +169,13 @@
 - 구현: 제품 사진이 있고 이미지 없는 장면이 있으면 PDF 버튼에서 선택 창 — 'AI 장면 이미지 생성 후 PDF'(비용·시간 안내, 생성 후 자동 다운로드, 실패 장면은 첨부 사진) / '첨부 사진 그대로 넣어 PDF'(무료) / 취소. 사진이 없으면 기존처럼 텍스트 PDF. 서버 PDF에 use_photos·photos 필드, 장면 순서대로 사진 배치·"첨부한 제품 사진(AI 생성 아님)" 표시. 중지하면 PDF를 받지 않음
 - 변경: features/promotion_studio/{service.py(parse_pdf_photos), routes.py, pdf_builder.py, panel.html, promotion_studio.js}, tests/test_promotion_studio/test_scene_image.py
 - 검증: validation.md "PDF 다운로드 때 이미지 칸 채우기" 항목
+
+## DEV-PS-2026_10_26-01 · development_instruction
+
+- 날짜/시간: 2026-10-26 (Asia/Seoul), 시각 미기록
+- 작업자: 정은진 / 기능: 홍보 스튜디오 (feature/promotion_studio에 develop 1adc8a2 병합 중)
+- 지시 흐름: "pdf5.1.0버전이야?" → requirements.txt에 5.1.0 없음 안내 → "5.1.0으로 바꿀 수 있을까?" → fpdf2엔 5.1.0 없음·pypdf 5.1.0은 하향이라 공통 위험 안내 → "바꾸지마 일단냅둬" → "requirement.txt에서 pdf출력하는 reportlab 5.1.0인지 확인해주고 내것이 아니면 그걸로 가능한지 알려줘" → 다른 브랜치(home·market_analysis)가 reportlab 5.1.0 사용 확인·전환 가능 안내 → "깃 충돌 뭐가 있어?" → requirements.txt 1개 충돌 안내(둘 다 유지 / reportlab 통일) → "2번으로 해"
+- 처리: requirements.txt 충돌을 develop 쪽으로 정리(fpdf2 삭제, reportlab 사용처 주석에 홍보 스튜디오 추가), jasonenv에 병합 requirements 설치 후 fpdf2 제거, pdf_builder.py를 reportlab 캔버스로 재작성(위쪽 기준 mm 좌표 도우미, 공백·글자 단위 줄바꿈, 저장 시 "n/전체" 쪽 번호, 글꼴 문자 집합은 reportlab TTFont로 확인해 fontTools 의존 제거, 글꼴 이름에 기능 접두어)
+- 문서: feature_spec.md 7장 도구, docs/decisions.md 내 기록 문장, fonts/README.md
+- Git: 충돌 파일 정리까지만 함. `git add`·병합 커밋은 담당자가 수행
+- 검증: validation.md 2026-10-26 항목

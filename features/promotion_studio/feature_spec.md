@@ -167,7 +167,7 @@ Flask 요청 전체 크기 상한(`MAX_CONTENT_LENGTH`)은 app.py 공통 설정�
 
 `POST /api/promotion-studio/pdf` — multipart: `storyboard`(화면이 가진 콘티 결과 JSON 문자열), `edition`(`bilingual`·`pt`), 선택 `logo`.
 
-- 도구: fpdf2 2.8.9(LGPL-3.0, requirements.txt 추가 — 팀 공통 PDF 도구로 확정된 것은 아님, 팀 공유 필요). 글꼴: Noto Sans KR(OFL) Regular·Bold 고정 인스턴스, `fonts/README.md`.
+- 도구: reportlab 5.1.0(BSD, 홈·시장 분석·제품소개서·그린 클레임과 같은 팀 PDF 도구). 2026-10-25 fpdf2 2.8.9로 구현했으나 2026-10-26 develop 병합 때 담당자 결정으로 reportlab으로 전환했다. 글꼴: Noto Sans KR(OFL) Regular·Bold 고정 인스턴스, `fonts/README.md`.
 - 임시 결정: A4 가로. 표지(제목 PT[+KO], 대상, 홍보 목적, 영상 길이·장면 수, 생성일, 로고, AI 초안 안내) → 장면당 1쪽(왼쪽 화면 비율 이미지 영역 "이미지 미생성", 오른쪽 화면 설명·카메라·자막·내레이션) → 마지막 확인 필요 사항.
 - 긴 문구는 11→7pt까지 글자 크기를 줄여 한 쪽에 맞추고, 7pt에서도 넘치면 다음 쪽으로 이어진다.
 - 서버는 받은 결과를 다시 검증한다(글자 수·장면 3~15개·코드값·장면 수 일치). 장면 길이 합계 ≠ 영상 길이면 400 `PDF_TIMING_MISMATCH`이고 화면 버튼도 비활성. 번호·시작 시간은 서버가 다시 계산한다.

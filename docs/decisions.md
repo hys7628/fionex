@@ -28,7 +28,7 @@
 - 제외: 이미지 분석 입력, Files API, 이미지 편집·참조 이미지, 영상, 스트리밍, 캐시·DB.
 - 2026-10-25 정은진: 홍보 스튜디오 장면 이미지(첨부 제품 사진 참고) 요구로 `generate_image_from_references`(참조 이미지) 함수를 공통에 추가.
   기존 함수 미수정, 모의 테스트만 통과. **공통 담당(유정현) 검토·합의 전**이며 위 '제외' 항목의 변경 여부는 검토 후 확정한다.
-  같은 작업에서 requirements.txt에 fpdf2(홍보 스튜디오 PDF)를 추가했다. 팀 공통 PDF 도구 확정은 아니다.
+  홍보 스튜디오 PDF는 처음 fpdf2로 만들었으나 2026-10-26 develop 병합 때 팀 PDF 도구(reportlab 5.1.0)로 전환하고 fpdf2는 requirements.txt에서 뺐다.
 
 ## 설계 기준
 - Flask + HTML/CSS/JS 구조, Conda jasonenv/Python 3.11을 기준으로 패키지 준비.

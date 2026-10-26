@@ -1,7 +1,8 @@
-"""홍보 스튜디오 콘티 PDF 생성(fpdf2). 입력 검증은 service.parse_pdf_request가 먼저 합니다.
+"""홍보 스튜디오 콘티 PDF 생성(reportlab). 입력 검증은 service.parse_pdf_request가 먼저 합니다.
 
 구성(feature_spec.md 7장): 표지 → 장면당 1쪽 → 마지막 확인 필요 사항 페이지.
 판형: A4 가로(명세 미정 사항을 2026-10-25 임시로 정함). 글꼴: fonts/README.md.
+PDF 도구는 팀의 다른 기능과 같은 reportlab 5.1.0을 씁니다(2026-10-26 fpdf2에서 전환).
 PDF는 메모리에서 만들고 디스크에 저장하지 않습니다.
 """
 import io
@@ -9,19 +10,25 @@ from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 
-from fontTools.ttLib import TTFont
-from fpdf import FPDF
 from PIL import Image
-from fpdf.enums import MethodReturnValue, XPos, YPos
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
 
 _FONT_DIR = Path(__file__).resolve().parent / "fonts"
-_FONT = "noto_sans_kr"
+# 다른 기능도 같은 이름의 글꼴을 등록할 수 있어 기능 접두어를 붙입니다.
+_FONT = "PromotionStudioNotoSansKR"
+_FONT_BOLD = "PromotionStudioNotoSansKR-Bold"
 
 EDITIONS = ("bilingual", "pt")
 # Windows Python에는 시간대 DB가 없을 수 있어 고정 오프셋을 씁니다(한국은 서머타임 없음).
 _KST = timezone(timedelta(hours=9))
 
 # 판형·여백(mm)
+_PAGE_W, _PAGE_H = (v / mm for v in landscape(A4))
 _MARGIN = 15
 _FRAME_W = 105       # 장면 이미지 영역 최대 폭
 _FRAME_MAX_H = 140   # 세로 비율(9:16)에서 높이 상한
@@ -30,12 +37,15 @@ _HEADER_H = 14
 _FOOTER_H = 12
 # 장면 문구가 한 쪽에 들어가지 않으면 이 순서로 글자 크기를 줄입니다. 최소 크기에서도 넘치면 다음 쪽으로 이어집니다.
 _TEXT_SIZES = (11, 10, 9, 8, 7)
+_LINE_RATIO = 1.45   # 줄 간격 = 글자 크기(pt) × 비율
 
 # 색(RGB). 화면 tokens.css의 글자·보조 글자·선 계열을 참고했습니다.
 _TEXT = (23, 32, 51)
 _MUTED = (84, 96, 120)
 _LINE = (214, 222, 235)
 _PRIMARY = (37, 99, 235)
+_WARN = (180, 83, 9)
+_FRAME_FILL = (244, 247, 252)
 
 _AUDIENCE_PT = {"buyer": "Compradores (B2B)", "consumer": "Consumidores"}
 _PURPOSE_PT = {
@@ -90,23 +100,23 @@ class SceneImageError(ValueError):
     """장면 이미지를 PDF에 넣지 못함."""
 
 
+@lru_cache(maxsize=1)
+def _register_fonts():
+    """글꼴을 한 번만 등록하고 두 굵기에 모두 있는 문자 집합을 돌려줍니다."""
+    regular = TTFont(_FONT, str(_FONT_DIR / "NotoSansKR-Regular.ttf"))
+    bold = TTFont(_FONT_BOLD, str(_FONT_DIR / "NotoSansKR-Bold.ttf"))
+    pdfmetrics.registerFont(regular)
+    pdfmetrics.registerFont(bold)
+    return frozenset(regular.face.charToGlyph) & frozenset(bold.face.charToGlyph)
+
+
 _REPLACEMENT = "□"
 _KEEP = "\n\r\t"
 
 
-@lru_cache(maxsize=1)
-def _supported_codepoints():
-    """두 굵기 글꼴에 모두 있는 문자. 없는 문자는 PDF에서 빈칸이 되므로 미리 바꿉니다."""
-    sets = []
-    for name in ("NotoSansKR-Regular.ttf", "NotoSansKR-Bold.ttf"):
-        with TTFont(str(_FONT_DIR / name), lazy=True) as font:
-            sets.append(frozenset(font.getBestCmap()))
-    return frozenset.intersection(*sets)
-
-
 def _replace_unsupported(board, edition, lab):
-    """(바꾼 콘티, 바꾼 위치 문구 목록). 원본 board는 바꾸지 않습니다."""
-    ok = _supported_codepoints()
+    """(바꾼 콘티, 바꾼 위치 문구 목록). 글꼴에 없는 문자는 PDF에서 빈칸이 되므로 □로 바꿉니다. 원본 board는 그대로."""
+    ok = _register_fonts()
     where = []
 
     def clean(text, location):
@@ -160,7 +170,7 @@ def _fit_scene_image(data, rw, rh):
         out = io.BytesIO()
         img.crop(box).save(out, format="JPEG", quality=_SCENE_JPEG_QUALITY)
     out.seek(0)
-    return out
+    return ImageReader(out)
 
 
 def _clock(sec):
@@ -172,57 +182,128 @@ def _ratio(aspect):
     return w, h
 
 
-class _Doc(FPDF):
-    def __init__(self, labels):
-        super().__init__(orientation="L", unit="mm", format="A4")
+def _wrap(text, font, size, width_mm):
+    """폭(mm)에 맞춰 줄을 나눕니다. 공백 단위로 나누고, 한 단어가 폭보다 길면 글자 단위로 자릅니다."""
+    width = width_mm * mm
+    lines = []
+    for paragraph in text.split("\n"):
+        line = ""
+        for word in paragraph.split(" "):
+            candidate = word if not line else line + " " + word
+            if pdfmetrics.stringWidth(candidate, font, size) <= width:
+                line = candidate
+                continue
+            if line:
+                lines.append(line)
+            line = ""
+            for ch in word:
+                if pdfmetrics.stringWidth(line + ch, font, size) > width and line:
+                    lines.append(line)
+                    line = ""
+                line += ch
+        lines.append(line)
+    return lines
+
+
+def _line_h(size):
+    """글자 크기(pt)의 줄 높이(mm)."""
+    return size * _LINE_RATIO / mm
+
+
+class _Doc:
+    """reportlab 캔버스를 위쪽 기준 mm 좌표로 다룹니다. 쪽 번호 "n/전체"는 저장할 때 씁니다."""
+
+    def __init__(self, labels, buffer):
         self.labels = labels
-        self.set_margins(_MARGIN, _MARGIN, _MARGIN)
-        self.set_auto_page_break(True, margin=_MARGIN + _FOOTER_H - 4)
-        self.add_font(_FONT, "", str(_FONT_DIR / "NotoSansKR-Regular.ttf"))
-        self.add_font(_FONT, "B", str(_FONT_DIR / "NotoSansKR-Bold.ttf"))
-        self.alias_nb_pages()
+        self.c = canvas.Canvas(buffer, pagesize=landscape(A4), pageCompression=1)
+        self.pages = []      # 각 쪽의 캔버스 상태(쪽 번호를 마지막에 그리기 위해 보관)
+        self.started = False
+        self.y = _MARGIN     # 현재 위치(위쪽에서부터 mm)
 
-    def footer(self):
-        self.set_y(-_MARGIN)
-        self.set_font(_FONT, "", 8)
-        self.set_text_color(*_MUTED)
-        self.cell(0, 5, self.labels["page"].format(n=self.page_no(), total="{nb}"), align="R")
+    def add_page(self):
+        if self.started:
+            self.pages.append(dict(self.c.__dict__))
+            self.c._startPage()
+        self.started = True
+        self.y = _MARGIN
 
-    def text_block(self, w, text, size, style="", color=_TEXT, dry=False):
-        """폭 w에 줄바꿈해 쓰고 높이(mm)를 돌려줍니다. dry=True면 쓰지 않고 높이만 계산합니다."""
-        self.set_font(_FONT, style, size)
-        self.set_text_color(*color)
-        line_h = size * 0.5
-        if dry:
-            return self.multi_cell(w, line_h, text, align="L", dry_run=True, output=MethodReturnValue.HEIGHT)
-        x = self.get_x()
-        before = self.get_y()
-        self.multi_cell(w, line_h, text, align="L", new_x=XPos.LEFT, new_y=YPos.NEXT)
-        self.set_x(x)
-        return self.get_y() - before
+    def finish(self):
+        self.pages.append(dict(self.c.__dict__))
+        total = len(self.pages)
+        for number, state in enumerate(self.pages, start=1):
+            self.c.__dict__.update(state)
+            self.c.setFont(_FONT, 8)
+            self.c.setFillColorRGB(*(v / 255 for v in _MUTED))
+            self.c.drawRightString((_PAGE_W - _MARGIN) * mm, (_MARGIN - 6) * mm,
+                                   self.labels["page"].format(n=number, total=total))
+            canvas.Canvas.showPage(self.c)
+        self.c.save()
+
+    # ---- 그리기 도우미(좌표는 위쪽 기준 mm) ----
+    def color(self, rgb, stroke=False):
+        r, g, b = (v / 255 for v in rgb)
+        (self.c.setStrokeColorRGB if stroke else self.c.setFillColorRGB)(r, g, b)
+
+    def text(self, x, y_top, s, size, bold=False, color=_TEXT, align="left"):
+        self.c.setFont(_FONT_BOLD if bold else _FONT, size)
+        self.color(color)
+        baseline = (_PAGE_H - y_top) * mm - size * 0.85
+        if align == "center":
+            self.c.drawCentredString(x * mm, baseline, s)
+        else:
+            self.c.drawString(x * mm, baseline, s)
+
+    def block_height(self, width, s, size, bold=False):
+        return len(_wrap(s, _FONT_BOLD if bold else _FONT, size, width)) * _line_h(size)
+
+    def block(self, x, width, s, size, bold=False, color=_TEXT):
+        """현재 위치부터 줄바꿈해 쓰고 높이를 돌려줍니다. 쪽 아래에 닿으면 새 쪽으로 이어 씁니다."""
+        font = _FONT_BOLD if bold else _FONT
+        start = self.y
+        for line in _wrap(s, font, size, width):
+            if self.y + _line_h(size) > _PAGE_H - _MARGIN - _FOOTER_H + 4:
+                self.add_page()
+            self.text(x, self.y, line, size, bold, color)
+            self.y += _line_h(size)
+        return self.y - start
+
+    def rect(self, x, y_top, w, h, fill=_FRAME_FILL, stroke=_LINE):
+        self.color(fill)
+        self.color(stroke, stroke=True)
+        self.c.rect(x * mm, (_PAGE_H - y_top - h) * mm, w * mm, h * mm, stroke=1, fill=1)
+
+    def line(self, x1, y1, x2, y2, rgb=_LINE):
+        self.color(rgb, stroke=True)
+        self.c.line(x1 * mm, (_PAGE_H - y1) * mm, x2 * mm, (_PAGE_H - y2) * mm)
+
+    def image(self, reader, x, y_top, w, h, keep_ratio=False):
+        self.c.drawImage(reader, x * mm, (_PAGE_H - y_top - h) * mm, w * mm, h * mm,
+                         preserveAspectRatio=keep_ratio, anchor="nw", mask="auto")
 
 
 def _cover(doc, board, edition, logo_bytes):
     lab = doc.labels
     c = board.conditions
     doc.add_page()
-    y = _MARGIN + 10
+    doc.y = _MARGIN + 10
     if logo_bytes:
         # 원본 비율을 유지해 최대 60×30mm 안에 넣습니다. 서명만 맞고 내용이 깨진 파일은 여기서 실패합니다.
         try:
-            doc.image(io.BytesIO(logo_bytes), x=_MARGIN, y=y, w=60, h=30, keep_aspect_ratio=True)
+            with Image.open(io.BytesIO(logo_bytes)) as img:
+                img.load()
+                logo = ImageReader(img.copy())
+            doc.image(logo, _MARGIN, doc.y, 60, 30, keep_ratio=True)
         except Exception:
             raise LogoImageError() from None
-        y += 40
-    doc.set_xy(_MARGIN, y)
-    width = doc.w - 2 * _MARGIN
-    doc.text_block(width, lab["cover_kicker"], 12, color=_PRIMARY)
-    doc.ln(3)
-    doc.text_block(width, board.title_pt, 26, "B")
+        doc.y += 40
+    width = _PAGE_W - 2 * _MARGIN
+    doc.block(_MARGIN, width, lab["cover_kicker"], 12, color=_PRIMARY)
+    doc.y += 3
+    doc.block(_MARGIN, width, board.title_pt, 26, bold=True)
     if edition == "bilingual":
-        doc.ln(1)
-        doc.text_block(width, board.title_ko, 16, color=_MUTED)
-    doc.ln(10)
+        doc.y += 1
+        doc.block(_MARGIN, width, board.title_ko, 16, color=_MUTED)
+    doc.y += 10
 
     if edition == "pt":
         audience = _AUDIENCE_PT[c.audience_code]
@@ -240,16 +321,14 @@ def _cover(doc, board, edition, logo_bytes):
     ]
     label_w = 70
     for label, value in rows:
-        doc.set_x(_MARGIN)
-        top = doc.get_y()
-        doc.text_block(label_w, label, 11, "B", _MUTED)
-        doc.set_xy(_MARGIN + label_w, top)
-        h = doc.text_block(width - label_w, value, 11)
-        doc.set_y(max(doc.get_y(), top + h) + 3)
+        top = doc.y
+        h1 = doc.block(_MARGIN, label_w, label, 11, bold=True, color=_MUTED)
+        doc.y = top
+        h2 = doc.block(_MARGIN + label_w, width - label_w, value, 11)
+        doc.y = top + max(h1, h2) + 3
 
-    doc.set_y(doc.h - _MARGIN - _FOOTER_H - 10)
-    doc.set_x(_MARGIN)
-    doc.text_block(width, lab["draft"], 9, color=_MUTED)
+    doc.y = _PAGE_H - _MARGIN - _FOOTER_H - 10
+    doc.block(_MARGIN, width, lab["draft"], 9, color=_MUTED)
 
 
 def _scene_texts(scene, edition, lab):
@@ -267,9 +346,9 @@ def _scene_texts(scene, edition, lab):
 def _blocks_height(doc, blocks, w, size):
     total = 0
     for label, lines in blocks:
-        total += doc.text_block(w, label, size - 1, "B", dry=True) + 1
+        total += doc.block_height(w, label, size - 1, bold=True) + 1
         for text, _ in lines:
-            total += doc.text_block(w, text, size, dry=True) + 1
+            total += doc.block_height(w, text, size) + 1
         total += 3
     return total
 
@@ -279,18 +358,14 @@ def _scene_page(doc, number, scene, start, aspect, edition, image_bytes=None, ca
     doc.add_page()
     end = start + scene.duration_seconds
 
-    doc.set_xy(_MARGIN, _MARGIN)
-    doc.set_font(_FONT, "B", 15)
-    doc.set_text_color(*_TEXT)
     title = lab["scene"].format(n=number)
-    doc.cell(doc.get_string_width(title) + 6, 8, title)
-    doc.set_font(_FONT, "", 11)
-    doc.set_text_color(*_PRIMARY)
-    doc.cell(0, 8, f"{_clock(start)}–{_clock(end)}  ({scene.duration_seconds}s)")
-    doc.set_draw_color(*_LINE)
-    doc.line(_MARGIN, _MARGIN + _HEADER_H - 3, doc.w - _MARGIN, _MARGIN + _HEADER_H - 3)
+    doc.text(_MARGIN, _MARGIN, title, 15, bold=True)
+    title_w = pdfmetrics.stringWidth(title, _FONT_BOLD, 15) / mm
+    doc.text(_MARGIN + title_w + 6, _MARGIN + 1.2, f"{_clock(start)}–{_clock(end)}  ({scene.duration_seconds}s)", 11,
+             color=_PRIMARY)
+    doc.line(_MARGIN, _MARGIN + _HEADER_H - 3, _PAGE_W - _MARGIN, _MARGIN + _HEADER_H - 3)
 
-    # 이미지 영역(아직 생성 이미지 없음). 콘티 한 편의 화면 비율로 그립니다.
+    # 이미지 영역. 콘티 한 편의 화면 비율로 그립니다.
     rw, rh = _ratio(aspect)
     frame_w = _FRAME_W
     frame_h = frame_w * rh / rw
@@ -298,65 +373,52 @@ def _scene_page(doc, number, scene, start, aspect, edition, image_bytes=None, ca
         frame_h = _FRAME_MAX_H
         frame_w = frame_h * rw / rh
     top = _MARGIN + _HEADER_H
-    doc.set_draw_color(*_LINE)
-    doc.set_fill_color(244, 247, 252)
-    doc.rect(_MARGIN, top, frame_w, frame_h, style="DF")
+    doc.rect(_MARGIN, top, frame_w, frame_h)
     if image_bytes:
         try:
-            doc.image(_fit_scene_image(image_bytes, rw, rh), x=_MARGIN, y=top, w=frame_w, h=frame_h)
+            doc.image(_fit_scene_image(image_bytes, rw, rh), _MARGIN, top, frame_w, frame_h)
         except Exception:
             raise SceneImageError() from None
-        doc.set_xy(_MARGIN, top + frame_h + 1)
-        doc.set_font(_FONT, "", 7)
-        doc.set_text_color(*_MUTED)
-        doc.cell(frame_w, 4, lab[caption_key])
+        doc.y = top + frame_h + 1.5
+        doc.block(_MARGIN, frame_w, lab[caption_key], 7, color=_MUTED)
     else:
-        doc.set_xy(_MARGIN, top + frame_h / 2 - 3)
-        doc.set_font(_FONT, "", 9)
-        doc.set_text_color(*_MUTED)
-        doc.cell(frame_w, 6, f"{lab['no_image']}  ·  {aspect}", align="C")
+        doc.text(_MARGIN + frame_w / 2, top + frame_h / 2 - 2, f"{lab['no_image']}  ·  {aspect}", 9,
+                 color=_MUTED, align="center")
 
     x = _MARGIN + _FRAME_W + _GAP
-    w = doc.w - _MARGIN - x
-    available = doc.h - top - _MARGIN - _FOOTER_H
+    w = _PAGE_W - _MARGIN - x
+    available = _PAGE_H - top - _MARGIN - _FOOTER_H
     blocks = _scene_texts(scene, edition, lab)
     size = next((s for s in _TEXT_SIZES if _blocks_height(doc, blocks, w, s) <= available), _TEXT_SIZES[-1])
 
-    doc.set_xy(x, top)
+    doc.y = top
     for label, lines in blocks:
-        doc.set_x(x)
-        doc.text_block(w, label, size - 1, "B", _PRIMARY)
-        doc.ln(1)
+        doc.block(x, w, label, size - 1, bold=True, color=_PRIMARY)
+        doc.y += 1
         for text, color in lines:
-            doc.set_x(x)
-            doc.text_block(w, text, size, color=color)
-            doc.ln(1)
-        doc.ln(3)
+            doc.block(x, w, text, size, color=color)
+            doc.y += 1
+        doc.y += 3
     return end
 
 
 def _review_page(doc, board, replaced):
     lab = doc.labels
     doc.add_page()
-    width = doc.w - 2 * _MARGIN
-    doc.set_xy(_MARGIN, _MARGIN)
-    doc.text_block(width, lab["review"], 15, "B")
-    doc.ln(4)
+    width = _PAGE_W - 2 * _MARGIN
+    doc.block(_MARGIN, width, lab["review"], 15, bold=True)
+    doc.y += 4
     if replaced:
-        doc.set_x(_MARGIN)
-        doc.text_block(width, "• " + lab["replaced"].format(where=", ".join(replaced)), 11, color=(180, 83, 9))
-        doc.ln(2)
+        doc.block(_MARGIN, width, "• " + lab["replaced"].format(where=", ".join(replaced)), 11, color=_WARN)
+        doc.y += 2
     if board.review_notes:
         for note in board.review_notes:
-            doc.set_x(_MARGIN)
-            doc.text_block(width, "• " + note, 11)
-            doc.ln(2)
+            doc.block(_MARGIN, width, "• " + note, 11)
+            doc.y += 2
     else:
-        doc.set_x(_MARGIN)
-        doc.text_block(width, lab["no_review"], 11)
-    doc.ln(4)
-    doc.set_x(_MARGIN)
-    doc.text_block(width, lab["review_hint"], 9, color=_MUTED)
+        doc.block(_MARGIN, width, lab["no_review"], 11)
+    doc.y += 4
+    doc.block(_MARGIN, width, lab["review_hint"], 9, color=_MUTED)
 
 
 def build_pdf(board, edition, logo_bytes=None, scene_images=None, photos=None):
@@ -365,10 +427,12 @@ def build_pdf(board, edition, logo_bytes=None, scene_images=None, photos=None):
     scene_images: {장면 번호: AI 생성 PNG bytes}(선택). photos: 제품 사진 bytes 목록(선택) —
     AI 이미지가 없는 장면에 순서대로 돌려 넣고 "첨부 사진(AI 생성 아님)"으로 표시합니다.
     """
-    doc = _Doc(_LABELS[edition])
-    board, replaced = _replace_unsupported(board, edition, doc.labels)
-    doc.set_title(board.title_pt)
-    doc.set_creator("fionex promotion_studio")
+    labels = _LABELS[edition]
+    board, replaced = _replace_unsupported(board, edition, labels)
+    buffer = io.BytesIO()
+    doc = _Doc(labels, buffer)
+    doc.c.setTitle(board.title_pt)
+    doc.c.setCreator("fionex promotion_studio")
     _cover(doc, board, edition, logo_bytes)
     start = 0
     # 번호·시작 시간은 받은 값 대신 장면 순서와 길이로 다시 계산합니다.
@@ -378,4 +442,5 @@ def build_pdf(board, edition, logo_bytes=None, scene_images=None, photos=None):
             image, caption = photos[(number - 1) % len(photos)], "photo_image"
         start = _scene_page(doc, number, scene, start, board.conditions.aspect_ratio, edition, image, caption)
     _review_page(doc, board, replaced)
-    return bytes(doc.output())
+    doc.finish()
+    return buffer.getvalue()
