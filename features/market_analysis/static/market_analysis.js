@@ -210,6 +210,7 @@
         "). 기간을 직접 선택해 주세요. 최대 " + meta.max_months + "개월입니다.";
     }
     AppShell.work.recheckInputs(FEATURE_ID);
+    updateBriefButtons();  // AI 설정 여부가 늦게 확인되면 바이어 'AI 브리핑' 버튼 상태를 맞춤
   }
 
   /* ---------- 조회 ---------- */
@@ -759,16 +760,22 @@
     }).join("<br>") : '<span class="field-hint">없음</span>';
     const contact = c.phones.map(esc).concat(c.domain ? ['<span class="field-hint">' + esc(c.domain) + "</span>"] : []).join("<br>") ||
       '<span class="field-hint">등록 없음</span>';
-    return "<tr><td class=\"num\">" + (i + 1) + "</td><td>" + name + "</td><td>" + esc(c.uf || "") +
+    // 등급: 공개 규칙(코드) 결과와 근거 한 줄. 색은 보조이며 글자 A/B/C로 구분합니다.
+    const grade = '<span class="ma-grade ma-grade-' + esc(c.grade) + '">' + esc(c.grade) + '</span><span class="visually-hidden">등급</span>' +
+      '<br><span class="field-hint">' + esc(c.grade_reason) + "</span>";
+    const brief = '<button type="button" class="btn btn-secondary ma-brief-btn" data-ma-brief="' + esc(c.cnpj) + '"' +
+      ' aria-describedby="market_analysis-briefing-cost"' + (aiReady() ? "" : " disabled") + ">AI 브리핑" +
+      '<span class="visually-hidden"> · ' + esc(c.razao_social) + "</span></button>";
+    return "<tr><td class=\"num\">" + (i + 1) + "</td><td>" + name + '</td><td class="ma-grade-cell">' + grade + "</td><td>" + esc(c.uf || "") +
       '<br><span class="field-hint">' + esc(c.municipio || "") + "</span></td>" +
       '<td title="' + esc(c.cnae + " " + (c.cnae_desc || "")) + '">' + esc(CNAE_SHORT[c.cnae] || c.cnae_desc || c.cnae) + "</td><td>" +
-      contact + "</td><td>" + ev + "</td></tr>";
+      contact + "</td><td>" + ev + "</td><td>" + brief + "</td></tr>";
   }
 
   function buyerTable(rows, offset, caption) {
     return '<div class="table-wrap"><table class="table ma-buyer-table"><caption>' + esc(caption) + "</caption><thead><tr>" +
-      '<th scope="col" class="num">#</th><th scope="col">회사명</th><th scope="col">지역</th><th scope="col">업종</th>' +
-      '<th scope="col">전화 · 회사 도메인</th><th scope="col">재생·T2T 근거</th></tr></thead><tbody>' +
+      '<th scope="col" class="num">#</th><th scope="col">회사명</th><th scope="col">등급 · 근거</th><th scope="col">지역</th><th scope="col">업종</th>' +
+      '<th scope="col">전화 · 회사 도메인</th><th scope="col">재생·T2T 근거</th><th scope="col">브리핑</th></tr></thead><tbody>' +
       rows.map(function (c, i) { return buyerRow(c, offset + i); }).join("") + "</tbody></table></div>";
   }
 
@@ -786,10 +793,15 @@
       "', 외국 법인·파산·회생 절차 회사 제외") + "</p>";
     notes += '<p class="field-hint">출처: ' + esc(d.source.name) + " · " + linkHtml(d.source.url) + " · " +
       esc("자료 기준월 " + d.source.reference_month + " · 생성 " + kstTime(d.source.generated_at)) + "</p>";
-    let html = '<div class="ma-buyer-summary"><p><strong>' + esc(fmtInt.format(list.length)) + "곳</strong> · 재생·T2T 근거 " +
-      esc(d.counts.with_evidence + "곳" + (d.counts.with_evidence ? "" : " (검토된 근거 없음)")) + "</p>" +
+    const g = d.counts.grades || {};
+    let html = '<div class="ma-buyer-summary"><p><strong>' + esc(fmtInt.format(list.length)) + "곳</strong> · " +
+      ["A", "B", "C"].map(function (k) { return '<span class="ma-grade ma-grade-' + k + '">' + k + "</span> " + esc(fmtInt.format(g[k] || 0)) + "곳"; }).join(" · ") +
+      " · 재생·T2T 근거 " + esc(d.counts.with_evidence + "곳" + (d.counts.with_evidence ? "" : " (검토된 근거 없음)")) + "</p>" +
+      '<p class="ma-grade-note">우선순위 등급: ' + esc(d.grade_note) + "</p>" +
+      '<details class="ma-details"><summary>등급 규칙 보기</summary><ul class="ma-grade-rules">' +
+      d.grade_rules.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul></details>" +
       '<details class="ma-details"><summary>참고 사항</summary>' + notes + "</details></div>";
-    html += buyerTable(list.slice(0, BUYERS_SHOWN), 0, "근거 업체 먼저 · 첫 " + Math.min(BUYERS_SHOWN, list.length) + "곳");
+    html += buyerTable(list.slice(0, BUYERS_SHOWN), 0, "우선순위 등급순 · 첫 " + Math.min(BUYERS_SHOWN, list.length) + "곳");
     if (list.length > BUYERS_SHOWN) {
       html += '<details class="ma-details"><summary>나머지 ' + fmtInt.format(list.length - BUYERS_SHOWN) + "곳 보기</summary>" +
         buyerTable(list.slice(BUYERS_SHOWN), BUYERS_SHOWN, "나머지 업체") + "</details>";
@@ -831,7 +843,127 @@
 
   buyersBox.addEventListener("click", function (event) {
     if (event.target.closest("[data-ma-buyers-retry]")) loadBuyers();
+    const brief = event.target.closest("[data-ma-brief]");
+    if (brief && !brief.disabled) runBriefing(brief.dataset.maBrief, brief);
   });
+
+  /* ---------- 바이어별 AI 브리핑(유료 1회 호출) ---------- */
+  const briefBox = panel.querySelector("[data-ma-briefing]");
+  const briefTitle = panel.querySelector("#market_analysis-briefing-title");
+  const briefStatus = panel.querySelector("[data-ma-briefing-status]");
+  const BRIEF_SECTIONS = [["overview", "회사 개요"], ["market_context", "시장 맥락"], ["approach_points", "접근 포인트"]];
+  let briefBusy = false;
+
+  function briefAnnounce(text) {
+    briefStatus.textContent = "";
+    if (text) setTimeout(function () { briefStatus.textContent = text; }, 50);
+  }
+
+  // 작업 중에는 모든 'AI 브리핑' 버튼을 잠가 동시에 여러 번 유료 호출하지 않게 합니다.
+  function updateBriefButtons() {
+    buyersBox.querySelectorAll("[data-ma-brief]").forEach(function (b) { b.disabled = briefBusy || !aiReady(); });
+  }
+
+  function srcChips(sources) {
+    return sources.map(function (s) {
+      return '<a class="ma-src" href="' + esc(safeUrl(s.url) || "#") + '" target="_blank" rel="noopener noreferrer" title="' +
+        esc(s.name + " · " + s.date) + '">' + esc(s.id) + '<span class="visually-hidden"> 출처: ' + esc(s.name) + " (새 탭)</span></a>";
+    }).join(" ");
+  }
+
+  function briefingHtml(b) {
+    const c = b.company;
+    const used = {};
+    function collect(list) { list.forEach(function (s) { used[s.id] = s; }); }
+    let html = '<div class="ma-brief-head"><p class="ma-brief-company">' + esc(c.razao_social) +
+      (c.nome_fantasia && c.nome_fantasia !== c.razao_social ? ' <span class="field-hint">' + esc(c.nome_fantasia) + "</span>" : "") + "</p>" +
+      '<p><span class="ma-grade ma-grade-' + esc(c.grade) + '">' + esc(c.grade) + '</span> <span class="field-hint">' + esc(c.grade_reason) + "</span></p>" +
+      '<p class="field-hint">' + esc((c.municipio || "") + ", " + (c.uf || "") + " · " + (c.cnae_label || c.cnae) + " · CNPJ " + c.cnpj) + "</p>" +
+      '<p class="field-hint">' + esc(b.market.included
+        ? "시장 맥락 포함: " + b.market.query.code_system_label + " " + b.market.query.code + " · " + b.market.query.from + "~" + b.market.query.to
+        : b.market.note) + "</p></div>";
+    BRIEF_SECTIONS.forEach(function (sec) {
+      const items = b.sections[sec[0]] || [];
+      html += '<section class="ma-brief-section"><h3 class="ma-h3">' + esc(sec[1]) + "</h3>";
+      if (!items.length) html += '<p class="field-hint">근거가 있는 내용이 없어 쓰지 않았습니다.</p>';
+      else html += "<ul>" + items.map(function (p) { collect(p.sources); return "<li>" + esc(p.text) + " " + srcChips(p.sources) + "</li>"; }).join("") + "</ul>";
+      html += "</section>";
+    });
+    html += '<section class="ma-brief-section"><h3 class="ma-h3">예상 질문</h3>';
+    if (!b.questions.length) html += '<p class="field-hint">근거가 있는 질문이 없어 쓰지 않았습니다.</p>';
+    else html += '<dl class="ma-brief-qa">' + b.questions.map(function (q) {
+      collect(q.sources);
+      return "<dt>" + esc(q.question) + "</dt><dd>" + esc(q.answer_direction) + " " + srcChips(q.sources) + "</dd>";
+    }).join("") + "</dl>";
+    html += "</section>";
+    if (b.gaps.length) html += '<p class="field-hint">근거 부족으로 쓰지 않은 내용: ' + esc(b.gaps.join("; ")) + "</p>";
+    html += b.notes.map(function (n) { return '<div class="notice notice-info"><p>' + esc(n) + "</p></div>"; }).join("");
+    if (b.removed.length) {
+      html += '<details class="ma-details"><summary>코드 검사로 뺀 문장 ' + b.removed.length + "개 보기</summary><ul>" +
+        b.removed.map(function (r) { return "<li>" + esc(r.section + " · " + r.text) + '<br><span class="field-hint">' + esc(r.reason) + "</span></li>"; }).join("") +
+        "</ul></details>";
+    }
+    const ids = Object.keys(used).sort();
+    if (ids.length) {
+      html += '<p class="field-hint">출처: ' + ids.map(function (id) {
+        const s = used[id];
+        return esc(id) + " " + linkHtml(s.url, s.name) + " (" + esc(s.date) + ")";
+      }).join(" · ") + "</p>";
+    }
+    const u = b.usage || {};
+    html += '<p class="field-hint">' + esc((b.reused ? "이미 만든 브리핑을 다시 표시했습니다(추가 호출 없음) · " : "") +
+      "모델 " + (u.model || "-") + " · 호출 " + (u.calls || 0) + "회 · 입력 " + (u.input_tokens || 0) + " / 출력 " + (u.output_tokens || 0) +
+      " 토큰 · 소요 " + (u.seconds || 0) + "초" + (u.estimated_cost_usd != null ? " · 추정 비용 USD " + u.estimated_cost_usd : "") +
+      " · 프롬프트 " + b.prompt_version + " · 생성 " + kstTime(b.generated_at)) + "</p>";
+    return html;
+  }
+
+  async function runBriefing(cnpj, button) {
+    if (briefBusy) return;
+    if (!aiReady()) {
+      briefBox.innerHTML = '<div class="notice notice-warning" role="status"><p class="notice-title">AI 브리핑 설정 필요</p><p>' +
+        "서버에 AI 설정(OpenAI 키·텍스트 모델)이 없어 지금은 실행할 수 없습니다. 등급과 목록은 그대로 볼 수 있습니다.</p></div>";
+      AppShell.ui.focusResult(briefTitle, { scroll: "start", from: [buyersBox] });
+      return;
+    }
+    briefBusy = true;
+    updateBriefButtons();
+    AppShell.ui.setButtonBusy(button, "브리핑 중...");
+    const company = button.closest("tr").querySelector(".ma-buyer-name").textContent;
+    briefBox.setAttribute("aria-busy", "true");
+    briefBox.innerHTML = '<div class="empty-state"><span class="spinner" aria-hidden="true"></span><p class="empty-state-title">AI 브리핑을 만드는 중입니다</p>' +
+      "<p>" + esc(company) + " · 보통 10~30초 걸립니다.</p></div>";
+    briefAnnounce(company + " AI 브리핑을 만드는 중입니다.");
+    let done = "";
+    try {
+      const res = await fetch("/api/market-analysis/buyer-briefing", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cnpj: cnpj, bundle_id: lastResult ? lastResult.bundle_id : null }),
+      });
+      let body = null;
+      try { body = await res.json(); } catch (e) { body = null; }
+      if (!body || typeof body.ok !== "boolean") throw new Error("unreadable");
+      if (!body.ok) throw body.error;
+      briefBox.innerHTML = briefingHtml(body.data);
+      done = body.data.company.razao_social + " AI 브리핑이 준비되었습니다.";
+    } catch (err) {
+      const server = err && !(err instanceof Error) ? err : null;
+      const config = server && server.needs_restart;
+      const message = server && server.message ? server.message
+        : CONNECTION_ERROR + " 이미 보낸 요청의 처리·요금이 취소되었는지는 보장할 수 없습니다.";
+      briefBox.innerHTML = '<div class="notice ' + (config ? "notice-warning" : "notice-danger") + '" role="' + (config ? "status" : "alert") + '">' +
+        '<p class="notice-title">' + (config ? "AI 브리핑을 시작하지 않았습니다" : "AI 브리핑을 만들지 못했습니다") + "</p><p>" + esc(message) +
+        (config ? "" : " 목록에서 'AI 브리핑'을 다시 눌러 시도할 수 있습니다.") + "</p>" + (server ? diagHtml(server.diagnostic) : "") + "</div>";
+    } finally {
+      briefBusy = false;
+      briefBox.setAttribute("aria-busy", "false");
+      AppShell.ui.setButtonBusy(button, null);
+      updateBriefButtons();
+    }
+    // 큰 결과가 목록 아래 새로 생기므로 브리핑 제목으로 초점·스크롤(다른 곳으로 옮겼으면 그대로)
+    AppShell.ui.focusResult(briefTitle, { scroll: "start", from: [buyersBox, briefBox] });
+    briefAnnounce(done);
+  }
 
   /* ---------- 하위 탭(시장 통계 / 바이어 목록) ---------- */
   const tabs = Array.from(panel.querySelectorAll("[data-ma-tab]"));

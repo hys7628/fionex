@@ -588,3 +588,23 @@
 - 변경 파일: features/home/static/home.js(fxChangeDirection, data-direction), features/home/static/home.css(등락 색 규칙), features/home/feature_spec.md.
 - 외부 호출: 0건(가상 FX 응답으로 화면 확인). 검증: validation.md DEV-HOME-022.
 - 담당자 판단: 미기재(담당자 검토 필요)
+
+## DEV-MA-BUYER-002 바이어 우선순위 등급(②)·바이어별 AI 브리핑(③)
+- 유형: development_instruction (서비스 프롬프트 buyer_briefing_v1.md 신규 작성, 실제 모델 실험은 미실행)
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis (+공통 소폭: common.css .table-wrap, app_shell.js focusLost) (브랜치 feature/common_setup, 작업 전 미커밋 변경 없음, 최근 커밋 8529489)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음(모의만)
+- 지시: 사용자가 붙여 넣은 '바이어 분석 기능 제안(①분포 ②등급 ③AI 브리핑)' + "시장분석 탭 수정할건데 1번은 빼고 가자 만들어줘"
+- 판단:
+  - ② 제안 규칙 그대로 코드화. '연락 가능'은 표의 높음(대표 전화+회사 도메인)으로 해석 → A 242·B 457·C 140(대안 '연락 수단 1개 이상'이면 A 500, 제안 표 정의와 달라 채택 안 함). 1340501(Estamparia e texturização)은 가연 포함 코드라 관련도 높음. 등급 근거 한 줄은 코드가 생성.
+  - ③ 제안의 4가지 자료 중 관세 18%·반덤핑 유예는 확인된 정적 자료가 없어 넣지 않음(수치를 만들지 않음, 프롬프트 금지 + 코드 검사). 시장 통계는 시장 통계 탭의 조회 묶음(bundle)을 재사용(추가 ComexStat 호출 없음). 재생·T2T 근거는 기존 근거 파일(현재 0건).
+  - 호출 1회 정책: 기존 시장 분석 AI처럼 5회 검토를 하지 않고 1회 생성 + 코드 검사(통과 항목만 표시). 같은 업체·묶음은 서버 메모리 3시간 재사용. 화면은 작업 중 모든 브리핑 버튼 잠금.
+  - 미정 항목은 제안의 추천을 따르거나 보류: 브랜드 묶음(자료 없음)·포르투갈어 첫 연락 문구(제품소개서와 겹침 확인 전)·③ 별도 PDF는 이번에 미구현, ②는 기존 PDF ⑥에 포함.
+  - 개인정보: AI 입력에 전화번호·CNPJ 번호를 넣지 않음(테스트로 확인).
+- 발견·수정한 문제: (1) 표 칸의 .visually-hidden(absolute)이 .table-wrap 스크롤 상자 밖으로 나가 390px 바이어 화면에 페이지 가로 스크롤(문서 폭 992px) → 공통 .table-wrap에 position: relative. (2) 작업 중 비활성 버튼을 누르면 main(tabindex=-1)에 초점이 가 결과 제목으로 초점 이동이 생략됨 → 공통 focusLost가 main도 '초점 없음'으로 봄. (3) 등급 열 추가로 업종 칸 nth-child 선택자가 밀림 → 5번째로 수정. (4) 바이어 카드 설명 '근거 업체 먼저' → '우선순위 등급순'.
+- 변경 파일: features/market_analysis/buyers.py, buyer_briefing.py(신규), prompts/buyer_briefing_v1.md(신규), routes.py, pdf_report.py, static/market_analysis.js·css, templates/market_analysis/panel.html, feature_spec.md, tests/test_market_analysis/test_buyer_briefing.py(신규 12건), static/css/common.css, static/js/app_shell.js, docs/design_system.md.
+- API contract: 기존 응답 필드 유지, buyers 응답에 등급 필드 추가, 새 엔드포인트 POST /api/market-analysis/buyer-briefing.
+- 외부 호출: 0건(가짜 AI·가상 통계, 브라우저는 route 가상 응답 + 키 없는 실제 서버).
+- 검증: validation.md DEV-MA-BUYER-002.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 OpenAI 브리핑 품질·비용·소요 시간 미검증, 숫자 없는 사실 오류는 코드로 못 잡음(고정 안내로 사람 확인 요구), 관세·반덤핑 자료·재생·T2T 근거·브랜드 묶음 미준비, ③ PDF 미구현, PDF가 53→65쪽(등급 열로 행 높이 증가).

@@ -331,17 +331,21 @@ def _buyer_section(d, W, st):
         out.append(_p("기준 자료가 아직 없습니다(buyer_data_builder로 생성 후 표시).", st["body"]))
         return out
     lst = d["companies"]
-    out.append(_p("전체 %d곳 · 재생·T2T 근거 %d곳 · 조건: 주 업종 대상 CNAE, 활성, 법인, 규모 '%s'. 근거 업체를 먼저 표시." % (
-        len(lst), d["counts"]["with_evidence"], d["filters"]["porte"]), st["small"]))
-    rows = [["#", "회사명 · CNPJ", "지역(주·시)", "업종(CNAE)", "법인 대표 전화 · 회사 도메인","재생·T2T 근거"]]
+    g = d["counts"].get("grades") or {}
+    out.append(_p("전체 %d곳(A %d · B %d · C %d) · 재생·T2T 근거 %d곳 · 조건: 주 업종 대상 CNAE, 활성, 법인, 규모 '%s'. 우선순위 등급순. %s" % (
+        len(lst), g.get("A", 0), g.get("B", 0), g.get("C", 0), d["counts"]["with_evidence"], d["filters"]["porte"], d.get("grade_note") or ""), st["small"]))
+    for rule in d.get("grade_rules") or []:
+        out.append(_p("· " + rule, st["small"]))
+    rows = [["#", "회사명 · CNPJ", "등급 · 근거", "지역(주·시)", "업종(CNAE)", "대표 전화 · 회사 도메인", "재생·T2T 근거"]]
     for i, c in enumerate(lst, 1):
         name = [_p(c["razao_social"], st["cell"])] + ([_p(c["nome_fantasia"], st["small"])] if c.get("nome_fantasia") else []) + \
             [_p("CNPJ " + c["cnpj"], st["small"])]
+        grade = [_p(c.get("grade") or "—", st["cell_head"]), _p(c.get("grade_reason") or "", st["small"])]
         contact = " / ".join(c["phones"] + (["도메인 " + c["domain"]] if c.get("domain") else [])) or "등록 없음"
         ev = [p for e in c["evidence"] for p in (_link(e.get("url"), st["cell"], e.get("title")), _p("확인 " + str(e.get("checked_at")), st["small"]))]
-        rows.append([str(i), name, "%s · %s" % (c.get("uf") or "", c.get("municipio") or ""),
+        rows.append([str(i), name, grade, "%s · %s" % (c.get("uf") or "", c.get("municipio") or ""),
                      "%s %s" % (c["cnae"], c.get("cnae_desc") or ""), contact, ev or "—"])
-    out.append(_table(rows, [9 * mm, 46 * mm, 26 * mm, 36 * mm, 38 * mm, W - 155 * mm], st, num_cols=(0,)))
+    out.append(_table(rows, [8 * mm, 38 * mm, 34 * mm, 22 * mm, 30 * mm, 30 * mm, W - 162 * mm], st, num_cols=(0,)))
     src = d["source"]
     out.append(_p("출처: %s · 자료 기준월 %s · 생성 %s" % (src["name"], src["reference_month"], src.get("generated_at")), st["small"]))
     out.append(_link(src["url"], st["cell"]))

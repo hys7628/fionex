@@ -109,10 +109,29 @@
     <div class="card-header">
       <div>
         <h2 class="card-title" id="market_analysis-buyers-title" tabindex="-1">바이어 목록 (리젠 T2T 잠재 바이어)</h2>
-        <p class="card-description">브라질 원사·원단 제조 기업(국세청 CNPJ 공개 자료). 재생·T2T 관심 근거가 있는 업체를 먼저 표시합니다.
+        <p class="card-description">브라질 원사·원단 제조 기업(국세청 CNPJ 공개 자료). 우선순위 등급(A·B·C, 업종·연락처·공개 근거 기준)순으로 표시합니다.
           전체 목록은 '시장 통계' 탭의 PDF(⑥)에도 들어갑니다.</p>
       </div>
     </div>
     <div data-ma-buyers><p class="field-hint">바이어 목록을 불러오는 중...</p></div>
+  </section>
+
+  {# 바이어별 AI 브리핑: 목록에서 고른 1곳. 'AI 브리핑' 1번에 OpenAI 1회(유료). 같은 업체·같은 조회 결과는 다시 호출하지 않음.
+     근거는 국세청 CNPJ(C1)·시장 통계 탭 조회 결과(S1, 있을 때만)·재생·T2T 공개 근거(T*)뿐이며 코드가 문장을 검사합니다. #}
+  <section class="card" aria-labelledby="market_analysis-briefing-title">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title" id="market_analysis-briefing-title" tabindex="-1">AI 바이어 브리핑</h2>
+        <p class="card-description" id="market_analysis-briefing-cost">목록에서 고른 업체 1곳의 회사 개요·시장 맥락·접근 포인트·예상 질문입니다.
+          출처 있는 자료만 쓰고, 'AI 브리핑'을 누를 때마다 OpenAI를 1회 호출합니다(유료, 같은 업체는 다시 호출하지 않음).</p>
+      </div>
+    </div>
+    <p class="visually-hidden" role="status" data-ma-briefing-status></p>
+    <div data-ma-briefing aria-busy="false">
+      <div class="empty-state">
+        <p class="empty-state-title">아직 고른 업체가 없습니다</p>
+        <p>위 바이어 목록에서 'AI 브리핑'을 누르세요. 시장 통계를 먼저 조회하면 시장 맥락이 함께 들어갑니다.</p>
+      </div>
+    </div>
   </section>
 </div>

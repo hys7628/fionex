@@ -135,7 +135,7 @@
 - **입력**: 높이 42px, radius 8px, 테두리 `--color-border-control`(3.5:1). hover 블루 테두리. 키보드 초점은 블루 테두리 + `--focus-halo` 링 + 투명 outline(고대비 모드에서 실제 선). 오류 `aria-invalid` 빨강 테두리(초점 시 빨강 옅은 링). disabled 옅은 면·보조 글자. placeholder `--color-text-placeholder`.
 - **배지/라벨**: 상태(성공=민트그린, 주의=주황, 위험=빨강, 정보=블루)는 `.badge-*`(점 + soft 배경 + 얇은 테두리). Google·KOTRA·ABIT·AI 요약·원사·원단 같은 단순 분류는 `.badge-neutral`/`.tag`(블루그레이)를 쓰고 초록·주황·빨강을 쓰지 않는다.
 - **안내** `.notice`: 옅은 tint 배경 + 1px 상태 테두리 + 왼쪽 3px 강조선, 여백 12px 16px, 제목은 상태 글자색·본문은 네이비. 아이콘 없이 제목 문장으로 뜻을 전달한다. 오류(`danger`)만 진한 tint를 쓰고 일반 안내는 옅게 둔다. 안의 버튼은 왼쪽 정렬.
-- **표**: 틀 1px 옅은 선 + radius 10px, 머리 `--color-surface-muted`·xs 보조 글자, 행 구분 1px `--color-border-subtle`, 행 hover `--color-row-hover`, 숫자 칸 `.num` 오른쪽·tabular-nums·medium. 열 너비는 기능이 정한다.
+- **표**: 틀 1px 옅은 선 + radius 10px, 머리 `--color-surface-muted`·xs 보조 글자, 행 구분 1px `--color-border-subtle`, 행 hover `--color-row-hover`, 숫자 칸 `.num` 오른쪽·tabular-nums·medium. 열 너비는 기능이 정한다. `.table-wrap`은 `position: relative`라 칸 안 `.visually-hidden`이 스크롤 상자 밖으로 나가 페이지 가로 스크롤을 만들지 않는다(2026-10-26).
 - **빈 상태**: 점선 `--color-border-strong` + 옅은 면, radius 10px, 최소 높이 160px.
 - **로딩**: `.spinner`(블루·아쿠아 테두리 회전) + 텍스트, 버튼 `disabled`, 영역 `aria-busy`. 누른 버튼은 아래 '작업 중 버튼'.
 
@@ -184,7 +184,7 @@
 - **비활성 → 활성 버튼**: 자동으로 초점을 주지 않는다. 버튼 옆 안내(`aria-describedby`)와 결과 제목 초점으로 인지시킨다.
 - **프로그램 초점 대상**: 제목·영역에 `tabindex="-1"`(Tab 순서에 넣지 않음, `tabindex="0"` 금지). 키보드로 이동했을 때는 공통 `:focus-visible` 테두리가 보이고 마우스 실행 후에는 보이지 않는다.
 - **스크롤**: `focus({ preventScroll: true })` 후 필요한 경우만 `scrollIntoView`. `prefers-reduced-motion: reduce`면 `behavior: "auto"`(즉시), 아니면 `"smooth"`.
-- **초점을 옮기지 않는 경우**: 대상이 숨겨진 탭·화면 안이거나 문서에서 빠졌을 때, 사용자가 작업 중 다른 곳으로 초점을 옮겼을 때(`from` 밖) — 끝난 작업이 초점을 뺏지 않는다.
+- **초점을 옮기지 않는 경우**: 대상이 숨겨진 탭·화면 안이거나 문서에서 빠졌을 때, 사용자가 작업 중 다른 곳으로 초점을 옮겼을 때(`from` 밖) — 끝난 작업이 초점을 뺏지 않는다. 초점이 body이거나 본문 빈 곳을 눌러 `main`(tabindex=-1)에 있으면 '초점 없음'으로 보고 옮긴다.
 - **aria-live**: 큰 결과 본문 전체에 붙이지 않는다(시장 분석 결과·바이어 목록에서 제거). 결과 완료는 짧은 `role="status"` 문장(예: "분석 결과가 준비되었습니다.")으로, 오류는 `role="alert"`.
 - **구조**: `본문으로 건너뛰기` skip link → `<main id="main-content" tabindex="-1">`, 사이드바 `<nav aria-label="주 메뉴">`. 탭 제목 h1 → 카드 h2 → 카드 안 구역 h3. 시각 크기 때문에 heading 단계를 고르지 않는다.
 

@@ -822,6 +822,7 @@ a.card:hover {
 
 /* ---------- 표 ---------- */
 .table-wrap {
+  position: relative;  /* 칸 안 .visually-hidden(absolute)이 스크롤 상자 밖으로 나가 페이지 가로 폭을 늘리지 않게 */
   overflow-x: auto;
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);

@@ -225,8 +225,10 @@
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const busyFocus = new WeakSet();  // 작업을 시작할 때 초점이 있던 버튼
 
+  // body이거나, 본문 빈 곳을 눌러 main(tabindex=-1)에 초점이 간 경우도 '초점 없음'으로 봅니다.
   function focusLost() {
-    return !document.activeElement || document.activeElement === document.body;
+    const a = document.activeElement;
+    return !a || a === document.body || a === main;
   }
 
   // 숨겨진 탭·화면 안이거나 문서에서 빠진 요소에는 초점을 옮기지 않습니다(탭 이동 중 끝난 작업이 초점을 뺏지 않게).
