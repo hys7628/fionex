@@ -849,17 +849,22 @@
 
 /* 넓은 화면: 좌우 배치와 화면 높이에 맞춘 내부 스크롤(작은 화면·확대 시에는 페이지 스크롤) */
 @media (min-width: 1100px) {
+  /* 두 열 높이 맞춤(2026-10-27): 왼쪽 파일 카드가 오른쪽(문구 카드 + 검수 실행) 전체 높이만큼 늘어나 아래가 비지 않게 */
   .feature-green_claim .green-claim-confirm-grid {
     flex-direction: row;
-    align-items: flex-start;
+    align-items: stretch;
   }
 
-  /* 파일 카드: 좁게 고정하면 요약·안내가 여러 줄로 접혀 길어지므로 화면 폭에 비례(340~480px).
-     파일·실행 버튼·상태·요약을 위에 두고, 화면보다 길면 카드 안에서 스크롤(페이지 전체는 짧게 유지) */
+  /* 파일 카드: 화면 폭에 비례(340~480px). 오른쪽 열 높이에 맞추고, 내용이 더 길면 카드 안에서 스크롤 */
   .feature-green_claim .green-claim-file-card {
     flex: 0 0 clamp(340px, 44%, 480px);
-    max-height: max(420px, calc(100vh - 420px));
+    min-height: 0;
     overflow-y: auto;
+  }
+
+  /* 오른쪽 열: 문구 카드가 남는 높이를 채우고 검수 실행 카드는 아래에 붙음 */
+  .feature-green_claim .green-claim-text-card {
+    flex: 1 1 auto;
   }
 
   /* 미지원 요소·불확실 구간 목록이 길면 이 영역 안에서 스크롤(항목은 그대로, 키보드 초점 가능) */
@@ -879,8 +884,8 @@
 
   /* 추출 문구 칸: 왼쪽 파일 카드와 비슷한 높이까지(900px 화면에서 약 12줄) */
   .feature-green_claim .green-claim-text-card .green-claim-textarea {
-    height: clamp(300px, calc(100vh - 540px), 640px);
-    min-height: 300px;
+    height: clamp(280px, calc(100vh - 600px), 600px);
+    min-height: 280px;
   }
 
   .feature-green_claim .green-claim-result-grid {
