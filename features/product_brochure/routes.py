@@ -30,7 +30,7 @@ FEATURE = {
     "id": "product_brochure",
     "label": "제품소개서",
     "title": "제품소개서",
-    "description": "한국어 제품 자료로 브라질 포르투갈어 소개서를 만들고 검토한 뒤 PDF로 내려받습니다.",
+    "description": "한국어 제품 자료로 포르투갈어 소개서 PDF를 만듭니다.",
     "icon": "document",
 }
 

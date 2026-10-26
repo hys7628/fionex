@@ -297,31 +297,34 @@ a {
 }
 
 /* ---------- 본문 머리글 ---------- */
+/* 2026-10-27: Home '일일 브리핑' 바와 같은 얇은 한 줄 바(탭 이름 · 짧은 설명 · 작업 상태 칩). Home은 home.css에서 화면에서 숨김 */
 .page-header {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-6) var(--space-8);
-  border: 1px solid var(--color-glass-card-border);
+  gap: var(--space-2) var(--space-4);
+  min-height: 68px;
+  padding: var(--space-3) var(--space-6);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background: var(--color-glass-card);  /* 흐림(backdrop-filter)은 쓰지 않음: 안의 position: fixed 팝오버 기준이 카드로 바뀌어 위치가 어긋남 */
-  box-shadow: var(--shadow-glass);
+  background: var(--color-hero-gradient);
+  box-shadow: var(--shadow-sm);
 }
 
 .page-header-text {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  max-width: 760px;
+  flex: 1 1 16rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-3);
+  min-width: 0;
 }
 
 .page-title {
   color: var(--color-text);
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  letter-spacing: -0.02em;
 }
 
 .page-title:focus {
@@ -330,6 +333,7 @@ a {
 
 .page-description {
   color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 /* ---------- 상태 표시 ---------- */
@@ -952,13 +956,12 @@ a.card:hover {
     gap: var(--space-5);
   }
 
-  .page-header,
   .card {
     padding: var(--space-5);
   }
 
-  .page-title {
-    font-size: var(--font-size-xl);
+  .page-header {
+    padding: var(--space-3) var(--space-5);
   }
 }
 
@@ -969,7 +972,7 @@ a.card:hover {
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .card, .page-header, .sidebar {
+  .card, .sidebar {
     border-color: var(--color-border-subtle);
     background: var(--color-surface);
     -webkit-backdrop-filter: none;

@@ -36,7 +36,7 @@ FEATURE = {
     "id": "market_analysis",
     "label": "시장/바이어 분석",
     "title": "시장/바이어 분석",
-    "description": "브라질 수입 통계로 시장 추세를 보고, 잠재 바이어를 우선순위 등급·AI 브리핑으로 살펴봅니다.",
+    "description": "브라질 수입 통계와 잠재 바이어를 살펴봅니다.",
     "icon": "chart",
 }
 
