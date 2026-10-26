@@ -24,7 +24,7 @@ from features.green_claim.service import ExtractError
 
 logger = logging.getLogger(__name__)
 
-PROMPT_VERSION = "claim_review_v2"  # v1은 2026-10-26 실제 실행 1건 후 보존(feature_spec.md "대체 문장 보완")
+PROMPT_VERSION = "claim_review_v5"  # v1~v4는 2026-10-26 실제 실행 후 보존(feature_spec.md "대체 문장 보완"~"수치 삭제 예시 보완")
 PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.md"
 MAX_CHARS = service.MAX_CHARS
 # 20,000자를 JSON 이스케이프로 보내도(\uXXXX 6바이트, 이모지 서로게이트 쌍 12바이트) 약 240,000바이트 + 여유
@@ -234,17 +234,29 @@ def _numbers(value):
     return {re.sub(r"[.,]", "", number) for number in _NUMBER.findall(value or "")}
 
 
-# 대체 예시에 나오면 근거가 필요한 표현의 어간(소문자·악센트 제거 기준). 입력 문구에 없는 어간이 예시에 있으면 예시를 쓰지 않습니다.
-# 정해진 목록의 기계 검사일 뿐이며, 바꿔 말한 표현·뜻으로만 생기는 새 전제는 찾지 못합니다(feature_spec.md "대체 문장 보완").
-CLAIM_TERMS = (
+# 대체 예시에 나오면 근거가 필요한 표현의 어간 묶음(소문자·악센트 제거 기준). 묶음 안의 어간은 같은 뜻의 언어별 표현입니다.
+# 예시(원문 언어 문장·포르투갈어 문장·한국어 해석)에 어떤 묶음의 어간이 있는데 입력 문구에 그 묶음의 어간이 하나도 없으면 예시를 쓰지 않습니다.
+# 언어별로 따로 비교하면 포르투갈어 입력의 충실한 한국어 해석(reciclado → 재활용)까지 지워지므로 뜻 묶음으로 비교합니다(2026-10-26 보완).
+# 정해진 목록의 기계 검사일 뿐이며, 바꿔 말한 표현·뜻으로만 생기는 새 전제는 찾지 못합니다(feature_spec.md "대체 문장 보완", "문맥 반영 보완").
+CLAIM_TERM_GROUPS = (
     # 평가·시험·검증·입증·인증
-    "comprov", "certific", "atest", "audit", "verific", "avalia", "escopo", "laudo", "ensaio", "testad", "selo",
-    "certif", "verif", "assess", "evaluat", "tested", "proven", "substantiat",
-    "인증", "검증", "입증", "평가", "시험", "실증",
+    ("proof", ("comprov", "atest", "substantiat", "proven", "입증", "실증")),
+    ("certification", ("certific", "certif", "selo", "인증")),
+    ("verification", ("audit", "verific", "verif", "검증")),
+    ("evaluation", ("avalia", "assess", "evaluat", "escopo", "laudo", "ensaio", "testad", "tested", "평가", "시험")),
     # 환경·사회 특성
-    "socioambient", "ambientalmente", "ecologic", "sustentav", "verde", "reciclad", "renovav", "biodegrad", "carbono",
-    "emisso", "pegada", "sustainab", "eco-", "ecolog", "green", "recycl", "renewab", "carbon", "emission", "footprint",
-    "친환경", "지속가능", "재활용", "재생", "탄소", "배출", "생분해", "사회적", "환경적",
+    ("socio_environmental", ("socioambient", "social", "사회적", "사회·환경")),
+    ("environmental", ("ambiental", "ambientalmente", "environmental", "환경적", "환경에")),
+    ("eco", ("ecologic", "ecolog", "eco-", "verde", "green", "친환경")),
+    ("sustainable", ("sustentav", "sustainab", "지속가능", "지속 가능")),
+    ("recycled_content", ("reciclad", "recycled", "recycling", "재활용", "재생")),
+    # 사용 후 단계(재활용 가능·퇴비화). 재활용 '함량'과 다른 주장이라 따로 묶음(입력에 함량만 있으면 '재활용 가능' 예시는 제거)
+    ("end_of_life", ("reciclav", "recyclab", "compost", "재활용 가능", "재활용할 수", "퇴비화")),
+    ("renewable", ("renovav", "renewab")),
+    ("biodegradable", ("biodegrad", "생분해")),
+    ("carbon", ("carbono", "carbon", "탄소")),
+    ("emission", ("emisso", "emission", "배출")),
+    ("footprint", ("pegada", "footprint", "발자국")),
 )
 
 
@@ -256,9 +268,11 @@ def _fold(value):
 
 
 def _unsupported_terms(values, text):
+    """예시에 있으나 입력 문구에는 같은 뜻 묶음의 어간이 하나도 없는 묶음 이름 목록."""
     folded_text = _fold(text)
     found = _fold(" ".join(value for value in values if value))
-    return sorted(term for term in CLAIM_TERMS if term in found and term not in folded_text)
+    return sorted(name for name, stems in CLAIM_TERM_GROUPS
+                  if any(stem in found for stem in stems) and not any(stem in folded_text for stem in stems))
 
 
 def _alternative(raw, unavailable, text, language):

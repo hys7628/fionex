@@ -121,3 +121,9 @@
 |---|---|---|---|---|---|
 | 2026-10-26 | 단계별 화면 캡처(1440×900 d1440_*, 1920×1080 d1920_*, 390px m390_*, 720×450 z200_*, 긴 결과 d1440_3_result_long) — 1_text_empty·2_text·3_result·3_result_help·1_file·2_file_before·2_file_extracted·2_file_help_review | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/c1b73469-0709-47ec-9be6-9389670902ea/scratchpad/ui_shots/ | 헤드리스 Chrome(flow_server 모의 AI) | validation DEV-2026_10_26-07 | 가상 사례 A·모의 결과·공개 fixture PDF(실제 검수 결과 아님). 저장소에 넣지 않음 |
 | 2026-10-26 | 확인 도구 | 같은 폴더 tools/cdp_check_steps.mjs, cdp_check_long_ime.mjs, cdp_steps_capture.mjs, cdp_measure.mjs, update_steps_expectations.py, update_steps_expectations2.py | 직접 작성 | 같음 | 저장소에 넣지 않음 |
+
+## 2026-10-26 문맥 반영 보완 캡처 (DEV-2026_10_26-09)
+| 날짜 | 종류 | 경로 | 생성 도구 | 관련 기록 | 사용권·검토 상태 |
+|---|---|---|---|---|---|
+| 2026-10-26 | 항목 0개 결과 화면 캡처(사례 A 모의) | 저장소 밖 세션 임시 폴더: C:/Users/user/AppData/Local/Temp/claude/c--Users-user-Desktop-2nd-project/c1b73469-0709-47ec-9be6-9389670902ea/scratchpad/ui_shots/d1440_3_result_zero_items.png | 헤드리스 Chrome(flow_server 모의 AI) | validation DEV-2026_10_26-09 | 가상 문구·모의 결과(실제 검수 결과 아님). 저장소에 넣지 않음 |
+| 2026-10-26 | 확인 도구 | 같은 폴더 tools/cdp_check_zero_items.mjs, make_v3.py, regroup_terms.py, flow_server.py(사례 A 응답 추가) | 직접 작성 | 같음 | 저장소에 넣지 않음 |

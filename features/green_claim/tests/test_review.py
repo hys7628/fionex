@@ -486,13 +486,219 @@ class AlternativeSafetyTest(Base):
                 self.assertIsNone(entry["alternative"]["original_text"])
 
     def test_prompt_v2_rules_and_v1_kept(self):
-        instructions = rs.load_instructions()
-        self.assertEqual(rs.PROMPT_VERSION, "claim_review_v2")
+        # 2026-10-26: 현재 버전은 v3(ContextReviewTest). v2 규칙은 v2 파일과 이어받은 v3 모두에 있어야 함
+        v2_text = rs.PROMPT_PATH.with_name("claim_review_v2.md").read_text(encoding="utf-8")
         for rule in ("전제하거나 암시하지 않는다", "입증해야 한다", "alternative를 null로", "pt_br_text 하나에만", "original_text는 null"):
-            self.assertIn(rule, instructions)
+            self.assertIn(rule, v2_text)
+            self.assertIn(rule, rs.load_instructions())
         v1 = rs.PROMPT_PATH.with_name("claim_review_v1.md")
         self.assertTrue(v1.is_file())
         self.assertIn("서버가 중복을 정리한다", v1.read_text(encoding="utf-8"))  # 실험한 v1 문장 그대로 보존
+
+# 2026-10-26 사용자 실제 실행(claim_review_v2) 3건의 입력(공개 가능한 가상 문구). 아래 가짜 AI 결과는 원본 응답이 아니다.
+CASE_A_TEXT = "이 원단은 파란색이며 폭은 150cm입니다."
+CASE_B_TEXT = "우리 원단은 완벽하게 친환경적이며 환경에 아무 영향도 주지 않습니다."
+CASE_C_TEXT = ("Nesta amostra, a embalagem contém 30% de material reciclado por massa. "
+               "A afirmação refere-se apenas à embalagem.")
+
+
+class ContextReviewTest(Base):
+    """문맥 반영 보완. 서버가 확인할 수 있는 것(전달·보존·기계 검사)만 검증하고, 모델의 문맥 판단은 검증하지 않는다."""
+
+    def test_prompt_v3_rules_and_v2_kept(self):
+        # 2026-10-26: 현재 버전은 v4(ItemSelectionTest). v3 규칙은 v3 파일과 이어받은 v4 모두에 있어야 함
+        v3_text = rs.PROMPT_PATH.with_name("claim_review_v3.md").read_text(encoding="utf-8")
+        instructions = rs.load_instructions()
+        for rule in ("앞·뒤 문장에 있는 범위·조건", "이미 있는 한정", "입력에 근거 자료가 제시되지 않았다", "재활용 소재 함량",
+                     "실제로 적용되는 기준만", "개수를 채우려고", "항목 수나 조치는 정해져 있지 않다", "강도를 그대로 옮긴다",
+                     "완벽하게 친환경적", "그 문장만 읽어도", "지시어만 남기지 않는다", "이미 있는 한정을 대체 문장에서 빼지 않는다"):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, v3_text)
+                self.assertIn(rule, instructions)
+        v2_text = rs.PROMPT_PATH.with_name("claim_review_v2.md").read_text(encoding="utf-8")
+        self.assertNotIn("이미 있는 한정", v2_text)  # v2는 실험한 그대로
+
+    def test_case_a_no_items_kept_as_regression(self):
+        result, calls = self.run_review(text=CASE_A_TEXT, data=result_data([], summary="사회·환경 주장 없음(가상)", limitations=[]))
+        self.assertEqual((len(calls), result["items"], result["criteria_refs"]), (1, [], {}))
+        self.assertEqual(result["summary"]["no_items_message"], rs.NO_ITEMS_MESSAGE)
+        self.assertEqual(result["summary"]["total"], 0)
+
+    def test_case_b_server_keeps_interpretation_unchanged(self):
+        # 해석 강도 보존은 모델(프롬프트)·사람 검토 몫: 서버는 해석을 바꾸지도 판정하지도 않음(약하게 옮긴 해석도 그대로 통과)
+        for interpretation in ("완벽하게 친환경적이라는 절대적 주장", "매우 친환경적이라는 주장"):
+            data = result_data([item("완벽하게 친환경적이며", action="revise_recommended", ids=("CONAR-U-3",), language="ko")])
+            data["items"][0]["interpretation_ko"] = interpretation
+            result, _ = self.run_review(text=CASE_B_TEXT, data=data)
+            with self.subTest(interpretation=interpretation):
+                self.assertEqual(result["items"][0]["interpretation_ko"], interpretation)
+
+    def test_qualifier_context_sent_whole(self):
+        # 한정 문구가 앞·뒤 문장에 있든 없든 서버는 문서 전체를 그대로 모델에 보냄(문맥 판단 자체는 모델 몫)
+        for text in (CASE_C_TEXT, "A afirmação refere-se apenas à embalagem. A embalagem contém 30% de material reciclado por massa.",
+                     "A embalagem contém 30% de material reciclado."):
+            _, calls = self.run_review(text=text, data=result_data([]))
+            with self.subTest(text=text[:30]):
+                self.assertEqual(json.loads(calls[0]["input_text"])["text_to_review"], text)
+
+    def test_cross_language_translation_not_removed(self):
+        # 2026-10-26 발견: 어간을 언어별로만 비교하면 충실한 번역(reciclado ↔ 재활용)이 입력에 없는 표현으로 지워짐 → 뜻 묶음으로 비교
+        cases = [
+            ("A embalagem contém material reciclado.", "material reciclado", "pt-BR",
+             {"original_text": None, "pt_br_text": "A embalagem contém material reciclado, segundo a empresa.", "ko_interpretation": "회사 설명에 따르면 포장재에 재활용 소재가 들어 있습니다."}),
+            ("포장재에 재활용 소재가 들어 있습니다.", "재활용 소재", "ko",
+             {"original_text": "회사 설명에 따르면 포장재에 재활용 소재가 들어 있습니다.", "pt_br_text": "Segundo a empresa, a embalagem contém material reciclado.",
+              "ko_interpretation": "회사 설명에 따르면 포장재에 재활용 소재가 들어 있습니다."}),  # 모델 출력 해석은 필수(같으면 서버가 정리)
+        ]
+        for text, quote, language, alternative in cases:
+            data = result_data([item(quote, ids=("CONAR-U-1",), language=language, alternative=alternative)])
+            entry = self.run_review(text=text, data=data)[0]["items"][0]
+            with self.subTest(language=language):
+                self.assertIsNotNone(entry["alternative"], entry["alternative_note_ko"])
+
+    def test_case_c_alternatives(self):
+        quote = "a embalagem contém 30% de material reciclado por massa"
+        def run(alternative):
+            data = result_data([item(quote, ids=("CONAR-U-1",), language="pt-BR", alternative=alternative,
+                                     unavailable="근거 자료가 있어야 예시를 쓸 수 있음")])
+            return self.run_review(text=CASE_C_TEXT, data=data)[0]["items"][0]
+        # 핵심 주장·이미 있는 한정을 유지한 예시: 새 어간 없음 → 유지
+        kept = run({"original_text": None, "ko_interpretation": "이 표본에서 포장재는 질량 기준 30% 재활용 소재를 포함합니다.",
+                    "pt_br_text": "Nesta amostra, a embalagem contém 30% de material reciclado por massa (informação da empresa)."})
+        self.assertIsNotNone(kept["alternative"])
+        # 재활용 함량 주장을 사용 후 '재활용 가능' 주장으로 바꾼 예시 → 제거(입력에 없는 단계의 주장)
+        recyclable = run({"original_text": None, "pt_br_text": "Nesta amostra, a embalagem é reciclável.",
+                          "ko_interpretation": "이 표본의 포장재는 재활용할 수 있습니다."})
+        self.assertIsNone(recyclable["alternative"])
+        self.assertEqual(recyclable["server_checks"], ["alternative_removed_unsupported_claim_term"])
+        # 새 수치 → 제거(기존 검사)
+        self.assertIsNone(run({"original_text": None, "pt_br_text": "A embalagem contém 50% de material reciclado.",
+                               "ko_interpretation": "포장재는 재활용 소재 50%"})["alternative"])
+        # 한계 고정: 핵심 주장을 지워 지시 대상만 남은 예시는 서버가 판정하지 못하고 통과함(v3 프롬프트·사람 검토에 의존)
+        incomplete = run({"original_text": None, "pt_br_text": "Nesta amostra, a afirmação refere-se apenas à embalagem.",
+                          "ko_interpretation": "이 표본에서 이 주장은 포장에만 해당합니다."})
+        self.assertIsNotNone(incomplete["alternative"])
+
+
+# 2026-10-26 사용자 실제 실행(claim_review_v3, 13:24:14) 관측: 포장 한정 문장 자체를 수정 권고로 잡고, 이유는 긍정·수정 방향은 유지였다.
+# 아래 가짜 AI 결과는 그 관측을 흉내 낸 것이며 원본 응답이 아니다.
+QUALIFIER = "A afirmação refere-se apenas à embalagem."
+CONTRADICTION_TEXT = ("A embalagem e o tecido contêm 30% de material reciclado por massa. "
+                      "A afirmação refere-se apenas à embalagem.")
+
+
+class ItemSelectionTest(Base):
+    """항목 선정·조치 일관성(v4). 서버는 의미를 판정하지 않으므로 '규칙 포함·그대로 전달·단어로 지우지 않음'만 확인한다."""
+
+    def test_prompt_v4_rules_and_v3_kept(self):
+        # 2026-10-26: 현재 버전은 v5(NumberRemovalAlternativeTest). v4 규칙은 v4 파일과 이어받은 v5 모두에 있어야 함
+        v4_text = rs.PROMPT_PATH.with_name("claim_review_v4.md").read_text(encoding="utf-8")
+        instructions = rs.load_instructions()
+        for rule in ("함께 평가한다", "구체적인 결함이 없으면 독립 항목으로 만들지 않는다", "관련 주장 항목의 reason_ko·direction_ko에 반영",
+                     "앞의 주장과 모순됨", "조치·이유·수정 방향은 서로 맞아야 한다", "무엇이 문제인지", "무엇을 어떻게 바꿔야 하는지",
+                     "항목으로 만들 이유가 없는 문장을 남기기 위해 쓰지 않는다", "0개일 수도 여러 개일 수도"):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, v4_text)
+                self.assertIn(rule, instructions)
+        v3_text = rs.PROMPT_PATH.with_name("claim_review_v3.md").read_text(encoding="utf-8")
+        self.assertNotIn("항목 고르기", v3_text)  # v3는 실험한 그대로
+
+    def test_normal_qualifier_reflected_in_claim_item(self):
+        # 기대 형태(모의): 한정 문장을 독립 항목으로 두지 않고 주장 항목 하나에 반영 → 서버는 그대로 1개를 돌려줌(개수 강제 없음)
+        data = result_data([item("a embalagem contém 30% de material reciclado por massa", ids=("CONAR-U-1",), language="pt-BR",
+                                 reason="포장 한정은 이미 있으나 30% 산정 근거 자료는 입력에 제시되지 않았습니다.",
+                                 direction="포장 한정은 유지하고 30% 산정 근거(측정 방법·자료)를 확인하세요.")])
+        result, _ = self.run_review(text=CASE_C_TEXT, data=data)
+        self.assertEqual([entry["quote"] for entry in result["items"]], ["a embalagem contém 30% de material reciclado por massa"])
+
+    def test_server_does_not_drop_items_by_words(self):
+        # 관측 형태(모의): 한정 문장을 수정 권고로, 이유가 긍정적인 항목 → 서버는 '긍정·유지' 같은 단어로 지우지 않고 그대로 돌려줌
+        # (조치와 설명의 일관성은 서버가 판정하지 못함: v4 프롬프트·사람 검토에 의존)
+        data = result_data([
+            item("a embalagem contém 30% de material reciclado por massa", ids=("CONAR-U-1",), language="pt-BR"),
+            item(QUALIFIER, action="revise_recommended", ids=("CONAR-U-2",), language="pt-BR",
+                 reason="범위를 포장으로 한정해 오인을 줄이는 방향이며 긍정적입니다.", direction="현재처럼 포장에 한정된다고 명시하고 유지하세요."),
+        ])
+        result, _ = self.run_review(text=CASE_C_TEXT, data=data)
+        self.assertEqual(len(result["items"]), 2)
+        self.assertEqual(result["items"][1]["action"], "revise_recommended")
+
+    def test_contradicting_qualifier_can_be_separate_item(self):
+        # 한정 문구가 앞 주장(포장과 원단)과 모순되는 경우 별도 항목으로 남을 수 있어야 함(서버가 막지 않음)
+        data = result_data([
+            item("A embalagem e o tecido contêm 30% de material reciclado por massa", ids=("CONAR-U-1",), language="pt-BR"),
+            item(QUALIFIER, action="revise_recommended", ids=("CONAR-U-2",), language="pt-BR",
+                 reason="앞 문장은 포장과 원단을 함께 말하는데 이 문장은 포장에만 해당한다고 해 적용 범위가 서로 맞지 않습니다.",
+                 direction="주장이 포장만인지 원단까지인지 한 가지로 맞추고, 그에 맞게 앞 문장이나 한정 문장을 고치세요."),
+        ])
+        result, _ = self.run_review(text=CONTRADICTION_TEXT, data=data)
+        self.assertEqual([entry["quote"] for entry in result["items"]][1], QUALIFIER)
+        self.assertIn("맞지 않습니다", result["items"][1]["reason_ko"])
+
+    def test_existing_regressions_still_hold_under_v4(self):
+        # 환경 주장 없음 → 0개 유지
+        result, _ = self.run_review(text=CASE_A_TEXT, data=result_data([]))
+        self.assertEqual(result["items"], [])
+        # 절대적 주장 해석은 서버가 바꾸지 않음
+        data = result_data([item("완벽하게 친환경적이며", action="revise_recommended", ids=("CONAR-U-3",), language="ko")])
+        data["items"][0]["interpretation_ko"] = "완벽하게 친환경적이라는 절대적 주장"
+        self.assertEqual(self.run_review(text=CASE_B_TEXT, data=data)[0]["items"][0]["interpretation_ko"], "완벽하게 친환경적이라는 절대적 주장")
+        # 근거 없는 대체 주장 제거·포르투갈어 같은 언어 중복 제거
+        data = result_data([item("100% sustentável, totalmente ecológico e não causa nenhum impacto ambiental", action="revise_recommended",
+                                 language="pt-BR", alternative={"original_text": BAD_R1_A, "pt_br_text": BAD_R1_B, "ko_interpretation": "입증 가능한 원단"})])
+        self.assertIsNone(self.run_review(text=FAILURE_TEXT, data=data)[0]["items"][0]["alternative"])
+        data = result_data([item("Fio de poliéster", language="pt-BR",
+                                 alternative={"original_text": "Fio feito de poliéster", "pt_br_text": "Fio de poliéster para tecidos", "ko_interpretation": "직물용 폴리에스터 원사"})])
+        alt = self.run_review(text="Fio de poliéster.", data=data)[0]["items"][0]["alternative"]
+        self.assertEqual((alt["original_text"], alt["pt_br_text"]), (None, "Fio de poliéster para tecidos"))
+
+
+# 2026-10-26 사용자 실제 실행(claim_review_v4, 13:40:53) 관측 대체 예시. 아래 가짜 AI 결과는 원본 응답이 아니다.
+V4_ORPHAN_ALT = "Nesta amostra, a embalagem contém material reciclado por massa. A afirmação refere-se apenas à embalagem."
+
+
+class NumberRemovalAlternativeTest(Base):
+    """수치 삭제 예시(v5). 서버는 수치에 딸린 표현이 남았는지·뜻이 온전한지 판정하지 못하므로 규칙 포함과 기존 검사만 확인한다."""
+
+    QUOTE = "a embalagem contém 30% de material reciclado por massa"
+
+    def run_alt(self, alternative):
+        data = result_data([item(self.QUOTE, ids=("CONAR-U-1",), language="pt-BR", alternative=alternative,
+                                 unavailable="근거 자료가 있어야 예시를 쓸 수 있음")])
+        return self.run_review(text=CASE_C_TEXT, data=data)[0]["items"][0]
+
+    def test_prompt_v5_rules_and_v4_kept(self):
+        instructions = rs.load_instructions()
+        self.assertEqual(rs.PROMPT_VERSION, "claim_review_v5")
+        for rule in ("수치에 딸린 표현", "뜻 없이 남지 않게", "근거 부족의 해결책으로 제시하지 않는다", "근거 확인은 여전히 필요",
+                     "모든 수치 삭제를 금지하는 것은 아니며"):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, instructions)
+        v4_text = rs.PROMPT_PATH.with_name("claim_review_v4.md").read_text(encoding="utf-8")
+        self.assertNotIn("수치에 딸린 표현", v4_text)  # v4는 실험한 그대로
+
+    def test_number_kept_or_rephrased_passes(self):
+        # 수치·측정 기준·범위를 유지하고 다듬은 예시: 새 수치·새 표현 묶음 없음 → 유지
+        kept = self.run_alt({"original_text": None, "ko_interpretation": "회사 설명에 따르면 이 표본의 포장재는 질량 기준 30%가 재활용 소재입니다.",
+                             "pt_br_text": "Segundo a empresa, nesta amostra 30% da massa da embalagem é material reciclado."})
+        self.assertIsNotNone(kept["alternative"])
+        # 근거 없는 절대 수치를 덜 단정적인 말로 바꾸는 수치 삭제는 서버가 막지 않음(모든 수치 삭제 금지 아님)
+        data = result_data([item("100% sustentável", action="revise_recommended", ids=("CDC-37",), language="pt-BR",
+                                 alternative={"original_text": None, "pt_br_text": "Produto descrito como sustentável",
+                                              "ko_interpretation": "지속 가능하다고 설명된 제품"})])
+        self.assertIsNotNone(self.run_review(text="Produto 100% sustentável.", data=data)[0]["items"][0]["alternative"])
+
+    def test_new_number_still_removed(self):
+        self.assertIsNone(self.run_alt({"original_text": None, "pt_br_text": "A embalagem contém 40% de material reciclado por massa.",
+                                        "ko_interpretation": "포장재는 질량 기준 40% 재활용 소재"})["alternative"])
+
+    def test_orphaned_dependent_expression_is_server_limit(self):
+        # 한계 고정: 30%를 지우고 '질량 기준(por massa)'만 남긴 관측 예시는 새 수치·새 표현 묶음이 없어 서버가 통과시킴.
+        # 수치에 딸린 표현이 뜻 없이 남았는지는 v5 프롬프트와 사람 검토에 의존한다(특정 단어로 일괄 삭제하지 않음).
+        entry = self.run_alt({"original_text": None, "pt_br_text": V4_ORPHAN_ALT,
+                              "ko_interpretation": "이 표본에서 포장재는 질량 기준으로 재활용 소재를 포함합니다. 이 주장은 포장에만 해당합니다."})
+        self.assertIsNotNone(entry["alternative"])
+
 
 class PromptAndPrivacyTest(Base):
     def test_prompt_and_input_as_data(self):
