@@ -112,43 +112,45 @@
         <div>
           <h2 class="card-title" id="market_analysis-buyers-title" tabindex="-1">바이어 목록 (리젠 T2T 잠재 바이어)</h2>
           <p class="card-description">브라질 원사·원단 제조 기업(국세청 CNPJ 공개 자료). 우선순위 등급(A·B·C, 업종·연락처·공개 근거 기준)순으로 표시합니다.
-            회사명을 누르면 업체 상세와 AI 브리핑을 볼 수 있습니다. 전체 목록은 '시장 통계' 탭의 PDF(⑥)에도 들어갑니다.</p>
+            '상세 보기'로 행 아래에서 업체 정보를 펼쳐 보고, 'AI 브리핑'으로 브리핑 창을 엽니다. 전체 목록은 '시장 통계' 탭의 PDF(⑥)에도 들어갑니다.</p>
         </div>
       </div>
       <div data-ma-buyers><p class="field-hint">바이어 목록을 불러오는 중...</p></div>
     </section>
   </div>
 
-  {# 업체 상세 화면: 업체 정보(국세청 공개 자료·등급) + AI 브리핑(받기·PDF). 목록으로 돌아가면 검색·등급·스크롤 위치를 유지합니다.
-     AI 브리핑은 'AI 브리핑 받기' 1번에 OpenAI 1회(유료). 같은 업체·같은 조회 결과는 다시 호출하지 않습니다.
-     근거는 국세청 CNPJ(C1)·시장 통계 탭 조회 결과(S1, 있을 때만)·재생·T2T 공개 근거(T*)뿐이며 코드가 문장을 검사합니다. #}
-  <div class="ma-buyer-view" data-ma-buyer-detail-view hidden>
-    <nav class="ma-detail-nav" aria-label="업체 상세 이동">
-      <button type="button" class="btn btn-ghost" data-ma-detail-back>← 바이어 목록으로</button>
-      <span class="ma-detail-pos" data-ma-detail-pos></span>
-      <span class="btn-row">
-        <button type="button" class="btn btn-secondary" data-ma-detail-step="-1">← 이전 업체</button>
-        <button type="button" class="btn btn-secondary" data-ma-detail-step="1">다음 업체 →</button>
-      </span>
-    </nav>
-    <section class="card" aria-labelledby="market_analysis-detail-title" data-ma-detail></section>
-    <section class="card" aria-labelledby="market_analysis-briefing-title">
-      <div class="card-header">
-        <div>
-          <h2 class="card-title" id="market_analysis-briefing-title" tabindex="-1">AI 바이어 브리핑</h2>
-          <p class="card-description" id="market_analysis-briefing-cost">이 업체의 회사 개요·시장 맥락·접근 포인트·예상 질문입니다.
-            출처 있는 자료만 쓰고, 'AI 브리핑 받기'를 누를 때마다 OpenAI를 1회 호출합니다(유료, 같은 업체는 다시 호출하지 않음).</p>
-        </div>
-        <div class="btn-row">
-          <button type="button" class="btn btn-primary" aria-describedby="market_analysis-briefing-cost market_analysis-briefing-run-hint" data-ma-brief-run>AI 브리핑 받기</button>
-          <button type="button" class="btn btn-secondary" disabled aria-describedby="market_analysis-briefing-pdf-hint" data-ma-brief-pdf>PDF 다운로드</button>
-        </div>
+  {# AI 브리핑 창(글래스, <dialog> 모달): 목록의 'AI 브리핑'을 누르면 업체 상세 + AI 브리핑을 띄웁니다.
+     브리핑이 없는 업체면 바로 받습니다(OpenAI 1회, 유료). 받은 업체는 다시 호출하지 않고 표시합니다.
+     근거는 국세청 CNPJ(C1)·시장 통계 탭 조회 결과(S1, 있을 때만)·재생·T2T 공개 근거(T*)뿐이며 코드가 문장을 검사합니다.
+     Esc·닫기·바깥 클릭으로 닫으면 누른 버튼으로 초점이 돌아갑니다. #}
+  <dialog class="ma-dialog" aria-labelledby="market_analysis-dialog-title" data-ma-dialog>
+    <div class="ma-dialog-panel">
+      <header class="ma-dialog-head">
+        <div class="ma-dialog-head-text" data-ma-dialog-head></div>
+        <button type="button" class="btn btn-ghost btn-icon" data-ma-dialog-close>
+          <span aria-hidden="true">✕</span><span class="visually-hidden">창 닫기</span>
+        </button>
+      </header>
+      <div class="ma-dialog-body">
+        <section class="ma-glass-block" aria-label="업체 상세" data-ma-detail></section>
+        <section class="ma-glass-block" aria-labelledby="market_analysis-briefing-title">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title" id="market_analysis-briefing-title" tabindex="-1">AI 바이어 브리핑</h3>
+              <p class="card-description" id="market_analysis-briefing-cost">출처 있는 자료만 쓰고, 받을 때마다 OpenAI를 1회 호출합니다(유료, 같은 업체는 다시 호출하지 않음).</p>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-secondary" aria-describedby="market_analysis-briefing-cost market_analysis-briefing-run-hint" data-ma-brief-run>AI 브리핑 받기</button>
+              <button type="button" class="btn btn-primary" disabled aria-describedby="market_analysis-briefing-pdf-hint" data-ma-brief-pdf>PDF 다운로드</button>
+            </div>
+          </div>
+          <p class="field-hint" id="market_analysis-briefing-run-hint" data-ma-brief-run-hint></p>
+          <p class="field-hint" id="market_analysis-briefing-pdf-hint" data-ma-brief-pdf-hint>브리핑을 받으면 PDF로 내려받을 수 있습니다.</p>
+          <div data-ma-brief-pdf-message aria-live="polite"></div>
+          <p class="visually-hidden" role="status" data-ma-briefing-status></p>
+          <div data-ma-briefing aria-busy="false"></div>
+        </section>
       </div>
-      <p class="field-hint" id="market_analysis-briefing-run-hint" data-ma-brief-run-hint></p>
-      <p class="field-hint" id="market_analysis-briefing-pdf-hint" data-ma-brief-pdf-hint>브리핑을 받으면 PDF로 내려받을 수 있습니다.</p>
-      <div data-ma-brief-pdf-message aria-live="polite"></div>
-      <p class="visually-hidden" role="status" data-ma-briefing-status></p>
-      <div data-ma-briefing aria-busy="false"></div>
-    </section>
-  </div>
+    </div>
+  </dialog>
 </div>

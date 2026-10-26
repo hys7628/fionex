@@ -15,6 +15,13 @@
   --color-surface-hover: #f0f5fb;
   --color-row-hover: #f6f9fe;
   --color-overlay: rgba(19, 35, 63, 0.35);
+  /* 글래스(반투명 유리) — 떠 있는 창(모달) 전용. 일반 카드에는 쓰지 않습니다. blur 미지원·투명도 줄이기 설정이면 불투명 면으로 대체 */
+  --color-glass-backdrop: rgba(19, 35, 63, 0.28);
+  --color-glass-surface: rgba(255, 255, 255, 0.78);
+  --color-glass-inner: rgba(255, 255, 255, 0.62);
+  --color-glass-border: rgba(255, 255, 255, 0.7);
+  --glass-blur: blur(18px) saturate(140%);
+  --glass-backdrop-blur: blur(6px);
 
   /* 색상: 글자 (흰 배경 기준 대비 4.5:1 이상) */
   --color-text: #13233f;          /* 딥 네이비, 제목·숫자·본문 15.7:1 */

@@ -641,3 +641,17 @@
 - 검증: validation.md DEV-MA-BUYER-004.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 브라우저 뒤로 가기로 목록 복귀 안 됨, 실제 OpenAI 브리핑 미실행.
+
+
+## DEV-MA-BUYER-005 바이어 목록 '상세 보기' 펼치기 + AI 브리핑 글래스 창
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis + 공통 토큰 (브랜치 feature/common_setup, 최근 커밋 f0245e5)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "상세보기는 그냥 목록탭에서 가볍게 확인하게 해주고 AI 브리핑누르면 AI브리핑이랑 상세보기 Glassmorphism하게 보이게 해줘"
+- 판단: DEV-MA-BUYER-004 상세 화면을 없애고 (1) 행 아래 펼치기, (2) 네이티브 `<dialog>` 모달 글래스 창(초점 가둠·Esc·초점 복귀를 브라우저 기본 동작으로)으로 대체. 'AI 브리핑'을 누른 것이 곧 브리핑 요청이므로 받은 적 없는 업체는 창을 열 때 자동 1회 호출하고 목록에 유료 안내 문장을 붙임. 글래스 값은 tokens.css에 새 토큰으로 두고 떠 있는 창 전용으로 제한, blur 미지원·투명도 줄이기 설정에서는 불투명 면으로 대체. 패널 `overflow: hidden`이면 브리핑 제목 초점 시 패널이 스크롤되어 머리가 가려져 `overflow: clip`으로 바꿈.
+- 변경 파일: static/css/tokens.css, features/market_analysis/templates/market_analysis/panel.html, static/market_analysis.js·css, feature_spec.md, docs/design_system.md. Python·API 변경 없음.
+- 외부 호출: 0건.
+- 검증: validation.md DEV-MA-BUYER-005.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 OpenAI 브리핑 미실행, prefers-reduced-transparency 화면 미확인(Chrome 에뮬레이션 미사용).

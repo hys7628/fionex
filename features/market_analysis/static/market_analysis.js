@@ -752,7 +752,7 @@
   };
 
   function buyerRow(c, i) {
-    const name = '<button type="button" class="ma-buyer-link ma-buyer-name" data-ma-detail="' + esc(c.cnpj) + '">' + esc(c.razao_social) + "</button>" +
+    const name = '<span class="ma-buyer-name">' + esc(c.razao_social) + "</span>" +
       (c.nome_fantasia && c.nome_fantasia !== c.razao_social ? '<br><span class="field-hint">' + esc(c.nome_fantasia) + "</span>" : "") +
       '<br><span class="field-hint">CNPJ ' + esc(c.cnpj) + "</span>";
     const ev = c.evidence.length ? c.evidence.map(function (e) {
@@ -763,8 +763,11 @@
     // 등급: 공개 규칙(코드) 결과와 근거 한 줄. 색은 보조이며 글자 A/B/C로 구분합니다.
     const grade = '<span class="ma-grade ma-grade-' + esc(c.grade) + '">' + esc(c.grade) + '</span><span class="visually-hidden">등급</span>' +
       '<br><span class="field-hint">' + esc(c.grade_reason) + "</span>";
-    const brief = '<button type="button" class="btn btn-secondary ma-brief-btn" data-ma-detail="' + esc(c.cnpj) + '">상세 보기' +
-      '<span class="visually-hidden"> · ' + esc(c.razao_social) + "</span></button>";
+    const hidden = '<span class="visually-hidden"> · ' + esc(c.razao_social) + "</span>";
+    const brief = '<span class="ma-row-actions"><button type="button" class="btn btn-secondary ma-brief-btn" data-ma-inline="' + esc(c.cnpj) + '" aria-expanded="false">' +
+      '<span data-ma-label>상세 보기</span>' + hidden + "</button>" +
+      '<button type="button" class="btn btn-primary ma-brief-btn" data-ma-brief-open="' + esc(c.cnpj) + '" aria-haspopup="dialog" aria-describedby="market_analysis-briefing-row-hint">AI 브리핑' +
+      hidden + "</button></span>";
     return "<tr><td class=\"num\">" + (i + 1) + "</td><td>" + name + '</td><td class="ma-grade-cell">' + grade + "</td><td>" + esc(c.uf || "") +
       '<br><span class="field-hint">' + esc(c.municipio || "") + "</span></td>" +
       '<td title="' + esc(c.cnae + " " + (c.cnae_desc || "")) + '">' + esc(CNAE_SHORT[c.cnae] || c.cnae_desc || c.cnae) + "</td><td>" +
@@ -813,6 +816,7 @@
           (f[0] === "all" ? "" : '<span class="visually-hidden">등급</span>') + "</button>";
       }).join("") + "</div></div>" +
       '<p class="ma-buyer-count" id="market_analysis-buyer-count" role="status" data-ma-buyer-count></p>' +
+      '<p class="field-hint" id="market_analysis-briefing-row-hint">' + esc("'상세 보기'는 행 아래에 업체 정보를 펼칩니다. 'AI 브리핑'은 업체 상세와 브리핑을 창으로 열며, 받은 적 없는 업체는 바로 OpenAI를 1회 호출합니다(유료, 같은 업체는 다시 호출하지 않음).") + "</p>" +
       "<div data-ma-buyer-results></div>";
     buyersBox.innerHTML = html;
     buyerView.list = list.map(function (c) {
@@ -885,7 +889,7 @@
       const body = await res.json();
       if (!body.ok) throw new Error();
       buyersData = body.data;
-      if (detailCnpj) closeDetail(false);
+      if (dialog.open) dialog.close();
       renderBuyers(body.data);
       ok = true;
     } catch (e) {
@@ -912,8 +916,10 @@
       buyersBox.querySelectorAll("[data-ma-grade-filter]").forEach(function (b) { b.setAttribute("aria-pressed", String(b === chip)); });
       renderBuyerResults();
     }
-    const detail = event.target.closest("[data-ma-detail]");
-    if (detail) openDetail(detail.dataset.maDetail, detail);
+    const inline = event.target.closest("[data-ma-inline]");
+    if (inline) toggleInline(inline);
+    const open = event.target.closest("[data-ma-brief-open]");
+    if (open) openDialog(open.dataset.maBriefOpen);
   });
 
   /* ---------- 바이어별 AI 브리핑(유료 1회 호출) ---------- */
@@ -1094,7 +1100,7 @@
     if (!aiReady()) {
       briefBox.innerHTML = '<div class="notice notice-warning" role="status"><p class="notice-title">AI 브리핑 설정 필요</p><p>' +
         "서버에 AI 설정(OpenAI 키·텍스트 모델)이 없어 지금은 실행할 수 없습니다. 업체 정보와 등급은 그대로 볼 수 있습니다.</p></div>";
-      AppShell.ui.focusResult(briefTitle, { scroll: "start", from: [detailView] });
+      AppShell.ui.focusResult(briefTitle, { scroll: "start", from: [dialog] });
       return;
     }
     const company = (findCompany(cnpj) || {}).razao_social || cnpj;
@@ -1137,19 +1143,17 @@
     }
     showBriefingFor(cnpj);
     if (errorHtml) briefBox.innerHTML = errorHtml + (briefCache[cnpj] ? briefingHtml(briefCache[cnpj]) : "");
-    AppShell.ui.focusResult(briefTitle, { scroll: "start", from: [detailView] });
+    AppShell.ui.focusResult(briefTitle, { scroll: "start", from: [dialog] });
     briefAnnounce(done);
   }
 
   if (briefRunBtn) briefRunBtn.addEventListener("click", function () { runBriefing(detailCnpj, briefRunBtn); });
 
-  /* ---------- 업체 상세 화면(같은 탭 안, 주소 변경 없음) ---------- */
-  const listView = panel.querySelector("[data-ma-buyer-list-view]");
-  const detailView = panel.querySelector("[data-ma-buyer-detail-view]");
+  /* ---------- 업체 상세: 목록 행 아래 가벼운 펼치기 + AI 브리핑 글래스 창 ---------- */
+  const dialog = panel.querySelector("[data-ma-dialog]");
+  const dialogHead = panel.querySelector("[data-ma-dialog-head]");
   const detailBox = panel.querySelector("[data-ma-detail]");
-  const detailPos = panel.querySelector("[data-ma-detail-pos]");
-  let detailCnpj = null;
-  let listScroll = 0;
+  let detailCnpj = null;   // 창에 띄운 업체
 
   function findCompany(cnpj) {
     const hit = buyerView.list.find(function (x) { return x.c.cnpj === cnpj; });
@@ -1165,18 +1169,14 @@
     return v.slice(0, 4) + "-" + v.slice(4, 6) + "-" + v.slice(6) + " · 업력 " + years + "년";
   }
 
-  function detailHtml(c) {
+  // 업체 정보 칸(펼치기·창 공용). 국세청 공개 자료와 등급만 쓰며 외부 요청 없음.
+  function detailGrid(c) {
     const item = function (label, value, wide) { return '<div' + (wide ? ' class="ma-detail-wide"' : "") + "><dt>" + esc(label) + "</dt><dd>" + value + "</dd></div>"; };
-    const domain = c.domain ? linkHtml("https://" + c.domain, c.domain) : '<span class="field-hint">없음</span>';
     const evidence = c.evidence.length ? "<ul>" + c.evidence.map(function (e) {
       return "<li>" + linkHtml(e.url, e.title) + ' <span class="field-hint">확인 ' + esc(e.checked_at) + "</span></li>";
     }).join("") + "</ul>" : '<span class="field-hint">없음(검토된 공개 근거 없음)</span>';
-    const notes = (buyersData && buyersData.notes ? buyersData.notes : []).map(function (n) { return '<p class="field-hint">' + esc(n) + "</p>"; }).join("");
-    return '<div class="ma-detail-head"><div class="ma-brief-title-row"><span class="ma-grade ma-grade-' + esc(c.grade) + '" title="우선순위 등급">' + esc(c.grade) +
-      '</span><span class="visually-hidden">등급</span><h2 class="card-title ma-detail-title" id="market_analysis-detail-title" tabindex="-1">' + esc(c.razao_social) + "</h2></div>" +
-      '<p class="ma-brief-sub">' + esc([c.nome_fantasia && c.nome_fantasia !== c.razao_social ? c.nome_fantasia : "", "CNPJ " + c.cnpj].filter(Boolean).join(" · ")) + "</p>" +
-      '<p class="ma-detail-reason">등급 근거: ' + esc(c.grade_reason) + "</p></div>" +
-      '<dl class="ma-detail-grid">' +
+    return '<dl class="ma-detail-grid">' +
+      item("등급 근거", esc(c.grade_reason), true) +
       item("지역", esc((c.municipio || "미상") + ", " + (c.uf || ""))) +
       item("업종", esc(c.cnae_label || c.cnae) + '<br><span class="field-hint">' + esc(c.cnae + " · " + (c.cnae_desc || "")) + "</span>") +
       item("규모(국세청 코드)", esc(c.porte || "미상")) +
@@ -1184,58 +1184,56 @@
       item("사업장", esc((c.matriz ? "본점" : "지점 자료(본점 아님)") + " · 대상 업종 사업장 " + (c.sites_matched || 1) + "곳")) +
       item("법인 형태", esc(c.natureza || "미상")) +
       item("대표 전화", c.phones.length ? c.phones.map(esc).join("<br>") : '<span class="field-hint">등록 없음</span>') +
-      item("회사 도메인", domain) +
-      item("재생·T2T 근거", evidence, true) + "</dl>" + notes;
+      item("회사 도메인", c.domain ? linkHtml("https://" + c.domain, c.domain) : '<span class="field-hint">없음</span>') +
+      item("재생·T2T 근거", evidence, true) + "</dl>";
   }
 
-  function renderDetailPos() {
-    const rows = buyerView.rows;
-    const i = rows.findIndex(function (c) { return c.cnpj === detailCnpj; });
-    const filtered = rows.length !== buyerView.list.length;
-    detailPos.textContent = i < 0 ? "" : (filtered ? "검색 결과 " : "전체 ") + fmtInt.format(i + 1) + " / " + fmtInt.format(rows.length) + "곳";
-    detailView.querySelector('[data-ma-detail-step="-1"]').disabled = i <= 0;
-    detailView.querySelector('[data-ma-detail-step="1"]').disabled = i < 0 || i >= rows.length - 1;
+  // '상세 보기': 행 바로 아래에 펼치기/접기(목록 화면 그대로, 여러 업체 동시에 펼칠 수 있음)
+  function toggleInline(btn) {
+    const tr = btn.closest("tr");
+    const next = tr.nextElementSibling;
+    const label = btn.querySelector("[data-ma-label]");
+    if (next && next.classList.contains("ma-inline-row")) {
+      next.remove();
+      btn.setAttribute("aria-expanded", "false");
+      label.textContent = "상세 보기";
+      return;
+    }
+    const c = findCompany(btn.dataset.maInline);
+    if (!c) return;
+    const id = "market_analysis-inline-" + c.cnpj;
+    tr.insertAdjacentHTML("afterend", '<tr class="ma-inline-row" id="' + id + '"><td colspan="' + tr.children.length + '"><div class="ma-inline-detail">' +
+      detailGrid(c) + "</div></td></tr>");
+    btn.setAttribute("aria-expanded", "true");
+    btn.setAttribute("aria-controls", id);
+    label.textContent = "상세 접기";
   }
 
-  function openDetail(cnpj) {
+  // 'AI 브리핑': 글래스 창에 업체 상세 + 브리핑. 받은 적 없는 업체면 바로 받습니다(1회 유료), 받은 업체는 다시 호출하지 않음.
+  function openDialog(cnpj) {
     const c = findCompany(cnpj);
     if (!c) return;
-    if (!detailCnpj) listScroll = window.scrollY;  // 목록에서 처음 들어올 때만 위치 기억(이전·다음 이동 중에는 유지)
     detailCnpj = cnpj;
-    listView.hidden = true;
-    detailView.hidden = false;
-    detailBox.innerHTML = detailHtml(c);
-    renderDetailPos();
+    dialogHead.innerHTML = '<div class="ma-brief-title-row"><span class="ma-grade ma-grade-' + esc(c.grade) + '" title="우선순위 등급">' + esc(c.grade) +
+      '</span><span class="visually-hidden">등급</span><h2 class="card-title ma-detail-title" id="market_analysis-dialog-title" tabindex="-1">' + esc(c.razao_social) + "</h2></div>" +
+      '<p class="ma-brief-sub">' + esc([c.nome_fantasia && c.nome_fantasia !== c.razao_social ? c.nome_fantasia : "", "CNPJ " + c.cnpj, (c.cnae_label || c.cnae),
+        (c.municipio || "") + ", " + (c.uf || "")].filter(Boolean).join(" · ")) + "</p>";
+    const notes = (buyersData && buyersData.notes ? buyersData.notes : []).map(function (n) { return '<p class="field-hint">' + esc(n) + "</p>"; }).join("");
+    detailBox.innerHTML = '<h3 class="visually-hidden">업체 상세</h3>' + detailGrid(c) + notes;
     showBriefingFor(cnpj);
-    // 초점은 업체명 제목, 화면은 상세 맨 위(목록으로·이전·다음 줄)부터 보이게 맞춥니다.
-    if (AppShell.ui.focusResult(panel.querySelector("#market_analysis-detail-title"), { scroll: false })) detailView.scrollIntoView({ block: "start" });
+    if (!dialog.open) dialog.showModal();
+    dialog.querySelector(".ma-dialog-body").scrollTop = 0;
+    AppShell.ui.focusResult(panel.querySelector("#market_analysis-dialog-title"), { scroll: false });
+    if (!briefCache[cnpj] && !briefBusy) runBriefing(cnpj, briefRunBtn);
   }
 
-  function closeDetail(restore) {
-    const cnpj = detailCnpj;
+  panel.querySelector("[data-ma-dialog-close]").addEventListener("click", function () { dialog.close(); });
+  // 창 바깥(흐린 배경)을 누르면 닫습니다.
+  dialog.addEventListener("click", function (event) { if (event.target === dialog) dialog.close(); });
+  // 닫히면(Esc 포함) 브라우저가 창을 연 버튼으로 초점을 돌려줍니다. 진행 중 브리핑은 계속되고 결과는 업체별로 보관됩니다.
+  dialog.addEventListener("close", function () {
     detailCnpj = null;
-    detailView.hidden = true;
-    listView.hidden = false;
     updateBriefButtons();
-    if (restore === false) return;
-    window.scrollTo(0, listScroll);
-    // 보던 업체 이름으로 초점을 돌려줍니다(목록에 없으면 목록 제목).
-    const back = cnpj && buyersBox.querySelector('.ma-buyer-link[data-ma-detail="' + cnpj + '"]');
-    AppShell.ui.focusResult(back && back.offsetParent ? back : panel.querySelector("#market_analysis-buyers-title"), { scroll: false });
-  }
-
-  detailView.addEventListener("click", function (event) {
-    if (event.target.closest("[data-ma-detail-back]")) closeDetail(true);
-    const step = event.target.closest("[data-ma-detail-step]");
-    if (step && !step.disabled) {
-      const rows = buyerView.rows;
-      const i = rows.findIndex(function (c) { return c.cnpj === detailCnpj; });
-      const next = rows[i + Number(step.dataset.maDetailStep)];
-      if (next) openDetail(next.cnpj);
-    }
-  });
-  detailView.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && !event.defaultPrevented) closeDetail(true);
   });
 
   /* ---------- 하위 탭(시장 통계 / 바이어 목록) ---------- */

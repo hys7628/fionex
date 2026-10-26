@@ -138,6 +138,7 @@
 - **표**: 틀 1px 옅은 선 + radius 10px, 머리 `--color-surface-muted`·xs 보조 글자, 행 구분 1px `--color-border-subtle`, 행 hover `--color-row-hover`, 숫자 칸 `.num` 오른쪽·tabular-nums·medium. 열 너비는 기능이 정한다. `.table-wrap`은 `position: relative`라 칸 안 `.visually-hidden`이 스크롤 상자 밖으로 나가 페이지 가로 스크롤을 만들지 않는다(2026-10-26).
 - **빈 상태**: 점선 `--color-border-strong` + 옅은 면, radius 10px, 최소 높이 160px.
 - **로딩**: `.spinner`(블루·아쿠아 테두리 회전) + 텍스트, 버튼 `disabled`, 영역 `aria-busy`. 누른 버튼은 아래 '작업 중 버튼'.
+- **떠 있는 창(글래스)** (2026-10-26): 글래스(반투명 유리)는 모달 `<dialog>` 같은 떠 있는 창에만 쓴다(일반 카드 금지). 토큰 `--color-glass-backdrop/-surface/-inner/-border`, `--glass-blur`(패널), `--glass-backdrop-blur`(뒤 배경). 패널은 `overflow: clip`(hidden이면 초점 이동 스크롤이 패널을 밀어 머리가 가려짐), 본문만 세로 스크롤. `backdrop-filter` 미지원·`prefers-reduced-transparency: reduce`이면 흰 불투명 면·`--color-overlay` 배경으로 대체. 글자는 흰 면 위에 두어 대비를 유지한다. 열 때 `showModal()`(초점 가둠·Esc·닫으면 연 버튼으로 초점 복귀), 등장 애니메이션은 reduced-motion에서 0s. 첫 사용: 시장/바이어 분석 AI 브리핑 창.
 
 ### 움직임
 - 대상: 버튼·카드·메뉴·필터 hover, 입력 초점, 상태 변화. 속성은 opacity·transform·background-color·border-color·box-shadow만, 150~220ms.
