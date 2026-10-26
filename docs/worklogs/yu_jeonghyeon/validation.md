@@ -378,3 +378,26 @@
 - 미검증 유지: 전체 번역 정확성·다른 항목 문구, 페이지 넘침, 다른 입력에서도 같은 품질이 유지되는지, 표시명 입력 외 DOM 동작 전반
 - 이전 기록(v2 실제 실행 미실행, v1 문제 발견)은 당시 상태로 보존하며 이 항목으로 후속 보완함
 
+## 2026-10-26 생성 결과 문구 편집·4쪽 "샘플·거래 상담" 정리
+- 변경 내용: product_brochure.js, product_brochure.css, catalog_preview.html, test_panel.py, review_logic_check.js
+- 실제 API 호출·서비스 프롬프트 변경 없음. 서버 파일(generation.py·routes.py·service.py·prompts) 무변경을 git diff로 확인
+
+### Claude가 직접 실행한 검증
+- `node --check product_brochure.js` → 문법 오류 없음
+- `node tests/test_product_brochure/review_logic_check.js` → 1차 31/32(테스트 데이터 문제, prompt_log DI-2026_10_26-02) → 수정 후 32개 통과(기존 26 + 편집 6)
+  - 편집 칸 5종 id·위치 이름·상한(80/140/600/300/200, 서버 값과 동일)
+  - 적용: 원본·적용본·임시 값 독립(적용 후 임시 값 변경이 적용본에 영향 없음), 표시명 trim·display_name과 표지 제품명 동시 변경, 라벨·source_keys·origin·virtual·가상 안내·notices·used_keys 보존, 원래 review_flags 유지, 사용자 수정 칸 계산, HTML 형태 문자열은 문자열로 보관, 줄바꿈·악센트 허용
+  - 검증: 141자·공백만·한글 음절·자모·제어 문자·한글 표시명 → 위치별 오류, 하나라도 틀리면 적용본 미생성(부분 적용 없음), 140자 경계 허용
+  - 복원·변경 감지: 원래 문구로 되돌리면 사용자 수정 아님, 원본 복제 시 수정 없음, 임시 값 dirty 감지
+  - 출력 편집 후에도 이전 결과 경고 아님, 입력 변경 시 경고 유지
+  - 재생성: 수정본이 있으면 "직접 수정한 문구" 대체 안내, 취소 시 요청 0회·성공 콜백 없음(기존 실패 시 결과 유지 점검도 통과)
+- `python -m unittest discover -s tests/test_product_brochure` → 1차 1건 실패(비활성 버튼 수 4→5) → 수정 후 77개 실행, OK
+  - 신규 정적 검사: 4쪽 제목·상담 마무리 문구가 시안·결과 모두 존재, 제공 가능·무료·즉시 발송 표현 없음, 결과 dialog에만 편집 UI(시안 제외), contenteditable·execCommand 없음, 편집 코드에 요청·스냅샷/표시명 대입·setResult·저장소·innerHTML 없음
+  - 화면 요청 본문 ↔ 서버 스키마 교차 확인 포함 기존 테스트 회귀 없음
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+
+### 미실행·미검증(브라우저 도구 없음)
+- 편집 영역 열기·입력·적용·취소·되돌리기·오류 표시, 닫기/Esc 확인 대화상자, 초점 이동, 탭 이동 후 임시 값 복원의 DOM 동작
+- 편집·복원 후 미리보기 갱신과 페이지 넘침 경고의 실제 표시
+- 4쪽 새 제목·문구의 배치, pt-BR 문구 검수
+

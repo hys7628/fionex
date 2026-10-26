@@ -349,3 +349,23 @@
 - 사전 확인: 브랜치 feature/product_brochure, HEAD cf81010, 작업 트리 깨끗, 병합 중 아님
 - 지시: 사용자 보고 v2 실행 결과를 SPE-2026_10_26-01로 기록(사용자 보고·Claude 미검증 명시), 기존 미실행·실패 기록 보존, 미확인·미검증 범위 유지
 - 변경: docs/worklogs/yu_jeonghyeon/prompt_log.md, validation.md
+
+## DI-2026_10_26-02 생성 결과 문구 편집·4쪽 "샘플·거래 상담" 정리
+- 유형: development_instruction / **서비스 프롬프트 변경 없음, 실제 API 실험 없음**
+- 날짜/시간: 2026-10-26 00:48 (Asia/Seoul) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure
+- 도구·모델: Claude Code (Opus 5.5)
+- 사전 확인: HEAD 4398d95, 작업 트리 깨끗, 병합 중 아님. stash@{0} 미조작. 생성 API 계약·표시명 처리·입력 스냅샷·결과 미리보기·이전 결과 경고·AppShell.work 실제 코드 확인. 서버 출력 상한(generation.py)을 실제 값으로 확인해 편집 검증에 사용
+- 지시 요약: 결과 문구 편집(표시명·소개·문단·3/4쪽 값), 원본·적용본·임시 값 분리, 적용(전체 검증·일괄 반영)·취소·원문 복원, 서버와 같은 길이·한글·제어 문자 검사, 사용자 수정 · 재검토 필요 표시, 메타데이터·고정 안내 보존, 재생성 확인, 탭 이동 보존, 4쪽 제목·중립 마무리. 서버·프롬프트 변경 금지
+- 설계 이유
+  - 편집본은 응답 데이터 구조를 그대로 복제하고 텍스트·값 칸만 교체 → 렌더링 코드 재사용, 메타데이터 자동 보존
+  - 사용자 수정 위치는 데이터에 넣지 않고 원본과 비교해 계산(editedIds) → 손으로 원래 문구로 되돌리면 수정 표시도 사라짐
+  - 표시명 편집은 결과 적용본의 display_name과 cover.product_name을 함께 갱신, 생성 요청용 표시명·스냅샷은 별도 유지
+  - 미리보기 공통 컨트롤러에 beforeClose를 추가해 닫기·Esc만 확인하고, 탭 숨김 닫기는 확인 없이 임시 값 보존
+  - 재생성 확인 문구를 상황별로 바꾸도록 요청 실행기에 confirmMessage 선택 의존성 추가(기존 동작 유지)
+  - maxlength를 쓰지 않아 붙여넣기 시 조용히 잘리지 않게 함
+- 4쪽: 제목 "Amostras e condições comerciais", 마무리 상담 문구(번역 검수 전). 고정 시안의 "Disponível mediante solicitação" 등 제공 약속 표현과 도착일로 오해될 수 있는 납기 설명 조정
+- 실제 실패와 수정
+  - 정적 테스트: 처음 비활성 버튼 수 4→5("AI 생성 원문으로 되돌리기") → 개수와 함께 버튼 이름을 확인하도록 수정
+  - Node 점검 1건: 고정 데이터의 원래 소개 문구가 이미 HTML 형태 문자열이라 같은 값 입력이 "수정 아님"으로 계산됨(로직은 정상) → 테스트 값을 원본과 다르게 수정
+- 변경: static/product_brochure.js, static/product_brochure.css, templates/product_brochure/catalog_preview.html, feature_spec.md(§23 후속 메모·§24), tests/test_product_brochure/test_panel.py·review_logic_check.js
+- 남은 한계: 편집 UI DOM·시각 미확인, 편집 후 넘침 실제 표시 미확인, pt-BR 문구 검수 전

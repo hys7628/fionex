@@ -217,6 +217,8 @@
     //   runner 옵션: validate(input) → bool, interpret(res), confirmMessage
     const REPLACE_MESSAGE = "PDF 분석 결과로 현재 확인·수정한 내용을 교체합니다. 분석에 성공한 뒤에만 교체됩니다. 계속할까요?";
     const REGENERATE_MESSAGE = "새 카탈로그 문구로 기존 생성 결과를 교체합니다. 생성에 성공한 뒤에만 교체됩니다. 계속할까요?";
+    const REGENERATE_EDITED_MESSAGE = "새 카탈로그 문구로 기존 생성 결과와 직접 수정한 문구(편집 중인 내용 포함)를 모두 교체합니다. " +
+      "생성에 성공한 뒤에만 교체됩니다. 계속할까요?";
 
     function createRunner(deps, options) {
       let seq = 0;
@@ -226,7 +228,8 @@
         if (busy) return "busy";
         if (deps.blocked && deps.blocked()) return "blocked";
         if (!options.validate(input)) return "invalid";
-        if (deps.needsConfirm() && !deps.confirm(options.confirmMessage)) return "cancelled";
+        const confirmMessage = deps.confirmMessage ? deps.confirmMessage() : options.confirmMessage;
+        if (deps.needsConfirm() && !deps.confirm(confirmMessage)) return "cancelled";
         const id = ++seq;
         busy = true;
         deps.onBusy(true);
@@ -569,6 +572,87 @@
       repeated_text: "표지 소개 문구와 거의 같은 내용이 반복됩니다",
     };
 
+    /* ----- 생성 결과 문구 편집(브라우저 메모리만, API 호출 없음) ----- */
+    // 서버 generation.py 출력 상한과 같은 값. 넘는 값은 자르지 않고 적용을 막습니다.
+    const OUTPUT_LIMITS = { tagline: 140, paragraph: 600, detail: 300, supply: 200 };
+    const EDIT_CONTROL = /[\u0000-\u0009\u000b-\u001f\u007f]/; // 줄바꿈(\n) 외 제어 문자
+
+    function cloneData(data) {
+      return JSON.parse(JSON.stringify(data));
+    }
+
+    // 편집 가능한 칸: 1쪽 표시명·소개, 2쪽 문단, 3·4쪽 값. 라벨·제목·고정 안내·메타데이터는 제외
+    function editableEntries(data) {
+      const p = data.pages;
+      const out = [
+        { id: "display_name", where: "1쪽 카탈로그 표시명", value: data.display_name.value, limit: MAX_DISPLAY_NAME_CHARS, multiline: false },
+        { id: "tagline", where: "1쪽 소개 문구", value: p.cover.tagline.text, limit: OUTPUT_LIMITS.tagline, multiline: true },
+      ];
+      p.intro.paragraphs.forEach(function (c, n) {
+        out.push({ id: "paragraph:" + n, where: "2쪽 소개 문단 " + (n + 1), value: c.text, limit: OUTPUT_LIMITS.paragraph, multiline: true });
+      });
+      p.details.items.forEach(function (i) {
+        out.push({ id: "detail:" + i.key, where: "3쪽 " + FIELD_LABEL[i.key] + " 값", value: i.value, limit: OUTPUT_LIMITS.detail, multiline: true });
+      });
+      p.supply.items.forEach(function (i) {
+        out.push({ id: "supply:" + i.key, where: "4쪽 " + FIELD_LABEL[i.key] + " 값", value: i.value, limit: OUTPUT_LIMITS.supply, multiline: true });
+      });
+      return out;
+    }
+
+    function editValues(data) {
+      const values = {};
+      editableEntries(data).forEach(function (e) { values[e.id] = e.value; });
+      return values;
+    }
+
+    // 위치별 검사. 하나라도 틀리면 적용하지 않습니다(부분 적용 없음).
+    function validateEdits(data, values) {
+      const errors = [];
+      editableEntries(data).forEach(function (e) {
+        const raw = values[e.id];
+        const add = function (message) { errors.push({ id: e.id, where: e.where, message: message }); };
+        if (typeof raw !== "string") return add("값을 읽을 수 없습니다.");
+        const v = raw.trim();
+        if (!v) return add("비어 있습니다.");
+        if (v.length > e.limit) return add(e.limit + "자를 넘습니다(현재 " + v.length + "자). 직접 줄여 주세요.");
+        if (HANGUL.test(v)) return add("한글이 남아 있습니다. 카탈로그 문구는 pt-BR로 입력하세요.");
+        if (EDIT_CONTROL.test(v)) return add("쓸 수 없는 문자가 있습니다.");
+      });
+      return { ok: errors.length === 0, errors: errors };
+    }
+
+    // 검증을 통과한 값으로 새 편집본을 만듭니다. 텍스트·값만 바꾸고 source_keys·origin·virtual·review_flags·안내는 보존.
+    // 표지 표시명은 display_name.value와 cover.product_name.text를 함께 바꿔 일관성을 유지합니다.
+    function applyEdits(original, current, values) {
+      const check = validateEdits(current, values);
+      if (!check.ok) return { ok: false, errors: check.errors };
+      const next = cloneData(current);
+      const v = function (id) { return values[id].trim(); };
+      next.display_name.value = v("display_name");
+      next.pages.cover.product_name.text = v("display_name");
+      next.pages.cover.tagline.text = v("tagline");
+      next.pages.intro.paragraphs.forEach(function (c, n) { c.text = v("paragraph:" + n); });
+      next.pages.details.items.forEach(function (i) { i.value = v("detail:" + i.key); });
+      next.pages.supply.items.forEach(function (i) { i.value = v("supply:" + i.key); });
+      return { ok: true, data: next, editedIds: editedIds(original, next) };
+    }
+
+    // AI 원본과 값이 다른 칸(사용자 수정 · 재검토 필요)
+    function editedIds(original, data) {
+      const base = editValues(original);
+      return editableEntries(data).filter(function (e) { return base[e.id] !== e.value; }).map(function (e) { return e.id; });
+    }
+
+    function isEditDirty(data, values) {
+      const base = editValues(data);
+      return Object.keys(base).some(function (id) { return values[id] !== base[id]; });
+    }
+
+    function describeUserEdits(data, ids) {
+      return editableEntries(data).filter(function (e) { return ids.indexOf(e.id) >= 0; }).map(function (e) { return e.where; });
+    }
+
     // review_flags → 사람이 찾을 수 있는 위치·항목 이름·설명 목록
     function describeReviewFlags(data) {
       const out = [];
@@ -592,6 +676,9 @@
       GENERATE_URL: GENERATE_URL, MAX_VALUE_CHARS: MAX_VALUE_CHARS, FIELD_LABEL: FIELD_LABEL, REGENERATE_MESSAGE: REGENERATE_MESSAGE,
       originOf: originOf, inputSignature: inputSignature, createSnapshot: createSnapshot,
       suggestDisplayName: suggestDisplayName, validateDisplayName: validateDisplayName,
+      REGENERATE_EDITED_MESSAGE: REGENERATE_EDITED_MESSAGE, OUTPUT_LIMITS: OUTPUT_LIMITS,
+      cloneData: cloneData, editableEntries: editableEntries, editValues: editValues, validateEdits: validateEdits,
+      applyEdits: applyEdits, editedIds: editedIds, isEditDirty: isEditDirty, describeUserEdits: describeUserEdits,
       MAX_DISPLAY_NAME_CHARS: MAX_DISPLAY_NAME_CHARS,
       evaluateGeneration: evaluateGeneration, buildGeneratePayload: buildGeneratePayload,
       validateGeneration: validateGeneration, interpretGenerateResponse: interpretGenerateResponse,
@@ -649,7 +736,10 @@
   let fieldsVersion = 0;      // 파일 교체·새 분석·예시 불러오기마다 증가(이전 적용·결과 재사용 방지)
   let applied = null;         // "확인 내용 적용" 시점의 요약
   let snapshot = null;        // "확인 내용 적용" 시점의 생성 입력 스냅샷(독립 복사본)
-  let generation = null;      // 마지막 성공한 생성 결과 { data, signature, version }
+  // 마지막 성공한 생성 결과 { original: AI 원본, current: 미리보기 적용본, editedIds, signature, version }
+  // original·current는 서로 독립 복사본. 편집은 current만 바꾸고 입력 스냅샷·표시명 상태는 건드리지 않습니다.
+  let generation = null;
+  let editing = null;         // 문구 편집 중 임시 값 { values: {칸 id: 문자열} }(적용 전)
   let lastFile = null;        // 파일 교체 취소 시 되돌릴 이전 선택
   let busy = false;           // PDF 분석 중
   let generating = false;     // 카탈로그 생성 중
@@ -674,7 +764,7 @@
   /* 작업 상태: 진행 중 요청·분석 결과·생성 초안(재요청 비용)은 보호, 예시는 수정했을 때만 보호.
      다운로드 기능이 없으므로 setResult는 쓰지 않습니다. 조건을 OR로 묶어 한 상태 변화로 보호가 꺼지지 않게 합니다. */
   function syncWork() {
-    const protect = working() || !!generation ||
+    const protect = working() || !!generation || !!editing ||
       (!!fields && (fieldsSource === "analysis" || Review.isDirty(fields)));
     AppShell.work.setDraft(FEATURE_ID, protect);
   }
@@ -782,9 +872,12 @@
     }
     const stale = Review.isResultStale(generation, generationContext());
     resultStatus.className = stale ? "field-error" : "field-hint";
-    resultStatus.textContent = stale
+    // 입력 변경 경고(stale)와 출력 문구 수정은 별개로 안내합니다. 출력 수정으로 입력 경고를 없애지 않습니다.
+    resultStatus.textContent = (stale
       ? "마지막 생성 결과가 현재 입력과 다를 수 있습니다. 결과를 열어 볼 수 있지만, 현재 입력으로 만들려면 다시 적용·생성하세요."
-      : "생성 결과(번역·내용 검토가 필요한 초안)를 \"생성 결과 보기\"로 확인할 수 있습니다.";
+      : "생성 결과(번역·내용 검토가 필요한 초안)를 \"생성 결과 보기\"로 확인할 수 있습니다.") +
+      (generation.editedIds.length ? " 직접 수정한 문구가 있습니다(재검토 필요)." : "") +
+      (editing ? " 적용하지 않은 편집 내용이 있습니다." : "");
   }
 
   function showGenerateError(out) {
@@ -1148,6 +1241,10 @@
     blocked: function () { return busy; },
     canGenerate: function () { return Review.evaluateGeneration(generationContext()).ok; },
     needsConfirm: function () { return !!generation; },
+    // 직접 수정한 문구나 편집 중 내용이 있으면 대체된다는 점을 따로 알립니다.
+    confirmMessage: function () {
+      return generation && (generation.editedIds.length || editing) ? Review.REGENERATE_EDITED_MESSAGE : Review.REGENERATE_MESSAGE;
+    },
     confirm: function (msg) { return window.confirm(msg); },
     onBusy: function (value) {
       generating = value;
@@ -1158,8 +1255,13 @@
     },
     onSuccess: function (data) {
       // 검사를 통과한 결과로 한 번에 교체하고, 생성 당시 입력 스냅샷과 연결합니다.
-      generation = { data: data, signature: snapshot.signature, version: snapshot.version };
-      renderResult(data);
+      // 성공했을 때만 새 원본으로 교체하고 이전 편집본·편집 중 값은 버립니다(확인은 요청 전에 받음).
+      generation = {
+        original: Review.cloneData(data), current: Review.cloneData(data), editedIds: [],
+        signature: snapshot.signature, version: snapshot.version,
+      };
+      editing = null;
+      renderResult();
       hideGenerateError();
       syncResultStatus();
       syncWork();
@@ -1200,7 +1302,9 @@
   // 대화상자 하나를 A4 미리보기로 다룹니다. 검토 항목·작업 상태를 읽거나 바꾸지 않습니다.
   const CATALOG_PAGE_WIDTH = 794; // A4 세로 210mm @96dpi
 
-  function createPreview(dialog, openBtn) {
+  // options.beforeClose(): 닫기 버튼·Esc 전에 호출, false면 닫지 않음. 탭 숨김으로 닫힐 때는 호출하지 않음(편집 임시 값 보존).
+  function createPreview(dialog, openBtn, options) {
+    const beforeClose = options && options.beforeClose;
     const closeBtn = dialog.querySelector("[data-catalog-close]");
     const zoomBtn = dialog.querySelector("[data-catalog-zoom]");
     const scroller = dialog.querySelector("[data-catalog-scroller]");
@@ -1276,7 +1380,13 @@
       title.focus();
     }
 
-    closeBtn.addEventListener("click", function () { dialog.close(); });
+    closeBtn.addEventListener("click", function () {
+      if (beforeClose && !beforeClose()) return;
+      dialog.close();
+    });
+    dialog.addEventListener("cancel", function (event) { // Esc
+      if (beforeClose && !beforeClose()) event.preventDefault();
+    });
     zoomBtn.addEventListener("click", function () { setZoom(!actualSize); });
     dialog.addEventListener("close", function () {
       if (observer) observer.disconnect();
@@ -1300,10 +1410,18 @@
   /* ---------- 카탈로그 생성 결과 미리보기 ---------- */
   // 마지막 성공한 생성 결과만 표시합니다. 시안 대화상자와 DOM을 공유하지 않으며 AI 문자열은 textContent로만 넣습니다.
   const resultDialog = panel.querySelector("[data-result-dialog]");
-  const resultPreview = createPreview(resultDialog, resultOpenBtn);
+  const resultPreview = createPreview(resultDialog, resultOpenBtn, { beforeClose: confirmLeaveEdit });
   const resultStale = resultDialog.querySelector("[data-result-stale]");
   const resultFlags = resultDialog.querySelector("[data-result-flags]");
   const resultMeta = resultDialog.querySelector("[data-result-meta]");
+  const resultUserEdits = resultDialog.querySelector("[data-result-user-edits]");
+  const editOpenBtn = resultDialog.querySelector("[data-result-edit-open]");
+  const editSection = resultDialog.querySelector("[data-result-edit]");
+  const editFields = resultDialog.querySelector("[data-result-edit-fields]");
+  const editErrors = resultDialog.querySelector("[data-result-edit-errors]");
+  const editApplyBtn = resultDialog.querySelector("[data-result-edit-apply]");
+  const editCancelBtn = resultDialog.querySelector("[data-result-edit-cancel]");
+  const editRestoreBtn = resultDialog.querySelector("[data-result-edit-restore]");
 
   function slot(name) {
     return resultDialog.querySelector('[data-slot="' + name + '"]');
@@ -1348,7 +1466,9 @@
     empty.hidden = !page.empty;
   }
 
-  function renderResult(data) {
+  // 미리보기는 항상 적용본(current)을 그립니다. 사용자 수정 위치는 카탈로그 밖 안내에만 표시합니다.
+  function renderResult() {
+    const data = generation.current;
     const pages = data.pages;
     slot("product_name").textContent = pages.cover.product_name.text;
     slot("tagline").replaceChildren(copyBlock("p", "catalog-lead", pages.cover.tagline));
@@ -1362,14 +1482,28 @@
     renderInfoPage(pages.supply, "supply", "supply-empty", true);
     slots("unofficial").forEach(function (node) { node.textContent = data.notices.unofficial; });
 
+    // AI 생성 당시 서버 검토 표시(review_flags). 사용자가 문구를 고쳐도 자동으로 해제하지 않습니다.
     const flags = Review.describeReviewFlags(data);
     resultFlags.replaceChildren();
     if (flags.length) {
       const list = el("ul", "product_brochure-list");
       flags.forEach(function (f) { list.append(el("li", "", f.where + ": " + f.text)); });
-      resultFlags.append(el("p", "notice-title", "검토 표시(점선 테두리 부분)"), list);
+      resultFlags.append(el("p", "notice-title", "AI 생성 검토 표시(점선 테두리 부분)"), list);
     }
     resultFlags.hidden = !flags.length;
+
+    // 사용자 수정 · 재검토 필요(원래 검토 표시와 별도). 수정이 사실·번역 검증 완료를 뜻하지 않습니다.
+    const edited = Review.describeUserEdits(data, generation.editedIds);
+    resultUserEdits.replaceChildren();
+    if (edited.length) {
+      const list = el("ul", "product_brochure-list");
+      edited.forEach(function (where) { list.append(el("li", "", where + ": 사용자 수정 · 재검토 필요")); });
+      resultUserEdits.append(
+        el("p", "notice-title", "사용자가 수정한 문구(재검토 필요)"), list,
+        el("p", "", "사용자 수정은 사실·번역 검증 완료가 아닙니다. 연결된 출처 항목(source_keys)은 생성 당시 기준이며 수정한 문구의 정확성을 보장하지 않습니다."));
+    }
+    resultUserEdits.hidden = !edited.length;
+    editRestoreBtn.disabled = !generation.editedIds.length && !(editing && Review.editedIds(generation.original, editingPreview()).length);
     const excluded = data.excluded.map(function (e) {
       return Review.FIELD_LABEL[e.key] + (e.reason === "unconfirmed" ? "(미확인)" : "(빈 값)");
     });
@@ -1378,9 +1512,133 @@
       (excluded.length ? " · 제외 " + excluded.join(", ") : "");
   }
 
+  /* 생성 결과 문구 편집: 입력 칸(input/textarea)만 사용, API 호출 없음 */
+  function editingPreview() {
+    // 편집 중 값이 형식상 적용 가능할 때만 비교용 데이터를 만들고, 아니면 현재 적용본을 기준으로 봅니다.
+    const r = Review.applyEdits(generation.original, generation.current, editing.values);
+    return r.ok ? r.data : generation.current;
+  }
+
+  function renderEditForm(errors) {
+    const byId = {};
+    (errors || []).forEach(function (e) { byId[e.id] = e.message; });
+    editFields.replaceChildren();
+    Review.editableEntries(generation.current).forEach(function (entry, n) {
+      const id = FEATURE_ID + "-edit-" + n;
+      const wrap = el("div", "field");
+      const label = el("label", "field-label", entry.where);
+      label.htmlFor = id;
+      const input = entry.multiline ? el("textarea", "textarea") : el("input", "input");
+      if (!entry.multiline) input.type = "text";
+      input.id = id;
+      input.value = editing.values[entry.id]; // 텍스트로만 표시(HTML 해석 없음). maxlength로 자르지 않음
+      const hint = el("p", "field-hint", "최대 " + entry.limit + "자 · 한국어 불가");
+      hint.id = id + "-hint";
+      const describedBy = [hint.id];
+      wrap.append(label, input, hint);
+      if (byId[entry.id]) {
+        const err = el("p", "field-error", byId[entry.id]);
+        err.id = id + "-error";
+        describedBy.push(err.id);
+        input.setAttribute("aria-invalid", "true");
+        wrap.append(err);
+      }
+      input.setAttribute("aria-describedby", describedBy.join(" "));
+      input.addEventListener("input", function () {
+        editing.values[entry.id] = input.value;
+        syncWork();
+      });
+      editFields.append(wrap);
+    });
+    editErrors.replaceChildren();
+    if (errors && errors.length) {
+      const list = el("ul", "product_brochure-list");
+      errors.forEach(function (e) { list.append(el("li", "", e.where + ": " + e.message)); });
+      editErrors.append(el("p", "notice-title", "적용하지 않았습니다. 아래 위치를 고쳐 주세요."), list);
+    }
+    editErrors.hidden = !(errors && errors.length);
+  }
+
+  function showEditSection(focusFirst) {
+    editSection.hidden = false;
+    editOpenBtn.hidden = true;
+    renderEditForm();
+    if (focusFirst) {
+      const first = editFields.querySelector("input, textarea");
+      if (first) first.focus();
+    }
+  }
+
+  function endEdit() {
+    editing = null;
+    editSection.hidden = true;
+    editOpenBtn.hidden = false;
+    editFields.replaceChildren();
+    editErrors.hidden = true;
+    syncWork();
+  }
+
+  function editDirty() {
+    return !!editing && Review.isEditDirty(generation.current, editing.values);
+  }
+
+  // 닫기·Esc·편집 취소: 바뀐 값이 있으면 버릴지 확인, 취소하면 편집 상태 유지
+  function confirmLeaveEdit() {
+    if (!editing) return true;
+    if (editDirty() && !window.confirm("편집 중인 변경을 버리고 닫을까요? 미리보기에 적용된 문구는 그대로 남습니다.")) return false;
+    endEdit();
+    return true;
+  }
+
+  editOpenBtn.addEventListener("click", function () {
+    if (!generation || working()) return;
+    if (!editing) editing = { values: Review.editValues(generation.current) };
+    showEditSection(true);
+    syncWork();
+  });
+
+  editCancelBtn.addEventListener("click", function () {
+    if (confirmLeaveEdit()) editOpenBtn.focus();
+  });
+
+  editApplyBtn.addEventListener("click", function () {
+    const r = Review.applyEdits(generation.original, generation.current, editing.values);
+    if (!r.ok) {
+      renderEditForm(r.errors); // 하나라도 틀리면 아무것도 반영하지 않음
+      const firstBad = editFields.querySelector('[aria-invalid="true"]');
+      if (firstBad) firstBad.focus();
+      return;
+    }
+    // 검증을 통과하면 한 번에 반영. 입력 스냅샷·표시명 상태·메타데이터는 바꾸지 않음
+    generation.current = r.data;
+    generation.editedIds = r.editedIds;
+    endEdit();
+    renderResult();
+    resultPreview.checkOverflow();
+    syncResultStatus();
+    editOpenBtn.focus();
+  });
+
+  editRestoreBtn.addEventListener("click", function () {
+    if (!window.confirm("마지막으로 생성된 AI 원문으로 되돌릴까요? 직접 수정한 문구가 모두 사라집니다.")) return;
+    generation.current = Review.cloneData(generation.original);
+    generation.editedIds = [];
+    if (editing) {
+      editing.values = Review.editValues(generation.current);
+      renderEditForm();
+    }
+    renderResult();
+    resultPreview.checkOverflow();
+    syncResultStatus();
+    syncWork();
+  });
+
   resultOpenBtn.addEventListener("click", function () {
     if (!generation) return;
     resultStale.hidden = !Review.isResultStale(generation, generationContext());
+    renderResult();
+    if (editing) showEditSection(false); // 탭 이동 등으로 닫혔던 편집 임시 값 복원
+    else { editSection.hidden = true; editOpenBtn.hidden = false; }
     resultPreview.open();
   });
 })();

@@ -496,6 +496,116 @@ check("생성 응답 표시명 검사와 한글 잔존 오류 위치 안내", ()
     details: { items: [] }, supply: { items: [] } } })[0].text, "표지 소개 문구와 거의 같은 내용이 반복됩니다");
 });
 
+/* ---------- 생성 결과 문구 편집 ---------- */
+function editableBody() {
+  const b = generationBody();
+  b.data.pages.details = { page: 3, items: [infoOut("yarn_spec", "75D/36F", true, ["number_not_preserved"])], empty: false, empty_message: null };
+  b.data.pages.supply.items[0].fictitious_notice = "Condições fictícias para demonstração.";
+  b.data.used_keys = ["product_name", "description", "yarn_spec", "moq"];
+  return R.validateGeneration(b);
+}
+
+check("편집 칸: 표시명·소개·문단·3/4쪽 값만(라벨·안내·메타데이터 제외), 서버 상한과 동일", () => {
+  const d = editableBody();
+  const entries = R.editableEntries(d);
+  assert.deepEqual(entries.map((e) => e.id), ["display_name", "tagline", "paragraph:0", "detail:yarn_spec", "supply:moq"]);
+  assert.deepEqual(entries.map((e) => e.limit), [80, 140, 600, 300, 200]);
+  assert.deepEqual(entries.map((e) => e.where), ["1쪽 카탈로그 표시명", "1쪽 소개 문구", "2쪽 소개 문단 1", "3쪽 원사 규격 값", "4쪽 MOQ 값"]);
+});
+
+check("편집 적용: 원본·적용본·임시 값 독립, 텍스트만 변경, 메타데이터·고정 안내 보존, 표시명 일관", () => {
+  const original = editableBody();
+  const current = R.cloneData(original);
+  const values = R.editValues(current);
+  values.display_name = "  Regen T2T Fio  ";
+  values["supply:moq"] = "500 kg por pedido";
+  values["paragraph:0"] = "Linha 1\nLinha 2 com acentuação: ação, têxtil.";
+  values.tagline = XSS + " editado";                                  // HTML 형태도 문자열로만 보관(원본과 다른 값)
+  const r = R.applyEdits(original, current, values);
+  assert.equal(r.ok, true);
+  assert.notEqual(r.data, current);
+  assert.equal(current.pages.supply.items[0].value, "500 kg");        // 적용본 원래 객체 불변
+  assert.equal(original.pages.supply.items[0].value, "500 kg");       // AI 원본 불변
+  values["supply:moq"] = "x";                                         // 임시 값 변경이 적용본에 영향 없음
+  assert.equal(r.data.pages.supply.items[0].value, "500 kg por pedido");
+  assert.equal(r.data.display_name.value, "Regen T2T Fio");
+  assert.equal(r.data.pages.cover.product_name.text, "Regen T2T Fio");
+  assert.equal(r.data.pages.cover.tagline.text, XSS + " editado");
+  const item = r.data.pages.supply.items[0];
+  assert.deepEqual([item.label, item.source_keys, item.origin, item.virtual, item.fictitious_notice],
+    ["moq", ["moq"], "extracted", true, "Condições fictícias para demonstração."]);
+  assert.deepEqual(r.data.pages.details.items[0].review_flags, ["number_not_preserved"]); // 원래 검토 표시 유지
+  assert.deepEqual(r.data.pages.intro.paragraphs[0].review_flags, ["new_number"]);
+  assert.deepEqual(r.data.notices, original.notices);
+  assert.deepEqual(r.data.used_keys, original.used_keys);
+  assert.deepEqual(r.editedIds, ["display_name", "tagline", "paragraph:0", "supply:moq"]);
+  assert.deepEqual(R.describeUserEdits(r.data, r.editedIds).slice(-1), ["4쪽 MOQ 값"]);
+});
+
+check("편집 검증: 빈 값·공백·길이 초과·한글·제어 문자는 위치별 오류, 하나라도 틀리면 부분 적용 없음", () => {
+  const original = editableBody();
+  const current = R.cloneData(original);
+  const bad = R.editValues(current);
+  bad.tagline = "a".repeat(141);
+  bad["paragraph:0"] = "   ";
+  bad["detail:yarn_spec"] = "75D 원사";
+  bad["supply:moq"] = "500\u0007kg";
+  bad.display_name = "리젠";
+  const r = R.applyEdits(original, current, bad);
+  assert.equal(r.ok, false);
+  assert.equal(r.data, undefined);
+  assert.deepEqual(r.errors.map((e) => e.where), ["1쪽 카탈로그 표시명", "1쪽 소개 문구", "2쪽 소개 문단 1", "3쪽 원사 규격 값", "4쪽 MOQ 값"]);
+  assert.ok(r.errors[1].message.includes("141자"));
+  assert.equal(current.pages.cover.tagline.text, original.pages.cover.tagline.text); // 변경 없음
+  const one = R.editValues(current);
+  one["supply:moq"] = "500 kg";
+  one.tagline = "ㅎ";                                                  // 자모만 있어도 거부
+  assert.equal(R.applyEdits(original, current, one).ok, false);
+  const exact = R.editValues(current);
+  exact.tagline = "é".repeat(140);                                      // 경계값·악센트 허용
+  assert.equal(R.applyEdits(original, current, exact).ok, true);
+});
+
+check("원문 복원·변경 감지: 원본과 같은 값이면 사용자 수정 아님, 임시 값 변경 감지", () => {
+  const original = editableBody();
+  const current = R.cloneData(original);
+  const v = R.editValues(current);
+  assert.equal(R.isEditDirty(current, v), false);
+  v.tagline = "Outro texto.";
+  assert.equal(R.isEditDirty(current, v), true);
+  const edited = R.applyEdits(original, current, v).data;
+  const back = R.editValues(edited);
+  back.tagline = original.pages.cover.tagline.text;                   // 손으로 원래 문구로 되돌림
+  assert.deepEqual(R.applyEdits(original, edited, back).editedIds, []);
+  assert.deepEqual(R.editedIds(original, R.cloneData(original)), []); // 원문 복원 = 원본 복제
+});
+
+check("출력 편집은 입력 변경 경고와 별개: 편집해도 stale 아님, 입력이 바뀌면 stale 유지", () => {
+  const fs = analysisFields();
+  confirmAll(fs, ["product_name", "description"]);
+  const snap = R.createSnapshot(fs, "analysis", 1, DN);
+  const result = { signature: snap.signature, version: 1, original: editableBody(), current: editableBody(), editedIds: ["tagline"] };
+  assert.equal(R.isResultStale(result, ctxOf(fs, snap)), false);       // 출력만 편집
+  R.setValue(fs[1], "입력 변경");
+  assert.equal(R.isResultStale(result, ctxOf(fs, snap)), true);        // 입력 변경 경고는 그대로
+});
+
+check("재생성 확인: 수정본이 있으면 대체 안내, 취소 시 요청 0회", async () => {
+  const sends = [];
+  let asked = null;
+  const g = R.createGenerator({
+    send: (s) => { sends.push(s); return Promise.resolve({ status: 200, json: generationBody() }); },
+    blocked: () => false, canGenerate: () => true, needsConfirm: () => true,
+    confirmMessage: () => R.REGENERATE_EDITED_MESSAGE,
+    confirm: (m) => { asked = m; return false; },
+    onBusy: () => {}, onSuccess: () => { throw new Error("호출 금지"); }, onFailure: () => {},
+  });
+  assert.equal(await g.run({ fields: [] }), "cancelled");
+  assert.equal(asked, R.REGENERATE_EDITED_MESSAGE);
+  assert.ok(asked.includes("직접 수정한 문구"));
+  assert.equal(sends.length, 0);
+});
+
 (async () => {
   let failed = 0;
   for (const [name, fn] of checks) {

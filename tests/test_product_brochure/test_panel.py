@@ -125,8 +125,10 @@ class PanelRenderTests(RenderedPanel):
         for label in ("카탈로그 생성", "PDF 다운로드"):
             self.assertIn(label, self.text)
         disabled = [a for t, a in self.parser.elements if t == "button" and "disabled" in a]
-        # 처음 화면: PDF 분석·카탈로그 생성(조건 충족 전)·PDF 다운로드(미구현)·생성 결과 보기(결과 없음)
-        self.assertEqual(len(disabled), 4)
+        # 처음 화면: PDF 분석·카탈로그 생성(조건 충족 전)·PDF 다운로드(미구현)·생성 결과 보기(결과 없음)·AI 원문 되돌리기(수정 없음)
+        self.assertEqual(len(disabled), 5)
+        for marker in ("data-analyze", "data-generate", "data-result-open", "data-result-edit-restore"):
+            self.assertTrue(any(marker in a for a in disabled), marker)
         generate = [a for t, a in self.parser.elements if t == "button" and "data-generate" in a]
         self.assertEqual(len(generate), 1)
         self.assertIn("disabled", generate[0])
@@ -217,6 +219,34 @@ class CatalogPreviewTests(RenderedPanel):
         self.assertIn("시안 제작 메모", dialog)
         for forbidden in (r"https?://", r"@", r"\+55", r"Hyosung", r"효성"):
             self.assertIsNone(re.search(forbidden, doc), forbidden)  # 외부 이미지·연락처·회사 표기 없음
+
+    def test_page4_samples_and_commercial_terms_in_both_dialogs(self):
+        html = create_app().test_client().get("/").get_data(as_text=True)
+        self.assertEqual(html.count("Amostras e condições comerciais"), 2)  # 시안·결과 모두
+        self.assertNotIn("Condições de fornecimento</h3>", html)
+        self.assertEqual(html.count("Entre em contato para consultar a disponibilidade de amostras e as condições comerciais."), 2)
+        for promise in ("Disponível mediante solicitação", "grátis", "gratuit", "envio imediato", "Solicite amostras"):
+            self.assertNotIn(promise, html)  # 제공 가능·무료·즉시 발송 약속 없음
+
+    def test_result_edit_ui_uses_plain_inputs(self):
+        html = create_app().test_client().get("/").get_data(as_text=True)
+        start = html.index("data-result-dialog")
+        result = html[start:html.index("</dialog>", start)]
+        for marker in ("data-result-edit-open", "data-result-edit-apply", "data-result-edit-cancel",
+                       "data-result-edit-restore", "data-result-edit-fields", "data-result-user-edits"):
+            self.assertIn(marker, result)
+        design = html[html.index("<dialog"):html.index("</dialog>")]
+        self.assertNotIn("data-result-edit", design)  # 고정 시안은 편집 대상 아님
+        self.assertNotIn("contenteditable", html)
+        self.assertNotIn("contentEditable", JS)
+        self.assertNotIn("execCommand", JS)
+
+    def test_edit_code_makes_no_requests_and_keeps_input_state(self):
+        start = JS.index("/* 생성 결과 문구 편집")
+        block = JS[start:JS.index('resultOpenBtn.addEventListener("click"', start)]
+        for forbidden in ("fetch(", "postRequest", "generator.run", "analyzer.run", "snapshot =", "displayName =",
+                          "setResult", "Storage", "innerHTML"):
+            self.assertNotIn(forbidden, block)
 
     def test_preview_code_does_not_touch_review_state(self):
         # 미리보기 공통 블록과 디자인 시안 블록(생성 결과 블록 전까지)
