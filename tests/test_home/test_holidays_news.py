@@ -12,6 +12,7 @@ import sys
 import tempfile
 import unittest
 import urllib.error
+import urllib.parse
 from pathlib import Path
 from unittest import mock
 
@@ -258,6 +259,83 @@ class KotraExposureTests(NewsTestBase):
         self.assertEqual(len(top), 8)
         self.assertEqual(len({id(i) for i in top}), 8)
         self.assertEqual(counts, {"kotra": 1, "google": 7})
+
+
+class NewsSearchTests(NewsTestBase):
+    """업계 소식 상세의 Google News 추가 검색(/api/home/news/search). 외부 요청 없음(가짜 응답)."""
+
+    SEARCH_RSS = rss(
+        ("Fios de poliéster reciclado ganham espaço", "https://news.google.com/s1", "Wed, 21 Oct 2026 10:00:00 GMT", "Jornal A"),
+        ("Tecidos técnicos para exportação", "https://news.google.com/s2", "Tue, 20 Oct 2026 10:00:00 GMT", "Jornal B"),
+        ("Malharia amplia produção no Sul", "https://news.google.com/s3", "Mon, 19 Oct 2026 10:00:00 GMT", "Jornal C"),
+        ("Indústria têxtil portuguesa cresce", "https://news.google.com/s4", "Mon, 19 Oct 2026 09:00:00 GMT", "Jornal PT", "https://www.jornal.pt"),
+        ("Como a IA está mudando empregos", "https://news.google.com/s5", "Sun, 18 Oct 2026 10:00:00 GMT", "Jornal D"),
+        ("Fios de poliéster reciclado ganham espaço", "https://news.google.com/s1", "Wed, 21 Oct 2026 10:00:00 GMT", "Jornal A"),  # 중복
+    )
+
+    def fake(self, body=None, fail=False):
+        calls = []
+
+        def get(url, accept):
+            calls.append(url)
+            if fail:
+                raise service.NewsFetchError("timeout")
+            return body if body is not None else self.SEARCH_RSS
+        self.use(get)
+        return calls
+
+    def test_relevance_pt_unrelated_duplicate_and_tags(self):
+        calls = self.fake()
+        data = service.search_news("  poliéster   reciclado ")
+        # A 6건(중복 1) → 관련 3건, B .pt 제외, C 무관 제외, D 중복 1건
+        self.assertEqual([i["title"] for i in data["items"]],
+                         ["Fios de poliéster reciclado ganham espaço", "Tecidos técnicos para exportação", "Malharia amplia produção no Sul"])
+        self.assertEqual((data["count"], data["collected"], data["after_filter"], data["source"], data["query"]),
+                         (3, 5, 3, "google_news_rss", "poliéster reciclado"))
+        for item in data["items"]:  # E 태그 1~2개, 기존 항목 구조
+            self.assertTrue(1 <= len(item["tags"]) <= 2)
+            self.assertEqual(item["origin"], "google")
+        self.assertEqual(data["items"][0]["tags"], ["원사", "리사이클·ESG"])
+        # 검색어 구성: 따옴표 묶음 + 섬유 낱말 + 기간, 기존 지역·언어 설정
+        url = urllib.parse.unquote(calls[0])
+        self.assertIn('"poliéster reciclado" (têxtil OR tecido OR fio OR confecção OR vestuário) when:90d', url)
+        self.assertIn("hl=pt-BR&gl=BR&ceid=BR:pt-419", url)
+
+    def test_limit_constant(self):
+        many = rss(*[(f"Tecido número {n}", f"https://news.google.com/m{n}", "Wed, 21 Oct 2026 10:00:00 GMT", "Jornal") for n in range(30)])
+        self.fake(many)
+        self.assertEqual(service.search_news("tecido")["count"], service.NEWS_SEARCH_LIMIT)
+
+    def test_no_new_ai_call_but_reuses_cached_summary(self):
+        self.fake()
+        target = service.parse_google_rss(self.SEARCH_RSS, "google")[0]
+        news_summary._cache[(target["id"], target["title"])] = {"summary": "재활용 폴리에스터 원사 확대", "expires": 10 ** 12}
+        with mock.patch.object(news_summary, "_request", side_effect=AssertionError("OpenAI 호출 금지")):
+            data = service.search_news("poliéster")
+        self.assertEqual(data["items"][0].get("summary_ko"), "재활용 폴리에스터 원사 확대")
+        self.assertNotIn("summary_ko", data["items"][1])
+
+    def test_route_ok_invalid_and_failure_keeps_news(self):
+        client = app.test_client()
+        self.use(FakeHttp())
+        client.get("/api/home/news")
+        before = client.get("/api/home/news").get_json()["data"]["items"]
+        calls = self.fake()
+        body = client.get("/api/home/news/search?q=" + urllib.parse.quote("poliéster")).get_json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(len(calls), 1)
+        # G 빈 검색어·공백·1글자·너무 김 → 400, 외부 요청 없음
+        for q in ("", "   ", "a", "x" * 81):
+            res = client.get("/api/home/news/search?q=" + urllib.parse.quote(q))
+            self.assertEqual((res.status_code, res.get_json()["error"]["code"]), (400, "invalid_query"), q)
+        self.assertEqual(client.get("/api/home/news/search").status_code, 400)
+        self.assertEqual(len(calls), 1)
+        # F RSS 실패 → 502 고정 문장, 기존 수집 뉴스는 그대로
+        self.fake(fail=True)
+        res = client.get("/api/home/news/search?q=tecido")
+        self.assertEqual((res.status_code, res.get_json()["error"]),
+                         (502, {"code": "search_failed", "message": "Google News 검색 결과를 가져오지 못했습니다."}))
+        self.assertEqual(client.get("/api/home/news").get_json()["data"]["items"], before)
 
 
 class HolidayTests(unittest.TestCase):

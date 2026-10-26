@@ -159,6 +159,14 @@ EXCLUDED_MEDIA_DOMAINS = ("portugaltextil.com", "vietnam.vn")
 # 일일 브리핑 등 상위 N건을 고를 때 경로별 최소 건수(필터를 통과한 기사가 있을 때만 채움).
 NEWS_SOURCE_MINIMUM = {"kotra": 1}
 
+# 업계 소식 상세 화면의 Google News 추가 검색(사용자가 버튼을 누를 때만). 지역·언어는 GOOGLE_RSS_URL 그대로(브라질·포르투갈어).
+# 검색어를 그대로 넓게 찾지 않도록 섬유 낱말 묶음과 기간을 붙이고, 결과는 위 관련성 필터를 똑같이 통과해야 합니다.
+NEWS_SEARCH_LIMIT = 20
+NEWS_SEARCH_MIN_LENGTH = 2
+NEWS_SEARCH_MAX_LENGTH = 80
+NEWS_SEARCH_CONTEXT = "(têxtil OR tecido OR fio OR confecção OR vestuário)"
+NEWS_SEARCH_WINDOW = "when:90d"
+
 # 뉴스 주제 태그(코드 기반 분류, AI 없음). 위 관련성 필터(포함/제외)와 목적이 달라 키워드를 따로 둡니다.
 # 초안(2026-10-25): feature_spec에 (4-1) 키워드 표가 아직 없어 관련성 필터 낱말과 필수 검증 사례를 바탕으로 정함.
 # 표가 확정되면 이 상수만 바꿉니다. 순서 = 우선순위(여러 태그가 맞으면 앞쪽부터 최대 2개, 없으면 "기타").
@@ -207,6 +215,10 @@ NEWS_ERRORS = {
 # 경로 → 마지막 성공 {"items", "collected", "after_filter", "fetched_at", "expires"}.
 # 갱신에 실패해도 지우지 않아 이전 수집분을 계속 보여 줍니다.
 _news_cache = {}
+
+
+class NewsSearchQueryError(ValueError):
+    """검색어가 비었거나 너무 짧거나 김(외부 요청 전에 거절)."""
 
 
 class NewsFetchError(Exception):
@@ -475,6 +487,37 @@ def _fetch_abit():
     with ThreadPoolExecutor(max_workers=len(ABIT_QUERIES)) as pool:
         results = list(pool.map(lambda q: _fetch_google_rss(q, "abit"), ABIT_QUERIES))
     return _collected([item for items in results for item in items], is_relevant_news)
+
+
+def search_news(query):
+    """업계 소식 상세 화면의 Google News 추가 검색. 사용자가 버튼을 눌렀을 때만 호출됩니다.
+
+    검색어에 섬유 낱말 묶음(NEWS_SEARCH_CONTEXT)을 붙여 기존 Google News RSS(브라질·포르투갈어 설정)로 찾고,
+    수집 뉴스와 같은 관련성 필터(.pt·제외 매체·섬유 낱말)·중복 제거·주제 태그를 적용합니다.
+    새 AI 요약은 만들지 않고, 같은 기사(id·제목)에 이미 만든 요약만 붙입니다. 결과는 저장·캐시하지 않습니다.
+    반환 {"query", "items", "count", "source", "collected", "after_filter"}. 실패는 NewsFetchError.
+    """
+    q = normalize_search_query(query)
+    result = _collected(_fetch_google_rss(f'"{q}" {NEWS_SEARCH_CONTEXT} {NEWS_SEARCH_WINDOW}', "google"), is_relevant_news)
+    items = []
+    for item in result["items"][:NEWS_SEARCH_LIMIT]:
+        item = dict(item)
+        item["tags"] = news_topics(item["title"])
+        summary = news_summary.cached(item) if news_summary.is_target(item) else None
+        if summary:
+            item["summary_ko"] = summary
+        items.append(item)
+    logger.info("뉴스 검색: collected=%d filtered=%d shown=%d", result["collected"], result["after_filter"], len(items))
+    return {"query": q, "items": items, "count": len(items), "source": "google_news_rss",
+            "collected": result["collected"], "after_filter": result["after_filter"]}
+
+
+def normalize_search_query(query):
+    """앞뒤 공백 제거·연속 공백 정리·따옴표 제거. 너무 짧거나 길면 NewsSearchQueryError(외부 요청 없음)."""
+    q = " ".join(str(query or "").replace('"', " ").split())
+    if len(q) < NEWS_SEARCH_MIN_LENGTH or len(q) > NEWS_SEARCH_MAX_LENGTH:
+        raise NewsSearchQueryError()
+    return q
 
 
 def _fetch_google_rss(query, origin):

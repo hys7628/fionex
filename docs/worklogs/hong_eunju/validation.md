@@ -566,3 +566,35 @@ fixture 서버(5013 many·5014 kotra0, FLASK_SKIP_DOTENV=1, urlopen 차단), 브
 | 회귀 | test_home_layout 78/78(부제 간격 항목은 1행 카드 제외), test_home_features 26/26, 6차 29/29, JS 예외 0 | | 통과 |
 | `python -m unittest discover -s tests/test_home` | OK | 90 OK(Python 변경 없음) | 통과 |
 외부 호출 0건. Python·API·PDF 파일 변경 없음(git diff *.py 없음).
+
+## 2026-10-26 Home 색감 정리 (DEV-HOME-018)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| 새 글자·배경 조합 대비(WCAG 공식 계산) | 4.5:1 이상 | 민트 hover 칩 5.00, 선택 칩 5.84, 분류 라벨 5.32, 바 보조 글자(그라데이션 양끝) 5.06·5.23, 바 제목 13.27, 환율 숫자 15.53, 바로가기 hover 설명 5.29, 민트 화살표 5.61 | 통과 |
+| 1440·1024·390 화면(fixture 서버, urlopen 차단) | 배치·높이 그대로, 가로 스크롤·예외 없음 | 1행 161px·뉴스 시작 y=309 등 이전과 같음(1440 첫 측정은 서버 기동 전 접속 실패로 다시 측정), 예외 0 | 통과 |
+| 회귀 | 유지 | test_home_layout 78/78, test_home_features 26/26, 6차 29/29(분류 라벨 글자색 rgb(85,101,125) 그대로) | 통과 |
+외부 호출 0건. Python·API·PDF 변경 없음.
+
+## 2026-10-26 업계 소식 상세 화면·검색 (DEV-HOME-019)
+### 서버(모의, FLASK_SKIP_DOTENV=1)
+| 사례 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| A RSS 6건(중복 1) | 관련 3건 | 3건(collected 5, after_filter 3) | 통과 |
+| B .pt 매체 / C 섬유 무관 / D 중복 | 제외 / 제외 / 1건 | 같음 | 통과 |
+| E 태그 | 모든 기사 1~2개 | 같음(첫 기사 원사·리사이클·ESG) | 통과 |
+| 검색어 구성 | 따옴표 + 섬유 낱말 + when:90d, hl=pt-BR&gl=BR&ceid=BR:pt-419 | 같음 | 통과 |
+| 상한 | 30건 → 20건 | 20 | 통과 |
+| AI | 새 호출 없음, 캐시 요약만 재사용 | _request 미호출, 캐시 요약 붙음 | 통과 |
+| G 빈칸·공백·1글자·81자 | 400 invalid_query, 외부 요청 없음 | 같음 | 통과 |
+| F RSS 실패 | 502 search_failed 고정 문장, 기존 뉴스 그대로 | 같음 | 통과 |
+| `python -m unittest discover -s tests/test_home` / `tests/test_common` | OK | 94 OK / 56 OK | 통과 |
+
+### 실제 Google News RSS 1회
+검색어 `poliéster reciclado` → HTTP 200, 원본 item 12건, 중복 제거 12건, .pt 2건, 제외 매체 도메인 3건(portugaltextil.com 포함), 관련성 통과 2건(축구 유니폼·버스 PET 등 섬유 낱말 없는 기사 제외).
+
+### 브라우저(fixture 서버 5013 many·5014 kotra0, urlopen 차단, headless Chrome CDP)
+1440·1024·390 각각: 카드 4건 + '업계 소식 더 보기 (전체 34건 · 검색)' → 상세(Home 숨김·제목 초점·전체 34건) → 'ALGODAO' 내부 검색(algodão 기사, 외부 요청 0) → '원사'(태그 검색) → 무결과 검색어 입력만으로 요청 0, 안내·버튼 → 버튼 1회 요청 → 관련 3건·'Google News 검색' 라벨·태그·새 탭 링크·새 AI 요약 없음 → 같은 검색어 재제출 요청 0 → 매체 KOTRA로 검색 결과 0건 → 주제 '원사'·매체 ABIT 동시 적용 → 1글자 무결과 버튼 비활성 → 'falha' 실패 안내·'다시 검색'(1440 재시도 1회) → 가로 스크롤 없음 → '← 홈으로'(초점 더 보기, 카드 4건, 주소 그대로). 46/46, localStorage·sessionStorage 0, JS 예외 0. 서버 기록 검색 요청 7건(=버튼 클릭 수). 1440 검색창+버튼 한 줄, 390 줄바꿈 육안 확인.
+회귀: test_home_layout 78/78, test_home_features 26/26, 6차 29/29(더 보기 동작 변경에 맞춰 기대값만 수정).
+
+### 미검증
+브라우저 뒤로 가기 연동(구현 안 함), 실제 사용자 브라우저(Edge·Safari·모바일 기기), 화면낭독기 낭독.

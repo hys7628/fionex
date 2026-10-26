@@ -290,10 +290,13 @@
     moreRow: panel.querySelector("#home-news-more-row"),
     more: panel.querySelector("#home-news-more"),
   };
-  // 매체 필터·더 보기는 이미 받은 목록을 화면에서만 거릅니다(추가 요청 없음).
-  // Home은 요약 화면이라 기본 4건만 보이고, '업계 소식 더 보기'로 이미 받은 목록을 펼칩니다.
+  // 매체·주제 필터는 이미 받은 목록을 화면에서만 거릅니다(추가 요청 없음).
+  // Home 카드는 요약이라 4건만 보이고, '업계 소식 더 보기'는 같은 탭 안의 뉴스 상세 화면을 엽니다.
   const NEWS_PAGE_SIZE = 4;
-  const newsView = { origin: "all", topic: "all", expanded: false };
+  const newsView = { origin: "all", topic: "all" };
+  // 마지막으로 받은 뉴스 목록·경로 상태(페이지 메모리에만). 카드와 상세 화면이 같이 씁니다.
+  let newsItems = [];
+  let newsMedia = null;
   // 주제 태그 순서(서버 service.NEWS_TOPIC_ORDER + "기타")와 같게 둡니다. 태그는 서버가 붙여 보냅니다.
   const NEWS_TOPICS = ["원사", "원단", "규제·무역", "리사이클·ESG", "패션·리테일", "기타"];
   let newsLoaded = false;
@@ -350,19 +353,23 @@
     }));
   }
 
-  // [전체 N] [KOTRA n] [Google News n] [ABIT n]. 건수는 화면 목록 기준(경로 사이 중복 제외 후).
-  // 실패·설정 필요 경로에는 ⚠와 화면낭독용 문구를 붙입니다. 재시도는 아래 안내의 버튼으로 합니다.
+  // [전체 N] [KOTRA n] [Google News n] [ABIT n]. 건수는 주어진 목록 기준(경로 사이 중복 제외 후).
+  // 실패·설정 필요 경로에는 ⚠와 화면낭독용 문구를 붙입니다. 재시도는 카드 안내의 버튼으로 합니다.
   function renderNewsFilter(items, media) {
+    fillMediaTabs(news.filter, items, media, newsView.origin);
+  }
+
+  function fillMediaTabs(container, items, media, selected) {
     const counts = { all: items.length };
     items.forEach(function (item) { counts[item.origin] = (counts[item.origin] || 0) + 1; });
     const tabs = [{ key: "all", label: "전체" }].concat(Object.keys(NEWS_ORIGINS).map(function (origin) {
-      return { key: origin, label: NEWS_ORIGINS[origin], status: media[origin].status };
+      return { key: origin, label: NEWS_ORIGINS[origin], status: media ? media[origin].status : "ok" };
     }));
-    news.filter.replaceChildren.apply(news.filter, [make("span", "home-news-filter-label", "매체")].concat(tabs.map(function (tab) {
+    container.replaceChildren.apply(container, [make("span", "home-news-filter-label", "매체")].concat(tabs.map(function (tab) {
       const button = make("button", "home-news-tab");
       button.type = "button";
       button.dataset.newsFilter = tab.key;
-      button.setAttribute("aria-pressed", String(newsView.origin === tab.key));
+      button.setAttribute("aria-pressed", String(selected === tab.key));
       button.append(make("span", "", tab.label), make("span", "home-news-tab-count", String(counts[tab.key] || 0)));
       if (tab.status && tab.status !== "ok") {
         const label = tab.status === "not_configured" ? "설정 필요" : "수집 실패";
@@ -373,25 +380,34 @@
       }
       return button;
     })));
-    news.filter.hidden = false;
+    container.hidden = false;
   }
 
   // 주제 필터 [전체] [원사] … [기타]. 매체 필터와 함께 적용합니다(둘 다 맞는 기사만).
   function renderTopicFilter(items) {
+    fillTopicTabs(news.topics, items, newsView.topic);
+  }
+
+  function fillTopicTabs(container, items, selected) {
     const counts = { all: items.length };
     items.forEach(function (item) {
       (item.tags || []).forEach(function (tag) { counts[tag] = (counts[tag] || 0) + 1; });
     });
     const keys = ["all"].concat(NEWS_TOPICS);
-    news.topics.replaceChildren.apply(news.topics, [make("span", "home-news-filter-label", "주제")].concat(keys.map(function (key) {
+    container.replaceChildren.apply(container, [make("span", "home-news-filter-label", "주제")].concat(keys.map(function (key) {
       const button = make("button", "home-news-tab");
       button.type = "button";
       button.dataset.newsTopic = key;
-      button.setAttribute("aria-pressed", String(newsView.topic === key));
+      button.setAttribute("aria-pressed", String(selected === key));
       button.append(make("span", "", key === "all" ? "전체" : key), make("span", "home-news-tab-count", String(counts[key] || 0)));
       return button;
     })));
-    news.topics.hidden = false;
+    container.hidden = false;
+  }
+
+  function matchesFilters(item, view) {
+    return (view.origin === "all" || item.origin === view.origin) &&
+      (view.topic === "all" || (item.tags || []).indexOf(view.topic) !== -1);
   }
 
   function applyNewsView() {
@@ -400,20 +416,19 @@
     items.forEach(function (li) {
       const match = (newsView.origin === "all" || li.dataset.origin === newsView.origin) &&
         (newsView.topic === "all" || li.dataset.tags.split("|").indexOf(newsView.topic) !== -1);
-      li.hidden = !match || (!newsView.expanded && matched >= NEWS_PAGE_SIZE);
+      li.hidden = !match || matched >= NEWS_PAGE_SIZE;
       if (match) matched += 1;
     });
     news.filterEmpty.hidden = items.length === 0 || matched > 0;
-    news.moreRow.hidden = matched <= NEWS_PAGE_SIZE;
-    news.more.textContent = newsView.expanded ? "처음 " + NEWS_PAGE_SIZE + "건만 보기" : "업계 소식 더 보기 (" + (matched - NEWS_PAGE_SIZE) + "건)";
-    news.more.setAttribute("aria-expanded", String(newsView.expanded));
+    // 상세 화면(전체 목록·검색)은 뉴스가 하나라도 있으면 열 수 있습니다.
+    news.moreRow.hidden = items.length === 0;
+    news.more.textContent = "업계 소식 더 보기 (전체 " + items.length + "건 · 검색)";
   }
 
   news.filter.addEventListener("click", function (event) {
     const button = event.target.closest("[data-news-filter]");
     if (!button) return;
     newsView.origin = button.dataset.newsFilter;
-    newsView.expanded = false;
     news.filter.querySelectorAll("[data-news-filter]").forEach(function (b) {
       b.setAttribute("aria-pressed", String(b === button));
     });
@@ -424,7 +439,6 @@
     const button = event.target.closest("[data-news-topic]");
     if (!button) return;
     newsView.topic = button.dataset.newsTopic;
-    newsView.expanded = false;
     news.topics.querySelectorAll("[data-news-topic]").forEach(function (b) {
       b.setAttribute("aria-pressed", String(b === button));
     });
@@ -432,8 +446,7 @@
   });
 
   news.more.addEventListener("click", function () {
-    newsView.expanded = !newsView.expanded;
-    applyNewsView();
+    openNewsDetail();
   });
 
   function renderNewsNotices(media) {
@@ -458,38 +471,45 @@
     }));
   }
 
+  // 기사 하나: 제목(원문 링크) · AI 요약(있을 때) · 경로·주제 라벨·매체·날짜·언어. source가 있으면 작은 출처 구분 라벨.
+  function newsItemNode(item, sourceLabel) {
+    const li = make("li", "home-news-item");
+    li.dataset.newsId = item.id;
+    li.dataset.origin = item.origin;
+    li.dataset.tags = (item.tags || []).join("|");
+    const link = make("a", "home-news-link", item.title);
+    link.href = item.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    if (item.lang) link.lang = item.lang;
+    link.append(make("span", "visually-hidden", " (새 탭에서 원문 열기)"));
+
+    const meta = make("p", "home-news-meta");
+    meta.append(make("span", "home-label", NEWS_ORIGINS[item.origin]));  // 분류 라벨은 회색(상태 색 아님)
+    // 주제 태그(1~2개, 없으면 "기타")도 같은 회색 라벨. 화면낭독기에는 "주제"를 붙여 읽힙니다.
+    (item.tags || []).forEach(function (tag) {
+      const label = make("span", "home-label home-topic-label");
+      label.append(make("span", "visually-hidden", "주제 "), document.createTextNode(tag));
+      meta.append(label);
+    });
+    if (item.media) meta.append(make("span", "", item.media));
+    const time = make("time", "", formatNewsDate(item.published_at));
+    time.dateTime = item.published_at;
+    meta.append(time);
+    if (langLabel(item.lang)) meta.append(make("span", "", langLabel(item.lang)));
+
+    if (sourceLabel) meta.prepend(make("span", "home-label home-search-label", sourceLabel));
+
+    li.append(link);
+    if (item.summary_ko) li.append(summaryNode(item.summary_ko));
+    li.append(meta);
+    return li;
+  }
+
   function renderNewsList(items, media) {
-    news.list.replaceChildren.apply(news.list, items.map(function (item) {
-      const li = make("li", "home-news-item");
-      li.dataset.newsId = item.id;
-      li.dataset.origin = item.origin;
-      li.dataset.tags = (item.tags || []).join("|");
-      const link = make("a", "home-news-link", item.title);
-      link.href = item.url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      if (item.lang) link.lang = item.lang;
-      link.append(make("span", "visually-hidden", " (새 탭에서 원문 열기)"));
-
-      const meta = make("p", "home-news-meta");
-      meta.append(make("span", "home-label", NEWS_ORIGINS[item.origin]));  // 분류 라벨은 회색(상태 색 아님)
-      // 주제 태그(1~2개, 없으면 "기타")도 같은 회색 라벨. 화면낭독기에는 "주제"를 붙여 읽힙니다.
-      (item.tags || []).forEach(function (tag) {
-        const label = make("span", "home-label home-topic-label");
-        label.append(make("span", "visually-hidden", "주제 "), document.createTextNode(tag));
-        meta.append(label);
-      });
-      if (item.media) meta.append(make("span", "", item.media));
-      const time = make("time", "", formatNewsDate(item.published_at));
-      time.dateTime = item.published_at;
-      meta.append(time);
-      if (langLabel(item.lang)) meta.append(make("span", "", langLabel(item.lang)));
-
-      li.append(link);
-      if (item.summary_ko) li.append(summaryNode(item.summary_ko));
-      li.append(meta);
-      return li;
-    }));
+    newsItems = items;
+    newsMedia = media;
+    news.list.replaceChildren.apply(news.list, items.map(function (item) { return newsItemNode(item); }));
     news.list.hidden = items.length === 0;
     news.empty.hidden = items.length > 0;
     renderNewsFilter(items, media);
@@ -499,6 +519,7 @@
     news.emptyText.textContent = allFailed
       ? "모든 수집 경로에서 뉴스를 불러오지 못했습니다. 위 안내를 확인한 뒤 다시 시도하세요."
       : "수집 기간 안에 해당하는 소식이 없습니다.";
+    if (!detail.view.hidden) renderDetail();
   }
 
   // 검증을 통과한 요약만 서버가 보내므로, 받은 항목에만 "AI 요약" 표시를 붙입니다.
@@ -512,11 +533,15 @@
   }
 
   function applySummaries(summaries) {
+    newsItems.forEach(function (item) {
+      if (summaries[item.id]) item.summary_ko = summaries[item.id];
+    });
     news.list.querySelectorAll(".home-news-item").forEach(function (li) {
       const text = summaries[li.dataset.newsId];
       if (!text || li.querySelector(".home-news-summary")) return;
       li.querySelector(".home-news-link").after(summaryNode(text));
     });
+    if (!detail.view.hidden) renderDetail();
   }
 
   function setSummaryStatus(text) {
@@ -611,6 +636,153 @@
       if (again) again.focus();
       else if (!news.list.hidden) news.list.focus();
     });
+  });
+
+  /* ---------- 업계 소식 상세(같은 탭 안의 화면) ---------- */
+  // Home 카드의 '업계 소식 더 보기'로 열고 '← 홈으로'로 닫습니다(새 메뉴·주소 없음, 페이지 이동 없음).
+  // 1) 받은 뉴스(newsItems)에서 먼저 검색(제목·매체·매체 도메인·주제 태그·수집 경로, AI 요약 제외).
+  // 2) 결과가 없을 때만 'Google News에서 검색' 버튼 → /api/home/news/search(사용자가 누를 때만).
+  // 검색어·결과는 이 페이지 메모리에만 둡니다(저장소·서버 저장 없음).
+  const NEWS_SEARCH_MIN_LENGTH = 2;  // 서버 service.NEWS_SEARCH_MIN_LENGTH와 같은 값
+  const detail = {
+    view: panel.querySelector("#home-news-detail"),
+    layout: panel.querySelector(".home-layout"),
+    back: panel.querySelector("#home-news-back"),
+    title: panel.querySelector("#home-news-detail-title"),
+    form: panel.querySelector("#home-news-search"),
+    query: panel.querySelector("#home-news-query"),
+    filter: panel.querySelector("#home-detail-filter"),
+    topics: panel.querySelector("#home-detail-topics"),
+    count: panel.querySelector("#home-detail-count"),
+    list: panel.querySelector("#home-detail-list"),
+    empty: panel.querySelector("#home-detail-empty"),
+    external: panel.querySelector("#home-detail-external"),
+    externalText: panel.querySelector("#home-detail-external-text"),
+    externalButton: panel.querySelector("#home-detail-external-button"),
+    externalStatus: panel.querySelector("#home-detail-external-status"),
+    externalList: panel.querySelector("#home-detail-search-list"),
+  };
+  const detailView = { origin: "all", topic: "all", query: "" };
+  // 마지막 Google News 검색 {query, status: busy|ok|error, items, message}
+  let externalSearch = null;
+
+  // 판정용 정규화: 악센트 제거·소문자(têxtil = textil). 화면 글자는 바꾸지 않습니다.
+  function plain(text) {
+    return String(text || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+
+  function normalizeQuery(value) {
+    return String(value || "").replace(/"/g, " ").split(/\s+/).filter(Boolean).join(" ");
+  }
+
+  // 검색어 낱말이 모두 들어 있는 기사(AND). 대상: 제목·매체·매체 도메인·주제 태그·수집 경로 이름.
+  function matchesQuery(item, query) {
+    const haystack = plain([item.title, item.media, item.media_domain, (item.tags || []).join(" "), NEWS_ORIGINS[item.origin]].join(" "));
+    return plain(query).split(" ").every(function (word) { return haystack.indexOf(word) !== -1; });
+  }
+
+  function renderDetail() {
+    const query = detailView.query;
+    const base = query ? newsItems.filter(function (item) { return matchesQuery(item, query); }) : newsItems;
+    const shown = base.filter(function (item) { return matchesFilters(item, detailView); });
+    fillMediaTabs(detail.filter, base, newsMedia, detailView.origin);
+    fillTopicTabs(detail.topics, base, detailView.topic);
+    detail.list.replaceChildren.apply(detail.list, shown.map(function (item) { return newsItemNode(item); }));
+    detail.list.hidden = shown.length === 0;
+    detail.count.textContent = query ? "검색 결과 " + shown.length + "건" : "전체 " + shown.length + "건";
+    const noData = newsItems.length === 0;
+    detail.empty.hidden = !(noData || (base.length > 0 && shown.length === 0));
+    detail.empty.textContent = noData ? "불러온 소식이 없습니다." : "선택한 조건에 해당하는 뉴스가 없습니다.";
+    renderExternal(query, base.length);
+  }
+
+  // 받은 뉴스에서 찾지 못했을 때만 Google News 검색 안내·버튼·결과를 보입니다.
+  function renderExternal(query, baseCount) {
+    const show = Boolean(query) && baseCount === 0;
+    detail.external.hidden = !show;
+    if (!show) return;
+    const tooShort = query.length < NEWS_SEARCH_MIN_LENGTH;
+    const current = externalSearch && externalSearch.query === query ? externalSearch : null;
+    detail.externalText.textContent = "현재 수집된 뉴스에서 결과를 찾지 못했습니다." +
+      (tooShort ? " Google News 검색은 두 글자 이상 입력하세요." : "");
+    detail.externalButton.disabled = tooShort || (current && current.status === "busy");
+    detail.externalButton.textContent = current && current.status === "error" ? "Google News에서 다시 검색" : "Google News에서 검색";
+    detail.externalButton.hidden = Boolean(current && current.status === "ok");
+    detail.external.setAttribute("aria-busy", current && current.status === "busy" ? "true" : "false");
+    let status = "";
+    if (current && current.status === "busy") status = "검색 중...";
+    else if (current && current.status === "error") status = current.message;
+    detail.externalStatus.textContent = status;
+    detail.externalStatus.className = current && current.status === "error" ? "notice notice-warning" : "field-hint";
+    detail.externalStatus.hidden = !status;
+
+    const items = current && current.status === "ok" ? current.items.filter(function (item) { return matchesFilters(item, detailView); }) : [];
+    detail.externalList.replaceChildren.apply(detail.externalList, items.map(function (item) { return newsItemNode(item, "Google News 검색"); }));
+    detail.externalList.hidden = !(current && current.status === "ok");
+    if (current && current.status === "ok") {
+      detail.externalStatus.className = "field-hint";
+      detail.externalStatus.textContent = "Google News 검색 결과 " + items.length + "건" +
+        (current.items.length === 0 ? " · 섬유 관련 기사로 확인된 결과가 없습니다." : "");
+      detail.externalStatus.hidden = false;
+    }
+  }
+
+  async function searchGoogleNews() {
+    const query = detailView.query;
+    if (query.length < NEWS_SEARCH_MIN_LENGTH) return;
+    if (externalSearch && externalSearch.query === query && externalSearch.status !== "error") return;  // 같은 검색어 중복 요청 방지
+    externalSearch = { query: query, status: "busy", items: [], message: "" };
+    renderDetail();
+    try {
+      const res = await fetch("/api/home/news/search?q=" + encodeURIComponent(query));
+      const body = await res.json();
+      if (!body.ok) throw new Error(body.error.message);
+      if (externalSearch.query === query) externalSearch = { query: query, status: "ok", items: body.data.items, message: "" };
+    } catch (err) {
+      if (externalSearch.query === query) {
+        externalSearch = { query: query, status: "error", items: [], message: "Google News 검색 결과를 가져오지 못했습니다." };
+      }
+    }
+    if (!detail.view.hidden) renderDetail();
+  }
+
+  function openNewsDetail() {
+    detail.layout.hidden = true;
+    detail.view.hidden = false;
+    renderDetail();
+    detail.title.focus({ preventScroll: true });
+    detail.view.scrollIntoView({ block: "start" });
+  }
+
+  function closeNewsDetail() {
+    detail.view.hidden = true;
+    detail.layout.hidden = false;
+    news.more.focus({ preventScroll: true });
+    panel.querySelector("#home-news").scrollIntoView({ block: "start" });
+  }
+
+  detail.back.addEventListener("click", closeNewsDetail);
+  detail.query.addEventListener("input", function () {
+    detailView.query = normalizeQuery(detail.query.value);
+    renderDetail();
+  });
+  detail.form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    detailView.query = normalizeQuery(detail.query.value);
+    renderDetail();
+  });
+  detail.externalButton.addEventListener("click", searchGoogleNews);
+  detail.filter.addEventListener("click", function (event) {
+    const button = event.target.closest("[data-news-filter]");
+    if (!button) return;
+    detailView.origin = button.dataset.newsFilter;
+    renderDetail();
+  });
+  detail.topics.addEventListener("click", function (event) {
+    const button = event.target.closest("[data-news-topic]");
+    if (!button) return;
+    detailView.topic = button.dataset.newsTopic;
+    renderDetail();
   });
 
   function ensureNews() {

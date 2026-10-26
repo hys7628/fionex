@@ -55,6 +55,31 @@ def news():
     return jsonify(ok=True, data=service.get_news(refresh))
 
 
+@bp.get("/api/home/news/search")
+def news_search():
+    """업계 소식 상세 화면의 Google News 추가 검색. ?q=검색어(2~80자). 화면에서 사용자가 버튼을 누를 때만 부릅니다.
+
+    성공 {"ok": true, "data": {query, items, count, source: "google_news_rss", collected, after_filter}}.
+    items는 /api/home/news 항목과 같은 구조(tags 포함, 새 AI 요약 없음). 검색어·결과는 저장하지 않습니다.
+    실패: 검색어 400 invalid_query, Google News 요청 실패 502 search_failed.
+    """
+    try:
+        data = service.search_news(request.args.get("q"))
+    except service.NewsSearchQueryError:
+        return jsonify(ok=False, error={
+            "code": "invalid_query",
+            "message": f"검색어는 {service.NEWS_SEARCH_MIN_LENGTH}~{service.NEWS_SEARCH_MAX_LENGTH}자로 입력하세요.",
+        }), 400
+    except Exception as err:  # NewsFetchError와 예상하지 못한 오류 모두 같은 고정 문장(내부 정보 노출 없음)
+        if not isinstance(err, service.NewsFetchError):
+            logger.exception("뉴스 검색 처리 중 오류")
+        return jsonify(ok=False, error={
+            "code": "search_failed",
+            "message": "Google News 검색 결과를 가져오지 못했습니다.",
+        }), 502
+    return jsonify(ok=True, data=data)
+
+
 @bp.post("/api/home/news/summaries")
 def news_summaries():
     """서버에 수집된 Google News·ABIT 포르투갈어 제목의 한국어 한 줄 요약. KOTRA는 대상이 아닙니다.

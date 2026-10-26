@@ -369,3 +369,37 @@
 - 검증: validation.md 2026-10-25 1행 compact 항목.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 1024px은 세로 배치라 환율이 바이어 아래(1행 정렬 해당 없음).
+
+## DEV-HOME-018 Home 색감(밝은 블루-민트) 정리
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/home, 작업 전 미커밋 변경 없음, 직전 커밋 e722942)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: 배치는 그대로, 첨부한 regenMap 화면의 색감·UI 무드(밝은 블루그레이 배경, 흰 카드·약한 그림자, 블루·민트 포인트, 네이비 숫자, 정돈된 상태색)만 Home에 반영. 기능·API·PDF 변경 금지, 공통 파일 수정이 필요하면 보고 후 중단. Git 작업 금지.
+- 판단:
+  - 첨부 이미지가 대화에 들어오지 않아 지시문의 색 설명만 기준으로 함(보고에 명시).
+  - design_system: 탭 CSS는 tokens.css 색만 사용, .card·.btn·body 덮어쓰기 금지. 그래서 기존 토큰(흰 면·surface-hover 블루그레이·primary 블루·accent 민트·hero 그라데이션·text 네이비)만으로 Home 고유 요소를 다듬음: 일일 브리핑 바(hero 그라데이션·옅은 테두리·약한 그림자), 필터 칩(비선택 흰색, hover 민트, 선택 블루), 분류 라벨(옅은 블루그레이), 접기 요약 hover 민트, 바로가기 hover 민트·화살표 민트, 숫자 네이비.
+  - 공통 변경이 필요한 부분은 적용하지 않고 제안만: 페이지 배경 톤, 카드 테두리·그림자, PDF 버튼(.btn-primary) 색, 상태색을 더 부드럽게(새 토큰). 공통 담당 합의 필요.
+- 변경 파일: features/home/static/home.css(Home 요소 색 규칙 블록 추가).
+- 외부 호출: 없음.
+- 검증: validation.md 2026-10-26 색감 항목.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 공통 영역(배경·카드·주 버튼·상태색)이 그대로라 전체 인상 변화는 작음.
+
+## DEV-HOME-019 업계 소식 상세 화면·검색(Google News 추가 검색)
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/home, 작업 전 미커밋 변경: DEV-HOME-018 색감 작업 home.css·worklog 2건 — 유지)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: '업계 소식 더 보기' → 뉴스 상세 화면(새 사이드바 메뉴 금지). 검색은 받은 뉴스에서 먼저, 없으면 사용자가 버튼을 눌렀을 때만 Google News RSS 추가 검색. RSS 결과에도 관련성 필터·.pt 제외·중복 제거·주제 태그 적용, 새 OpenAI 호출 금지, 검색어·결과 영구 저장 금지, 매체·주제 필터, 오류·재시도, Home 복귀. Git 작업 금지.
+- 판단:
+  - 공통 shell은 패널 id와 같은 해시만 탭으로 처리하므로, 주소를 바꾸지 않고 Home 패널 안의 두 번째 화면을 JS로 보이고 숨김(공통 변경 없음). 브라우저 뒤로 가기와는 연결하지 않음(한계로 기록).
+  - '더 보기'는 카드 안 펼치기 대신 상세 화면 열기로 바꿈(카드는 4건 유지). 카드·상세가 기사 표시·필터 탭 만들기를 같은 함수로 씀.
+  - 내부 검색 대상: 제목·매체·매체 도메인·주제 태그·수집 경로 이름. AI 요약은 제외(생성 번역문으로 범위가 바뀌지 않게). 악센트·대소문자 무시, 여러 낱말 AND.
+  - 외부 검색: 기존 _fetch_google_rss·parse_google_rss·_collected(is_relevant_news)·news_topics 재사용. 검색어에 섬유 낱말 묶음과 when:90d를 붙임(브라질·포르투갈어는 기존 주소 설정). 상한 NEWS_SEARCH_LIMIT=20, 검색어 2~80자. 서버 캐시 없음(검색어 보관하지 않음), 같은 검색어 중복 요청은 화면에서 막음.
+- 변경 파일: features/home/service.py, routes.py, templates/home/panel.html, static/home.js, static/home.css, feature_spec.md, tests/test_home/test_holidays_news.py.
+- 외부 호출: Google News RSS 실제 1회(구조·필터 확인용, 검색어 'poliéster reciclado'). OpenAI·KOTRA·한국수출입은행 0회. 브라우저 검증은 fixture 서버(urlopen 차단)로 외부 요청 0건.
+- 발견 문제: 검증 스크립트의 1글자 검색어 'x'가 기존 제목(예: exportação)에 들어 있어 외부 검색 안내가 나오지 않음 → 앱 동작이 맞음, 검증 문자만 'Ж'로 바꿈. 기존 검증 스크립트의 '더 보기 펼침' 항목은 바뀐 동작(상세 화면 열기)에 맞게 수정.
+- 검증: validation.md 2026-10-26 업계 소식 상세 항목.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 브라우저 뒤로 가기로 상세→홈 복귀 안 됨(← 홈으로 버튼 사용). 실제 사용자 브라우저·화면낭독기 미확인.

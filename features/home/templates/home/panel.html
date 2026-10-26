@@ -109,7 +109,7 @@
         <ul class="home-news-list" id="home-news-list" aria-label="뉴스 목록" tabindex="-1" hidden></ul>
         <p class="field-hint" id="home-news-filter-empty" hidden>선택한 조건에 해당하는 뉴스가 없습니다.</p>
         <div class="btn-row" id="home-news-more-row" hidden>
-          <button type="button" class="btn btn-secondary" id="home-news-more" aria-controls="home-news-list" aria-expanded="false">더 보기</button>
+          <button type="button" class="btn btn-secondary" id="home-news-more" aria-controls="home-news-detail">업계 소식 더 보기</button>
         </div>
         <div class="empty-state" id="home-news-empty" hidden>
           <p class="empty-state-title">불러온 소식이 없습니다</p>
@@ -185,7 +185,7 @@
       <section aria-labelledby="home-notes-news">
         <h3 class="home-notes-title" id="home-notes-news">업계 소식</h3>
         <ul>
-          <li>수집 경로별 최신 20건 · 1시간마다 갱신. Home에는 4건을 보여 주며 '업계 소식 더 보기'로 이미 받은 목록을 펼칩니다.</li>
+          <li>수집 경로별 최신 20건 · 1시간마다 갱신. Home에는 4건을 보여 주며 '업계 소식 더 보기'로 여는 상세 화면에서 전체 목록을 검색·필터할 수 있습니다. 받은 뉴스에서 찾지 못하면 버튼을 눌렀을 때만 Google News를 검색하며, 그 결과에도 같은 섬유 관련성 필터·.pt 매체 제외·주제 태그를 적용하고 새 AI 요약은 만들지 않습니다. 검색어·결과는 저장하지 않습니다.</li>
           <li>"AI 요약"은 Google News·ABIT 포르투갈어 제목만 보고 만든 한국어 한 줄로, 기사 본문을 보지 않았으므로 원문 확인이 필요합니다. KOTRA 뉴스는 요약하지 않습니다.</li>
           <li>Google News·ABIT 링크는 Google News를 거쳐 원문으로 이동합니다.</li>
           <li>주제 태그는 제목의 키워드로 코드가 분류한 것(AI 아님, 최대 2개, 해당 없으면 기타)이며 기사 내용과 다를 수 있습니다.</li>
@@ -210,3 +210,44 @@
     </div>
   </details>
 </div>
+
+{# 업계 소식 상세: Home 탭 안의 두 번째 화면(새 메뉴·주소 없음). '업계 소식 더 보기'로 열고 '← 홈으로'로 돌아갑니다.
+   받은 뉴스에서 먼저 검색하고, 없을 때만 버튼으로 Google News(/api/home/news/search)를 찾습니다.
+   검색 입력은 보기 설정이라 작성 중 감지에서 제외합니다(data-work-ignore). 외부 문자열은 textContent로만 넣습니다. #}
+<section class="home-news-detail" id="home-news-detail" aria-labelledby="home-news-detail-title" hidden>
+  <div class="home-detail-bar">
+    <button type="button" class="btn btn-ghost" id="home-news-back">← 홈으로</button>
+  </div>
+  <article class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title" id="home-news-detail-title" tabindex="-1">업계 소식</h2>
+        <p class="card-description">수집된 브라질 섬유·의류 소식을 검색하고 매체·주제로 걸러 봅니다.</p>
+      </div>
+    </div>
+    <div class="home-card-body">
+      <form class="home-news-search" id="home-news-search" role="search" data-work-ignore>
+        <label class="field-label" for="home-news-query">뉴스 검색</label>
+        <div class="home-news-search-row">
+          <input class="input" id="home-news-query" type="search" maxlength="80" autocomplete="off"
+                 placeholder="섬유, 폴리에스터, 재활용 원사, 수출 규제 등" aria-describedby="home-news-query-hint">
+          <button type="submit" class="btn btn-primary">검색</button>
+        </div>
+        <p class="field-hint" id="home-news-query-hint">제목·매체·주제에서 찾습니다(AI 요약 제외).</p>
+      </form>
+      <div class="home-news-filter" id="home-detail-filter" role="group" aria-label="매체별 보기"></div>
+      <div class="home-news-filter" id="home-detail-topics" role="group" aria-label="주제별 보기"></div>
+      <p class="home-detail-count" id="home-detail-count" role="status"></p>
+      <ul class="home-news-list" id="home-detail-list" aria-label="업계 소식 목록" tabindex="-1"></ul>
+      <p class="field-hint" id="home-detail-empty" hidden></p>
+      <div class="home-detail-external" id="home-detail-external" aria-busy="false" hidden>
+        <p id="home-detail-external-text"></p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary" id="home-detail-external-button">Google News에서 검색</button>
+        </div>
+        <p class="field-hint" id="home-detail-external-status" role="status" hidden></p>
+        <ul class="home-news-list" id="home-detail-search-list" aria-label="Google News 검색 결과" hidden></ul>
+      </div>
+    </div>
+  </article>
+</section>

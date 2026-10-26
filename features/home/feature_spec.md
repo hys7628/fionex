@@ -89,7 +89,7 @@ BrasilAPI timeout 5초. 실패 시 대체 자료 `features/home/data/holidays_br
 - 매체 필터 탭 `[전체 N] [KOTRA n] [Google News n] [ABIT n]`(`<button aria-pressed>`, 회색 기본·선택만 포인트 색, 건수는 화면 목록 기준). 이미 받은 목록을 화면에서만 거른다(추가 요청 없음). 실패·설정 필요 경로는 탭에 `⚠`(+화면낭독용 문구).
 - `수집 현황`(접기): 수집 경로별 상태 배지 `KOTRA`·`Google News`·`ABIT` + `정상`/`실패`/`설정 필요`, 갱신 시각과 `수집 N · 필터 후 M · 표시 K`(수집 기록이 없으면 `수집 기록 없음`).
 - 실패 안내(notice)와 `○○ 다시 시도` 버튼(재시도 가능한 오류만), 이전 수집분이 있으면 `… 수집분을 계속 표시합니다.`
-- 목록(최신순, 카드 안 스크롤 없음): Home 요약으로 기본 3건(전시회 카드와 높이 균형), 더 있으면 `업계 소식 더 보기 (N건)`으로 이미 받은 목록을 펼치고 `처음 3건만 보기`로 접는다(별도 상세 화면·API 없음). 굵은 원문 제목 링크(밑줄은 hover·focus 때만, 새 탭, `rel="noopener noreferrer"`), 회색 `AI 요약` 라벨 + 한국어 한 줄(있을 때만), 회색 수집 경로 라벨, 매체명, 날짜(시각 있으면 KST, KOTRA는 날짜만), 언어.
+- 목록(최신순, 카드 안 스크롤 없음): Home 요약으로 기본 4건, 뉴스가 있으면 `업계 소식 더 보기 (전체 N건 · 검색)`으로 같은 탭 안의 상세 화면을 연다(아래 (4-2)). 굵은 원문 제목 링크(밑줄은 hover·focus 때만, 새 탭, `rel="noopener noreferrer"`), 회색 `AI 요약` 라벨 + 한국어 한 줄(있을 때만), 회색 수집 경로 라벨, 매체명, 날짜(시각 있으면 KST, KOTRA는 날짜만), 언어.
 - 카드 하단 한 줄 `출처: KOTRA 해외시장뉴스 · Google News · ABIT …`, 긴 안내(최신 20건·갱신 주기·AI 요약·링크 경유·KOTRA 출처)는 `출처 및 유의사항`.
 - 모든 경로 실패 시 빈 상태 `모든 수집 경로에서 뉴스를 불러오지 못했습니다…`.
 
@@ -112,6 +112,7 @@ BrasilAPI timeout 5초. 실패 시 대체 자료 `features/home/data/holidays_br
 - `GET /api/home/news?refresh=kotra|google|abit` (잘못된 값 400 `invalid_refresh`)
   → `{"items": [{…, "tags": ["원사", "리사이클·ESG"]}], "media": {경로: {"status": "ok|error|not_configured", "fetched_at", "collected", "after_filter", "count", "stale", "error"?: {"code","message","retryable"}}}, "summary": {"pending": n}}`
   항목의 `summary_ko`는 이미 만든 요약이 있을 때만 붙는다.
+- `GET /api/home/news/search?q=검색어` → (4-2) 참고
 - `POST /api/home/news/summaries` → `{"status": "ok|unavailable|error", "message"?, "summaries": {id: 요약}}` (서버에 수집된 뉴스만 대상, 클라이언트 문장을 받지 않음)
 
 ### (4-1) 뉴스 주제 태그
@@ -132,6 +133,18 @@ BrasilAPI timeout 5초. 실패 시 대체 자료 `features/home/data/holidays_br
 - 화면: 기사마다 회색 주제 라벨(매체 라벨과 같은 계층), 매체 필터와 별도의 주제 필터 `[전체] [원사] [원단] [규제·무역] [리사이클·ESG] [패션·리테일] [기타]`(`aria-pressed`, 건수 표시). 두 필터는 함께 적용(둘 다 맞는 기사만), 이미 받은 목록을 화면에서만 거른다(추가 요청 없음). 맞는 기사가 없으면 `선택한 조건에 해당하는 뉴스가 없습니다.`
 - PDF: 매체·날짜 줄 끝에 ` · 원사 · 리사이클·ESG`.
 
+### (4-2) 업계 소식 상세·검색 (2026-10-26)
+- 위치: Home 탭 안의 두 번째 화면(새 사이드바 메뉴·주소·공통 코드 변경 없음). 카드의 `업계 소식 더 보기`로 열면 Home 화면을 숨기고 상세 화면을 보이며 제목으로 초점, `← 홈으로`로 돌아오면 `더 보기` 버튼으로 초점. 페이지 이동·새로고침 없음(브라우저 뒤로 가기와는 연결하지 않음).
+- 화면: 제목 `업계 소식` + 한 줄 설명, 검색 입력(라벨 `뉴스 검색`, placeholder `섬유, 폴리에스터, 재활용 원사, 수출 규제 등`, 최대 80자) + `검색` 버튼(넓으면 한 줄, 좁으면 줄바꿈), 매체·주제 필터(카드와 같은 탭·분류), `전체 N건` / `검색 결과 N건`, 기사 목록(카드와 같은 기사 표시).
+- 기본 목록: 서버가 가진 현재 수집 뉴스 전체(경로별 최대 20건, 중복 제거 후 현재 34건). 새 페이지네이션·API 없음.
+- 내부 검색(먼저): 받은 뉴스에서만, 입력하는 즉시. 대상은 제목·매체명·매체 도메인·주제 태그·수집 경로 이름(AI 요약 제외 — 생성된 번역문으로 범위가 바뀌지 않게). 앞뒤 공백·따옴표 정리, 대소문자·악센트 무시(`textil` = `têxtil`), 여러 낱말은 모두 포함(AND). 외부 요청 없음.
+- 결과가 없으면 `현재 수집된 뉴스에서 결과를 찾지 못했습니다.` + `Google News에서 검색` 버튼. **버튼을 눌렀을 때만** `GET /api/home/news/search?q=`를 부른다(입력·제출만으로는 요청 없음, 같은 검색어 결과가 있으면 다시 부르지 않음, 요청 중 버튼 disabled·`aria-busy`·`검색 중...`). 2자 미만이면 버튼 비활성 + `Google News 검색은 두 글자 이상 입력하세요.`
+- Google News 검색(서버 service.search_news): 기존 Google News RSS 주소(`hl=pt-BR&gl=BR&ceid=BR:pt-419`)에 `"검색어" (têxtil OR tecido OR fio OR confecção OR vestuário) when:90d`로 찾는다(`NEWS_SEARCH_CONTEXT`·`NEWS_SEARCH_WINDOW`). 결과에는 수집 뉴스와 같은 규칙(날짜·링크 유효성, 중복 제거, `.pt`·제외 매체 도메인 제외, 섬유 낱말 관련성 필터, 주제 태그 1~2개)을 적용하고 최대 `NEWS_SEARCH_LIMIT`=20건. 검색어가 섬유 기사와 무관하면(예: `AI`만) 필터를 통과한 기사만 보이므로 0건일 수 있다.
+- 검색 결과 표시: `Google News 검색 결과 N건`, 기사마다 작은 `Google News 검색` 라벨(옅은 민트, 상태색 아님). 매체·주제 필터도 함께 적용. **새 AI 요약 없음**(같은 기사 id·제목에 이미 만든 요약만 붙임).
+- API: `GET /api/home/news/search?q=` (2~80자) → `{"query", "items": [/api/home/news 항목과 같은 구조, tags 포함], "count", "source": "google_news_rss", "collected", "after_filter"}`. 검색어 오류 400 `invalid_query`, Google News 실패 502 `search_failed`(`Google News 검색 결과를 가져오지 못했습니다.`).
+- 실패: 화면에 위 문장 + `Google News에서 다시 검색`. 기존 수집 뉴스·카드는 그대로.
+- 저장 없음: 검색어·결과는 페이지 메모리에만(서버 캐시·파일·DB·localStorage·sessionStorage·IndexedDB 없음). 검색 입력은 작성 중 감지에서 제외(`data-work-ignore`).
+- 검증(2026-10-26): 모의 테스트(관련 3/5건·.pt·무관·중복·태그·상한·AI 미호출·캐시 요약 재사용·400/502·기존 뉴스 유지), 브라우저 1440·1024·390(46항목), 실제 Google News RSS 1회(`poliéster reciclado`: 원본 12건, .pt 2건, 제외 매체 3건, 관련성 통과 2건).
 ### 캐시
 경로별 서버 메모리 1시간. 갱신 실패 시 이전 성공 수집분을 지우지 않고 `stale`로 표시. 실패는 캐시하지 않는다. `refresh`는 그 경로만 다시 가져온다.
 
