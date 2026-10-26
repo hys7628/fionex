@@ -49,6 +49,42 @@
   white-space: nowrap;
 }
 
+/* 2단계 추출 문구 카드: 제목은 카드 제목 크기, 입력칸은 종이처럼 흰 면 + 넉넉한 여백,
+   아래 안내는 왼쪽 블루 선이 있는 옅은 상자로 묶어 한눈에 읽히게 */
+.feature-green_claim .green-claim-text-card .field > .field-label {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.feature-green_claim .green-claim-text-card .green-claim-textarea {
+  padding: var(--space-4) var(--space-5);
+  border-color: var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: inset 0 1px 2px rgba(16, 36, 71, 0.04);
+}
+
+.feature-green_claim .green-claim-text-card .green-claim-textarea::placeholder {
+  color: var(--color-text-placeholder);
+  font-size: var(--font-size-sm);
+}
+
+.feature-green_claim .green-claim-text-card .field > .field-hint:not(.green-claim-count) {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--color-info-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-glass-card-inner);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+/* 추출 후 직접 고쳤다는 안내는 주황 왼쪽 선으로 구분 */
+.feature-green_claim .green-claim-text-card #green_claim-extracted-edited {
+  border-left-color: var(--color-warning-border);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
 /* 20,000자 초과 시 글자 수도 오류 색으로(문장 안내는 .field-error가 담당) */
 .feature-green_claim .green-claim-count[data-state="over"] {
   color: var(--color-danger);
@@ -841,9 +877,10 @@
     min-height: 180px;
   }
 
+  /* 추출 문구 칸: 왼쪽 파일 카드와 비슷한 높이까지(900px 화면에서 약 12줄) */
   .feature-green_claim .green-claim-text-card .green-claim-textarea {
-    height: clamp(200px, calc(100vh - 700px), 600px);
-    min-height: 200px;
+    height: clamp(300px, calc(100vh - 540px), 640px);
+    min-height: 300px;
   }
 
   .feature-green_claim .green-claim-result-grid {
