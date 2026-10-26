@@ -269,17 +269,24 @@
   min-width: 0;
 }
 
+/* 단계 막대: 단계 표시 + 오른쪽 끝 '검수 범위' 도움말을 유리 막대 하나에.
+   흐림(backdrop-filter)은 쓰지 않음: 안의 position: fixed 팝오버 기준이 막대로 바뀌어 위치가 어긋남 */
 .feature-green_claim .green-claim-flow-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-glass-card-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-glass-card);
+  box-shadow: var(--shadow-glass);
 }
 
-/* 단계 표시: 유리 막대 안에 번호 원 + 단계 이름 + 상태 글자(괄호). 현재·완료·이전 결과·잠김을 글자와 모양으로 함께 구분 */
+/* 단계 표시: 번호 원 + 단계 이름 + 상태 글자(괄호). 현재·완료·이전 결과·잠김을 글자와 모양으로 함께 구분 */
 .feature-green_claim .green-claim-steps {
-  flex: 1 1 560px;
+  flex: 1 1 520px;
   min-width: 0;
 }
 
@@ -289,13 +296,7 @@
   grid-template-columns: repeat(3, minmax(max-content, 1fr));
   gap: var(--space-2);
   margin: 0;
-  padding: var(--space-2);
-  border: 1px solid var(--color-glass-card-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-glass-card);
-  -webkit-backdrop-filter: var(--glass-card-blur);
-  backdrop-filter: var(--glass-card-blur);
-  box-shadow: var(--shadow-glass);
+  padding: 0;
   list-style: none;
   overflow-x: auto;
   scrollbar-width: thin;
@@ -414,23 +415,35 @@
   background: transparent;
 }
 
-/* 범위 안내: 단계 표시 옆 '검수 범위' 도움말 버튼(안내 문장은 팝오버 안) */
+/* 범위 안내: 단계 막대 안 오른쪽 끝의 조용한 글자 버튼(평소 보조 글자색, 올리거나 열면 블루). 안내 문장은 팝오버 안 */
 .feature-green_claim .green-claim-scope {
   display: flex;
   flex: none;
   align-items: center;
-  margin: 0;
+  margin: 0 0 0 auto;
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--color-border-subtle);
 }
 
 .feature-green_claim .green-claim-scope .green-claim-help-button {
-  gap: var(--space-2);
+  gap: var(--space-1);
   width: auto;
-  height: var(--control-height);
-  padding: 0 var(--space-4) 0 var(--space-3);
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 0;
   border-radius: var(--radius-md);
+  background: none;
+  box-shadow: none;
+  color: var(--color-text-muted);
   font: inherit;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.feature-green_claim .green-claim-scope .green-claim-help-button:hover,
+.feature-green_claim .green-claim-scope .green-claim-help-button[aria-expanded="true"] {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
 }
 
 .feature-green_claim .green-claim-stage-head {
@@ -694,14 +707,12 @@
   }
 }
 
-/* 유리 대체: blur 미지원·투명도 줄이기 설정이면 단계 막대·팝오버를 불투명 흰 면으로 */
+/* 유리 대체: blur 미지원·투명도 줄이기 설정이면 팝오버를 불투명 흰 면으로 */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .feature-green_claim .green-claim-steps-list,
   .feature-green_claim .green-claim-popover { background: var(--color-surface); }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .feature-green_claim .green-claim-steps-list,
   .feature-green_claim .green-claim-popover {
     background: var(--color-surface);
     -webkit-backdrop-filter: none;
