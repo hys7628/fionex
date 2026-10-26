@@ -215,9 +215,9 @@
       inputs.to.max = meta.latest.month;
       if (!inputs.from.value) setDefault(inputs.from, meta.default.from);
       if (!inputs.to.value) setDefault(inputs.to, meta.default.to);
-      periodHint.textContent = "최신 제공 월 " + meta.latest.month + " (ComexStat 갱신일 " + meta.latest.updated +
+      periodHint.textContent = "최신 제공 월 " + meta.latest.month + (meta.latest.snapshot ? " (MDIC 공개 원본 자료 기준일 " : " (ComexStat 갱신일 ") + meta.latest.updated +
         "). 기본값은 최신 월까지 최근 " + meta.default.months + "개월이며 최대 " + meta.max_months + "개월까지 조회할 수 있습니다." +
-        (meta.latest.snapshot ? " ComexStat에 연결하지 못해 MDIC 공개 원본 자료(기준: " + String(meta.latest.checked_at || "").slice(0, 10) + ")의 최신 월을 사용했습니다."
+        (meta.latest.snapshot ? " ComexStat이 점검 중이거나 연결되지 않아 MDIC 공개 원본 자료(기준: " + String(meta.latest.checked_at || "").slice(0, 10) + ")의 최신 월을 사용했습니다. 분석도 이 자료로 계산합니다."
           : meta.latest.stale ? " 오늘 최신 월을 다시 확인하지 못해 이전에 확인한 값을 사용했습니다." : "");
     } else {
       periodHint.textContent = "최신 제공 월을 확인하지 못했습니다(" + (meta.error ? meta.error.message : "") +
@@ -277,10 +277,12 @@
     showView("result", resultTitle);  // 결과 화면으로 넘어가서 불러오는 중 표시
     setBusy(true, refresh ? refreshBtn : submitBtn);
     let failed = false;
-    announce("ComexStat 자료를 불러오는 중입니다.");
+    const viaSnapshot = !!(meta && meta.latest && meta.latest.snapshot);  // ComexStat 점검 중이면 원본 자료로 계산
+    announce(viaSnapshot ? "통계 자료를 불러오는 중입니다." : "ComexStat 자료를 불러오는 중입니다.");
     const previous = resultBox.innerHTML;
     resultBox.innerHTML = '<div class="empty-state"><span class="spinner" aria-hidden="true"></span>' +
-      '<p class="empty-state-title">ComexStat에서 자료를 불러오는 중입니다</p><p>호출 한도 때문에 수십 초 걸릴 수 있습니다.</p></div>';
+      (viaSnapshot ? '<p class="empty-state-title">통계 자료를 불러오는 중입니다</p><p>ComexStat이 점검 중이면 MDIC 공개 원본 자료로 계산합니다.</p></div>'
+        : '<p class="empty-state-title">ComexStat에서 자료를 불러오는 중입니다</p><p>호출 한도 때문에 수십 초 걸릴 수 있습니다.</p></div>');
     try {
       const res = await fetch("/api/market-analysis/analyze", {
         method: "POST",
@@ -411,7 +413,9 @@
 
   function renderResult(d) {
     const q = d.query, s = d.summary, src = d.sources[0];
-    const caption = "출처: ComexStat · 브라질 수입 · " + q.code_system_label + " " + q.code + " · " + q.from + "~" + q.to;
+    const viaSnapshot = d.sources[0].cache_status === "snapshot";
+    const sourceShort = viaSnapshot ? "MDIC 공개 원본 자료(기준: " + String(d.sources[0].fetched_at || "").slice(0, 10) + ")" : "ComexStat";
+    const caption = "출처: " + sourceShort + " · 브라질 수입 · " + q.code_system_label + " " + q.code + " · " + q.from + "~" + q.to;
     let html = "";
 
     html += '<div class="ma-query">' + badge("neutral", "브라질 수입") + " " +
@@ -427,7 +431,7 @@
     }
     if (src.cache_status === "snapshot") {
       html += '<div class="notice notice-warning" role="status"><p class="notice-title">' + esc(snapshotLabel(src)) + "</p><p>" +
-        "ComexStat 조회에 실패해 MDIC가 공개한 원본 CSV를 미리 받아 요약한 시연용 자료로 표시했습니다. 실시간 조회 결과가 아닙니다.</p></div>";
+        "ComexStat이 점검 중이거나 연결되지 않아, MDIC가 공개한 원본 CSV를 미리 받아 요약한 자료로 계산했습니다. 이 화면의 수치·그래프·AI 분석은 모두 이 자료 기준이며 ComexStat 실시간 조회 결과가 아닙니다.</p></div>";
     }
     if (src.cache_status === "stale") {
       html += '<div class="notice notice-warning" role="status"><p class="notice-title">이전 자료 사용</p><p>ComexStat 조회에 실패해 ' +
@@ -435,7 +439,7 @@
     }
 
     if (!d.has_data) {
-      html += '<div class="empty-state"><p class="empty-state-title">조회 결과 없음</p><p>이 조건에는 ComexStat 수입 기록이 없습니다. 자료 조회 실패가 아니며, 수입액이 0으로 확인된 것도 아닙니다.</p></div>';
+      html += '<div class="empty-state"><p class="empty-state-title">조회 결과 없음</p><p>이 조건에는 ' + esc(sourceShort) + ' 수입 기록이 없습니다. 자료 조회 실패가 아니며, 수입액이 0으로 확인된 것도 아닙니다.</p></div>';
       html += sourcesHtml(d, true);
       resultBox.innerHTML = html;
       setupResultTabs();
@@ -463,7 +467,7 @@
 
     // ③ 공급국
     html += paneOpen("s3", "③ 공급국 비교");
-    html += '<p class="field-hint">수입액 기준 순위. 비중의 분모는 같은 품목·기간의 브라질 전체 수입액입니다. 공급국은 ComexStat 기준 원산지 국가이며 판매 회사의 국가가 아닙니다(MDIC 통계 이용 매뉴얼). 기간 내 공급국 ' + d.suppliers.count + "개국.</p>";
+    html += '<p class="field-hint">수입액 기준 순위. 비중의 분모는 같은 품목·기간의 브라질 전체 수입액입니다. 공급국은 MDIC 통계 기준 원산지 국가이며 판매 회사의 국가가 아닙니다(MDIC 통계 이용 매뉴얼). 기간 내 공급국 ' + d.suppliers.count + "개국.</p>";
     html += koreaHtml(d.suppliers);
     html += supplierTable(d.suppliers.top, caption + " · 상위 " + d.suppliers.top.length + "개국");
     if (d.suppliers.selected.length) {
@@ -505,7 +509,7 @@
           detail: ".env 파일은 앱이 직접 읽지 않습니다(python-dotenv 미설치 시). 서버를 시작하는 셸의 환경변수로 넣어야 합니다." }) + "</div>";
     }
     // 소요 시간은 2026-10-26 실제 실행 3회(44~56초) 기준. 회차별 검토 항목은 실행 후 '5차례 검토 기록'에 나옵니다.
-    return html + '<p class="field-hint">통계(ComexStat)를 근거로 분석합니다. OpenAI를 최대 6번 호출하는 유료 기능(초안 1회 + 5차례 검토)이며 1분 안팎 걸립니다. ' +
+    return html + '<p class="field-hint">위 통계(' + esc(lastResult ? sourceShortOf(lastResult) : "ComexStat") + ')를 근거로 분석합니다. OpenAI를 최대 6번 호출하는 유료 기능(초안 1회 + 5차례 검토)이며 1분 안팎 걸립니다. ' +
       "같은 조회 결과로는 한 번만 실행됩니다.</p>" +
       '<button type="button" class="btn btn-primary" data-ma-ai-run disabled>AI 분석 실행</button>';
   }
@@ -732,6 +736,11 @@
       "</tr></thead><tbody>" + rows.join("") + "</tbody></table></div>";
   }
 
+  function sourceShortOf(d) {
+    const src = d.sources[0];
+    return src.cache_status === "snapshot" ? "MDIC 공개 원본 자료(기준: " + String(src.fetched_at || "").slice(0, 10) + ")" : "ComexStat";
+  }
+
   // "MDIC 공개 원본 자료(기준: YYYY-MM-DD) 사용" — 스냅샷 대체 표시(기준일 = 원본을 받은 날)
   function snapshotLabel(src) {
     return "MDIC 공개 원본 자료(기준: " + String(src.fetched_at || "").slice(0, 10) + ") 사용";
@@ -739,7 +748,7 @@
 
   function sourcesHtml(d, shown) {
     const src = d.sources[0];
-    const cache = src.cache_status === "snapshot" ? snapshotLabel(src) + "(ComexStat 조회 실패)"
+    const cache = src.cache_status === "snapshot" ? snapshotLabel(src) + "(ComexStat 점검·연결 실패로 대체)"
       : { fresh: "이번 조회에서 받음", cached: "6시간 안에 받은 자료 재사용", stale: "이전 자료 사용(최신 조회 실패)" }[src.cache_status];
     let html = paneOpen("s5", "⑤ 근거 자료", shown) + '<ul class="ma-sources">';
     html += "<li><strong>" + esc(src.name) + "</strong> · " + linkHtml(src.url) + "<br>" +

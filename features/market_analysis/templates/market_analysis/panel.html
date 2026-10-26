@@ -16,7 +16,7 @@
     <div class="card-header">
       <div>
         <h2 class="card-title" id="market_analysis-input-title" tabindex="-1">조회 조건</h2>
-        <p class="card-description">브라질 수입 통계(ComexStat)에서 품목·기간·공급국 조건으로 조회합니다.</p>
+        <p class="card-description">브라질 수입 통계(MDIC ComexStat)에서 품목·기간·공급국 조건으로 조회합니다. ComexStat이 점검 중이면 MDIC 공개 원본 자료로 대신 계산합니다.</p>
       </div>
     </div>
 
@@ -89,7 +89,7 @@
       <button type="submit" class="btn btn-primary" data-ma-submit>분석 실행</button>
       <button type="button" class="btn btn-secondary" data-ma-to-result hidden>분석 결과 보기 →</button>
     </div>
-    <p class="field-hint">'분석 실행'을 누르면 분석 결과 화면으로 넘어갑니다. ComexStat 호출 한도 때문에 첫 조회는 수십 초 걸릴 수 있습니다. 같은 날 같은 품목을 다시 조회하면 받아 둔 자료를 사용합니다.</p>
+    <p class="field-hint">'분석 실행'을 누르면 분석 결과 화면으로 넘어갑니다. ComexStat 호출 한도 때문에 첫 조회는 수십 초 걸릴 수 있습니다. 6시간 안에 같은 품목을 다시 조회하면 받아 둔 자료를 사용합니다.</p>
   </form>
 
   <div class="ma-result-view" data-ma-view="result" hidden>

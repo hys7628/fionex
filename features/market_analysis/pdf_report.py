@@ -281,7 +281,9 @@ def build_pdf(payload):
     story = []
 
     story.append(_p("브라질 시장 분석 보고서", st["title"]))
-    story.append(_p("브라질 수입 통계(ComexStat)로 %s %s 품목의 수입 추세와 공급국 현황을 정리했습니다. 생성 %s." % (
+    snap = src.get("cache_status") == "snapshot"
+    src_short = ("MDIC 공개 원본 자료(기준: %s)" % str(src.get("fetched_at") or "")[:10]) if snap else "ComexStat"
+    story.append(_p("브라질 수입 통계(" + src_short + ")로 %s %s 품목의 수입 추세와 공급국 현황을 정리했습니다. 생성 %s." % (
         q["code_system_label"], q["code"], created), st["lead"]))
 
     countries = ", ".join(_country(c) for c in q.get("countries") or []) or "전체 국가"
@@ -293,16 +295,16 @@ def build_pdf(payload):
         ["비교 공급국", countries],
     ], [32 * mm, W - 32 * mm], st, zebra=False))
     story.append(_p("무역 통계는 해당 코드의 전체 시장이며 일반 원사·재생 원사·리젠 T2T를 구분하지 않습니다. T2T 수요나 시장 규모로 해석하지 마세요. "
-                    "평균 수입단가는 FOB 기준이며 견적·판매가격·도착가격이 아닙니다. 공급국은 ComexStat 기준 원산지 국가입니다.", st["notice"]))
+                    "평균 수입단가는 FOB 기준이며 견적·판매가격·도착가격이 아닙니다. 공급국은 MDIC 통계 기준 원산지 국가입니다.", st["notice"]))
     if src.get("cache_status") == "snapshot":
         story.append(_p(snapshot_label(src), st["notice"]))
     for n in stats.get("notes") or []:
         story.append(_p("· " + n, st["small"]))
 
     # ① 핵심 수치
-    story.append(_h2("① 핵심 수치", "ComexStat 집계"))
+    story.append(_h2("① 핵심 수치", "MDIC 공개 원본 자료 집계" if snap else "ComexStat 집계"))
     if not stats.get("has_data"):
-        story.append(_p("조회 결과 없음: 이 조건에는 ComexStat 수입 기록이 없습니다(조회 실패나 0 확인이 아님).", st["body"]))
+        story.append(_p("조회 결과 없음: 이 조건에는 %s 수입 기록이 없습니다(조회 실패나 0 확인이 아님)." % src_short, st["body"]))
     else:
         pp = s["prior_period"]
         story.append(theme.stat_cards([
@@ -320,7 +322,7 @@ def build_pdf(payload):
         story.append(_p("증감률 = (현재 − 전년 동기) ÷ 전년 동기 × 100. 평균 수입단가 = FOB 합계 ÷ 순중량 합계.", st["small"]))
 
         # ② 월별 추세
-        story.append(_h2("② 시장 추세 (월별)", "ComexStat 월별 집계"))
+        story.append(_h2("② 시장 추세 (월별)", "MDIC 공개 원본 자료 월별 집계" if snap else "ComexStat 월별 집계"))
         for metric, label in (("fob", "수입액 월별 추이 (USD)"), ("kg", "수입량 월별 추이 (t)"), ("unit_price", "평균 수입단가(FOB) 월별 추이 (USD/kg)")):
             story.append(KeepTogether([_p(label, st["cell_head"]), _chart(stats["monthly"], metric, W)]))
         story.append(_p("막대·점이 없는 달은 수입 기록이 없는 달입니다. 단가 그래프의 테두리 점은 '확인 필요'(중앙값의 ½ 미만 또는 2배 초과).", st["small"]))
@@ -369,7 +371,7 @@ def build_pdf(payload):
     story.append(_p("자료 갱신일 %s · 최신 제공 월 %s · 자료 받은 시각 %s" % (
         src.get("data_updated") or "확인 안 됨", src.get("latest_month") or "확인 안 됨", src.get("fetched_at") or "확인 안 됨"), st["small"]))
     if src.get("cache_status") == "snapshot":
-        story.append(_p(snapshot_label(src) + " — ComexStat 조회에 실패해 MDIC가 공개한 원본 CSV를 미리 받아 요약한 시연용 자료로 만들었습니다. "
+        story.append(_p(snapshot_label(src) + " — ComexStat이 점검 중이거나 연결되지 않아 MDIC가 공개한 원본 CSV를 미리 받아 요약한 자료로 만들었습니다. "
                         "실시간 조회 결과가 아닙니다.", st["notice"]))
 
     note = "%s %s · %s~%s" % (q["code_system_label"], q["code"], q["from"], q["to"])

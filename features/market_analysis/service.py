@@ -477,7 +477,7 @@ def compute(rows, req, code_name=None):
     notes = []
     missing = span - current["months_with_record"]
     if missing:
-        notes.append("조회 기간 %d개월 중 %d개월은 ComexStat 수입 기록이 없습니다. 0으로 채우지 않고 '기록 없음'으로 표시했습니다." % (span, missing))
+        notes.append("조회 기간 %d개월 중 %d개월은 수입 기록이 없습니다. 0으로 채우지 않고 '기록 없음'으로 표시했습니다." % (span, missing))
     prior_missing = span - prior["months_with_record"]
     if prior["months_with_record"] and prior_missing:
         notes.append("전년 동기(%s~%s) 중 %d개월은 기록이 없습니다. 전년 대비 증감률 해석에 주의하세요." % (
@@ -488,7 +488,7 @@ def compute(rows, req, code_name=None):
     if brazil_names:
         share = (brazil_fob / current["fob"] * 100) if (brazil_fob is not None and current["fob"]) else None
         notes.append("원산지가 브라질(Brasil)인 재수입분%s은 대상 시장 자신이라 공급국 목록·순위에서 제외했습니다. "
-                     "전체 수입액과 비중의 분모(ComexStat 공식 합계)에는 포함되어 있습니다. ComexStat 수입 통계는 원산지 기준이라 "
+                     "전체 수입액과 비중의 분모(MDIC 공식 합계)에는 포함되어 있습니다. MDIC 수입 통계는 원산지 기준이라 "
                      "브라질에서 만든 상품이 수리·반송 등으로 다시 들어오면 원산지가 브라질로 기록됩니다(MDIC 통계 이용 매뉴얼)." % (
                          " USD {:,}(전체의 {:.1f}%)".format(int(round(brazil_fob)), share) if share is not None else ""))
     unmapped = sorted({c["country"]["name_pt"] for c in per_country if c["country"]["code"] is None})
@@ -520,7 +520,7 @@ def compute(rows, req, code_name=None):
         },
         "outlier": {
             "rule": "같은 조회의 단가 중앙값 대비 ½배 미만 또는 2배 초과이면 '확인 필요'로 표시합니다(값은 삭제하지 않음). 단가가 3개 미만이면 판정하지 않습니다.",
-            "country_basis": "공급국은 ComexStat 기준 원산지 국가입니다(판매 회사 국가 아님).",
+            "country_basis": "공급국은 MDIC 통계 기준 원산지 국가입니다(판매 회사 국가 아님).",
             "monthly_median": month_median,
             "country_median": country_median,
         },
@@ -587,15 +587,19 @@ def analyze(payload):
         code_name = found or None
 
     result = compute(rows, req, code_name)
-    result["notes"].insert(0, "품목코드 이름과 유효성은 ComexStat 현행 코드표 기준입니다. 과거 기간에 같은 코드가 적용됐는지(NCM 개정)는 확인하지 않았습니다.")
-    result["notes"].append("ComexStat은 올해 각 달의 수치를 매월 다시 집계하고, 지난해 수치는 이듬해 2월에 한 번 수정한 뒤 고정합니다(MDIC 통계 이용 매뉴얼). "
-                           "같은 조건이라도 조회 시점에 따라 최근 수치가 달라질 수 있습니다.")
+    snapshot_used = cache_status == "snapshot"
+    result["notes"].insert(0, ("품목코드 이름은 MDIC 공개 코드표(NCM.csv) 기준입니다. " if snapshot_used else
+                               "품목코드 이름과 유효성은 ComexStat 현행 코드표 기준입니다. ") +
+                           "과거 기간에 같은 코드가 적용됐는지(NCM 개정)는 확인하지 않았습니다.")
+    result["notes"].append("MDIC는 올해 각 달의 수치를 매월 다시 집계하고, 지난해 수치는 이듬해 2월에 한 번 수정한 뒤 고정합니다(MDIC 통계 이용 매뉴얼). "
+                           + ("이번 자료는 원본을 받은 날 기준이라 이후 수정된 최근 수치와 다를 수 있습니다." if snapshot_used else
+                              "같은 조건이라도 조회 시점에 따라 최근 수치가 달라질 수 있습니다."))
     if latest_error:
         result["notes"].insert(0, "최신 제공 월을 확인하지 못해 종료 월 상한을 검사하지 않았습니다.")
     snap = load_snapshot() if cache_status == "snapshot" else None
     if snap:
-        result["notes"].insert(0, "ComexStat 조회에 실패해 %s(기준: %s)를 사용했습니다. MDIC가 공개한 원본 CSV를 미리 받아 요약한 시연용 자료이며 "
-                               "실시간 조회 결과가 아닙니다." % (SNAPSHOT_LABEL, snapshot_date(snap)))
+        result["notes"].insert(0, "ComexStat이 점검 중이거나 연결되지 않아 %s(기준: %s)를 사용했습니다. MDIC가 공개한 원본 CSV를 미리 받아 요약한 자료이며 "
+                               "ComexStat 실시간 조회 결과가 아닙니다." % (SNAPSHOT_LABEL, snapshot_date(snap)))
     result["sources"] = [{
         "name": snap["source"]["name"] if snap else "ComexStat (브라질 산업통상서비스부 MDIC)",
         "url": (snap["source"]["files"][-1]["url"] if snap and snap["source"].get("files") else comex.SITE_URL),
