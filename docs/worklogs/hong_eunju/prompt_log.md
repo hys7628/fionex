@@ -655,3 +655,16 @@
 - 검증: validation.md DEV-MA-BUYER-005.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 실제 OpenAI 브리핑 미실행, prefers-reduced-transparency 화면 미확인(Chrome 에뮬레이션 미사용).
+
+## DEV-MA-BUYER-006 AI 브리핑 창 안 하위 탭(업체 상세 | AI 브리핑)
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis (브랜치 feature/common_setup, DEV-MA-BUYER-005 미커밋 상태에서 이어서 작업)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "시장통계 바이어목록처럼 보기 쉽게 만들어줘" → 적용 위치 질문에 "AI 브리핑 창 안" 선택
+- 판단: 바깥 하위 탭과 같은 클래스·키보드 동작을 쓰도록 탭 연결 코드를 `bindTabs`로 묶어 두 곳에서 사용. 사용자가 누른 것이 'AI 브리핑'이라 열 때 브리핑 탭. 상세 탭을 보는 사이 브리핑이 끝나면 초점을 빼앗지 않고 탭 옆 '새 결과' 표시. 탭 전환 시 창 높이가 바뀌어 탭이 움직여 창 높이를 고정.
+- 변경 파일: features/market_analysis/templates/market_analysis/panel.html, static/market_analysis.js·css, feature_spec.md, docs/design_system.md. Python·API 변경 없음.
+- 외부 호출: 0건.
+- 검증: validation.md DEV-MA-BUYER-006.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 OpenAI 브리핑 미실행.

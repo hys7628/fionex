@@ -1108,6 +1108,7 @@
     briefRunning = cnpj;
     AppShell.ui.setButtonBusy(button, "브리핑 중...");
     showBriefingFor(cnpj);
+    updateBriefBadge();
     briefAnnounce(company + " AI 브리핑을 만드는 중입니다.");
     let done = "";
     let errorHtml = "";
@@ -1138,12 +1139,16 @@
     }
     if (detailCnpj !== cnpj) {  // 그사이 다른 업체로 옮겼으면 결과는 보관만 하고 지금 화면은 그대로 둡니다.
       updateBriefButtons();
+      updateBriefBadge();
       briefAnnounce(done);
       return;
     }
     showBriefingFor(cnpj);
     if (errorHtml) briefBox.innerHTML = errorHtml + (briefCache[cnpj] ? briefingHtml(briefCache[cnpj]) : "");
-    AppShell.ui.focusResult(briefTitle, { scroll: "start", from: [dialog] });
+    // 업체 상세 탭을 보고 있으면 초점을 빼앗지 않고 탭 옆에 '새 결과'만 표시합니다(완료 문장은 읽어 줌).
+    if (briefPaneShown()) AppShell.ui.focusResult(briefTitle, { scroll: "start", from: [dialog] });
+    else briefFresh[cnpj] = true;
+    updateBriefBadge();
     briefAnnounce(done);
   }
 
@@ -1154,6 +1159,19 @@
   const dialogHead = panel.querySelector("[data-ma-dialog-head]");
   const detailBox = panel.querySelector("[data-ma-detail]");
   let detailCnpj = null;   // 창에 띄운 업체
+  let dialogTabs = [];     // 창 안 하위 탭(아래 '하위 탭'에서 연결)
+  let selectDialogTab = null;
+  const briefBadge = panel.querySelector("[data-ma-brief-badge]");
+  const briefFresh = {};   // 업체 상세 탭을 보는 사이 끝난 브리핑(AI 브리핑 탭을 열면 지움)
+
+  function briefPaneShown() { return !panel.querySelector('[data-ma-dpane="brief"]').hidden; }
+
+  // AI 브리핑 탭 옆 작은 표시: 지금 창 업체의 브리핑이 생성 중이거나, 상세를 보는 사이 끝났을 때
+  function updateBriefBadge() {
+    const text = detailCnpj && briefRunning === detailCnpj ? "생성 중" : (detailCnpj && briefFresh[detailCnpj] ? "새 결과" : "");
+    briefBadge.textContent = text ? " · " + text : "";
+    briefBadge.hidden = !text;
+  }
 
   function findCompany(cnpj) {
     const hit = buyerView.list.find(function (x) { return x.c.cnpj === cnpj; });
@@ -1221,8 +1239,8 @@
     const notes = (buyersData && buyersData.notes ? buyersData.notes : []).map(function (n) { return '<p class="field-hint">' + esc(n) + "</p>"; }).join("");
     detailBox.innerHTML = '<h3 class="visually-hidden">업체 상세</h3>' + detailGrid(c) + notes;
     showBriefingFor(cnpj);
+    selectDialogTab(dialogTabs.find(function (t) { return t.dataset.maDtab === "brief"; }), false);
     if (!dialog.open) dialog.showModal();
-    dialog.querySelector(".ma-dialog-body").scrollTop = 0;
     AppShell.ui.focusResult(panel.querySelector("#market_analysis-dialog-title"), { scroll: false });
     if (!briefCache[cnpj] && !briefBusy) runBriefing(cnpj, briefRunBtn);
   }
@@ -1234,33 +1252,46 @@
   dialog.addEventListener("close", function () {
     detailCnpj = null;
     updateBriefButtons();
+    updateBriefBadge();
   });
 
-  /* ---------- 하위 탭(시장 통계 / 바이어 목록) ---------- */
-  const tabs = Array.from(panel.querySelectorAll("[data-ma-tab]"));
-
-  function selectTab(tab, focus) {
-    tabs.forEach(function (t) {
-      const on = t === tab;
-      t.setAttribute("aria-selected", on ? "true" : "false");
-      t.tabIndex = on ? 0 : -1;
-      panel.querySelector('[data-ma-pane="' + t.dataset.maTab + '"]').hidden = !on;
+  /* ---------- 하위 탭(시장 통계 / 바이어 목록, 창 안 업체 상세 / AI 브리핑) ---------- */
+  // 탭 묶음 하나를 연결하고 선택 함수를 돌려줍니다. paneOf(tab) = 그 탭의 패널, onSelect(tab) = 선택 뒤 할 일(없어도 됨)
+  function bindTabs(list, paneOf, onSelect) {
+    function select(tab, focus) {
+      list.forEach(function (t) {
+        const on = t === tab;
+        t.setAttribute("aria-selected", on ? "true" : "false");
+        t.tabIndex = on ? 0 : -1;
+        paneOf(t).hidden = !on;
+      });
+      if (focus) tab.focus();
+      if (onSelect) onSelect(tab);
+    }
+    list.forEach(function (t, i) {
+      t.addEventListener("click", function () { select(t, false); });
+      t.addEventListener("keydown", function (event) {
+        const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+        if (event.key === "Home" || event.key === "End") {
+          event.preventDefault();
+          select(list[event.key === "Home" ? 0 : list.length - 1], true);
+        } else if (step) {
+          event.preventDefault();
+          select(list[(i + step + list.length) % list.length], true);
+        }
+      });
     });
-    if (focus) tab.focus();
+    return select;
   }
 
-  tabs.forEach(function (t, i) {
-    t.addEventListener("click", function () { selectTab(t, false); });
-    t.addEventListener("keydown", function (event) {
-      const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
-      if (event.key === "Home" || event.key === "End") {
-        event.preventDefault();
-        selectTab(tabs[event.key === "Home" ? 0 : tabs.length - 1], true);
-      } else if (step) {
-        event.preventDefault();
-        selectTab(tabs[(i + step + tabs.length) % tabs.length], true);
-      }
-    });
+  const tabs = Array.from(panel.querySelectorAll("[data-ma-tab]"));
+  bindTabs(tabs, function (t) { return panel.querySelector('[data-ma-pane="' + t.dataset.maTab + '"]'); });
+
+  dialogTabs = Array.from(panel.querySelectorAll("[data-ma-dtab]"));
+  selectDialogTab = bindTabs(dialogTabs, function (t) { return panel.querySelector('[data-ma-dpane="' + t.dataset.maDtab + '"]'); }, function (t) {
+    if (t.dataset.maDtab === "brief" && detailCnpj) delete briefFresh[detailCnpj];
+    dialog.querySelector(".ma-dialog-body").scrollTop = 0;
+    updateBriefBadge();
   });
 
   loadMeta();

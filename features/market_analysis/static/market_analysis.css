@@ -337,7 +337,8 @@
 }
 .feature-market_analysis .ma-dialog::backdrop { background: var(--color-glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop-blur); backdrop-filter: var(--glass-backdrop-blur); }
 .feature-market_analysis .ma-dialog-panel {
-  display: flex; flex-direction: column; max-height: calc(100vh - 2 * var(--space-6)); overflow: clip;  /* hidden이면 초점 이동 스크롤이 패널 자체를 밀어 머리가 가려짐 */
+  /* 높이 고정: 탭을 바꿔도 창 크기·탭 위치가 흔들리지 않게 */
+  display: flex; flex-direction: column; height: calc(100vh - 2 * var(--space-6)); max-height: calc(100vh - 2 * var(--space-6)); overflow: clip;  /* hidden이면 초점 이동 스크롤이 패널 자체를 밀어 머리가 가려짐 */
   border: 1px solid var(--color-glass-border); border-radius: var(--radius-lg);
   background: var(--color-glass-surface); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-lg);
@@ -347,6 +348,10 @@
   display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4);
   padding: var(--space-5) var(--space-6); border-bottom: 1px solid var(--color-glass-border);
 }
+/* 창 안 하위 탭: 바깥 .ma-subtab과 같은 모양, 머리 바로 아래에 고정(본문만 스크롤) */
+.feature-market_analysis .ma-dialog-head:has(+ .ma-dialog-tabs) { border-bottom: 0; padding-bottom: var(--space-3); }
+.feature-market_analysis .ma-dialog-tabs { flex-shrink: 0; margin: 0; padding: 0 var(--space-6); border-bottom-color: var(--color-glass-border); }
+.feature-market_analysis .ma-tab-badge { color: var(--color-primary-text); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
 .feature-market_analysis .ma-dialog-head-text { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
 .feature-market_analysis .ma-dialog-body { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-5) var(--space-6) var(--space-6); overflow-y: auto; overscroll-behavior: contain; }
 .feature-market_analysis .ma-glass-block {
@@ -368,7 +373,7 @@
 }
 @media (max-width: 599.98px) {
   .feature-market_analysis .ma-dialog { width: calc(100vw - 2 * var(--space-2)); max-height: calc(100vh - 2 * var(--space-2)); }
-  .feature-market_analysis .ma-dialog-panel { max-height: calc(100vh - 2 * var(--space-2)); }
-  .feature-market_analysis .ma-dialog-head, .feature-market_analysis .ma-dialog-body { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .feature-market_analysis .ma-dialog-panel { height: calc(100vh - 2 * var(--space-2)); max-height: calc(100vh - 2 * var(--space-2)); }
+  .feature-market_analysis .ma-dialog-head, .feature-market_analysis .ma-dialog-tabs, .feature-market_analysis .ma-dialog-body { padding-left: var(--space-4); padding-right: var(--space-4); }
   .feature-market_analysis .ma-glass-block { padding: var(--space-4); }
 }

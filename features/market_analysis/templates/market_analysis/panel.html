@@ -131,9 +131,16 @@
           <span aria-hidden="true">✕</span><span class="visually-hidden">창 닫기</span>
         </button>
       </header>
+      {# 창 안 하위 탭(바깥 '시장 통계 | 바이어 목록'과 같은 모양·키보드). 열 때는 AI 브리핑 탭 #}
+      <div class="ma-subtabs ma-dialog-tabs" role="tablist" aria-label="업체 보기">
+        <button type="button" class="ma-subtab" role="tab" id="market_analysis-dtab-detail" aria-controls="market_analysis-dpane-detail"
+                aria-selected="false" tabindex="-1" data-ma-dtab="detail">업체 상세</button>
+        <button type="button" class="ma-subtab" role="tab" id="market_analysis-dtab-brief" aria-controls="market_analysis-dpane-brief"
+                aria-selected="true" data-ma-dtab="brief">AI 브리핑<span class="ma-tab-badge" data-ma-brief-badge hidden></span></button>
+      </div>
       <div class="ma-dialog-body">
-        <section class="ma-glass-block" aria-label="업체 상세" data-ma-detail></section>
-        <section class="ma-glass-block" aria-labelledby="market_analysis-briefing-title">
+        <section class="ma-glass-block" role="tabpanel" id="market_analysis-dpane-detail" aria-labelledby="market_analysis-dtab-detail" data-ma-dpane="detail" data-ma-detail hidden></section>
+        <section class="ma-glass-block" role="tabpanel" id="market_analysis-dpane-brief" aria-labelledby="market_analysis-dtab-brief" data-ma-dpane="brief">
           <div class="card-header">
             <div>
               <h3 class="card-title" id="market_analysis-briefing-title" tabindex="-1">AI 바이어 브리핑</h3>

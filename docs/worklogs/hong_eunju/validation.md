@@ -957,3 +957,17 @@ body·사이드바(Medium/SemiBold)·버튼·select·Home KPI·카드 제목·ba
 
 ### 미검증
 실제 OpenAI 브리핑, prefers-reduced-transparency 화면(에뮬레이션 미사용), backdrop-filter 미지원 브라우저 화면.
+
+## 2026-10-26 AI 브리핑 창 안 하위 탭 (DEV-MA-BUYER-006)
+환경: 검증 서버 127.0.0.1:5013(모의, urlopen 차단; 창 점검은 브리핑 generate만 가짜로 바꾼 실행기), Chrome + playwright-core.
+
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 창 점검(dialog.js, 탭 6항목 추가) | 23/23: 탭 '업체 상세 \| AI 브리핑'·열 때 AI 브리핑 선택·'생성 중' 표시 / ← 키로 상세 탭(초점·10항목·탭 위치 그대로) / 상세 탭에서 완료 시 초점 유지·'새 결과' / End 키로 브리핑 탭·표시 지움 / 다시 열면 브리핑 탭·재호출 없음 / 기존 17항목 | 통과 |
+| 검색 점검 | 11/11 (390 항목을 상세 펼치기·브리핑 창 기준으로 갱신, 브리핑 영역 선택자 갱신) | 통과 |
+| 회귀 | 5개 탭 × 3폭 15/15(가로 스크롤 없음·JS 예외 0), 공통 상호작용 26/26, 키보드·초점 41/41, 로딩·오류 36/36(다운로드 대기 30초판, 실제 9.5초) | 통과 |
+| `-s tests/test_common` / `-s tests/test_market_analysis` | 65 / 84 OK | 통과 |
+외부 호출 0건.
+
+### 미검증
+실제 OpenAI 브리핑, prefers-reduced-transparency 화면.
