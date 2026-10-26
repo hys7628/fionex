@@ -13,9 +13,11 @@
       </ol>
     </nav>
     <p class="green-claim-scope">
+      <span class="green-claim-scope-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" focusable="false" fill="none"
+        stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5.5c0 4.3 2.9 8.1 7 9.5 4.1-1.4 7-5.2 7-9.5V6z"/><path d="m9 12 2 2 4-4"/></svg></span>
       <span>브라질 대상 홍보 문구의 표현 위험 검토입니다. 사실·인증·적법성은 확인하거나 보장하지 않습니다.</span>
       <span class="green-claim-help">
-        <button type="button" class="green-claim-help-button" aria-expanded="false" aria-controls="green_claim-help-scope" aria-label="도움말: 검수 범위">ⓘ</button>
+        <button type="button" class="green-claim-help-button" aria-expanded="false" aria-controls="green_claim-help-scope" aria-label="도움말: 검수 범위"><svg class="green-claim-help-icon" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 9.2v4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="10" cy="6.3" r="1.15" fill="currentColor"/></svg></button>
         <span class="green-claim-popover" id="green_claim-help-scope" role="note" hidden>
           <span class="green-claim-popover-title">검수 범위</span>
           <span class="green-claim-popover-body">브라질 대상 홍보 문구의 표현 위험을 검토합니다. 제품 사실·인증 보유·적법성은 확인하지 않습니다.
@@ -43,10 +45,14 @@
         <legend class="field-label">입력 방식</legend>
         <label class="choice">
           <input type="radio" name="input_mode" value="text" checked>
+          <span class="green-claim-mode-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" focusable="false" fill="none"
+            stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 11h16M4 16h10"/></svg></span>
           문구 직접 입력
         </label>
         <label class="choice">
           <input type="radio" name="input_mode" value="file">
+          <span class="green-claim-mode-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" focusable="false" fill="none"
+            stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 17v-6"/><path d="m9.5 13.5 2.5-2.5 2.5 2.5"/></svg></span>
           홍보물 파일 업로드 (PDF·Word·이미지)
         </label>
       </fieldset>
@@ -113,7 +119,7 @@
               <button type="button" class="btn btn-secondary" id="green_claim-extract">글자 추출</button>
               <button type="button" class="btn btn-secondary" id="green_claim-ocr" aria-describedby="green_claim-ocr-hint">AI 글자 판독 (PDF·이미지)</button>
               <span class="green-claim-help">
-                <button type="button" class="green-claim-help-button" aria-expanded="false" aria-controls="green_claim-help-ocr" aria-label="도움말: AI 글자 판독">ⓘ</button>
+                <button type="button" class="green-claim-help-button" aria-expanded="false" aria-controls="green_claim-help-ocr" aria-label="도움말: AI 글자 판독"><svg class="green-claim-help-icon" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 9.2v4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="10" cy="6.3" r="1.15" fill="currentColor"/></svg></button>
                 <span class="green-claim-popover" id="green_claim-help-ocr" role="note" hidden>
                   <span class="green-claim-popover-title">AI 글자 판독</span>
                   <span class="green-claim-popover-body">누를 때만 실행됩니다. 선택한 PDF 또는 이미지 파일이 OpenAI로 전송되어 AI가 글자를 판독하며 요금이 발생할 수 있습니다.
@@ -190,7 +196,7 @@
           <span class="field-hint green-claim-extract-status" id="green_claim-review-status" role="status"></span>
           <button type="button" class="btn btn-primary" id="green_claim-review" aria-describedby="green_claim-review-hint">검수 실행</button>
           <span class="green-claim-help">
-            <button type="button" class="green-claim-help-button" aria-expanded="false" aria-controls="green_claim-help-review" aria-label="도움말: 검수 실행">ⓘ</button>
+            <button type="button" class="green-claim-help-button" aria-expanded="false" aria-controls="green_claim-help-review" aria-label="도움말: 검수 실행"><svg class="green-claim-help-icon" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 9.2v4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="10" cy="6.3" r="1.15" fill="currentColor"/></svg></button>
             <span class="green-claim-popover" id="green_claim-help-review" role="note" hidden>
               <span class="green-claim-popover-title">검수 실행</span>
               <span class="green-claim-popover-body">누를 때만 실행됩니다. 지금 선택한 입력 방식의 문구(직접 입력 문구 또는 확인·수정한 추출 문구)가 OpenAI로 전송되어 AI가 표현 위험을 검토하며 요금이 발생할 수 있습니다.
@@ -222,7 +228,7 @@
         <section class="green-claim-review-source-box" id="green_claim-review-source-box" aria-labelledby="green_claim-review-source-title" hidden>
           <h3 class="green-claim-subtitle" id="green_claim-review-source-title">검수한 원문 (검수 시점 사본 · 편집 불가)
             <span class="green-claim-help">
-              <button type="button" class="green-claim-help-button" aria-expanded="false" aria-controls="green_claim-help-source" aria-label="도움말: 원문 표시">ⓘ</button>
+              <button type="button" class="green-claim-help-button" aria-expanded="false" aria-controls="green_claim-help-source" aria-label="도움말: 원문 표시"><svg class="green-claim-help-icon" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 9.2v4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="10" cy="6.3" r="1.15" fill="currentColor"/></svg></button>
               <span class="green-claim-popover" id="green_claim-help-source" role="note" hidden>
                 <span class="green-claim-popover-title">원문 표시</span>
                 <span class="green-claim-popover-body">입력칸이 아니라 실제로 검수에 보낸 문구입니다. 표시된 구절의 번호(R1 등)를 누르면 오른쪽(모바일은 아래) 결과 항목으로 이동합니다.

@@ -104,7 +104,7 @@
 - **웹**: `static/css/common.css` 맨 앞 `@font-face` 4개 — Regular 400·Medium 500·SemiBold 600·Bold 700 woff2, `font-display: swap`, 상대경로 `../fonts/pretendard/…`. 실제로 쓰는 굵기 파일만 내려받는다(4개 합계 약 3.1MB).
 - **굵기 토큰**: 파일과 1:1 — `--font-weight-regular` 400·`medium` 500·`semibold` 600·`bold` 700(합성 굵기 없음). 이 밖의 굵기 값은 쓰지 않는다.
 - **fallback**: `"Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif` — 폰트를 못 불러온 경우에만 쓰인다.
-- **글리프(fontTools 확인)**: 한글 완성형 11,172자, ASCII, 포르투갈어 악센트(á ã â à ç é ê í ó õ ô ú ü·대문자), `· • – — … € ₩ ▲ ▼ ①~⑥ ※` 모두 포함 → 한국어·영어·포르투갈어가 한 글꼴로 그려진다. `ⓘ`만 없음(웹 도움말 버튼, 시스템 글꼴로 대체).
+- **글리프(fontTools 확인)**: 한글 완성형 11,172자, ASCII, 포르투갈어 악센트(á ã â à ç é ê í ó õ ô ú ü·대문자), `· • – — … € ₩ ▲ ▼ ①~⑥ ※` 모두 포함 → 한국어·영어·포르투갈어가 한 글꼴로 그려진다. `ⓘ`만 없음(그래서 그린 클레임 도움말 버튼은 2026-10-27부터 글자 대신 SVG "i" 아이콘을 쓴다).
 - **PDF**: `common/config.py`의 `PDF_FONT_FILES`(Pretendard-Regular.ttf·Pretendard-Bold.ttf, TrueType 외곽선 — ReportLab은 CFF .otf를 못 써서 배포본 `alternative/` TTF 사용)와 `PDF_FONT_NAMES`(Pretendard·Pretendard-Bold)를 세 PDF가 같이 쓴다. 그린 클레임의 글자별 글꼴 선택·`[U+XXXX]` 대체 구조는 유지(두 자리 모두 Pretendard). PDF 리소스의 `/Helvetica`는 ReportLab 캔버스 기본 선언(그리는 글자 없음).
 - **상속**: 모든 요소는 `--font-sans`를 상속한다. `button, input, select, textarea { font: inherit }`, `::file-selector-button`도 `font: inherit`. 기능 CSS에서 `font-family`를 직접 쓰지 않는다(코드·고정폭은 `--font-mono`). 차트 SVG `<text>`·툴팁도 상속으로 같은 글꼴.
 - **숫자**: 별도 고정폭 글꼴 없이 `tabular-nums` 유지.
