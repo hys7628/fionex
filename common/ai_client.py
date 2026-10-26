@@ -3,6 +3,8 @@
 - generate_structured: 텍스트 입력 → 기능 담당자 스키마(Pydantic)로 검증된 결과 (Responses API)
 - generate_structured_from_pdf: PDF 1개(+선택 부가 텍스트) → 스키마 검증 결과 (Responses API, input_file)
 - generate_image: 텍스트 프롬프트 → PNG 이미지 1장 bytes (Images API)
+- generate_image_from_references: 참조 이미지 1~5장 + 텍스트 프롬프트 → PNG 1장 (Images API edits)
+  (2026-10-25 정은진 추가, 공통 담당 유정현 검토 대기)
 
 업무 프롬프트·결과 필드·판단 로직은 각 기능에서 정의합니다. 이 모듈은 Flask 응답을 만들지 않고
 common.errors의 AIError를 발생시킵니다. 사용법: docs/data_contracts.md
@@ -364,3 +366,106 @@ def _decode_image(result, size):
     if dims is None or dims != expected:
         raise AIImageInvalidError()
     return raw, dims
+
+
+# ---------- 참조 이미지 기반 이미지 생성 (2026-10-25 정은진 추가, 공통 담당 검토 대기) ----------
+_REF_TYPES = (  # (서명 검사, 확장자, MIME). 공급자에는 원본 파일명 대신 고정 이름을 보냅니다.
+    (lambda b: b.startswith(_PNG_SIGNATURE), "png", "image/png"),
+    (lambda b: b.startswith(b"\xff\xd8\xff"), "jpg", "image/jpeg"),
+    (lambda b: b[:4] == b"RIFF" and b[8:12] == b"WEBP", "webp", "image/webp"),
+)
+
+
+@dataclass(frozen=True)
+class ImageUsage:
+    """Images API usage. 공급자가 주지 않으면 None 필드 대신 ReferenceImageResult.usage가 None입니다."""
+
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    input_image_tokens: Optional[int]
+    input_text_tokens: Optional[int]
+
+
+@dataclass(frozen=True)
+class ReferenceImageResult:
+    """image: GeneratedImage(PNG). usage: 비용 확인용 토큰 수(없으면 None)."""
+
+    image: GeneratedImage
+    usage: Optional[ImageUsage]
+
+
+def _reference_files(reference_images):
+    if not isinstance(reference_images, (list, tuple)) or not reference_images:
+        raise AIInputError(message="참조 이미지를 1장 이상 전달해야 합니다.")
+    if len(reference_images) > config.IMAGE_REF_MAX_FILES:
+        raise AIInputError(message=f"참조 이미지는 최대 {config.IMAGE_REF_MAX_FILES}장까지 전달할 수 있습니다.")
+    files = []
+    total = 0
+    for index, data in enumerate(reference_images, start=1):
+        if not isinstance(data, (bytes, bytearray)) or not data:
+            raise AIInputError(message="참조 이미지가 비어 있거나 bytes가 아닙니다.")
+        if len(data) > config.IMAGE_REF_MAX_BYTES:
+            raise AIInputError(message="참조 이미지가 허용 용량을 넘습니다.", http_status=413)
+        total += len(data)
+        kind = next((t for t in _REF_TYPES if t[0](data)), None)
+        if kind is None:
+            raise AIInputError(message="참조 이미지는 PNG·JPEG·WEBP만 사용할 수 있습니다.")
+        files.append((f"reference_{index}.{kind[1]}", bytes(data), kind[2]))
+    if total > config.IMAGE_REF_TOTAL_MAX_BYTES:
+        raise AIInputError(message="참조 이미지 합계가 허용 용량을 넘습니다.", http_status=413)
+    return files
+
+
+def _image_usage(result):
+    usage = getattr(result, "usage", None)
+    if usage is None:
+        return None
+    details = getattr(usage, "input_tokens_details", None)
+    return ImageUsage(
+        input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, total_tokens=usage.total_tokens,
+        input_image_tokens=getattr(details, "image_tokens", None),
+        input_text_tokens=getattr(details, "text_tokens", None),
+    )
+
+
+def generate_image_from_references(*, prompt, reference_images, size=config.IMAGE_DEFAULT_SIZE,
+                                   quality=config.IMAGE_DEFAULT_QUALITY):
+    """참조 이미지(제품 사진 등)를 참고해 PNG 이미지 1장을 생성합니다. 모델은 OPENAI_IMAGE_MODEL.
+
+    reference_images: PNG·JPEG·WEBP bytes 목록(1~config.IMAGE_REF_MAX_FILES장). 서명을 확인한 뒤 요청합니다.
+    size·quality: generate_image와 같은 허용값. input_fidelity 등 미확인 파라미터는 보내지 않습니다.
+    반환: ReferenceImageResult(image=GeneratedImage, usage=ImageUsage 또는 None)
+    오류: AIError 하위 클래스. 입력·설정 오류는 API 호출 전에 발생합니다.
+    참조 이미지는 요청에만 쓰고 저장·로그하지 않습니다. 외형 일치를 보장하지 않으므로 사람이 검토해야 합니다.
+    """
+    _require_text(prompt, "prompt")
+    if size not in config.IMAGE_SIZES:
+        raise AIInputError(message="지원하지 않는 이미지 크기입니다.")
+    if quality not in config.IMAGE_QUALITIES:
+        raise AIInputError(message="지원하지 않는 이미지 품질입니다.")
+    files = _reference_files(reference_images)
+
+    model = config.get_image_model()
+    api_key = _require_settings(config.ENV_OPENAI_IMAGE_MODEL, model)
+
+    result = _call(
+        api_key, config.IMAGE_TIMEOUT_SECONDS, config.IMAGE_MAX_RETRIES, "image_edit",
+        lambda client: client.images.edit(
+            model=model,
+            image=files,
+            prompt=prompt,
+            n=1,
+            size=size,
+            quality=quality,
+            output_format=config.IMAGE_OUTPUT_FORMAT,
+        ),
+    )
+    try:
+        data = _decode_image(result, size)
+    except AIError as err:
+        logger.warning("AI image_edit 결과 거부: code=%s", err.code)
+        raise
+    width, height = data[1]
+    image = GeneratedImage(data=data[0], mime_type=config.IMAGE_MIME_TYPE, width=width, height=height, model=model)
+    return ReferenceImageResult(image=image, usage=_image_usage(result))

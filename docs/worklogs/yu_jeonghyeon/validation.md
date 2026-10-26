@@ -8,6 +8,18 @@
 
 ---
 
+## 2026-10-25 제품소개서 기능 명세 구체화 (문서 검토)
+- 변경 내용: features/product_brochure/feature_spec.md 재작성
+- 검증 절차: 수정 명세를 README.md, AGENTS.md, docs/decisions.md, docs/development.md, docs/design_system.md, docs/data_contracts.md, docs/recording_rules.md와 수동 대조
+- 기대/실제
+  - 공통 규칙 일치(로그인·영구 저장·탭 간 연동 없음, 메모리 유지·새로고침 미복원, AppShell.work 사용, 서버 측 OpenAI 호출, 오류 응답 형식, 사용자 자료 비저장): 일치 확인
+  - 확정/제안/미정 구분: 항목마다 [확정]/[제안]/[미정] 표기 확인
+  - 미구현 기능을 완료로 표현하지 않음: 상태·검증 현황·오류 사례·완료 기준을 미구현/미실행으로 표기 확인
+  - 금지 항목 임의 확정 여부(모델·SDK·PDF 라이브러리·상한·타임아웃·재시도·비용·엔드포인트 스키마·실제 제품 수치·정보 부족 정책·4페이지 초과·이미지 없을 때 배치): 모두 [미정]으로 표기 확인
+- 판정: 문서 검토 통과(사람 최종 검토 전)
+- 불일치·조율 필요: docs/decisions.md의 제품소개서 미정 항목 갱신 필요(공통 문서라 미수정). 회사명 표기 "효성티앤씨"(decisions.md)와 "효성TNC"(지시) 병기
+- 미검증: 앱 실행·API 호출·PDF 출력·브라우저 동작(이번 작업은 문서만 수정하여 실행하지 않음)
+
 ## 2026-10-25 공통 OpenAI 연결 첫 구현 (모의 테스트)
 - 변경 내용: common/ai_client.py, common/config.py, common/errors.py, tests/test_common/test_ai_client.py
 - 환경: Conda jasonenv, Python 3.11.17, openai 3.37.0, pydantic 2.14.1, httpx2 2.16.0, Flask 3.1.2
@@ -70,6 +82,56 @@
 - 이전 기록(모의 테스트 통과·실제 연결 미검증)은 당시 상태로 유지하며 이 항목으로 후속 보완함
 - 공통 문서 반영(2026-10-25): docs/data_contracts.md, README.md, docs/decisions.md의 "실제 호출 미검증" 표현을 위 결과에 맞게 정정. 실행 검증 아님(문서 수정만, 테스트 재실행 없음)
 
+## 2026-10-25 제품소개서 첫 화면 (PDF 선택·결과 확인·수정)
+- 변경 내용: panel.html, product_brochure.js, product_brochure.css, feature_spec.md, tests/test_product_brochure/test_panel.py
+- 환경: Conda jasonenv Python 3.11.17, Flask 3.1.2, Node v24.20.0(로직 점검용, 프로젝트 의존성 아님)
+
+### Claude가 직접 실행한 검증
+- `python -m unittest discover -s tests/test_product_brochure -v` → 12개 실행, OK
+  - Flask test_client로 `GET /` 200, 5개 탭 패널 모두 렌더링
+  - 파일 입력 1개(`multiple` 없음, accept .pdf), 스캔 PDF·상한 미정 안내 문구
+  - 분석 버튼 비활성 + "PDF 분석 연결 준비 중", 카탈로그 생성·PDF 다운로드 비활성(비활성 버튼 3개)
+  - 예시 버튼은 type=button·활성, 검토 영역은 처음 hidden, 예시 안내 문장 존재, 검토 영역 `data-work-ignore`
+  - 이전 예시 입력(요청 사항 textarea)·바이어 입력 없음
+  - JS 정적 검사: fetch·XMLHttpRequest·sendBeacon·localStorage·sessionStorage·indexedDB·FileReader·파일 읽기 메서드 없음, innerHTML 등 HTML 삽입 없음, setResult·downloadBlob 없음
+  - CSS 선택자 모두 `.feature-product_brochure ` 범위
+- `python -m unittest discover -s tests/test_common` → 32개 실행, OK(기존 공통 테스트 영향 없음 확인)
+- `node --check product_brochure.js` → 문법 오류 없음
+- Node 상태 로직 점검(스크래치패드 스크립트, 저장소 미포함) → 11개 통과
+  - 예시 8개 항목 미확인 시작·dirty 아님, MOQ·샘플·납기 제공+가상, 원사 규격·탄소 저감률·인증 미제공
+  - 값 수정 시 확인 해제·사용자 수정, 같은 값 입력은 확인 유지, 원래 값 복귀 시 사용자 수정 해제
+  - 미제공 항목 입력 → 사용자 추가(제공 여부는 false 유지), 공백만 입력은 추가 아님
+  - 미제공+가상 동시 성립, 예시의 가상 조건 해제 불가, 요약 집계
+  - 파일 검사: 미선택·확장자 오류(MIME이 application/pdf여도 .docx·.pdf.exe 거부)·빈 파일·대문자 .PDF 허용
+
+### 미검증(브라우저 미실행)
+- 실제 브라우저에서의 파일 선택·안내 표시, 확인 대화상자(예시 재불러오기·새 PDF 선택), 취소 시 이전 파일 복원(DataTransfer)
+- 탭 이동 후 상태 유지, 머리글 "작성 중" 표시·새로고침 경고, 새로고침 후 미복원
+- 네트워크 요청이 실제로 발생하지 않는지(정적 검사로만 확인)
+- 화면 배치·반응형·키보드 접근성·화면낭독기 안내
+- 코드 검토와 단위 점검은 브라우저 동작 확인이 아님
+
+## 2026-10-25 제품소개서 첫 화면 후속: 사용자 직접 확인 결과를 전달받음
+- 실행 주체: 사용자(브라우저). Claude는 직접 관측하지 않았고 전달받은 내용을 그대로 기록함
+- 대상: DI-2026_10_25-06 화면(배치 정리 전)
+- 사용자 보고(정상)
+  - 값 수정 시 사용자 확인 체크 해제
+  - 다른 탭 이동 후 수정값 유지
+  - 수정 후 예시 재불러오기에서 취소하면 수정값 유지
+  - 새로고침 경고에서 취소하면 값 유지
+  - 새로고침을 진행하면 작업 내용 초기화(미복원)
+- 여전히 미검증: 파일 선택 안내(미선택·빈 파일·확장자), 새 PDF 선택 시 확인 대화상자와 취소 시 이전 파일 복원, 예시 재불러오기 확인 후 초기화, "확인 내용 적용" 요약 표시, 네트워크 요청 미발생(정적 검사만), 머리글 "작성 중" 표시, 반응형·키보드·화면낭독기
+
+## 2026-10-25 제품소개서 확인·수정 화면 배치·문구 정리
+- 변경 내용: panel.html, product_brochure.js(렌더링 부분만), product_brochure.css, feature_spec.md
+- Claude가 직접 실행한 검증
+  - `python -m unittest discover -s tests/test_product_brochure` → 12개 실행, OK
+  - `python -m unittest discover -s tests/test_common` → OK
+  - `node --check product_brochure.js` → 문법 오류 없음
+  - Node 상태 로직 점검(스크래치패드 스크립트, 저장소 미포함) → 11개 통과. 상태 로직은 이번에 변경하지 않음
+- 코드 확인: 입력·체크박스 이벤트 처리, setDraft 연동, 파일 교체·예시 재불러오기 확인 로직은 변경하지 않음(렌더링 문구·감싸는 요소만 변경)
+- 미검증(브라우저 미실행): 2열/1열 전환이 실제 카드 폭에서 의도대로 되는지, 제품 설명 전체 폭, 화면 길이 감소 정도, 숨긴 안내와 aria-describedby의 화면낭독기 동작, 배치 변경 후 사용자 보고 항목(확인 해제·탭 유지 등)의 재확인
+
 ## 2026-10-25 공통 OpenAI 연결 PDF 입력 지원 (모의 테스트)
 - 변경 내용: common/ai_client.py(generate_structured_from_pdf, PdfStructuredResult, 결과 검증 공통화), common/pdf_utils.py(inspect_pdf), common/errors.py(PDF_* 오류), common/config.py(PDF_* 설정), requirements.txt(pypdf==6.21.2), tests/test_common/test_pdf.py
 - 환경: Conda jasonenv, Python 3.11.17, openai 3.37.0, pydantic 2.14.1, httpx2 2.16.0, pypdf 6.21.2
@@ -116,3 +178,529 @@
 - 비용 금액, 소요 시간, detail high/low 차이
 - 제품소개서 화면·분석 라우트 연결(미구현)
 - 이번 결과는 연결 확인용 최소 추출이며 제품소개서 서비스 프롬프트 품질 검증이 아님
+
+## 2026-10-25 제품소개서 PDF 분석 서버 (모의 테스트)
+- 변경 내용: features/product_brochure/routes.py(분석 API), service.py(스키마·후처리·업로드 오류), prompts/brochure_extract_v1.md, tests/test_product_brochure/test_analyze_api.py
+- 환경: Conda jasonenv, Python 3.11.17, Flask 3.1.2, Werkzeug 3.1.9, openai 3.37.0, pydantic 2.14.1, httpx2 2.16.0, pypdf 6.21.2
+
+### Claude가 직접 실행한 검증
+- 1차 `python -m unittest discover -s tests/test_product_brochure` → 45개 중 4개 실패(500 KB 이상 정상 업로드가 413). 원인: max_form_memory_size 16 KiB 지정(prompt_log DI-10). 수정 후 재실행
+- 최종 `python -m unittest discover -s tests/test_product_brochure` → 45개 실행, OK(기존 화면 12 + 분석 33)
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK(공통 회귀 없음)
+- 확인 항목(모의 전송 MockTransport, 라우트→서비스→공통 함수 전체 경로, 가짜 키·가상 PDF)
+  - 정상 multipart → 200, 8개 항목 고정 순서, confirmed false, check not_checked, extraction_status unconfirmed, source·model·prompt_version, MOQ 값·found·가상 true
+  - 공급자 요청 1회, instructions = 프롬프트 v1 파일, input_file 파일명 document.pdf·detail high·store false, 원본 파일명이 요청·응답에 없음
+  - 정확히 10 MiB 통과, 10 MiB+1·+1000 bytes는 PDF_TOO_LARGE(413), 파일 스트림은 상한+1바이트로만 읽음(전체 읽기 없음), 요청 전체 상한 초과 UPLOAD_TOO_LARGE(413), 파트 수 초과 413
+  - 파일 누락·빈 파일명·중복 파일·다른 파일 필드·빈 파일·위장(PNG)·손상·암호화(RC4)·0쪽·21쪽 → 각 코드, 외부 요청 0회
+  - 키가 없어도 잘못된 PDF는 PDF_* 우선, 정상 PDF는 AI_CONFIG_MISSING(503)
+  - 401·429·500·시간 초과·거절·incomplete·비JSON·알 수 없는 key → 기존 JSON 오류 형식, 요청 1회(기능 재시도 없음), 예기치 않은 예외 → AI_UNKNOWN_ERROR(500)
+  - 후처리: 근거 없음·공백 발췌·빈 값 found 강등, 범위 밖 페이지(0·9) 표시와 유효 근거 유무에 따른 상태, 페이지 null, not_found+값 모순, 누락 key 채움, 중복 key 후보 보존, 가상 표시 유지(강등·미제공 포함), 복수 제품 서버·AI 검토 사항, 긴 발췌 자르기
+  - 700 KB 업로드가 SpooledTemporaryFile에서 디스크 임시 파일로 넘어가고(_rolled True) 요청 후 닫힘
+  - 오류 응답·로그에 가짜 키·문서 표지·공급자 원문·원본 파일명(경로) 없음
+  - 화면 key와 스키마 key 일치, 프롬프트 파일 규칙 문구, GET / 200·앱 전역 MAX_CONTENT_LENGTH 변경 없음·GET 분석 경로 405
+- 판정: 모의 테스트 통과. **실제 PDF 추출 품질·스캔 판독·실제 OpenAI 연결 성공을 뜻하지 않음**
+
+### 미검증
+- 서비스 프롬프트 v1의 실제 실행(텍스트·스캔 더미 PDF), 추출 정확성, 할루시네이션 발생 여부, 비용·소요 시간
+- 근거 발췌의 원문 대조(미구현)
+- 실제 브라우저·개발 서버에서의 업로드, 413 시 연결 끊김 여부, 프로세스 비정상 종료 시 임시 파일 정리
+- 화면과 분석 API 연결(미구현)
+
+## 2026-10-25 제품소개서 화면 ↔ PDF 분석 API 연결
+- 변경 내용: panel.html, product_brochure.js, product_brochure.css, test_panel.py(갱신), review_logic_check.js·test_review_logic.py(신규)
+- 환경: Conda jasonenv Python 3.11.17, Node v24.20.0(로직 점검용, 프로젝트 의존성 아님)
+
+### Claude가 직접 실행한 검증
+- `node --check product_brochure.js` → 문법 오류 없음
+- `node tests/test_product_brochure/review_logic_check.js` → 13개 점검 통과
+  - 파일 크기 경계(10 MiB 통과·+1 byte too_large)·빈 파일·확장자·미선택
+  - 성공 응답 → 8개 항목 고정 순서, confirmed false, marked_virtual 보존(미제공+가상 포함, 해제 불가), provided = found+값, unclear 값 보존·사용자 추가 아님, not_found 구분, 범위 밖 페이지 표시값, candidates 시 값 비움
+  - unclear 수정 → 사용자 수정·확인 해제, not_found 입력 → 사용자 추가
+  - 잘못된 성공 응답(7개·중복 key·알 수 없는 key·잘못된 status·confirmed true·page 형식·extraction_status 누락·review_notes 형식) 거부
+  - 실패 구분(네트워크·시간 초과·413·비JSON·안전한 서버 오류·안전하지 않은 서버 오류·형식 오류·비2xx 성공 형식)
+  - 요청 실행기: 정상 1회·진행 on/off, 중복 요청 무시, 교체 확인 취소 시 요청 0회·진행 상태 변화 없음, 승인 후 실패 시 성공 콜백 없음, 잘못된 파일 요청 없음, 예외 → 네트워크 실패·자동 재시도 없음·재요청 가능, 오래된 응답 무시
+  - AI 문자열(`<img …>`)이 상태에 문자열 그대로 보관됨(렌더링은 textContent, 정적 검사)
+  - 기존 예시 동작(가상 고정·수정 시 확인 해제·사용자 추가)
+- `python -m unittest discover -s tests/test_product_brochure` → 47개 실행, OK(분석 API 33, 화면·정적 13, Node 래퍼 1)
+  - 1차 실행에서 정적 테스트 1건 실패(주석의 "Content-Type" 단어) → 테스트 수정 후 통과
+  - 갱신한 정적 검사: fetch 1곳·분석 URL·POST·source_file append 1곳·Content-Type 헤더 미지정·analyzer.run 1곳(사용자 submit)·AppShell.onShow 미사용·브라우저 저장소/파일 읽기/XHR/sendBeacon/setInterval 없음·HTML 삽입 없음·setResult 없음
+  - 화면: 분석 버튼 처음 비활성·data-analyze, 오류 영역 hidden, 출처 안내 2종 분리·원문 대조 미실시 문구, 검토 카드 aria-busy
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+- 참고: 테스트 중 ResourceWarning은 werkzeug 테스트 클라이언트가 multipart 요청 본문을 만들 때 쓰는 클라이언트 쪽 임시 파일에서 발생(tracemalloc으로 출처 확인). 서버 라우트의 업로드 정리 확인은 기존 테스트 범위 그대로
+
+### 미검증(브라우저 미실행, 브라우저 도구 없음)
+- 실제 브라우저에서 파일 선택·버튼 활성화·진행 표시·조작 잠금·확인 대화상자·오류 안내·결과 렌더링·후보·근거 표시·탭 이동 후 유지·새로고침 경고
+- DOM 연결 코드(send·syncControls·renderField 등) 자체의 실행. Node 점검은 DOM 없는 로직만 다룸
+- 실제 서버·OpenAI와의 종단 동작, 413 시 연결 끊김 안내, 반응형·키보드·화면낭독기
+- 서비스 프롬프트 v1의 추출 품질(실험 미실행)
+
+## 2026-10-25 후속 검증: 제품소개서 화면 실제 브라우저 확인 (사용자 직접 확인 결과를 전달받음)
+- 실행 주체: 사용자(실제 브라우저). **Claude는 브라우저에서 직접 검증하거나 관측하지 않았고 전달받은 내용을 그대로 기록함**
+- 대상: DI-2026_10_25-11 화면 연결(미커밋 작업 트리 상태), 서비스 프롬프트 brochure_extract_v1(SPE-2026_10_25-01)
+- 입력: 더미 PDF(시연용 가상 자료로 보고됨). 파일·원문·결과 원문은 기록하지 않음
+
+### 확인됨(사용자 보고 기준)
+- 더미 PDF 분석 후 결과가 화면에 표시됨(화면 → 분석 API → 공통 PDF 함수 → 응답 표시 경로가 실제로 동작)
+- MOQ·샘플·납기에 "가상 정보" 표시와 AI 제시 근거가 표시됨
+- MOQ의 사용자 확인을 체크한 뒤 값을 수정하면 확인 체크가 해제됨
+- 다른 탭으로 이동했다 돌아와도 분석 결과와 수정값이 유지됨
+
+### 미검증 유지
+- 8개 항목 전체의 정확성(원문 대조), 문서에 없는 값 생성 여부, 근거 페이지·발췌의 정확성
+- 스캔 PDF 판독
+- 오류 화면(네트워크·413·서버 오류·잘못된 응답), 교체 확인 대화상자, 파일 교체 취소 시 복원
+- 분석 중 조작 잠금·진행 표시·중복 요청 방지의 브라우저 동작
+- 응답 모델명·사용량, 비용 금액, 소요 시간
+- 새로고침 경고(분석 결과 상태), 반응형·키보드·화면낭독기
+- 이전 기록(브라우저 미확인, 서비스 프롬프트 실험 미실행)은 당시 상태로 보존하며 이 항목으로 후속 보완함
+
+## 2026-10-25 제품소개서 4페이지 카탈로그 디자인 시안
+- 변경 내용: catalog_preview.html(신규), panel.html, product_brochure.js(시안 블록), product_brochure.css, test_panel.py
+- AI API 호출 없음(OpenAI·이미지 생성 미호출)
+
+### Claude가 직접 실행한 검증
+- `node --check product_brochure.js` → 문법 오류 없음
+- `python -m unittest discover -s tests/test_product_brochure` → 1차 2건 실패(기존 "바이어" 검사에 시안 설명 문구가 걸림, 상속으로 기존 테스트 중복 실행) → 수정 후 51개 실행, OK
+  - 시안 검사 4개: 진입 버튼(type=button·활성)·dialog 1개(자동 열림 없음·data-work-ignore), 4쪽(data-page 1~4·lang pt-BR) 각각 비공식 안내와 "n / 4", 공급 조건 3개 각각 가상 안내, 규격·인증·탄소 자리표시자에 숫자·% 없음, img·외부 URL·@·+55·회사 표기 없음, "não é foto real do produto" 표시, 시안 JS 블록이 검토 상태·작업 상태·fetch·저장소를 참조하지 않음
+  - 기존 화면·분석 API·Node 로직 점검(13개) 회귀 없음, CSS 선택자 범위 검사 통과
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+
+### 미실행·미검증
+- 시각 검증 전체(브라우저 도구 없음): 넓은 화면 2쪽 배치, 좁은 화면 축소, 실제 크기 전환, 페이지 넘침 여부(경고 표시 동작 포함), 대화상자 초점·Esc·초점 복귀, 화면 전체 가로 스크롤 여부
+- 시안을 열고 닫은 뒤 분석 결과·수정값 유지(코드 정적 검사로만 확인, 브라우저 미확인)
+- 색 대비 실측, pt-BR 문구 검수, 인쇄·PDF 출력 일치
+
+## 2026-10-25 카탈로그 시안 콘셉트 이미지 적용·편집 디자인 개선
+- 변경 내용: catalog_preview.html, product_brochure.css(시안 섹션), product_brochure.js(이미지 처리), test_panel.py, assets.md
+- AI API 호출 없음(이미지 생성·재생성 없음)
+
+### Claude가 직접 실행한 검증
+- 이미지 파일: `file`로 PNG 1024×1536(cover)·1448×1086(material), 8-bit RGB 확인. 이미지 보기 도구로 두 이미지 구도 확인(디자인 배치 판단용, 육안 품질 검토는 사용자 몫)
+- Flask test_client: 두 정적 URL `/features/product_brochure/static/images/…` → 200, image/png, PNG 서명 일치. 렌더링 HTML에 로컬 절대 경로 없음
+- `node --check product_brochure.js` → 문법 오류 없음
+- `python -m unittest discover -s tests/test_product_brochure` → 52개 실행, OK
+  - 시안 검사 5개: 진입·dialog, 렌더링된 4쪽 각각 비공식 안내·"n / 4"·콘셉트 이미지(로컬 정적 경로)·alt "conceitual"·AI 이미지 안내·로딩 실패 대체 요소, 이미지 정적 응답, 4쪽 공급 조건 3개 가상 안내, 3쪽 "Informações técnicas a confirmar."·규격·인증 수치 없음, 문서 안 제작 안내·점선 자리표시자·연락처 자리 없음, "시안 제작 메모"는 대화상자에 존재, 시안 JS 블록이 검토 상태를 참조하지 않음
+  - CSS 범위 검사(모든 선택자 .feature-product_brochure 시작), 기존 화면·분석 API·Node 로직 점검 회귀 없음
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+
+### 미실행·미검증
+- 시각 검증 전체(브라우저 도구 없음): 이미지 로딩 후 각 쪽 크롭·제목과 이미지의 위계·가독성, 넓은 화면 2쪽 배치·좁은 화면 축소·100% 전환, 페이지 넘침(경고 동작 포함), 대화상자 내부 스크롤, 초점 복귀
+- 이미지 로딩 실패 시 대체 안내의 실제 표시(코드·정적 검사만)
+- 이미지 사용권 조건·생성 설정(미확인), 색 대비 실측, pt-BR 검수, 인쇄·PDF 일치, 약 5.9 MB 이미지 로딩 시간
+
+## 2026-10-25 pt-BR 카탈로그 문구 생성 서버 (모의 테스트)
+- 변경 내용: generation.py, prompts/brochure_generate_v1.md, routes.py(generate), test_generate_api.py
+- 환경: Conda jasonenv Python 3.11.17, Flask 3.1.2, openai 3.37.0, pydantic 2.14.1. 실제 OpenAI 호출 없음(MockTransport)
+
+### Claude가 직접 실행한 검증
+- `python -m unittest discover -s tests/test_product_brochure -p test_generate_api.py` → 14개 실행, OK(첫 실행)
+  - 정상: 4쪽 구조(page 1~4), 제품명 입력 표기 보존, used_keys·excluded(empty·unconfirmed)·input_meta, 서버 고정 안내, 소개 문구 가상 전파(+고정 안내), 3·4쪽 출처·가상·고정 가상 안내, 모델 입력에 사용 항목만·메타데이터·제외 항목 없음, 지시문 = 프롬프트 파일, 요청 1회
+  - 선택 항목 전부 없음 → 3·4쪽 items 빈 목록·empty true·빈 상태 문구, 모델 입력 details/supply_keys 빈 목록
+  - review_flags: 입력에 없는 숫자·평가 어휘(new_number·claim_term), 수치 변경(number_not_preserved) 표시만 하고 성공 응답
+  - 입력 오류(외부 호출 0회): 제품명·설명 비어 있음/공백/미확인, 중복·누락·알 수 없는 key, "true"·1·"false"·숫자 value·null value·잘못된 origin, 추가 최상위·항목 필드(필드명이 오류 메시지에 반사되지 않음), 잘못된 JSON·Content-Type·배열 본문·fields 없음, 8개 항목별 길이 초과(경계값은 허용), 본문 32 KiB 초과 413
+  - 출력 오류(요청 1회, 재시도 없음): 제외된 key 참조·빈 source_keys·미제공 3쪽 항목 추가·3쪽 누락·4쪽 중복/누락·다른 쪽 항목·tagline 초과·문단 0/3개·빈 값·라벨 초과 → GENERATE_OUTPUT_INVALID 502, 거절 422·미완료·비JSON·스키마 밖 key → 공통 AI_* 코드
+  - 429·키 없음(503, 요청 0회), 오류 응답·로그에 입력 표지·공급자 원문·가짜 키 없음
+  - 프롬프트 규칙 문구와 출력 상한 숫자가 서버 상수와 일치
+- `python -m unittest discover -s tests/test_product_brochure` → 66개 실행, OK(분석 API·화면·시안·Node 로직 회귀 없음)
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+
+### 미검증
+- 서비스 프롬프트 brochure_generate_v1 실제 실행(실험 미실행): pt-BR 문구 품질·번역 의미·문체, 수치·단위 보존, 근거 없는 주장 발생 여부, 비용·소요 시간
+- review_flags 오탐·미탐 비율(단순 숫자·어휘 검사)
+- 화면 연결(미구현), 생성 결과의 브라우저 표시
+
+## 2026-10-25 카탈로그 생성 API 화면 연결·결과 미리보기
+- 변경 내용: product_brochure.js, panel.html, catalog_preview.html(결과 dialog), product_brochure.css, test_panel.py, review_logic_check.js, test_review_logic.py
+- 실제 생성 API·OpenAI 호출 없음(모의 응답·정적 검사·Node 로직 점검만)
+
+### Claude가 직접 실행한 검증
+- `node --check product_brochure.js` → 문법 오류 없음
+- `node tests/test_product_brochure/review_logic_check.js` → 22개 점검 통과(기존 13 + 생성 9)
+  - origin 변환(추출·사용자 수정·사용자 추가, 사용자 추가 재수정 시 유지)
+  - 적용 스냅샷 독립성(원본 수정 후 스냅샷 불변, 객체 참조 미공유, 필드 5개만)
+  - 생성 가능 조건: 개발용 예시 → 불가, 미적용·새 입력 버전 → not_applied, 확인 체크 변경 → reapply, 필수 미확인 → required, 길이 초과 → too_long(요청 본문 값은 자르지 않음), 진행 중 → busy, 정상 시 포함·제외(미확인·빈 값)
+  - 요청 본문: 최상위 fields만, 8개 key 순서, 항목 필드 5개·boolean·문자열, 근거 발췌 미포함
+  - 응답 검사: 정상 통과, 상태·쪽 누락·사용하지 않은 key·다른 쪽 항목·중복·empty 불일치·문단 0/3개·source_keys 이상·review_flags 형식·used_keys 필수 누락·notices 누락 → 거부
+  - 실패 해석: 알려진 코드만 고정 안내(서버 원문 미표시), 미지 코드·비JSON·413·시간 초과("과금 취소 보장 아님" 문구)·비2xx 성공 형식 구분
+  - 생성 실행기: 정상 1회, 조건 미충족·분석 중·재생성 취소·스냅샷 없음 → 요청 0회·진행 상태 변화 없음, 중복 클릭 무시, 실패 시 성공 콜백 없음, 오래된 응답 무시
+  - 이전 결과 판정(입력 수정·재분석 → 다를 수 있음), review_flags 위치 설명(한국어 항목 이름), HTML 형태 AI 문자열이 데이터에 그대로 보관
+- `python -m unittest discover -s tests/test_product_brochure` → 1차 4건 실패(구조 변경에 따른 정적 테스트, prompt_log DI-16) → 수정 후 68개 실행, OK
+  - 화면 요청 본문 ↔ 서버 스키마 교차 확인: Node(화면 JS)가 만든 본문을 generation.parse_request·select_inputs가 그대로 받고 used/excluded·origin·virtual이 기대와 일치
+  - 정적: dialog 2개(시안·결과) 자동 열림 없음, 결과 dialog에 예시 값·예시 문구 없음·slot 존재·4쪽·검토 초안 안내·AI 이미지 안내, 처음 비활성 버튼 4개(생성 포함), fetch 1곳·분석/생성 URL·run 각 1곳·Content-Type 직접 지정 없음·브라우저 저장소 없음·onShow 없음, setResult 호출 없음, 미리보기 공통·시안 블록이 검토/생성 상태를 참조하지 않음, HTML 삽입 없음, CSS 범위
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+
+### 미실행·미검증(브라우저 도구 없음)
+- DOM 연결 코드 실행 전반: 버튼 활성/비활성 전환, 안내 문구, 잠금·aria-busy, 교체 확인 대화상자, 결과 dialog 렌더링, 점선 검토 표시, "현재 입력과 다를 수 있음" 표시, 탭 이동 후 유지, 새로고침 경고
+- 상한 길이 문구(소개 140자·문단 600자×2·공급 값 200자)와 빈 상세·공급의 실제 배치·넘침(넘침 검사 코드는 있으나 실행 미확인)
+- 실제 서버·OpenAI 종단 동작, 생성 품질(서비스 프롬프트 실험 미실행)
+
+## 2026-10-25 후속 검증: 카탈로그 생성 v1 실제 실행 (사용자 실행 결과를 전달받음)
+- 실행 주체: 사용자(실제 화면). Claude는 호출·관측하지 않음. 원문·생성 결과 전문은 기록하지 않음
+- 전달받은 범위: 응답 모델 gpt-5.4-mini-2026-03-17, 프롬프트 brochure_generate_v1, 실제 결과 미리보기 표시
+- 발견 문제: 표지 한글 제품명 노출, 샘플 번역("revisão de amostra") 개선 필요, 표지·2쪽 소개 반복 (prompt_log SPE-2026_10_25-02)
+- 확인된 것(사용자 보고 기준): 화면 → 생성 API → 결과 미리보기 경로가 실제로 동작
+- 미검증: 전체 번역 정확성, 다른 항목 문구, 페이지 넘침, 비용·소요 시간
+
+## 2026-10-25 카탈로그 표시명 분리·언어 검사·프롬프트 v2 (모의 테스트)
+- 변경 내용: generation.py, brochure_generate_v2.md, product_brochure.js, panel.html, 테스트 3개
+- 실제 API 호출 없음
+
+### Claude가 직접 실행한 검증
+- `node --check product_brochure.js` → 문법 오류 없음
+- `node tests/test_product_brochure/review_logic_check.js` → 26개 통과(기존 22 + 표시명 4)
+  - 제안: "리젠 T2T (regen T2T)" → "regen T2T", 라틴만·악센트 이름은 그대로, 다른 제품의 괄호 라틴 표기는 그 표기(regen T2T 강제 없음), 한글만·괄호 밖 라틴만·불일치·괄호 후보 2개·괄호 안 한글 → 비움(none/ambiguous)
+  - 검사: 빈 값·한글 음절·자모·81자·제어 문자 거부, 80자·악센트·숫자·®·-·&·/·괄호 허용
+  - 스냅샷·서명·판정: 표시명 미확인·한글 → display_name 사유, 표시명 변경 → reapply, 이전 결과 경고, 스냅샷 독립, 요청 본문 trim
+  - 응답: 표지 제품명 ≠ 표시명·display_name 누락 거부, 한글 잔존 오류는 알려진 위치만 표시, repeated_text 안내 문구
+- `python -m unittest discover -s tests/test_product_brochure` → 1차 31건 실패·2건 오류(요청 계약 변경), 준비 코드 갱신 후 74개 실행, OK
+  - 생성 API: 표시명 누락·미확인·공백·한글 음절/자모·81자·제어 문자·형 오류 → 400(AI 호출 0회), 악센트·숫자·기호 표시명 4종 허용 및 표지·모델 입력에 그대로 사용(regen T2T 강제 없음), 모델 입력 product_name = 표시명·원본 한글 미포함, 응답 display_name·prompt_version v2
+  - 한글 잔존: 1쪽 소개·2쪽 문단(자모)·4쪽 샘플 값·3쪽 항목명 → 502 GENERATE_OUTPUT_LANGUAGE, 메시지에 위치만(생성 문구 원문 미포함), 요청 1회(재시도 없음), pt-BR 악센트 문구는 통과
+  - repeated_text: 거의 같은 문단에만 표시, 제품명·핵심 용어 반복은 미표시
+  - 프롬프트 v2 규칙 문구 포함·특정 제품명 미포함·v1 파일 존재(git diff로 v1 무변경 확인)
+  - 교차: 화면 제안 표시명 → 서버 parse_request 통과, 원본 제품명 보존, used/excluded·origin·virtual 기존과 동일
+  - 기존 가상 표시·수치/단위 review_flags·분석 API·화면·시안 테스트 회귀 없음
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+
+### 미검증
+- v2 프롬프트 실제 실행(번역·샘플 표현·반복 개선 여부) — 프롬프트에 지침을 넣은 것과 실제 개선은 별개
+- 표시명 입력·체크·제안 갱신·재적용 표시의 브라우저 동작(DOM)
+- 한글 검사 통과가 pt-BR 품질을 뜻하지 않음, 페이지 넘침, 비용·소요 시간
+
+## 2026-10-26 후속 검증: 카탈로그 생성 v2 실제 실행 (사용자 실행 결과를 전달받음)
+- 실행 주체: 사용자(실제 화면). **Claude는 호출·관측·검증하지 않음.** 결과 전문·사용자 문서는 기록하지 않음
+- 대상: 커밋 cf81010, 프롬프트 brochure_generate_v2 (prompt_log SPE-2026_10_26-01)
+- 확인됨(사용자 보고 기준, v1에서 발견한 세 문제)
+  - 표지 제품명이 한글 없이 "regen T2T"로 표시됨
+  - 샘플 문구가 평가용 샘플 요청 의미로 표현됨
+  - 표지 소개와 2쪽 설명의 그대로 반복되는 문제가 개선됨
+- 판정: 위 세 항목은 이번 1회 실행 기준 정상(사용자 보고)
+- 미확인: 응답 모델명, 사용량, 비용, 소요 시간
+- 미검증 유지: 전체 번역 정확성·다른 항목 문구, 페이지 넘침, 다른 입력에서도 같은 품질이 유지되는지, 표시명 입력 외 DOM 동작 전반
+- 이전 기록(v2 실제 실행 미실행, v1 문제 발견)은 당시 상태로 보존하며 이 항목으로 후속 보완함
+
+## 2026-10-26 생성 결과 문구 편집·4쪽 "샘플·거래 상담" 정리
+- 변경 내용: product_brochure.js, product_brochure.css, catalog_preview.html, test_panel.py, review_logic_check.js
+- 실제 API 호출·서비스 프롬프트 변경 없음. 서버 파일(generation.py·routes.py·service.py·prompts) 무변경을 git diff로 확인
+
+### Claude가 직접 실행한 검증
+- `node --check product_brochure.js` → 문법 오류 없음
+- `node tests/test_product_brochure/review_logic_check.js` → 1차 31/32(테스트 데이터 문제, prompt_log DI-2026_10_26-02) → 수정 후 32개 통과(기존 26 + 편집 6)
+  - 편집 칸 5종 id·위치 이름·상한(80/140/600/300/200, 서버 값과 동일)
+  - 적용: 원본·적용본·임시 값 독립(적용 후 임시 값 변경이 적용본에 영향 없음), 표시명 trim·display_name과 표지 제품명 동시 변경, 라벨·source_keys·origin·virtual·가상 안내·notices·used_keys 보존, 원래 review_flags 유지, 사용자 수정 칸 계산, HTML 형태 문자열은 문자열로 보관, 줄바꿈·악센트 허용
+  - 검증: 141자·공백만·한글 음절·자모·제어 문자·한글 표시명 → 위치별 오류, 하나라도 틀리면 적용본 미생성(부분 적용 없음), 140자 경계 허용
+  - 복원·변경 감지: 원래 문구로 되돌리면 사용자 수정 아님, 원본 복제 시 수정 없음, 임시 값 dirty 감지
+  - 출력 편집 후에도 이전 결과 경고 아님, 입력 변경 시 경고 유지
+  - 재생성: 수정본이 있으면 "직접 수정한 문구" 대체 안내, 취소 시 요청 0회·성공 콜백 없음(기존 실패 시 결과 유지 점검도 통과)
+- `python -m unittest discover -s tests/test_product_brochure` → 1차 1건 실패(비활성 버튼 수 4→5) → 수정 후 77개 실행, OK
+  - 신규 정적 검사: 4쪽 제목·상담 마무리 문구가 시안·결과 모두 존재, 제공 가능·무료·즉시 발송 표현 없음, 결과 dialog에만 편집 UI(시안 제외), contenteditable·execCommand 없음, 편집 코드에 요청·스냅샷/표시명 대입·setResult·저장소·innerHTML 없음
+  - 화면 요청 본문 ↔ 서버 스키마 교차 확인 포함 기존 테스트 회귀 없음
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+
+### 미실행·미검증(브라우저 도구 없음)
+- 편집 영역 열기·입력·적용·취소·되돌리기·오류 표시, 닫기/Esc 확인 대화상자, 초점 이동, 탭 이동 후 임시 값 복원의 DOM 동작
+- 편집·복원 후 미리보기 갱신과 페이지 넘침 경고의 실제 표시
+- 4쪽 새 제목·문구의 배치, pt-BR 문구 검수
+
+
+## 2026-10-26 카탈로그 PDF 렌더러(ReportLab) — 모의 데이터 검증
+- 변경 내용: pdf_catalog.py, fonts/, requirements.txt, feature_spec.md §25, test_pdf_catalog.py·pdf_fixtures.py·make_pdf_samples.py
+- 실제 API 호출·서비스 프롬프트 실험·라우트/화면 연결 없음
+
+### Claude가 직접 실행한 검증
+- 설치: `pip install --dry-run` → reportlab 5.1.0·pillow 13.0.0·charset-normalizer 3.5.2만 설치 예정 확인 → 설치 → pip freeze 전후 차이 3줄 → `pip check` "No broken requirements found."
+- 글꼴 복사본 git blob 해시가 팀 브랜치 원본과 동일함을 확인
+- `python -m unittest discover -s tests/test_product_brochure` → 1차 26개 중 2개 실패(소스 검사 테스트 오탐, 4쪽 넘침 예시가 실제로 넘치지 않음) → 수정 후 전체 103개 OK
+  - 4쪽·A4 세로·%PDF, 모든 쪽 비공식 안내·쪽 번호·AI 이미지 안내 텍스트 추출, 쪽별 제목, 항목명 서버 상수
+  - 이미지 4곳 배치(폭 1024/1448/1448/1024), 이미지 객체 2개만, 글꼴은 내장 글꼴만(Helvetica 없음), 3 MB 미만
+  - 편집값 반영(표시명·소개·문단·공급 값), & < > " ' 와 악센트가 글자 그대로 추출, 마크업 형태 입력 미해석·이미지 추가 없음, 시안 문구 미혼입, 한글 없음
+  - 빈 상세·공급 → 서버 빈 상태 문구, 가상 안내 수(표지 2·2쪽 1·3쪽 3·4쪽 3), 기본 데이터에서 가상 표시 항목만 안내
+  - 상한 근처 긴 문구 통과(long_max, 문단 2×600자), 24자 이하 넓은 단어 값의 글자 크기 전환
+  - 넘침: 3쪽 상세(300자×3+가상), 1쪽 긴 한 단어 표시명 → 422·쪽 번호, 오류 문구에 사용자 문자열 없음. 4쪽은 최소 높이 상향 모의로 검사 동작 확인
+  - 입력 검사: 상한±1, 공백만, 한글 음절·자모, 탭, 표시명 줄바꿈, 다른 쪽 key, 중복, 미허용 key, 라벨·html·image_url·font_path·color·notice 필드, 문자열 virtual, 문단 0/3개, language≠pt-BR, 배열 입력
+  - 자산: 이미지 없음·잘린 PNG·다른 크기, 글꼴 없음·손상 → 자산 오류. 자산 문제 상태에서도 앱 첫 화면 200
+  - 이모지 → 글리프 없음 오류
+  - 생성 함수·소켓 연결을 금지 모의로 바꾼 상태에서 성공·실패 렌더링 모두 호출 없음, 로그 없음(assertNoLogs), 소스에 AI·네트워크·logging·tempfile·내장 open·pdf_utils 사용 없음(AST), routes.py 미연결
+- `python -m unittest discover -s tests/test_common` → 56개 OK
+- `node --check product_brochure.js` → 오류 없음(JS 변경 없음)
+- 개발 검증 PDF 생성(`make_pdf_samples.py`, 저장소 밖 폴더, 덮어쓰기 금지): 정상 6건 각 약 877 KB, 0.17~0.43초(첫 건은 글꼴·이미지 준비 포함). 넘침 2건은 의도대로 실패. 시간은 측정값이며 강제 타임아웃이 아님
+- pypdf 텍스트·메타데이터 추출로 edited 예시의 쪽별 문구 순서 확인
+
+### 미실행·미검증
+- **쪽별 시각 확인 미실행**: Read 도구는 pdftoppm 없음으로 실패, Edge headless 스크린샷은 빈 화면. 새 시각화 패키지는 설치하지 않음. 텍스트 추출·페이지 수 검사는 시각 검증이 아님
+  - 사람이 열어 볼 파일: C:\Users\user\AppData\Local\Temp\claude\C--Users-user-Desktop-fionex\36d7c2bf-67d2-469c-9a14-643e83056de0\scratchpad\pdf_samples_v3\catalog_*.pdf
+- 겹침 여부는 측정 기반 배치 계산으로만 확인(실제 그림 비교 아님), 다른 뷰어·인쇄 결과, 실제 생성 결과 데이터, 동시 요청 시 메모리·시간
+- 삭제 시도 기록: `rm -f $S/*.pdf`는 사용자 승인 거부로 실행되지 않음. 이후 ls로 pdf_samples의 6개 파일(크기·시각 동일) 보존 확인
+
+## 2026-10-26 카탈로그 PDF 가로 넘침 수정 — 후속 검증
+### 외부 전달 결과(Claude 미관찰)
+- 사용자가 ChatGPT로 이전 검증 PDF(catalog_base, catalog_max_paragraphs) 8쪽을 렌더링해 확인: 2쪽 본문 오른쪽 잘림·쪽 밖 이탈, 3쪽 여백 침범, 4쪽 상담 문구 영역 이탈, 1쪽 정상
+- 이전 항목(렌더러 103개 테스트 통과)은 텍스트·페이지 수·자체 측정 기반이라 이 문제를 잡지 못했음. 이 후속 시각 검증에서 잘림이 발견됨
+
+### Claude가 직접 실행한 검증
+- 내용 스트림 확인: 머리말의 `1.469446 Tc`가 q/Q 밖에 남는 것을 확인(원인)
+- 내용 스트림 기반 줄 폭 계산(pdf_geometry): 수정 전 2쪽 최대 644.0pt(기본)·666.5pt(긴 문단), 쪽 폭 595.3pt, 1·3·4쪽도 오른쪽 여백선(547.3pt) 초과 줄 있음 → 수정 후 모든 예시 최대 547.3pt(쪽 번호 오른쪽 정렬 끝), 최소 18.0pt(3쪽 캡션 시작)
+- 수정 전 코드(HEAD 복사본)에 새 회귀 테스트 적용 → 2개 실패(1쪽 제목 508.6px > 504px, 2쪽 줄 592.2pt vs 482.0pt). 수정 후 통과
+- `unittest discover -s tests/test_product_brochure` → 106개 OK(신규 GeometryTests 3개, 영역 대조 예시 7개: base·edited·empty_info·virtual_all·long_max·max_paragraphs·wide_words)
+- `unittest discover -s tests/test_common` → 56개 OK, pip check 이상 없음
+- 새 검증 PDF 생성(새 폴더, 기존 파일 삭제·덮어쓰기 없음): 정상 7건 각 약 877 KB, 넘침 예시 2건은 의도대로 실패
+  - C:\Users\user\AppData\Local\Temp\claude\C--Users-user-Desktop-fionex\36d7c2bf-67d2-469c-9a14-643e83056de0\scratchpad\pdf_samples_v4_fix_hoverflow
+
+### 미실행·미검증
+- **수정 후 쪽별 육안 확인 미실행**: 렌더링 도구 없음(pdftoppm 미설치, Edge headless는 이전에 빈 화면). 새 패키지 미설치. 영역 대조는 글자 줄의 가로 범위·기준선만 보며 글자 높이·이미지와의 겹침·시각 품질은 확인하지 않음
+- 이전 검증 PDF 폴더(pdf_samples, _v2, _v3)는 삭제하지 않고 보존(수정 전 코드로 만든 파일이라 잘림 포함)
+
+## 2026-10-26 가로 넘침 수정 후 외부 시각 검증(전달받은 결과, Claude 미관찰)
+- 사용자가 ChatGPT로 pdf_samples_v4_fix_hoverflow의 기본형·긴 문단형·긴 단어형 PDF 3개(12쪽)를 렌더링해 확인
+  - 글자 잘림·의도하지 않은 겹침 없음, 긴 문단·가상 안내와 하단 안내 겹침 없음, 긴 단어 줄바꿈·악센트·특수문자 표시 정상
+  - 미검증: 실제 생성·편집 결과의 다운로드, 다른 PDF 뷰어·인쇄
+- Claude는 이 시각 확인을 직접 수행하지 않음(렌더링 도구 없음)
+
+## 2026-10-26 카탈로그 PDF 다운로드 API — 서버·테스트
+- 변경 내용: routes.py(POST /api/product-brochure/pdf), pdf_download.py(신규), test_pdf_download_api.py(신규), test_pdf_catalog.py, feature_spec.md §26
+- 실제 API 호출·서비스 프롬프트 실험·화면 수정 없음
+
+### Claude가 직접 실행한 검증
+- `python -W error::ResourceWarning -m unittest discover -s tests/test_product_brochure` → 1차 45개 중 2개 실패(테스트 측 문제, prompt_log DI-2026_10_26-05) → 수정 후 전체 122개 OK
+  - 신규 API 테스트 16개: 실제 렌더러 경유 200·%PDF·고정 파일명·no-store·nosniff·Content-Length·4쪽 A4, 편집값·가상 안내 출력·시안 문구 미혼입, 사용자 값이 헤더에 들어가지 않음, 키 없이 첫 화면 200·PDF 200
+  - 잘못된 Content-Type 2종·손상 JSON·빈 본문·최상위 형식 11종·catalog 내부 6종·32 KiB 초과 → 지정 코드, 렌더러 실행 0회·슬롯 반환, 앱 전역 MAX_CONTENT_LENGTH 미설정 유지
+  - 렌더러 오류: 넘침·글리프 422, 자산 500(내부 경로 미노출)
+  - 예상하지 못한 오류: 500 고정 문구, 응답·로그에 입력·경로·키 형태 문자열·Traceback 없음, 로그에는 예외 종류만
+  - 동시 실행: 슬롯 2개 점유 시 렌더링 없이 429, 실제 요청 2건 진행 중 세 번째 즉시 429 후 두 요청 200, 예상 외 오류 3회 연속에도 슬롯 누수 없음
+  - OpenAI 클라이언트 생성·생성 함수·소켓 연결 금지 모의, 쓰기 모드 open 0회, 새 ResourceWarning 0건
+- `python -W error::ResourceWarning -m unittest discover -s tests/test_common` → 56개 OK
+- `pip check` 이상 없음, `node --check product_brochure.js` 오류 없음(JS 변경 없음)
+- ResourceWarning 출처 확인: 전체 실행 중 경고 10건은 기존 test_analyze_api.py(분석 업로드 임시 파일, 이번 미변경)에서만 발생, 신규·변경 PDF 테스트 파일은 0건. 기존 경고는 이번 범위에서 수정하지 않음
+
+### 미실행·미검증
+- 화면 다운로드 버튼(미구현), 실제 브라우저 다운로드·저장, 실제 생성·편집 결과로 만든 PDF
+- 여러 워커 환경의 동시 제한(프로세스당 제한만 구현), 큰 부하에서 메모리·시간, 렌더링 강제 시간 제한(없음)
+- 이번 단계 PDF 육안 확인(새 샘플 미생성, 기존 샘플 삭제·덮어쓰기 없음)
+
+## 2026-10-26 화면 "PDF 다운로드" 연결 — 모의·정적 검증
+- 변경 내용: product_brochure.js(PDF 순수 로직·화면 연결·항목명), panel.html(버튼·안내 위치), product_brochure.css, 테스트 3개 파일, feature_spec.md §27
+- 실제 OpenAI 호출·서버 API 변경 없음
+
+### Claude가 직접 실행한 검증
+- `node --check product_brochure.js` → 오류 없음
+- `node tests/test_product_brochure/review_logic_check.js` → 40개 통과(신규 PDF 8개)
+  - 요청 본문: 적용본 값·가상 표시만, 금지 필드(label·source_keys·review_flags·origin·안내·model·display_name 등) 없음, 독립 복사본, 불리언 아닌 virtual 미부풀림
+  - 가능 조건: 결과 없음·진행 중·미적용 편집(고정 문구)·32 KiB 초과(UTF-8 바이트) 거부, 경계 32 KiB 허용
+  - 응답 해석: 정상 PDF만 통과, 다른 MIME·빈 파일·잘못된 서명·201·HTML(200/502)·413·알려진 오류 7종(서로 다른 고정 안내, 서버 문구 미표시)·알 수 없는 코드·네트워크·시간 초과
+  - 실행기: 이전 결과 확인 취소·다른 요청 진행 중·크기 초과 → 요청 0회, 중복 클릭 → 요청 1회·성공 1회(blob·요청 당시 버전), 잘못된 응답·실패 → 다운로드 0회·재시도 없음·이후 재요청 가능, 시간 초과 후 잠금 해제, 무효화 뒤 오래된 응답 무시
+- `python -W error::ResourceWarning -m unittest discover -s tests/test_product_brochure` → 1차 test_panel 3건 실패(prompt_log DI-2026_10_26-06) → 수정 후 128개 OK
+  - JS가 만든 요청 본문을 실제 서버 parse_request·parse_catalog가 받음(편집값·가상 표시 일치, AI 라벨 미전송), 같은 본문으로 라우트 200·application/pdf·편집값·가상 안내 텍스트 확인
+  - 화면 항목명·파일명·32 KiB 상수가 서버 값과 같음
+  - 정적: downloadBlob 호출 1곳(성공 경로) 뒤 recheckInputs·syncWork, setResult·innerHTML·저장소 없음, fetch 2곳(postRequest·sendPdf), pdfDownloader.run 1곳, resultRevision 증가 3곳(생성·편집 적용·원문 복원), 편집 적용·원문 복원은 진행 중 잠금, 버튼 초기 비활성·상태/오류 영역 역할, "준비 중" 안내 제거
+- `python -W error::ResourceWarning -m unittest discover -s tests/test_common` → 56개 OK, `pip check` 이상 없음
+
+### ResourceWarning 측정(이전 보고 정정)
+- 위 제품소개서 전체 실행 출력에 "Exception ignored" 5건과 "ResourceWarning: unclosed file" 5건이 있었고 결과는 OK. GC 정리 중 경고는 -W error에서도 테스트를 실패시키지 않으므로 "경고를 오류로 처리한 실행 통과"가 경고 0건을 뜻하지 않음
+- `-W always::ResourceWarning`로 파일별 실행: test_analyze_api.py 5건, test_pdf_download_api.py·test_pdf_catalog.py·test_generate_api.py·test_panel.py·test_review_logic.py 0건
+- 이전 기록의 "10건"은 경고 줄과 "Enable tracemalloc" 안내 줄을 함께 센 줄 수(실제 경고 5건). 기존 분석 테스트 경고는 이번 범위에서 수정하지 않음
+- 각 경고가 정확히 어느 테스트에서 생겼는지(GC 시점)는 미확인
+
+### 미실행·미검증(브라우저 도구 없음)
+- 실제 브라우저의 버튼 활성/비활성 전환, 확인창, "PDF 만드는 중…" 표시, 다운로드 저장, 초점·스크린리더 안내, 탭 이동 중 요청 유지
+- 실제 생성 결과·편집본으로 받은 PDF 육안 확인, 다른 뷰어·인쇄
+
+## 2026-10-26 PDF 다운로드 이전 결과 확인창 — 사용자 보고 조사
+### 사용자 보고(Claude 미관찰)
+- 생성 결과 있음 → 분석·검토 MOQ 단위 kg 수정 → PDF 다운로드 → 확인창 없이 다운로드
+
+### Claude가 직접 실행한 재현(실제 브라우저 엔진, 모의 분석·생성)
+- Edge headless + CDP, 로컬 서버(키 비움·.env 미로딩), 분석·생성은 브라우저 가로채기 모의 응답, PDF는 실제 렌더러. 스크립트: C:\Users\user\AppData\Local\Temp\claude\C--Users-user-Desktop-fionex\36d7c2bf-67d2-469c-9a14-643e83056de0\scratchpad\cdp_repro\repro.mjs
+- 결과(확인창 취소 후 PDF 요청·다운로드 / 확인 후 누적): MOQ "500 kgs" 0·0 / 1·1, 실제 키·마우스 "500 KG" 0·0 / 1·1, 원래 값 복원 0·0 / 1·1, 제품 설명 0·0 / 1·1, 표시명 0·0 / 1·1, MOQ 확인 해제 0·0 / 1·1, 확인창 문구 모두 "이 결과는 현재 입력과 다를 수 있습니다. 현재 미리보기 내용으로 PDF를 다운로드할까요?"
+- 결과 문구 편집·적용만: 확인창 0회, 다운로드 진행(입력 불일치 경고 없음)
+- 검토 화면 MOQ 값은 다운로드 후에도 사용자가 입력한 값 유지, 요청에는 기존 적용본 값 사용(Node 회귀로 확인)
+- **보고 증상은 현재 코드에서 재현되지 않음. 원인 미확인 → 동작 코드 수정 없음**
+
+### 테스트
+- `node --check product_brochure.js` → 오류 없음(JS 변경 없음)
+- `node review_logic_check.js` → 42개 통과(신규 2개: MOQ만 수정 시 취소 0회·확인 1회·기존 적용본 값 전송, 설명·표시명·표시명 확인·확인 해제·가상 표시·값 복원 감지, 결과 편집만은 미감지·수정본 전송)
+- `unittest discover -s tests/test_product_brochure` → 1차 1건 실패(정적 검사 호출 수 예상 오류) → 수정 후 129개 OK
+- `unittest discover -s tests/test_common` → 56개 OK
+
+### 미검증
+- 사용자 환경에서의 정확한 단계(결과 문구 편집 여부, 재적용·재생성 여부, 서버·탭 재시작 여부)
+- 창 모드 실제 브라우저에서의 확인, 실제 생성 결과 사용
+
+### 원인 확인(2026-10-26, 사용자 보고)
+- 사용자 확인: MOQ 수정 위치는 결과 대화상자의 "문구 수정 → 미리보기에 적용". 이 경우 확인창 없이 다운로드되는 것이 정상(Claude 재현의 "결과 문구 편집·적용만: 확인창 0회"와 일치)
+- 보고 원인: 편집 위치 혼동. 코드 결함 아님, 서비스 코드 변경 없음
+- 미확인: 실제로 내려받은 PDF에 결과 편집 MOQ 값이 반영됐는지(사용자 확인 전). Claude가 확인한 것은 모의 데이터에서 요청 본문·서버 렌더링에 수정본 값이 쓰이는 것까지
+
+## 2026-10-26 실제 화면 PDF 다운로드 — 외부 검증 결과(전달받음, Claude 미관찰)
+- 절차: 사용자가 실제 화면에서 PDF 다운로드 → 파일을 ChatGPT에 첨부 → ChatGPT가 4쪽 렌더링·텍스트 추출로 확인
+- 확인된 범위(전달받음)
+  - 파일 열림, 4쪽
+  - 4쪽 MOQ 표시 확인(결과 문구 편집 후 값). 사용자가 의도한 최종 값과의 일치는 명시적 확인 전 → 편집 전후 값 일치 검증 완료로 보지 않음
+  - MOQ·샘플·납기 가상 조건 안내 유지, 모든 쪽 비공식 안내·AI 이미지 안내
+  - 글자 잘림·의도하지 않은 겹침·한글 잔존·글자 깨짐 없음(해당 PDF 1개)
+  - 기술 정보가 없는 3쪽에 확인 필요 안내
+- Claude 직접 실행: 없음(기록만 작성, 앱 실행·테스트 재실행 안 함)
+- 미검증 유지: 전체 번역·사실 정확성·원문 대조, 스캔 PDF 판독, 다양한 입력의 추출·생성 품질, 모든 브라우저·인쇄 환경, 비용·소요 시간
+- 이전 실패·미검증 기록(가로 넘침 발견·수정, 확인창 보고 조사 등)은 그대로 보존
+
+## 2026-10-26 스캔 PDF 검증 자료 준비(이미지 전용, API 미호출)
+### Claude가 직접 실행한 검증
+- 원본: 3쪽, 595.28×841.89pt, 회전 0, 쪽마다 내장 글꼴 3·이미지 0, pypdf 텍스트 추출 가능. 작업 전후 sha256 동일(수정 없음)
+- 렌더링: WinRT로 원본 150dpi(1240×1754px) 3쪽, Read 도구로 원본 렌더링 3쪽 육안 확인(제목·표·가상 표시·하단 안내)
+- 스캔형 v3(pypdf): 쪽 수 3=3, 쪽 크기 원본과 동일(3쪽 모두), 회전 0, 쪽 자원 /ProcSet·/XObject만, 쪽마다 1240×1754 DCT 이미지 1장, extract_text 길이 0(3쪽 모두), 파일 전체(스트림 밖) /Font·Tj·TJ·BT·/Annots·/AcroForm 0
+- 재렌더링 대조: 스캔형을 같은 조건으로 다시 렌더링해 원본 렌더링과 픽셀 비교 — 평균 차이 0.45~0.51/255, 차이 40 초과 화소 0%(3쪽 모두) → 내용 누락·잘림·이동·회전 없음(JPEG 압축 차이 수준). Read 도구로 재렌더링 3쪽 육안 확인(쪽 번호 1/3~3/3, 가상 조건·시연용 안내 유지, 똑바름)
+- 실패와 수정: 배율 125% 반영 렌더링(1550px) → 보정 후 재렌더링, 초기 글꼴 설정·미참조 글꼴 객체 → 제거 후 v3(prompt_log DI-2026_10_26-09)
+
+### 명시
+- 이 파일은 실제 종이 스캔이 아니라 디지털 원본을 이미지화한 테스트 자료. 흐림·회전·기울기·잡음 변형 없음
+- 같은 렌더러(WinRT)로 만들고 다시 읽어 대조했으므로 다른 뷰어에서의 표시는 미확인
+
+### 미실행·미검증
+- 스캔형 입력의 실제 분석 API 호출과 판독 품질(서비스 프롬프트 실험 미실행), 비용·소요 시간
+- 서버 업로드 검사(inspect_pdf)·분석 라우트 통과 여부(앱 실행 안 함)
+- 실제 종이 스캔·흐림·회전 자료
+
+## 2026-10-26 스캔형(이미지 전용) PDF 실제 분석 — 외부 확인 결과(SPE-2026_10_26-02)
+- 절차(사용자): 이미지 전용 스캔형 테스트본 v3를 실제 화면에서 분석 → "정상" 보고. ChatGPT가 화면 캡처 3장을 직접 확인
+- Claude 직접 실행·관찰: 없음(캡처 미열람, API 재호출·테스트 재실행·코드 수정 없음)
+- 전달받은 확인 범위
+  - 파일 정보 3쪽·817,318 bytes(준비한 v3와 같은 크기), 응답 모델 gpt-5.4-mini-2026-03-17
+  - 제품명·설명 추출과 1쪽 근거, 규격·탄소 저감률·인증 "문서에서 찾지 못함", MOQ·샘플·납기 값·단위·조건과 가상 표시, 사용자 확인 미확인 유지
+- 판정 범위: 선명한 150dpi 디지털 이미지형 PDF 1건에서 실제 분석 요청이 성공하고 결과가 화면에 표시됨(텍스트 레이어 없는 입력)
+- 미검증 유지: 원문과 추출값·발췌의 정확한 일치, 실제 종이 스캔, 흐림·회전, 다양한 입력의 정확성, 비용·소요 시간·토큰 사용량, 실행 프롬프트 버전
+- 이전 기록의 "스캔 PDF 판독 미검증·서비스 프롬프트 실험 미실행"은 당시 상태로 보존하며 이 항목으로 후속 보완
+
+## 2026-10-26 AI 표지 배경 생성 API — 모의 테스트
+- 변경 내용: cover_image.py, prompts/brochure_cover_image_v1.md, routes.py, test_cover_image_api.py, feature_spec.md(머리말 정정·§28)
+- 실제 OpenAI 호출·서비스 프롬프트 실험 없음, 화면·PDF 변경 없음
+
+### Claude가 직접 실행한 검증
+- `unittest discover -p test_cover_image_api.py` → 1차 14개 중 오류 4건(테스트 측: 클라이언트 인자 기록 없음, PNG 응답 텍스트 디코딩) → 수정 후 14개 OK
+  - 세 분위기 각각 200·image/png 바이너리(base64 아님)·no-store·nosniff·X-Prompt-Version, 요청 1회(재시도 없음), 공급자 요청 model·n=1·1024x1536·medium·png, 프롬프트에 선택 분위기
+  - 공통 함수 호출 인자 prompt·size·quality만, 클라이언트 timeout 180·max_retries 0
+  - 명령처럼 보이는 설명: 지시 구역·끝 구역에 사용자 문장 없음, 참고 데이터 블록이 JSON으로 그대로 해석됨, 입력 속 자리표시자 미치환, 금지 규칙 문구 존재(주입 완전 차단 확인 아님)
+  - 한국어 설명·줄바꿈·탭·pt-BR 악센트 표시명 허용
+  - JSON 아님·손상·빈 본문·배열 → INVALID_JSON, 추가 필드(prompt·size·quality 등)·필드 누락·잘못된 분위기·대소문자·None·잘못된 타입·빈 값·공백만·한글 표시명·표시명 줄바꿈·81자·설명 1501자·제어 문자 → INVALID_INPUT, 16 KiB 초과 → 413. 모든 경우 외부 호출 0회, 앱 전역 MAX_CONTENT_LENGTH 미설정 유지
+  - 공급자 429·500, 크기 다른 이미지, 빈 data → 공통 JSON 오류·요청 1회·공급자 원문 미노출, 이미지 모델 미설정 → 503 호출 0회, 예상 외 오류 → AI_UNKNOWN_ERROR·경로·키·입력 미노출(로그에는 예외 종류만)
+  - 쓰기 모드 open 0회, 로그에 입력·표시명·이미지 바이트 없음, 고정 이미지 2개·PDF 렌더러는 표지 생성 코드를 참조하지 않음
+  - `-W always::ResourceWarning`로 이 파일 실행 시 경고 0건
+- `unittest discover -s tests/test_product_brochure` → 143개 OK(기존 분석·생성·편집·PDF·다운로드 회귀 포함)
+- `unittest discover -s tests/test_common` → 56개 OK, `node --check product_brochure.js` 오류 없음(JS 변경 없음)
+
+### 미실행·미검증
+- 실제 이미지 생성(서비스 프롬프트 실험), 이미지 품질·글자·로고 혼입 여부·왼쪽 위 여백·분위기별 차이, 1쪽 표지 크롭과의 실제 맞춤
+- 비용·소요 시간, OpenAI 측 데이터 보관 조건(이 작업에서 확인하지 않음)
+- 화면 버튼·결과 상태·미리보기·PDF 반영(미구현)
+
+## 2026-10-26 AI 표지 배경 화면 연결 — 모의·헤드리스 확인
+### Claude가 직접 실행한 검증
+- `node --check product_brochure.js` → 오류 없음
+- `node review_logic_check.js` → 48개 통과(신규 6개): 생성 조건(예시·미적용·재적용·확인 누락·표시명 미확인·진행 중 거부), 요청 3필드·적용 스냅샷 값만, 응답 해석(형식·빈 파일·서명·디코딩·해상도·16 MiB 경계·HTML·JSON 오류 코드별 고정 안내·시간 초과 문구), 실행기(잘못된 입력 요청 0회·다른 요청 중 0회·중복 클릭 1회·실패 후 재요청·오래된 응답 무시), URL 해제 규칙 7가지, 적용 중 PDF 차단·후보만이면 허용
+- `unittest discover -s tests/test_product_brochure` → 1차 test_panel 4건 실패(개수 검사 갱신 필요) → 수정 후 144개 OK(표지 마크업·연결 정적 검사 1개 추가)
+- `unittest discover -s tests/test_common` → 56개 OK
+- 헤드리스 브라우저(모의 응답, 실제 DOM·이벤트) 결과
+  - 처음: 생성 버튼 비활성·안내, 적용 전 생성 불가 → 적용 후 활성
+  - 카탈로그 생성 전 후보 생성(프리미엄): 후보 표시·적용 버튼 비활성과 이유 안내, 결과 표지 불변
+  - 카탈로그 생성 후 적용: 결과 1쪽 표지만 blob URL로 변경, 2~4쪽 이미지·고정 시안 표지 불변, PDF 버튼 비활성·고정 안내, 비활성 속성을 강제로 지우고 눌러도 PDF 요청 0회
+  - 실패 3종(1024×1024 PNG·429 JSON·502 HTML): 고정 안내(서버 원문 미표시), 후보·적용 이미지 유지, 잠금 해제
+  - 새 후보 성공: 적용 이미지 유지, 두 URL 모두 유효 → 후보 버리기(확인): 적용 URL 유효·버린 URL 해제·숨은 이미지 src 제거
+  - 검토 화면 설명 변경: 적용 이미지에 "다른 제품 정보로 생성됨" 안내, 생성은 재적용 안내로 비활성, 탭 이동 후 상태 유지
+  - 재적용 → 새 후보(새 설명으로 요청) → 다시 설명 변경 → 적용 시 이전 정보 확인창, 취소하면 기존 적용 유지
+  - 기본 배경 복원(확인): 결과 표지 기본 이미지, 해제된 URL 무효, PDF 버튼 다시 활성 → 이전 결과 확인창 후 PDF 요청 1회·다운로드 1회
+  - 전 과정 이탈 보호(draft) 유지, 표지 요청 6회 모두 display_name·description·mood 3필드만
+- 서버 로그: 세 번 실행에서 PDF 요청 3건만 도달, 분석·생성·표지 요청 0건(모두 브라우저 가로채기)
+
+### 미실행·미검증
+- 실제 이미지 생성(서비스 프롬프트 실험)·이미지 품질·글자 혼입·제목 여백·분위기 차이·비용·시간
+- 창 모드 실제 브라우저의 시각 확인(헤드리스는 DOM·상태 값만 확인, 화면 캡처 육안 확인 안 함)·스크린리더 안내
+- 실제 210초 시간 초과(순수 로직·문구만 확인)
+- PDF에 적용 이미지 반영(미구현)
+
+## 2026-10-26 적용 표지 PDF 연결 — Codex 직접 검증(DI-12)
+
+### 인계와 구현
+- Claude 보고: 서버 구현/PDF 57개 통과, 화면 셸 인용 오류로 중단. Codex 시작 시 서버 3개+기존 테스트 1개 수정, 표지 테스트 1개 미추적. 화면은 임시 PDF 차단 및 URL만 보관. 브랜치 정상, 병합 중 아님, develop 확인, stash 1개 보존.
+- 이어서 화면 Blob 보관·multipart 전송·통합 확인·오류 한국어 안내·제목 상태 갱신·URL 해제 순서, 담당 테스트와 명세를 수정. 서버 3개 구현은 인계 상태 그대로.
+
+### Codex가 직접 실행
+- JS 문법: `node --check features/product_brochure/static/product_brochure.js` 및 `node --check tests/test_product_brochure/browser_cover_check.js` 통과.
+- Node: `node tests/test_product_brochure/review_logic_check.js` 50/50. JSON 회귀, 적용 Blob/고정 파일명/multipart 필드, 서버 오류 코드 매핑, 취소 0회·중복 1회·오래된 응답 무시·URL 수명·미적용 편집 차단. DOM 브라우저 검증은 아님.
+- 제품소개서: `python -m unittest discover -s tests/test_product_brochure` 156개 OK. 공통: `python -m unittest discover -s tests/test_common` 56개 OK.
+- PDF 관련: `python -W always::ResourceWarning -m unittest discover -s tests/test_product_brochure -p 'test_pdf*.py'` 57개 OK. 최초 경고 존재: tracemalloc 결과 Werkzeug 테스트 입력의 multipart 인코딩 임시 파일. test_pdf_cover_api.py helper에 테스트 소유 wsgi.input cleanup 추가(서버 자원과 구분).
+- cleanup 추가 후 같은 PDF 57개 재실행: 전부 OK, ResourceWarning 0건. 전체 156개 최초 성공 실행의 경고는 당시 결과로 보존.
+- 최종 대상 환경 `C:/Users/user/miniforge3/envs/jasonenv/python.exe`에서도 제품소개서 156개·공통 56개 OK. 전체 실행에서는 PDF 외 기존 테스트의 임시 입력 자원 경고가 남음(통과와 경고 없음은 구분). 이번 PDF 테스트의 경고 0건 결과를 전체 테스트로 확대 해석하지 않음.
+- 분리 확인: jasonenv에서 `-X tracemalloc=1 -W always::ResourceWarning ... -p test_analyze_api.py`만 실행해 33개 OK 및 같은 임시 파일 경고 재현. 이번에 수정하지 않은 분석 테스트 경로임을 확인했으며 정확한 소유권/전체 원인 수정은 수행하지 않음.
+- 기존 실패: 1차 Node 49/50, Python 156개 중 3개(이전 문구/정적 전제). 기대값을 새 계약으로 정정 후 위 결과. 숨기거나 이전 이력 삭제하지 않음.
+- `python tests/test_product_brochure/check_cover_render.py`: 실제 Flask PDF API로 기본/A/B/복원 4개 PDF(A4 4쪽) 생성, 설치된 PDFium으로 96dpi 렌더. 2~4쪽 모든 픽셀 동일, 복원 1쪽 기본과 동일, A/B 1쪽 다름. CSS 크롭 수식(794×940, 50% 70%)과 띠 경계 오차 3px 미만. OpenAI 클라이언트 생성 금지 패치.
+- 직접 시각 확인: a_contact_sheet.png 4쪽에서 제목/본문/가상/AI 안내 배치와 표지 교체, 4쪽 기존 이미지 유지 확인. **브라우저 화면과 직접 비교한 것은 아님.**
+- 새 샘플 폴더: `tests/test_product_brochure/samples/cover_render_20261026_135436_147831/`(default.pdf, a.pdf, b.pdf, restored.pdf, 쪽별 PNG·연락판). 기존 샘플 삭제/덮어쓰기 없음.
+- `git diff --check` 오류 없음. Git 쓰기·stash 조작·유료 API·패키지 설치·공통 파일 변경 없음.
+
+### 브라우저 중단과 미검증
+- 별도 모의 서버 127.0.0.1:5017 기동 확인 후 중지. AI 라우트만 fixture로 대체, PDF는 실제 라우트, 실제 AI 클라이언트 생성 금지. 환경변수·프롬프트 변경 없음.
+- 컴퓨터 제어 도구가 현재 Chrome URL을 충분히 확인하지 못해 작업을 중단. 이후 UI 제어/우회 없음. **브라우저 스크립트 실행·실제 다운로드·화면 크롭 비교는 미실행**. 브라우저 서버/JS는 준비 및 문법 확인만, PASS 보고 파일 없음.
+- 미검증: 브라우저 DOM 전체 흐름(후보→적용→교체→복원·제목·잠금·다운로드·자원·이탈 보호), 실제 30/210초 시간 초과, 스크린리더/다른 브라우저/인쇄. 순수 로직/API 결과와 구분.
+- 실제 유료 이미지/문구 생성·번역·이미지 품질·비용·시간은 재실행하지 않음.
+
+### 수동 확인 절차(유료 호출 없음)
+1. 프로젝트 루트에서 `python tests/test_product_brochure/browser_cover_server.py` 실행. 기존 앱과 별도 5017 포트.
+2. Chrome/Edge에서 `http://127.0.0.1:5017/#product_brochure` 열기. 가상 데이터 자동 검사 스크립트가 기본/A/B/복원 다운로드를 요청하므로 브라우저 다운로드 설정에 따라 확인이 필요할 수 있음. 다른 서비스나 실제 키를 사용하지 않음.
+3. 페이지 제목 PASS/FAIL 및 새 `tests/test_product_brochure/samples/browser_cover_<실행시각>/report_*.json` 확인. 스크립트는 실제 브라우저에서 아직 검증되지 않았으므로 실패 시 보고된 단계부터 조사.
+4. 기본→후보 A→A 적용→후보 B(미적용)→PDF의 A→B 적용→복원 확인. 후보 제목, 2~4쪽 유지, 다운로드 PDF 1쪽과 화면 크롭 대조.
+5. 오류 시 문구/후보/적용 이미지 보존, 취소 요청 0회, PDF 진행 중 변경 잠금, 미적용 문구 차단, 다운로드 후 새로고침 이탈 경고 확인. 실제 저장 완료는 페이지에서 보장하지 않음.
+6. 확인 후 서버 Ctrl+C. 샘플은 가상 자료만이며 기존 실행 폴더를 덮어쓰지 않음.
+
+### 프리미엄 실제 실행 외부 전달(SPE-03)
+사용자 보고·ChatGPT 작은 캡처 확인: 후보 표시·적용 상태·밝은 제목 여백과 가독성, 적용 후 미적용 제목 모순. Codex 직접 원본 열람 없음. 모델/실행 프롬프트 버전/비용/시간 미확인, 미세 글자·로고 부재 보장 불가. 전문/원본 미저장.
+
+## 2026-10-26 적용 표지 PDF — 기존 실행 앱 사용자 후속 확인(DI-13)
+- 기록 시각: 2026-10-26 14:07 (Asia/Seoul). 실제 확인 시각 미확인. 작업자 유정현.
+- 근거/환경: 사용자 메시지에 따른 확인 결과. **모의 테스트 서버가 아닌 기존 실행 앱에서 사용자가 직접 확인**했으며, Codex가 직접 브라우저로 확인하거나 다운로드 파일을 대조한 결과는 아님.
+
+| 사용자 확인 절차 | 사용자 보고 결과 |
+|---|---|
+| AI 표지 배경 적용 | 정상 |
+| 적용 뒤 후보 영역 제목과 다운로드 버튼 확인 | “현재 표지에 적용된 이미지” 표시 및 PDF 다운로드 활성화 정상 |
+| 다운로드 PDF와 미리보기 대조 | 1쪽 배경 일치, 2~4쪽 및 문구 유지 |
+| 기본 배경 복원 후 PDF 다운로드 | PDF도 기본 표지로 복원, 정상 |
+
+- 판정 범위: 사용자 보고 기준 위 네 항목 정상. 앞선 Codex 브라우저 도구 중단·직접 검증 미실행 기록은 당시 사실로 보존하며, 이번 사용자 확인 결과로 후속 보완한다. 모의 브라우저 검사 스크립트의 실행/통과 근거로 사용하지 않는다.
+- Codex 이번 수행: 규칙·브랜치·status·diff·스테이징 상태 읽기 전용 확인 및 개인 기록 두 파일 추가. 서비스 코드 변경·API 호출·테스트 재실행 없음. 실제 결과 파일/이미지 원본을 복사하거나 기록에 저장하지 않음.
+- 미확인 유지: 추가 이미지 생성 여부·호출 횟수·모델·실행 프롬프트 버전·비용·시간. 이번 보고에 없는 오류·취소·중복·오래된 응답·자원 정리·이탈 보호의 브라우저 확인 여부는 추가 확정하지 않음.
+
+검토용 산출물의 커밋 제외 권장(읽기 전용 확인, 파일 삭제/Git 변경 없음)
+- 현재 feature/product_brochure, 병합 중 아님. 전체 스테이징 목록 비어 있음.
+- `tests/test_product_brochure/samples/cover_render_20261026_135436_147831/`의 23개 파일 전부 미추적:
+  - PDF 4개: `a.pdf`, `b.pdf`, `default.pdf`, `restored.pdf`.
+  - PNG 19개: `a.png`, `b.png`, `a_contact_sheet.png`, `a_page_1.png`~`a_page_4.png`, `b_page_1.png`~`b_page_4.png`, `default_page_1.png`~`default_page_4.png`, `restored_page_1.png`~`restored_page_4.png`.
+- 위 파일은 재생성 가능한 검토용 산출물로 커밋 제외 권장. 미추적 테스트 소스 `test_pdf_cover_api.py`, `browser_cover_check.js`, `browser_cover_server.py`, `check_cover_render.py`는 별도의 소스 검토/커밋 대상이며 산출물 제외 목록에 포함하지 않음. 브라우저 스크립트는 문법/기동 확인만 완료한 기존 상태 유지.
+- 기존 추적 서비스 이미지 `catalog_cover_concept.png`, `catalog_material_concept.png` 및 공통 디자인 참고 이미지는 이번 제외 권장 대상이 아님.
+
+## 2026-10-26 develop 병합 충돌 해결 검증(DI-14)
+- 기록 시각: 2026-10-26 15:15 (Asia/Seoul). 작업자 유정현. 아래는 Codex가 이번 최종 파일 상태에서 직접 실행한 결과이며 Claude의 과거 보고나 DI-13 사용자 브라우저 확인과 구분한다.
+- 시작 상태: feature/product_brochure, 정상 merge 진행 중. 병합 대상은 로컬 develop/MERGE_HEAD `7c39f5a`, 공통 조상 `9e2066c`. 충돌 파일은 requirements.txt 1개. rebase/cherry-pick/revert 진행 상태 없음. 자동 병합 스테이징 140개와 stash 1개는 수정하지 않음.
+- 해결 기대/실제: stage 1/2/3과 사용 코드를 비교해 양쪽 기능 의존성·설명을 보존. 최종 패키지 집합이 stage 2와 stage 3의 합집합과 동일하고 중복 없이 9개임을 packaging.Requirement로 확인. ReportLab 5.1.0/Pillow 13.0.0은 양쪽 동일 버전이며 dotenv 1.2.4/docx 1.2.0도 유지. 삭제한 것은 충돌 마커·동일 패키지 중복·더 이상 맞지 않는 PDF 도구 미정/향후 병합 안내뿐.
+
+### 직접 실행한 검증
+환경: `C:/Users/user/miniforge3/envs/jasonenv/python.exe`. 각 unittest 실행 프로세스에서 OpenAI 및 외부 데이터 API 관련 키 환경변수를 제거하고 socket.socket.connect를 실패시키는 가드를 설정한 뒤 기존 모의 테스트를 discover로 실행. .env를 읽는 서버 실행이나 실제 외부 API 요청은 하지 않음.
+
+| 대상/절차 | 실제 결과 |
+|---|---|
+| unittest discover -s tests/test_common | 56개 통과 |
+| unittest discover -s tests/test_product_brochure | 156개 통과(Node 로직 검사 포함) |
+| unittest discover -s tests/test_home | 94개 통과 |
+| unittest discover -s tests/test_market_analysis | 71개 통과 |
+| unittest discover -s features/green_claim/tests | 161개 unittest 항목 중 160개 통과, test_docx_extract 로딩 오류 1개 |
+| 추적 Python 소스 ast.parse | 85개 문법 정상 |
+| node --check: 공통 app_shell 및 home/market_analysis/green_claim/product_brochure JS | 5개 문법 정상 |
+| create_app 및 라우트 등록, 테스트 클라이언트 GET / | Blueprint 5개, 라우트 27개, HTTP 200 |
+| Git 충돌 마커 검사(충돌 파일·공통/기능 소스·관련 규칙 문서), git diff --check | 마커/공백 오류 없음 |
+| 작업 전후 git ls-files --stage 대조 | index 엔트리 동일, 스테이징 변경 없음 |
+| 개인 로그 추가 전 HEAD 대비 제품소개서 기능·개인 기록 diff | 차이 없음: 분석·생성·편집·AI 표지·PDF 및 기존 기록 보존 |
+| MERGE_HEAD 대비 home/market_analysis/green_claim 및 해당 팀원 개인 기록 diff | 차이 없음: 자동 병합된 팀 기능·자산·기록 보존 |
+
+### 실패·기존 경고·미검증 구분
+- 환경 문제: `test_docx_extract`가 `ModuleNotFoundError: No module named 'docx'`로 로딩되지 않음. 설치 메타데이터와 import로 python-docx 부재 확인. DOCX 테스트 본문은 실행되지 않았으며 그린 클레임 전체 통과로 보고하지 않음. 이번 병합 코드 실패라는 근거는 없음.
+- 환경 차이: python-dotenv 설치 버전 1.1.1, 요구 버전 1.2.4. 다른 선언 7개 패키지는 설치 버전과 일치. dotenv 1.2.4 환경 및 .env 자동 로드 동작은 이번 검증 범위 밖. 요구 버전을 환경에 맞춰 바꾸거나 패키지를 설치하지 않음.
+- 기존 경고: 제품소개서 분석 테스트의 임시 업로드 파일 ResourceWarning 재관찰. DI-12 등 기존 이력을 유지하며 이 경고를 해결하려고 무관한 테스트/기능을 변경하지 않음. 모의 오류를 주입하는 테스트의 진단 로그는 unittest 실패와 구분.
+- 미실행: 실제 브라우저 통합 검증, 실제 유료 API·이미지 생성·외부 데이터 호출, DOCX 추출 테스트 본문, 지정 dotenv 버전 환경 검증. 과거 브라우저 도구 중단과 사용자 후속 확인 기록은 그대로 보존하며 이번 직접 확인으로 대체하지 않음.
+- 변경 범위: requirements.txt 및 유정현 prompt_log.md/validation.md만 수정. 공통 앱 등록·AppShell 보호 계약은 사용처를 확인했고 변경하지 않음. 글꼴·이미지·테스트 소스·다른 작업자 기록 변경/삭제 없음.
+- 사용자 후속 처리: requirements.txt 내용 검토 후 GitHub Desktop에서 충돌 해결 표시 및 병합 완료를 직접 수행해야 함. 파일 내용의 마커가 없어도 git status의 UU는 index에 해결 상태를 반영하기 전까지 남음. 자동 병합된 기존 스테이징을 보존하고 개인 기록도 검토할 것. 내용 판단이 남은 충돌은 없음.

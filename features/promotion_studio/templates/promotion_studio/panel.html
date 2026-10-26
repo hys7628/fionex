@@ -1,46 +1,262 @@
-{# 홍보 스튜디오 작업 영역. 입력 항목은 공통 UI 확인용 예시이며 명세 확정 후 담당자가 교체합니다. #}
+{# 홍보 스튜디오 작업 영역. 선택지·제한값은 service.py(routes.py의 context processor)에서 받습니다. #}
+{% set ps = promotion_studio %}
+{% set lim = ps.limits %}
+{% macro error(name) -%}
+<p class="field-error" id="promotion_studio-{{ name }}-error" data-ps-error="{{ name }}" hidden></p>
+{%- endmacro %}
+{% macro other_input(name, label) -%}
+<div class="field ps-other" data-ps-other="{{ name }}" hidden>
+  <label class="field-label" for="promotion_studio-{{ name }}">{{ label }}<span class="field-required">필수</span></label>
+  <input class="input" id="promotion_studio-{{ name }}" name="{{ name }}" type="text" maxlength="{{ lim.other_max_chars }}"
+         disabled aria-describedby="promotion_studio-{{ name }}-hint promotion_studio-{{ name }}-error">
+  <p class="field-hint" id="promotion_studio-{{ name }}-hint">최대 {{ lim.other_max_chars }}자</p>
+  {{ error(name) }}
+</div>
+{%- endmacro %}
 <div class="workspace">
-  <form class="card" aria-labelledby="promotion_studio-input-title">
+  <form class="card" aria-labelledby="promotion_studio-input-title" novalidate data-ps-form
+        data-ps-limits='{{ lim|tojson }}'
+        data-ps-doc-ext='{{ ps.doc_extensions|list|tojson }}' data-ps-image-ext='{{ ps.image_extensions|list|tojson }}'>
     <div class="card-header">
       <div>
         <h2 class="card-title" id="promotion_studio-input-title">콘티 조건</h2>
-        <p class="card-description">대상과 제품 자료를 직접 입력합니다. 다른 탭의 자료는 자동으로 가져오지 않습니다.</p>
+        <p class="card-description">대상과 제품 자료를 직접 입력합니다. 다른 탭의 자료는 자동으로 가져오지 않으며, 올린 파일은 저장하지 않습니다.</p>
       </div>
     </div>
-    <fieldset class="fieldset">
-      <legend class="field-label">대상</legend>
+
+    <div class="stack">
+      <fieldset class="fieldset" aria-describedby="promotion_studio-audience-error">
+        <legend class="field-label">대상<span class="field-required">필수</span></legend>
+        <div class="ps-choices">
+          {% for value, text in ps.audiences %}
+          <label class="choice"><input type="radio" name="audience" value="{{ value }}"> {{ text }}</label>
+          {% endfor %}
+        </div>
+        {{ error("audience") }}
+      </fieldset>
+
+      <div class="field">
+        <label class="field-label" for="promotion_studio-description">제품 설명<span class="field-required">필수</span></label>
+        <textarea class="textarea" id="promotion_studio-description" name="description" maxlength="{{ lim.description_max_chars }}"
+                  aria-describedby="promotion_studio-description-hint promotion_studio-description-error"
+                  data-ps-count="description"></textarea>
+        <p class="field-hint" id="promotion_studio-description-hint">
+          확인된 제품 사실만 입력하세요. 수치·인증·친환경 주장은 근거 자료가 필요합니다.
+          <span data-ps-counter="description">0</span> / {{ "{:,}".format(lim.description_max_chars) }}자
+        </p>
+        {{ error("description") }}
+      </div>
+
+      <fieldset class="fieldset" aria-describedby="promotion_studio-purposes-hint promotion_studio-purposes-error">
+        <legend class="field-label">홍보 목적<span class="field-required">필수</span></legend>
+        <p class="field-hint" id="promotion_studio-purposes-hint">1~{{ lim.purpose_max }}개 선택</p>
+        <div class="ps-choices">
+          {% for value, text in ps.purposes %}
+          <label class="choice"><input type="checkbox" name="purposes" value="{{ value }}"> {{ text }}</label>
+          {% endfor %}
+        </div>
+        {{ error("purposes") }}
+      </fieldset>
+      {{ other_input("purpose_other", "홍보 목적 직접 입력") }}
+
+      <div class="field">
+        <label class="field-label" for="promotion_studio-cta">CTA</label>
+        <input class="input" id="promotion_studio-cta" name="cta" type="text" maxlength="{{ lim.cta_max_chars }}"
+               aria-describedby="promotion_studio-cta-hint promotion_studio-cta-error" data-ps-count="cta">
+        <p class="field-hint" id="promotion_studio-cta-hint">
+          선택 사항. 비워 두면 CTA를 만들지 않습니다. <span data-ps-counter="cta">0</span> / {{ lim.cta_max_chars }}자
+        </p>
+        {{ error("cta") }}
+      </div>
+
+      <fieldset class="fieldset" aria-describedby="promotion_studio-tone-error">
+        <legend class="field-label">홍보 톤<span class="field-required">필수</span></legend>
+        <div class="ps-choices">
+          {% for value, text in ps.tones %}
+          <label class="choice"><input type="radio" name="tone" value="{{ value }}"> {{ text }}</label>
+          {% endfor %}
+        </div>
+        {{ error("tone") }}
+      </fieldset>
+      {{ other_input("tone_other", "홍보 톤 직접 입력") }}
+
+      <fieldset class="fieldset" aria-describedby="promotion_studio-duration-error">
+        <legend class="field-label">영상 길이<span class="field-required">필수</span></legend>
+        <div class="ps-choices">
+          {% for sec in ps.durations %}
+          <label class="choice"><input type="radio" name="duration" value="{{ sec }}"{% if sec == ps.defaults.duration %} checked{% endif %}> {{ sec }}초</label>
+          {% endfor %}
+        </div>
+        {{ error("duration") }}
+      </fieldset>
+
+      <div class="field">
+        <label class="field-label" for="promotion_studio-scene_count">장면 수<span class="field-required">필수</span></label>
+        <select class="select" id="promotion_studio-scene_count" name="scene_count"
+                aria-describedby="promotion_studio-scene_count-hint promotion_studio-scene_count-error">
+          {% for n in range(lim.scene_min, lim.scene_max + 1) %}
+          <option value="{{ n }}"{% if n == ps.defaults.scene_count %} selected{% endif %}>{{ n }}개</option>
+          {% endfor %}
+        </select>
+        <p class="field-hint" id="promotion_studio-scene_count-hint">영상 길이와 관계없이 {{ lim.scene_min }}~{{ lim.scene_max }}개</p>
+        {{ error("scene_count") }}
+      </div>
+
+      <fieldset class="fieldset" aria-describedby="promotion_studio-aspect_ratio-hint promotion_studio-aspect_ratio-error">
+        <legend class="field-label">화면 비율<span class="field-required">필수</span></legend>
+        <p class="field-hint" id="promotion_studio-aspect_ratio-hint">콘티 한 편의 모든 장면에 같은 비율을 적용합니다.</p>
+        <div class="ps-choices">
+          {% for ratio in ps.aspect_ratios %}
+          <label class="choice"><input type="radio" name="aspect_ratio" value="{{ ratio }}"{% if ratio == ps.defaults.aspect_ratio %} checked{% endif %}> {{ ratio }}</label>
+          {% endfor %}
+        </div>
+        {{ error("aspect_ratio") }}
+      </fieldset>
+
+      <fieldset class="fieldset" aria-describedby="promotion_studio-image_style-error">
+        <legend class="field-label">이미지 스타일<span class="field-required">필수</span></legend>
+        <div class="ps-choices">
+          {% for value, text in ps.image_styles %}
+          <label class="choice"><input type="radio" name="image_style" value="{{ value }}"{% if value == ps.defaults.image_style %} checked{% endif %}> {{ text }}</label>
+          {% endfor %}
+        </div>
+        {{ error("image_style") }}
+      </fieldset>
+      {{ other_input("image_style_other", "이미지 스타일 직접 입력") }}
+
+      <div class="field">
+        <label class="field-label" for="promotion_studio-max_wait_seconds">최대 대기 시간(초)<span class="field-required">필수</span></label>
+        <input class="input ps-number" id="promotion_studio-max_wait_seconds" name="max_wait_seconds" type="number"
+               inputmode="numeric" step="1" min="{{ lim.wait_min_seconds }}" max="{{ lim.wait_max_seconds }}"
+               value="{{ ps.defaults.max_wait_seconds }}"
+               aria-describedby="promotion_studio-max_wait_seconds-hint promotion_studio-max_wait_seconds-error">
+        <p class="field-hint" id="promotion_studio-max_wait_seconds-hint">
+          {{ lim.wait_min_seconds }}~{{ lim.wait_max_seconds }}초. 시간을 넘기면 처리를 멈추고 다시 시도하도록 안내합니다.
+        </p>
+        {{ error("max_wait_seconds") }}
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="promotion_studio-documents">보조 문서</label>
+        <input class="file-input" id="promotion_studio-documents" name="documents" type="file" multiple
+               accept="{{ ps.doc_extensions|join(',') }}"
+               aria-describedby="promotion_studio-documents-hint promotion_studio-documents-error" data-ps-file="documents">
+        <p class="field-hint" id="promotion_studio-documents-hint">
+          선택 사항. PDF·DOCX·PPTX·HWP·XLSX·TXT, 최대 {{ lim.doc_max_files }}개, 파일당 {{ lim.doc_max_file_bytes // 1048576 }}MB·합계 {{ lim.doc_max_total_bytes // 1048576 }}MB.
+          다시 선택하면 기존 선택이 바뀝니다. 파일명 옆 ×로 하나씩 첨부를 해제할 수 있습니다(원본 파일은 그대로).
+        </p>
+        <ul class="ps-file-list" data-ps-file-list="documents" hidden></ul>
+        {{ error("documents") }}
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="promotion_studio-photos">제품 사진</label>
+        <input class="file-input" id="promotion_studio-photos" name="photos" type="file" multiple
+               accept="{{ ps.image_extensions|join(',') }}"
+               aria-describedby="promotion_studio-photos-hint promotion_studio-photos-error" data-ps-file="photos">
+        <p class="field-hint" id="promotion_studio-photos-hint">
+          선택 사항. JPG·JPEG·PNG·WEBP, 최대 {{ lim.photo_max_files }}장, 파일당 {{ lim.image_max_file_bytes // 1048576 }}MB.
+          사진이 없으면 실제 제품 외형과 같은지 확인할 수 없어 검토 항목으로 남깁니다.
+        </p>
+        <ul class="ps-file-list" data-ps-file-list="photos" hidden></ul>
+        {{ error("photos") }}
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="promotion_studio-logo">로고</label>
+        <input class="file-input" id="promotion_studio-logo" name="logo" type="file"
+               accept="{{ ps.image_extensions|join(',') }}"
+               aria-describedby="promotion_studio-logo-hint promotion_studio-logo-error" data-ps-file="logo">
+        <p class="field-hint" id="promotion_studio-logo-hint">
+          선택 사항. 1개, 파일당 {{ lim.image_max_file_bytes // 1048576 }}MB. 제품 사진과 로고 합계 {{ lim.image_max_total_bytes // 1048576 }}MB.
+        </p>
+        <ul class="ps-file-list" data-ps-file-list="logo" hidden></ul>
+        {{ error("logo") }}
+      </div>
+
+      <fieldset class="fieldset" data-ps-logo-scope hidden aria-describedby="promotion_studio-logo_scope-error">
+        <legend class="field-label">로고 적용 범위<span class="field-required">필수</span></legend>
+        <div class="ps-choices">
+          {% for value, text in ps.logo_scopes %}
+          <label class="choice"><input type="radio" name="logo_scope" value="{{ value }}" disabled> {{ text }}</label>
+          {% endfor %}
+        </div>
+        {{ error("logo_scope") }}
+      </fieldset>
+
+      <div class="notice notice-info" data-ps-summary role="status" aria-live="polite">
+        <p class="notice-title">입력 확인</p>
+        <p data-ps-summary-text>필수 항목을 입력하세요.</p>
+      </div>
+
       <div class="btn-row">
-        <label class="choice"><input type="radio" name="audience" value="buyer"> 바이어용</label>
-        <label class="choice"><input type="radio" name="audience" value="consumer"> 소비자용</label>
+        <button type="submit" class="btn btn-primary" aria-describedby="promotion_studio-generate-hint" data-ps-submit>콘티 생성</button>
+        <button type="button" class="btn btn-secondary" data-ps-cancel hidden>취소</button>
+        <span class="field-hint" id="promotion_studio-generate-hint">
+          제품 설명으로 텍스트 콘티를 만듭니다. 보조 문서·사진은 아직 반영하지 않으며, 이미지 생성은 다음 단계입니다.
+        </span>
       </div>
-    </fieldset>
-    <div class="field">
-      <label class="field-label" for="promotion_studio-description">제품 설명</label>
-      <textarea class="textarea" id="promotion_studio-description" name="description"></textarea>
-    </div>
-    <div class="field">
-      <label class="field-label" for="promotion_studio-images">사진·로고</label>
-      <input class="file-input" id="promotion_studio-images" name="images" type="file" multiple
-             aria-describedby="promotion_studio-images-hint">
-      <p class="field-hint" id="promotion_studio-images-hint">지원 형식과 용량은 기능 명세 확정 후 안내합니다. 파일은 저장하지 않습니다.</p>
-    </div>
-    <div class="btn-row">
-      <button type="submit" class="btn btn-primary" disabled aria-describedby="promotion_studio-pending">콘티 생성</button>
-      <span class="field-hint" id="promotion_studio-pending">준비 중: 아직 사용할 수 없습니다.</span>
     </div>
   </form>
 
-  <section class="card" aria-labelledby="promotion_studio-result-title">
+  <section class="card" aria-labelledby="promotion_studio-result-title" data-ps-result-card>
     <div class="card-header">
       <div>
         <h2 class="card-title" id="promotion_studio-result-title">콘티 결과</h2>
-        <p class="card-description">장면별 구성과 포르투갈어 문구를 표시합니다.</p>
+        <p class="card-description">장면별 구성과 포르투갈어·한국어 문구를 표시합니다.</p>
       </div>
-      <button type="button" class="btn btn-secondary" disabled aria-describedby="promotion_studio-pending">PDF 다운로드</button>
+      <div class="ps-download" data-work-ignore>
+        <label class="visually-hidden" for="promotion_studio-pdf_edition">PDF 종류</label>
+        <select class="select" id="promotion_studio-pdf_edition" data-ps-pdf-edition disabled>
+          {% for value, text in ps.pdf_editions %}
+          <option value="{{ value }}">{{ text }}</option>
+          {% endfor %}
+        </select>
+        <button type="button" class="btn btn-secondary" disabled aria-describedby="promotion_studio-pdf-hint" data-ps-pdf>PDF 다운로드</button>
+      </div>
     </div>
-    <div class="empty-state">
+    <p class="field-hint" id="promotion_studio-pdf-hint" data-ps-pdf-hint>콘티를 생성하면 PDF로 내려받을 수 있습니다.</p>
+    <div class="notice notice-info" data-ps-pdf-choice role="alertdialog" aria-labelledby="promotion_studio-pdf-choice-title" data-work-ignore hidden>
+      <p class="notice-title" id="promotion_studio-pdf-choice-title">PDF 이미지 칸을 어떻게 채울까요?</p>
+      <p data-ps-pdf-choice-text></p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" data-ps-pdf-choice-ai>AI 장면 이미지 생성 후 PDF</button>
+        <button type="button" class="btn btn-secondary" data-ps-pdf-choice-photo>첨부 사진 그대로 넣어 PDF</button>
+        <button type="button" class="btn btn-ghost" data-ps-pdf-choice-cancel>취소</button>
+      </div>
+    </div>
+    <div class="notice notice-info" data-ps-busy role="status" hidden>
+      <p class="ps-busy-line"><span class="spinner" aria-hidden="true"></span> 콘티를 생성하고 있습니다. 장면 수에 따라 1분 이상 걸릴 수 있습니다.</p>
+    </div>
+    <div class="notice notice-danger" data-ps-error-box role="alert" hidden>
+      <p class="notice-title" data-ps-error-title>콘티를 만들지 못했습니다</p>
+      <p data-ps-error-text></p>
+    </div>
+    <div class="notice notice-warning" data-ps-stale role="status" hidden>
+      <p class="notice-title">입력 조건이 바뀌었습니다</p>
+      <p>아래 결과는 이전 조건으로 만든 것입니다. 바뀐 조건을 반영하려면 다시 생성하세요.</p>
+    </div>
+    <div class="ps-image-gen" data-ps-image-gen data-work-ignore hidden
+         data-ps-image-info='{{ ps.scene_image|tojson }}'>
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" data-ps-image-start disabled aria-describedby="promotion_studio-image-hint">장면 이미지 생성</button>
+        <button type="button" class="btn btn-ghost" data-ps-image-stop hidden>중지</button>
+      </div>
+      <p class="field-hint" id="promotion_studio-image-hint" data-ps-image-hint></p>
+      <div class="notice notice-warning" data-ps-image-confirm role="alertdialog" aria-labelledby="promotion_studio-image-confirm-title" hidden>
+        <p class="notice-title" id="promotion_studio-image-confirm-title">이미지 생성 전 확인</p>
+        <p data-ps-image-confirm-text></p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" data-ps-image-confirm-yes>생성 시작</button>
+          <button type="button" class="btn btn-ghost" data-ps-image-confirm-no>취소</button>
+        </div>
+      </div>
+      <p class="field-hint" data-ps-image-status role="status" aria-live="polite"></p>
+    </div>
+    <div class="empty-state" data-ps-empty>
       <p class="empty-state-title">아직 결과가 없습니다</p>
-      <p>콘티 생성 기능이 개발되면 결과가 이곳에 표시됩니다.</p>
+      <p>콘티 조건을 입력하고 콘티 생성을 누르면 결과가 이곳에 표시됩니다.</p>
     </div>
+    <div class="stack" data-ps-result hidden></div>
   </section>
 </div>

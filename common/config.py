@@ -39,6 +39,12 @@ IMAGE_MIME_TYPE = "image/png"
 # 디코딩 후 이미지 1장의 메모리 상한. base64 문자열은 디코딩 전에 같은 기준으로 길이를 검사합니다.
 IMAGE_MAX_BYTES = 16 * 1024 * 1024
 
+# 참조 이미지 기반 이미지 생성(Images API edits, OPENAI_IMAGE_MODEL). 2026-10-25 정은진 추가, 공통 담당 검토 대기.
+# 공식 가이드상 입력 이미지는 50MB 미만이며 장수 상한은 명시되지 않음(2026-10-25 조회). 아래는 프로젝트 제한입니다.
+IMAGE_REF_MAX_FILES = 5
+IMAGE_REF_MAX_BYTES = 10 * 1024 * 1024
+IMAGE_REF_TOTAL_MAX_BYTES = 50 * 1024 * 1024
+
 # PDF 입력(텍스트 모델 OPENAI_MODEL 사용). 파일 자체 제한이며 HTTP 요청 전체 제한은 라우트에서 별도로 정합니다.
 PDF_MAX_BYTES = 10 * 1024 * 1024
 PDF_MAX_PAGES = 20

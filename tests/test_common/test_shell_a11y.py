@@ -87,11 +87,13 @@ class ShellA11yTest(unittest.TestCase):
     def test_green_claim_results_title_focus_target(self):
         self.assertIn('tabindex="-1"', tag(self.html, 'id="green_claim-results-title"'))
 
-    def test_unavailable_buttons_describe_pending(self):
-        for feature in ("product_brochure", "promotion_studio"):
-            buttons = re.findall(r'<button[^>]*aria-describedby="%s-pending"[^>]*>' % feature, self.html)
-            self.assertEqual(len(buttons), 2, feature)
-            self.assertTrue(all("disabled" in b for b in buttons), feature)
+    def test_described_by_targets_exist(self):
+        # 제품소개서·홍보 스튜디오의 미구현 자리 표시 버튼(…-pending 안내)은 develop 병합(2026-10-26)으로 실제 기능으로 바뀌었습니다.
+        # 대신 모든 aria-describedby가 페이지에 있는 id를 가리키는지 확인합니다(병합 뒤 끊긴 참조 방지).
+        ids = set(re.findall(r'\sid="([^"]+)"', self.html))
+        refs = re.findall(r'aria-describedby="([^"]+)"', self.html)
+        missing = sorted({i for r in refs for i in r.split() if "{" not in i and i not in ids})
+        self.assertEqual(missing, [])
 
     def test_shell_exposes_focus_helpers(self):
         js = (ROOT / "static" / "js" / "app_shell.js").read_text(encoding="utf-8")

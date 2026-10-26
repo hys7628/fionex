@@ -985,3 +985,19 @@ body·사이드바(Medium/SemiBold)·버튼·select·Home KPI·카드 제목·ba
 
 ### 미검증
 실제 ComexStat 조회, AI 브리핑 창 점검(dialog.js)은 이번 변경 후 다시 돌리지 않음(바이어 목록 코드 변경 없음).
+
+## 2026-10-26 develop 병합 충돌 정리 (DEV-MERGE-001)
+환경: 병합 중 작업 트리, 검증 서버 127.0.0.1:5013(모의, urlopen 차단), Chrome + playwright-core.
+
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 충돌 표시 남음 | 두 panel.html·저장소 전체 `<<<<<<<`/`>>>>>>>` 없음, 두 파일 = develop 버전(줄바꿈 제외 동일) | 통과 |
+| 내 작업 유지 | common/config.py Pretendard PDF_FONT_FILES·홈 report.py Pretendard 유지, 내 담당 파일(static/css·market_analysis·home·templates)은 HEAD 대비 변경 없음 | 통과 |
+| 단위 테스트 | test_common 70 OK(수정 후), test_home 94 OK, test_market_analysis 84 OK, green_claim 178 OK, test_product_brochure 156 OK(수정 후), test_promotion_studio 68 OK | 통과 |
+| 수정 전 실패 | test_common 1(자리 표시 버튼 2개 기대) · test_product_brochure 2(첫 `<dialog>`가 시장/바이어 분석 창). develop 원본(git archive)에서는 156 OK → 병합 조합 문제로 확인 | 수정함 |
+| 브라우저 회귀 | 5개 탭 × 3폭 15/15(가로 스크롤 없음·JS 예외 0), 공통 상호작용 26/26, 키보드·초점 41/41, 로딩·오류 36/36, 시장 통계 두 화면 18/18, 바이어 검색 11/11 | 통과 |
+점검 스크립트 갱신: 옛 제품소개서 textarea·'준비 중' 버튼 기대 2항목을 실제 기능 기준(공통 입력칸 초점은 시장 분석 품목코드 칸, 결과 전 PDF 버튼 비활성+이유 안내)으로 변경.
+외부 호출 0건.
+
+### 미검증
+AI 브리핑 창 점검(dialog.js, AI 모의 서버) 재실행 안 함, 제품소개서·홍보 스튜디오 실제 OpenAI·PDF 생성 화면 흐름.

@@ -681,3 +681,16 @@
 - 검증: validation.md DEV-MA-STATS-007.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 실제 ComexStat 조회로는 확인하지 않음(모의 서버), 브라우저 뒤로 가기와 연결하지 않음.
+
+## DEV-MERGE-001 develop → feature/common_setup 병합 충돌 정리
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통 (브랜치 feature/common_setup, 사람이 시작한 병합 중 상태, MERGE_HEAD 4092930)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "지금 깃 충돌난거 오류없이 병합해줘" → "아니 내꺼위주로 병합해"
+- 판단: 충돌 2곳(제품소개서·홍보 스튜디오 panel.html)에서 내 쪽 변경은 미구현 자리 표시 버튼에 aria-describedby(…-pending)를 붙인 한 줄뿐이었고, develop은 그 버튼을 실제 기능 버튼으로 바꿈. 내 쪽 줄을 그대로 고르면 제품소개서는 data-review-empty가 사라져 product_brochure.js에서 null 오류, 홍보 스튜디오는 죽은 PDF 버튼이 중복되어 "오류 없이" 조건을 못 지킴 → 두 파일은 develop 구조로 정리. 그 밖의 내 작업(공통 UI·Pretendard·시장/바이어 분석)은 자동 병합으로 유지됨을 확인. requirements.txt reportlab 설명이 develop의 옛 글꼴 설명으로 되돌아가 내 쪽 Pretendard 통일 설명으로 복구하고 develop의 새 사용처(홍보 스튜디오·제품소개서, Noto Sans KR) 추가. 병합으로 깨진 테스트 3건(내 낡은 자리 표시 버튼 테스트, 첫 <dialog>를 집던 제품소개서 테스트) 수정.
+- 변경 파일: features/product_brochure/templates/product_brochure/panel.html, features/promotion_studio/templates/promotion_studio/panel.html, requirements.txt, tests/test_common/test_shell_a11y.py, tests/test_product_brochure/test_panel.py, 이 기록 파일들.
+- Git: add·commit은 사람이 수행(이번 작업은 파일 정리만).
+- 외부 호출: 0건.
+- 검증: validation.md DEV-MERGE-001.
+- 남은 한계: 홍보 스튜디오·제품소개서 PDF는 아직 Noto Sans KR(Pretendard 통일 미적용). 두 탭 실제 OpenAI 기능은 미실행.

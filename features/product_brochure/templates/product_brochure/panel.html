@@ -1,40 +1,192 @@
-{# 제품소개서 작업 영역. 입력 항목은 공통 UI 확인용 예시이며 명세 확정 후 담당자가 교체합니다. #}
+{# 제품소개서 작업 영역: 한국어 PDF 선택 → 분석 요청 → 결과 확인·수정. 카탈로그 생성·PDF 출력은 아직 연결하지 않았습니다. #}
 <div class="workspace">
-  <form class="card" aria-labelledby="product_brochure-input-title">
+  <form class="card" aria-labelledby="product_brochure-input-title" novalidate>
     <div class="card-header">
       <div>
-        <h2 class="card-title" id="product_brochure-input-title">자료 입력</h2>
-        <p class="card-description">소개서에 사용할 한국어 제품 자료를 넣습니다.</p>
+        <h2 class="card-title" id="product_brochure-input-title">자료 선택</h2>
+        <p class="card-description">소개서에 사용할 한국어 제품 자료 PDF 1개를 선택합니다.</p>
       </div>
     </div>
+
     <div class="field">
-      <label class="field-label" for="product_brochure-file">한국어 제품 자료</label>
+      <label class="field-label" for="product_brochure-file">한국어 제품 자료 PDF<span class="field-required">필수</span></label>
       <input class="file-input" id="product_brochure-file" name="source_file" type="file"
-             aria-describedby="product_brochure-file-hint">
-      <p class="field-hint" id="product_brochure-file-hint">지원 형식과 용량은 기능 명세 확정 후 안내합니다. 파일은 저장하지 않습니다.</p>
+             accept=".pdf,application/pdf"
+             aria-describedby="product_brochure-file-hint product_brochure-file-status">
+      <p class="field-hint" id="product_brochure-file-hint">
+        PDF 1개, 최대 10 MiB·20쪽. 스캔 PDF도 분석을 요청할 수 있지만 판독 품질은 아직 확인하지 않았습니다.
+        화면에서는 확장자·빈 파일·크기만 확인하고, 실제 PDF 형식·손상·암호화·페이지 수는 서버에서 검사합니다.
+        파일은 영구 저장하지 않습니다.
+      </p>
+      <p class="field-hint" id="product_brochure-file-status" data-file-status aria-live="polite">선택된 파일이 없습니다.</p>
     </div>
-    <div class="field">
-      <label class="field-label" for="product_brochure-notes">요청 사항</label>
-      <textarea class="textarea" id="product_brochure-notes" name="notes"
-                placeholder="강조할 내용이나 바이어 정보를 적어 주세요."></textarea>
-    </div>
+
+    <dl class="product_brochure-file-info" data-file-info hidden>
+      <div><dt>파일명</dt><dd data-file-name></dd></div>
+      <div><dt>크기</dt><dd data-file-size></dd></div>
+    </dl>
+
     <div class="btn-row">
-      <button type="submit" class="btn btn-primary" disabled aria-describedby="product_brochure-pending">소개서 생성</button>
-      <span class="field-hint" id="product_brochure-pending">준비 중: 아직 사용할 수 없습니다.</span>
+      <button type="submit" class="btn btn-primary" data-analyze disabled aria-describedby="product_brochure-analyze-status">PDF 분석</button>
+      <span class="field-hint" id="product_brochure-analyze-status" data-analyze-status role="status">10 MiB 이하의 PDF를 선택하면 분석할 수 있습니다.</span>
+    </div>
+    <div class="notice notice-danger" data-analyze-error role="alert" hidden></div>
+
+    <div class="product_brochure-dev" aria-labelledby="product_brochure-dev-title">
+      <p class="field-label" id="product_brochure-dev-title">개발용 화면 확인</p>
+      <p class="field-hint" id="product_brochure-dev-hint">
+        API 없이 확인·수정 화면을 점검하기 위한 고정 예시입니다. 선택한 PDF를 읽거나 업로드하지 않습니다.
+      </p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" data-load-example aria-describedby="product_brochure-dev-hint">개발용 예시 불러오기</button>
+      </div>
     </div>
   </form>
 
-  <section class="card" aria-labelledby="product_brochure-result-title">
+  <section class="card" aria-labelledby="product_brochure-review-title" data-review-card data-work-ignore aria-busy="false">
     <div class="card-header">
       <div>
-        <h2 class="card-title" id="product_brochure-result-title">소개서 미리보기</h2>
-        <p class="card-description">생성된 포르투갈어 소개서를 검토하고 수정합니다.</p>
+        <h2 class="card-title" id="product_brochure-review-title">분석 결과 확인·수정</h2>
+        <p class="card-description">항목별 값과 상태·가상·확인 여부를 검토합니다.</p>
       </div>
-      <button type="button" class="btn btn-secondary" disabled aria-describedby="product_brochure-pending">PDF 다운로드</button>
     </div>
-    <div class="empty-state">
-      <p class="empty-state-title">아직 결과가 없습니다</p>
-      <p>생성 기능이 개발되면 소개서 미리보기가 이곳에 표시됩니다.</p>
+
+    <div class="empty-state" data-review-empty>
+      <p class="empty-state-title">아직 분석 결과가 없습니다</p>
+      <p>PDF를 선택하고 "PDF 분석"을 누르세요. API 없이 화면만 점검하려면 "개발용 예시 불러오기"를 사용하세요.</p>
+    </div>
+
+    <div class="stack" data-review hidden>
+      <div class="notice notice-warning" role="note" data-source-example hidden>
+        <p class="notice-title">개발용 예시입니다. 업로드한 PDF의 분석 결과가 아닙니다.</p>
+        <p>값은 화면 확인용 고정 예시이며 효성티앤씨의 공식 제품 사양·공급 조건이 아닙니다. 근거 위치와 원문 발췌는 없습니다.</p>
+      </div>
+      <div class="notice notice-warning" role="note" data-source-analysis hidden>
+        <p class="notice-title">PDF 분석(AI 추출) 결과입니다. 사용자 확인 전에는 확정 정보가 아닙니다.</p>
+        <p>페이지·발췌는 AI가 제시한 근거이며 원문 대조는 하지 않았습니다(원문 대조 미실시). 값과 근거를 원문에서 직접 확인하세요.</p>
+        <p data-analysis-meta></p>
+      </div>
+      <div class="notice notice-info" data-review-notes hidden></div>
+      <div class="notice notice-info" role="note">
+        <p class="notice-title">검토 방법</p>
+        <ul class="product_brochure-guide">
+          <li>"사용자 확인"은 검토했다는 표시이며 원문 대조·사실 검증·인증 완료를 뜻하지 않습니다.</li>
+          <li>값을 수정하면 그 항목의 사용자 확인이 해제됩니다.</li>
+          <li>자료(예시 또는 AI 추출)에서 가상으로 표시된 값은 "가상 정보" 표시를 해제할 수 없습니다.</li>
+          <li>상태: "문서에서 추출"은 AI가 근거와 함께 읽은 값, "확인 필요"는 불명확·근거 부족·충돌, "문서에서 찾지 못함"은 AI가 찾지 못한 항목입니다.</li>
+          <li>값이 없던 항목에 입력한 값은 사용자 추가 정보로 구분되며 문서 근거가 아닙니다.</li>
+        </ul>
+      </div>
+      <div class="stack" data-review-groups></div>
+      <fieldset class="fieldset product_brochure-group" data-display-name hidden>
+        <legend class="field-label">카탈로그 표시명</legend>
+        <div class="field">
+          <label class="field-label" for="product_brochure-display-name">카탈로그 표지에 쓸 제품명(라틴 문자 표기)</label>
+          <input class="input" id="product_brochure-display-name" type="text" maxlength="200" autocomplete="off"
+                 aria-describedby="product_brochure-display-name-hint product_brochure-display-name-note">
+          <p class="field-hint" id="product_brochure-display-name-hint" data-display-name-hint aria-live="polite"></p>
+          <p class="field-hint" id="product_brochure-display-name-note">
+            위 "제품명" 항목(원본)은 그대로 두고 카탈로그에만 이 표기를 씁니다. 원문에 있는 표기만 쓰고 공식 영문명을 임의로 만들지 마세요.
+          </p>
+        </div>
+        <label class="choice"><input type="checkbox" id="product_brochure-display-name-confirm"> 카탈로그 표시명 확인</label>
+      </fieldset>
+      <div class="notice notice-info" data-apply-status role="status" hidden></div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" data-apply>확인 내용 적용</button>
+        <button type="button" class="btn btn-secondary" data-generate disabled aria-describedby="product_brochure-generate-status">카탈로그 생성</button>
+      </div>
+      <p class="field-hint" id="product_brochure-generate-status" data-generate-status role="status"></p>
+      <div class="notice notice-danger" data-generate-error role="alert" hidden></div>
     </div>
   </section>
 </div>
+
+<section class="card product_brochure-design" aria-labelledby="product_brochure-design-title">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title" id="product_brochure-design-title">카탈로그 미리보기</h2>
+      <p class="card-description" id="product_brochure-design-hint">
+        "디자인 시안 보기"는 4페이지 레이아웃을 검토하기 위한 고정 예시입니다(분석 결과·수정값을 쓰지 않고 API를 호출하지 않음).
+        "생성 결과 보기"는 마지막으로 성공한 카탈로그 생성 결과를 같은 디자인으로 보여 줍니다.
+      </p>
+      <p class="field-hint" id="product_brochure-result-status" data-result-status role="status">아직 생성 결과가 없습니다.</p>
+      {# PDF 다운로드: 미리보기에 적용된 생성 결과만 대상(디자인 시안 제외). 안내는 JS가 textContent로만 넣음 #}
+      <p class="field-hint" id="product_brochure-pdf-status" data-pdf-status role="status" aria-live="polite">
+        카탈로그를 생성한 뒤 PDF를 다운로드할 수 있습니다(디자인 시안은 대상이 아님).
+      </p>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-secondary" data-catalog-open aria-haspopup="dialog"
+              aria-describedby="product_brochure-design-hint">디자인 시안 보기</button>
+      <button type="button" class="btn btn-primary" data-result-open aria-haspopup="dialog" disabled
+              aria-describedby="product_brochure-result-status">생성 결과 보기</button>
+      <button type="button" class="btn btn-secondary" data-pdf-download disabled
+              aria-describedby="product_brochure-pdf-status">PDF 다운로드</button>
+    </div>
+  </div>
+  <div class="notice notice-danger product_brochure-pdf-error" data-pdf-error role="alert" hidden></div>
+</section>
+
+{# AI 표지 배경(생성 결과 미리보기 1쪽 표지에만 적용). 생성은 버튼 클릭 때만, 후보는 직접 "표지에 적용"해야 반영.
+   이미지·안내 문구는 JS가 브라우저 메모리(object URL)·textContent로만 다룸. 분위기 선택만으로는 작업 상태를 만들지 않음 #}
+<section class="card product_brochure-cover" aria-labelledby="product_brochure-cover-title" data-cover>
+  <div class="card-header">
+    <div>
+      <h2 class="card-title" id="product_brochure-cover-title">AI 표지 배경</h2>
+      <p class="card-description" id="product_brochure-cover-hint">
+        적용한 확인 내용(표시명·제품 설명)과 분위기로 표지용 콘셉트 배경 1장을 만듭니다.
+        생성할 때마다 API 비용이 발생하며, 실제 제품 사진이 아닌 AI 콘셉트 이미지입니다.
+        만든 후보는 직접 "표지에 적용"해야 생성 결과 미리보기 1쪽에 반영됩니다.
+      </p>
+    </div>
+  </div>
+  <fieldset class="fieldset" data-cover-moods data-work-ignore>
+    <legend class="field-label">분위기</legend>
+    <div class="cover-moods">
+      <label class="choice"><input type="radio" name="product_brochure-cover-mood" value="minimal" checked> 미니멀</label>
+      <label class="choice"><input type="radio" name="product_brochure-cover-mood" value="premium"> 프리미엄</label>
+      <label class="choice"><input type="radio" name="product_brochure-cover-mood" value="soft_texture"> 부드러운 소재감</label>
+    </div>
+  </fieldset>
+  <div class="btn-row">
+    <button type="button" class="btn btn-primary" data-cover-generate disabled
+            aria-describedby="product_brochure-cover-status">AI 표지 배경 생성</button>
+    <button type="button" class="btn btn-secondary" data-cover-restore disabled>기본 배경으로 복원</button>
+  </div>
+  <p class="field-hint" id="product_brochure-cover-status" data-cover-status role="status" aria-live="polite">
+    PDF 분석 결과를 검토하고 "확인 내용 적용"을 누르면 생성할 수 있습니다.
+  </p>
+  <p class="field-hint" data-cover-applied-status role="status"></p>
+  <div class="notice notice-danger" data-cover-error role="alert" hidden></div>
+  <div class="cover-candidate" data-cover-candidate hidden>
+    <div class="cover-candidate-preview">
+      <div class="catalog-sheet"><div class="catalog-page catalog-cover" lang="pt-BR" role="img"
+           aria-label="후보 표지 축소 미리보기(실제 표지와 같은 크롭·제목 위치)">
+        <figure class="catalog-figure catalog-cover-figure">
+          <img data-cover-candidate-img alt="" width="1024" height="1536">
+        </figure>
+        <div class="catalog-cover-text">
+          <p class="catalog-kicker">fionex · catálogo de demonstração</p>
+          <p class="catalog-title" data-cover-candidate-title></p>
+          <p class="catalog-lead" data-cover-candidate-tagline></p>
+        </div>
+        <div class="catalog-cover-band">
+          <p class="catalog-caption">Imagem conceitual gerada por IA — não representa o produto real.</p>
+        </div>
+      </div></div>
+    </div>
+    <div class="cover-candidate-info">
+      <p class="notice-title" data-cover-candidate-heading>생성 후보</p>
+      <p class="field-hint" data-cover-candidate-meta></p>
+      <p class="field-hint" data-cover-candidate-stale hidden></p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" data-cover-apply aria-describedby="product_brochure-cover-apply-hint">표지에 적용</button>
+        <button type="button" class="btn btn-secondary" data-cover-discard>후보 버리기</button>
+      </div>
+      <p class="field-hint" id="product_brochure-cover-apply-hint" data-cover-apply-hint></p>
+    </div>
+  </div>
+</section>
+
+{% include "product_brochure/catalog_preview.html" %}

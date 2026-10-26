@@ -18,13 +18,17 @@ python-dotenv==1.2.4
 # 필수 하위 의존성으로 lxml 6.1.3, typing_extensions 4.16.0이 함께 설치되었다(Python 3.11 기준).
 python-docx==1.2.0
 # 그린 클레임 이미지(JPG·JPEG·PNG) AI 판독의 실제 디코딩 검사·판독용 사본(투명 합성·EXIF 방향·메타데이터 제거) 생성(features/green_claim).
+# 제품소개서 표지 PNG 검사·투명 합성과 PDF 이미지 처리(features/product_brochure/pdf_download.py·pdf_catalog.py)에도 사용.
 # 담당자 승인 후 jasonenv에 설치, pip check 정상(2026-10-25). 필수 하위 의존성 없음. MIT-CMU. 실제 OpenAI 판독은 미검증.
 # reportlab 요구 pillow>=9.0.0을 만족하므로 reportlab 설치 시에도 이 버전을 유지한다.
 pillow==13.0.0
 # PDF 출력(생성). BSD. 공통 PDF 입력 검사(pypdf)와는 별개 기능이다. 2026-10-25 공통 담당 합의(한윤수 확인) 후 추가.
-# 설치 시 pillow·charset-normalizer(3.5.2, MIT)가 함께 설치된다. 기능별 사용처:
+# 설치 시 pillow·charset-normalizer(3.5.2, MIT)가 함께 설치된다. 기능별 사용처와 글꼴:
 # - 홈 일일 브리핑(features/home/report.py), 시장 분석(features/market_analysis/pdf_report.py),
 #   그린 클레임 검수 보고서(features/green_claim/report_worker.py).
-# - 글꼴: 세 PDF 모두 공통 Pretendard(static/fonts/pretendard/, SIL OFL 1.1, common/config.py PDF_FONT_FILES). 2026-10-26 통일.
+# - 글꼴: 위 세 PDF는 공통 Pretendard(static/fonts/pretendard/, SIL OFL 1.1, common/config.py PDF_FONT_FILES). 2026-10-26 통일.
 #   jasonenv(Python 3.11.17) 설치, pip check 정상(2026-10-26).
+# - 홍보 스튜디오 콘티 PDF(features/promotion_studio/pdf_builder.py), 제품소개서 카탈로그 PDF(features/product_brochure/pdf_catalog.py):
+#   각 기능 fonts 폴더의 Noto Sans KR(OFL). Pretendard 통일은 아직 적용 전(develop 병합 2026-10-26 기준).
+#   홍보 스튜디오는 2026-10-26 fpdf2에서 reportlab으로 전환(팀 도구 통일), jasonenv 테스트·렌더링 확인.
 reportlab==5.1.0
