@@ -477,6 +477,17 @@
   min-width: 0;
 }
 
+/* 단계 막대 → 내용 간격: 다른 탭과 같게 머리글 아래 간격(24px, 960px 미만 20px)으로 */
+.feature-green_claim .green-claim-flow {
+  gap: var(--space-6);
+}
+
+@media (max-width: 959.98px) {
+  .feature-green_claim .green-claim-flow {
+    gap: var(--space-5);
+  }
+}
+
 /* 단계 막대: 단계 표시 + 오른쪽 끝 '검수 범위' 도움말을 유리 막대 하나에.
    흐림(backdrop-filter)은 쓰지 않음: 안의 position: fixed 팝오버 기준이 막대로 바뀌어 위치가 어긋남 */
 .feature-green_claim .green-claim-flow-head {
