@@ -43,6 +43,19 @@ def squash(text):
     return re.sub(r"\s+", "", text)
 
 
+def real_state_snapshot():
+    """실제 data/criteria_state·criteria_work의 (상대 경로, 크기, 수정 시각). 파일 내용은 읽지 않고 바꾸지 않습니다."""
+    snapshot = {}
+    for name in ("criteria_state", "criteria_work"):
+        base = cl.DATA_ROOT / name
+        if base.exists():
+            for p in base.rglob("*"):
+                if p.is_file():
+                    info = p.stat()
+                    snapshot[str(p.relative_to(cl.DATA_ROOT))] = (info.st_size, info.st_mtime_ns)
+    return snapshot
+
+
 class ReviewReportFlowTest(Base):
     @classmethod
     def setUpClass(cls):
@@ -50,6 +63,7 @@ class ReviewReportFlowTest(Base):
 
     def setUp(self):
         super().setUp()  # 임시 data 폴더·실제 소켓 차단·가짜 공식 페이지(self.web)
+        self.real_before = real_state_snapshot()
         self.ai_calls = []
         self.web_calls = []
 
@@ -132,8 +146,10 @@ class ReviewReportFlowTest(Base):
             with self.subTest(fragment=fragment):
                 self.assertNotIn(fragment, logged)
                 self.assertNotIn(fragment.encode("utf-8"), stored)
-        for name in ("criteria_state", "criteria_work"):
-            self.assertEqual(sorted(p.name for p in (cl.DATA_ROOT / name).rglob("*")), [".gitignore"])
+        # 실제 data 폴더는 이 테스트에서 쓰지 않음: 처음부터 비어 있다고 가정하지 않고 실행 전후 목록을 비교(내용은 읽지 않음)
+        self.assertEqual(real_state_snapshot(), self.real_before)
+        written = [p for p in Path(self.root).rglob("*") if p.is_file() and "brazil_claim_criteria" not in p.parts]
+        self.assertTrue(any(p.name == "check_state.json" for p in written))  # 확인 상태는 임시 data 폴더에만 생김
 
     def test_ai_failure_returns_fixed_error_once(self):
         self.ai_error = errors.AITimeoutError()

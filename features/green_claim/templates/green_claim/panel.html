@@ -1,163 +1,279 @@
 {# 그린 클레임 체크 작업 영역. 문구 직접 입력 + 일반 PDF·Word(.docx) 글자 추출 + PDF·이미지(JPG·JPEG·PNG) AI 글자 판독(사용자 선택)·확인·수정
    + 그린워싱 표현 위험 검수 실행·결과 표시(feature_spec.md "검수 실행·결과 화면") + 검수 결과 PDF 보고서 다운로드("검수 결과 PDF 다운로드").
+   화면은 3단계(자료 입력 → 문구 확인 → 검수 결과)로 표시합니다("단계별 화면"). 단계 이동은 표시 전환이며 요청을 만들지 않습니다.
+   직접 입력칸·파일 선택칸은 하나씩만 있고 green_claim.js가 단계 자리(data-slot) 사이로 옮깁니다(복제 금지).
    검수 결과는 제공 근거 범위의 표현 스크리닝이며 법적 적합성 보장이 아닙니다(docs/data_contracts.md). #}
-<div class="workspace">
-  <form class="card" aria-labelledby="green_claim-input-title" autocomplete="off" novalidate>
-    <div class="card-header">
-      <div>
-        <h2 class="card-title" id="green_claim-input-title">검수할 문구</h2>
-        <p class="card-description">브라질 대상 홍보 문구의 표현 위험을 검토합니다. 제품 사실·인증 보유·적법성은 확인하지 않습니다.</p>
-      </div>
-    </div>
+<div class="green-claim-flow">
+  <div class="green-claim-flow-head">
+    <nav class="green-claim-steps" aria-label="검수 진행 단계">
+      <ol class="green-claim-steps-list">
+        <li><button type="button" class="green-claim-step" data-step-go="1" id="green_claim-step-nav-1"><span class="green-claim-step-num" aria-hidden="true">1</span><span class="green-claim-step-name">자료 입력</span><span class="green-claim-step-state" data-step-state></span></button></li>
+        <li><button type="button" class="green-claim-step" data-step-go="2" id="green_claim-step-nav-2"><span class="green-claim-step-num" aria-hidden="true">2</span><span class="green-claim-step-name">문구 확인</span><span class="green-claim-step-state" data-step-state></span></button></li>
+        <li><button type="button" class="green-claim-step" data-step-go="3" id="green_claim-step-nav-3"><span class="green-claim-step-num" aria-hidden="true">3</span><span class="green-claim-step-name">검수 결과</span><span class="green-claim-step-state" data-step-state></span></button></li>
+      </ol>
+    </nav>
+    <p class="green-claim-scope">
+      <span>브라질 대상 홍보 문구의 표현 위험 검토입니다. 사실·인증·적법성은 확인하거나 보장하지 않습니다.</span>
+      <span class="green-claim-help">
+        <button type="button" class="green-claim-help-button" aria-expanded="false" aria-controls="green_claim-help-scope" aria-label="도움말: 검수 범위">ⓘ</button>
+        <span class="green-claim-popover" id="green_claim-help-scope" role="note" hidden>
+          <span class="green-claim-popover-title">검수 범위</span>
+          <span class="green-claim-popover-body">브라질 대상 홍보 문구의 표현 위험을 검토합니다. 제품 사실·인증 보유·적법성은 확인하지 않습니다.
+            검수 결과는 문구별 검토 의견·관련 브라질 기준·수정 방향입니다. 표현 위험 스크리닝이며 적법성·사실·인증을 보장하지 않습니다.
+            그림·색상·로고 등 디자인은 평가하지 않으며, 원본 파일을 수정하지 않습니다.</span>
+          <button type="button" class="btn btn-ghost green-claim-popover-close">닫기</button>
+        </span>
+      </span>
+    </p>
+    <p class="visually-hidden" id="green_claim-step-live" aria-live="polite"></p>
+  </div>
 
-    {# 입력 방식 전환만으로 '작성 중' 상태가 되지 않도록 자동 감지에서 제외합니다. #}
-    <fieldset class="fieldset" data-work-ignore>
-      <legend class="field-label">입력 방식</legend>
-      <label class="choice">
-        <input type="radio" name="input_mode" value="text" checked>
-        문구 직접 입력
-      </label>
-      <label class="choice">
-        <input type="radio" name="input_mode" value="file">
-        홍보물 파일 업로드 (PDF·Word·이미지)
-      </label>
-    </fieldset>
-
-    <div class="stack" data-mode-panel="text">
-      <div class="field">
-        <label class="field-label" for="green_claim-claims">문구<span class="field-required">필수</span></label>
-        <textarea class="textarea green-claim-textarea" id="green_claim-claims" name="claims" rows="10"
-                  autocomplete="off"
-                  aria-describedby="green_claim-claims-hint green_claim-claims-count green_claim-claims-error"
-                  placeholder="소개서·이메일·광고에 쓸 문장을 앞뒤 문맥과 함께 그대로 붙여넣어 주세요."></textarea>
-        <p class="field-hint" id="green_claim-claims-hint">한국어·영어·브라질 포르투갈어로 작성하거나 붙여넣을 수 있습니다. 문구는 저장하지 않습니다.</p>
-        <p class="field-hint green-claim-count" id="green_claim-claims-count">0 / 20,000자 (공백·줄바꿈 포함)</p>
-        <p class="field-error" id="green_claim-claims-error" hidden></p>
-        <p class="visually-hidden" id="green_claim-claims-live" aria-live="polite"></p>
-      </div>
-    </div>
-
-    <div class="stack" data-mode-panel="file" id="green_claim-file-section" hidden>
-      <div class="field">
-        <label class="field-label" for="green_claim-file">홍보물 파일 (PDF·Word·JPG·PNG)</label>
-        <input class="file-input" id="green_claim-file" name="promo_file" type="file"
-               accept=".pdf,.docx,.jpg,.jpeg,.png,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"
-               aria-describedby="green_claim-file-hint green_claim-file-error">
-        <p class="field-hint" id="green_claim-file-hint">파일 1개, 10,000,000바이트(약 10MB) 이하. 원본 파일은 수정하지 않습니다.
-          '글자 추출'(외부 전송 없음): 일반 PDF(20페이지 이하)·Word(.docx) 안의 텍스트 정보만 읽습니다.
-          'AI 글자 판독'(OpenAI 전송): 스캔 PDF와 이미지(JPG·JPEG·PNG, 가로·세로 8,000픽셀·전체 20,000,000픽셀 이하)의 보이는 글자를 판독합니다. 이미지는 '글자 추출'로 읽을 수 없습니다.
-          이미지는 원본 대신 판독용 사본(메타데이터 제거, 사진 방향 반영, 투명 부분은 흰색 배경)을 보냅니다.
-          지원하지 않음: 16비트 회색조 PNG, 움직이는 이미지·여러 장 든 이미지, Word 속 이미지·텍스트 상자·머리글 등의 글자.</p>
-        <p class="field-error" id="green_claim-file-error" hidden></p>
-      </div>
-
-      <div class="btn-row">
-        <button type="button" class="btn btn-secondary" id="green_claim-extract">글자 추출</button>
-        <span class="field-hint green-claim-extract-status" id="green_claim-extract-status" role="status"></span>
-      </div>
-
-      <div class="green-claim-ocr">
-        <div class="btn-row">
-          <button type="button" class="btn btn-secondary" id="green_claim-ocr" aria-describedby="green_claim-ocr-hint">AI 글자 판독 (PDF·이미지)</button>
-        </div>
-        <p class="field-hint" id="green_claim-ocr-hint">누를 때만 실행됩니다. 선택한 PDF 또는 이미지 파일이 OpenAI로 전송되어 AI가 글자를 판독하며 요금이 발생할 수 있습니다.
-          스캔 PDF·JPG·JPEG·PNG처럼 '글자 추출'로 읽히지 않거나 이미지 속 문구가 빠졌을 때 사용하세요. 결과는 원본과 비교해 고쳐야 합니다.
-          글자만 옮기며 디자인·색상·그림·로고는 평가하지 않습니다. Word는 지원하지 않습니다.</p>
-      </div>
-
-      <div id="green_claim-extract-message" aria-live="polite"></div>
-
-      <div class="notice notice-warning" id="green_claim-replace" hidden>
-        <p class="notice-title">새로 추출한 문구가 있습니다</p>
-        <p>아래 입력칸의 문구를 새 추출 결과로 바꿀까요? 바꾸면 지금 입력칸의 문구와 수정한 내용은 사라집니다.</p>
-        <div class="btn-row">
-          <button type="button" class="btn btn-primary" id="green_claim-replace-apply">새 결과로 바꾸기</button>
-          <button type="button" class="btn btn-secondary" id="green_claim-replace-keep">지금 문구 유지</button>
+  <form class="green-claim-form" aria-label="검수할 문구 입력과 확인" autocomplete="off" novalidate>
+    {# ---------- 1단계 자료 입력 ---------- #}
+    <section class="card green-claim-stage" data-step-panel="1" aria-labelledby="green_claim-input-title">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title" id="green_claim-input-title" tabindex="-1">1. 자료 입력</h2>
+          <p class="card-description">검수할 문구를 직접 입력하거나 홍보물 파일 1개를 고른 뒤 '다음'을 누르세요.</p>
         </div>
       </div>
 
-      <div class="notice notice-info" id="green_claim-extract-summary" hidden>
-        <p class="notice-title" id="green_claim-extract-summary-title"></p>
-        <p id="green_claim-extract-summary-text"></p>
-        <div id="green_claim-extract-detected-box" hidden>
-          <p id="green_claim-extract-detected-title">이 문서에서 감지한 미지원 요소(추출하지 않음):</p>
-          <ul class="green-claim-notice-list" id="green_claim-extract-detected"></ul>
+      {# 입력 방식 전환만으로 '작성 중' 상태가 되지 않도록 자동 감지에서 제외합니다. #}
+      <fieldset class="fieldset green-claim-mode" data-work-ignore>
+        <legend class="field-label">입력 방식</legend>
+        <label class="choice">
+          <input type="radio" name="input_mode" value="text" checked>
+          문구 직접 입력
+        </label>
+        <label class="choice">
+          <input type="radio" name="input_mode" value="file">
+          홍보물 파일 업로드 (PDF·Word·이미지)
+        </label>
+      </fieldset>
+
+      <div class="stack" data-mode-panel="text" data-slot="text-1">
+        <div class="field" id="green_claim-claims-field">
+          <label class="field-label" for="green_claim-claims">문구<span class="field-required">필수</span></label>
+          <textarea class="textarea green-claim-textarea" id="green_claim-claims" name="claims" rows="10"
+                    autocomplete="off"
+                    aria-describedby="green_claim-claims-hint green_claim-claims-count green_claim-claims-error"
+                    placeholder="소개서·이메일·광고에 쓸 문장을 앞뒤 문맥과 함께 그대로 붙여넣어 주세요."></textarea>
+          <p class="field-hint" id="green_claim-claims-hint">한국어·영어·브라질 포르투갈어로 작성하거나 붙여넣을 수 있습니다. 문구는 저장하지 않습니다.</p>
+          <p class="field-hint green-claim-count" id="green_claim-claims-count">0 / 20,000자 (공백·줄바꿈 포함)</p>
+          <p class="field-error" id="green_claim-claims-error" hidden></p>
+          <p class="visually-hidden" id="green_claim-claims-live" aria-live="polite"></p>
         </div>
-        <p>일반 안내:</p>
-        <ul class="green-claim-notice-list" id="green_claim-extract-notices"></ul>
-        <details class="green-claim-pages">
-          <summary id="green_claim-extract-pages-label">추출 범위</summary>
-          <ul class="green-claim-notice-list" id="green_claim-extract-pages"></ul>
-        </details>
       </div>
 
-      <div class="field">
-        <label class="field-label" for="green_claim-extracted">추출 문구 확인·수정<span class="field-required">필수</span></label>
-        <textarea class="textarea green-claim-textarea" id="green_claim-extracted" name="extracted" rows="10"
-                  autocomplete="off"
-                  aria-describedby="green_claim-extracted-hint green_claim-extracted-count green_claim-extracted-error green_claim-extracted-edited"
-                  placeholder="파일을 선택하고 '글자 추출' 또는 'AI 글자 판독'을 누르면 읽은 문구가 여기에 표시됩니다."></textarea>
-        <p class="field-hint" id="green_claim-extracted-hint">추출 결과를 원본과 비교해 빠지거나 잘못 읽힌 부분을 고쳐 주세요. 수정은 검수 입력만 바꾸며 원본 파일은 바뀌지 않습니다.</p>
-        <p class="field-hint green-claim-count" id="green_claim-extracted-count">0 / 20,000자 (공백·줄바꿈 포함)</p>
-        <p class="field-error" id="green_claim-extracted-error" hidden></p>
-        <p class="field-hint" id="green_claim-extracted-edited" hidden>추출·판독 후 문구를 수정했습니다. 위 추출 범위(페이지·문단·표·이미지 위치)는 수정 전 기준이라 정확하지 않을 수 있습니다.</p>
-        <p class="visually-hidden" id="green_claim-extracted-live" aria-live="polite"></p>
+      <div class="stack" data-mode-panel="file" data-slot="file-1" hidden>
+        <div class="field" id="green_claim-file-field">
+          <label class="field-label" for="green_claim-file">홍보물 파일 (PDF·Word·JPG·PNG)</label>
+          <input class="file-input" id="green_claim-file" name="promo_file" type="file"
+                 accept=".pdf,.docx,.jpg,.jpeg,.png,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"
+                 aria-describedby="green_claim-file-hint green_claim-file-error">
+          <p class="field-hint" id="green_claim-file-hint">파일 1개, 10,000,000바이트(약 10MB) 이하. 원본 파일은 수정하지 않습니다.</p>
+          <p class="field-error" id="green_claim-file-error" hidden></p>
+          <details class="green-claim-details">
+            <summary>파일 제한·처리 방식 자세히</summary>
+            <ul class="green-claim-notice-list">
+              <li>'글자 추출'(외부 전송 없음): 일반 PDF(20페이지 이하)·Word(.docx) 안의 텍스트 정보만 읽습니다.</li>
+              <li>'AI 글자 판독'(OpenAI 전송): 스캔 PDF와 이미지(JPG·JPEG·PNG, 가로·세로 8,000픽셀·전체 20,000,000픽셀 이하)의 보이는 글자를 판독합니다. 이미지는 '글자 추출'로 읽을 수 없습니다.</li>
+              <li>이미지는 원본 대신 판독용 사본(메타데이터 제거, 사진 방향 반영, 투명 부분은 흰색 배경)을 보냅니다.</li>
+              <li>지원하지 않음: 16비트 회색조 PNG, 움직이는 이미지·여러 장 든 이미지, Word 속 이미지·텍스트 상자·머리글 등의 글자.</li>
+            </ul>
+          </details>
+        </div>
+        <p class="field-hint">파일을 골라도 바로 읽지 않습니다. 다음 단계에서 '글자 추출' 또는 'AI 글자 판독'을 누를 때만 실행됩니다.</p>
       </div>
-    </div>
 
-    <div class="green-claim-review-run">
-      <div class="btn-row">
-        <button type="button" class="btn btn-primary" id="green_claim-review" aria-describedby="green_claim-review-hint">검수 실행</button>
-        <span class="field-hint green-claim-extract-status" id="green_claim-review-status" role="status"></span>
+      <div class="green-claim-actions">
+        <div class="btn-row green-claim-actions-row">
+          <button type="button" class="btn btn-primary" id="green_claim-step1-next">다음: 문구 확인</button>
+        </div>
       </div>
-      <p class="field-hint" id="green_claim-review-hint">누를 때만 실행됩니다. 지금 선택한 입력 방식의 문구(직접 입력 문구 또는 확인·수정한 추출 문구)가 OpenAI로 전송되어 AI가 표현 위험을 검토하며 요금이 발생할 수 있습니다.
-        파일 원본은 다시 보내지 않습니다. 검수 전에 공식 출처(CDC) 변경 확인을 시도하며, 모두 합쳐 최대 100초 걸릴 수 있습니다.
-        글자 추출·판독 완료는 검수 완료가 아닙니다.</p>
-      <div id="green_claim-review-message" aria-live="polite"></div>
-    </div>
+    </section>
 
-    <section class="green-claim-review-source-box" id="green_claim-review-source-box" aria-labelledby="green_claim-review-source-title" hidden>
-      <h3 class="green-claim-subtitle" id="green_claim-review-source-title">검수한 원문 (검수 시점 사본 · 편집 불가)</h3>
-      <p class="field-hint" id="green_claim-review-source-hint">위 입력칸이 아니라 실제로 검수에 보낸 문구입니다. 표시된 구절의 번호(R1 등)를 누르면 오른쪽(모바일은 아래) 결과 항목으로 이동합니다.
-        여러 항목이 겹치는 부분은 점선 밑줄로 표시합니다.</p>
-      <div id="green_claim-review-source-error"></div>
-      <div class="green-claim-review-source" id="green_claim-review-source"></div>
+    {# ---------- 2단계 문구 확인 ---------- #}
+    <section class="green-claim-stage" data-step-panel="2" aria-labelledby="green_claim-confirm-title" hidden>
+      <div class="green-claim-stage-head">
+        <h2 class="card-title" id="green_claim-confirm-title" tabindex="-1">2. 문구 확인</h2>
+        <p class="card-description" data-mode-panel="text">작성한 문구를 확인·수정한 뒤 '검수 실행'을 누르세요.</p>
+        <p class="card-description" data-mode-panel="file" hidden>'글자 추출' 또는 'AI 글자 판독'으로 문구를 가져와 원본과 비교해 고친 뒤 '검수 실행'을 누르세요. 원본 파일은 변경되지 않습니다.</p>
+      </div>
+
+      <div class="green-claim-confirm-grid">
+        {# 넓은 화면에서는 이 카드가 화면 높이에 맞춰 안에서 스크롤됩니다(키보드로 카드에 초점을 두고 스크롤 가능). #}
+        <div class="card green-claim-file-card" data-mode-panel="file" id="green_claim-file-section" role="region" tabindex="0"
+             aria-label="선택한 파일과 글자 읽기" hidden>
+          <div data-slot="file-2"></div>
+
+          {# 글자 추출(외부 전송 없음)과 AI 글자 판독(OpenAI 전송)을 한 줄에 두고, 전송·요금 안내와 처리 상태는 바로 아래에 항상 표시 #}
+          <div class="green-claim-ocr">
+            <div class="btn-row green-claim-file-actions">
+              <button type="button" class="btn btn-secondary" id="green_claim-extract">글자 추출</button>
+              <button type="button" class="btn btn-secondary" id="green_claim-ocr" aria-describedby="green_claim-ocr-hint">AI 글자 판독 (PDF·이미지)</button>
+              <span class="green-claim-help">
+                <button type="button" class="green-claim-help-button" aria-expanded="false" aria-controls="green_claim-help-ocr" aria-label="도움말: AI 글자 판독">ⓘ</button>
+                <span class="green-claim-popover" id="green_claim-help-ocr" role="note" hidden>
+                  <span class="green-claim-popover-title">AI 글자 판독</span>
+                  <span class="green-claim-popover-body">누를 때만 실행됩니다. 선택한 PDF 또는 이미지 파일이 OpenAI로 전송되어 AI가 글자를 판독하며 요금이 발생할 수 있습니다.
+                    스캔 PDF·JPG·JPEG·PNG처럼 '글자 추출'로 읽히지 않거나 이미지 속 문구가 빠졌을 때 사용하세요. 결과는 원본과 비교해 고쳐야 합니다.
+                    글자만 옮기며 디자인·색상·그림·로고는 평가하지 않습니다. Word는 지원하지 않습니다.</span>
+                  <button type="button" class="btn btn-ghost green-claim-popover-close">닫기</button>
+                </span>
+              </span>
+            </div>
+            <p class="field-hint" id="green_claim-ocr-hint">'AI 글자 판독'은 누를 때만 실행되며, 선택한 파일이 OpenAI로 전송되어 요금이 발생할 수 있습니다.</p>
+            <span class="field-hint green-claim-extract-status" id="green_claim-extract-status" role="status"></span>
+          </div>
+
+          <div id="green_claim-extract-message" aria-live="polite"></div>
+
+          <div class="notice notice-info" id="green_claim-extract-summary" hidden>
+            <p class="notice-title" id="green_claim-extract-summary-title"></p>
+            <p id="green_claim-extract-summary-text"></p>
+            {# 미지원 요소·불확실 구간은 항상 보이되 길면 이 영역 안에서 스크롤(키보드로 초점 이동 가능) #}
+            <div id="green_claim-extract-detected-box" class="green-claim-detected" role="region" tabindex="0"
+                 aria-labelledby="green_claim-extract-detected-title" hidden>
+              <p id="green_claim-extract-detected-title">이 문서에서 감지한 미지원 요소(추출하지 않음):</p>
+              <ul class="green-claim-notice-list" id="green_claim-extract-detected"></ul>
+            </div>
+            <div class="green-claim-summary-more">
+              <details class="green-claim-pages">
+                <summary>일반 안내</summary>
+                <ul class="green-claim-notice-list" id="green_claim-extract-notices"></ul>
+              </details>
+              <details class="green-claim-pages">
+                <summary id="green_claim-extract-pages-label">추출 범위</summary>
+                <ul class="green-claim-notice-list" id="green_claim-extract-pages"></ul>
+              </details>
+            </div>
+          </div>
+
+          <p class="field-hint" id="green_claim-file-kind-hint"></p>
+        </div>
+
+        <div class="green-claim-confirm-main">
+        <div class="card green-claim-text-card">
+          <div data-mode-panel="text" data-slot="text-2"></div>
+
+          <div class="stack" data-mode-panel="file" hidden>
+            <div class="notice notice-warning" id="green_claim-replace" hidden>
+              <p class="notice-title">새로 추출한 문구가 있습니다</p>
+              <p>아래 입력칸의 문구를 새 추출 결과로 바꿀까요? 바꾸면 지금 입력칸의 문구와 수정한 내용은 사라집니다.</p>
+              <div class="btn-row">
+                <button type="button" class="btn btn-primary" id="green_claim-replace-apply">새 결과로 바꾸기</button>
+                <button type="button" class="btn btn-secondary" id="green_claim-replace-keep">지금 문구 유지</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="green_claim-extracted">추출 문구 확인·수정<span class="field-required">필수</span></label>
+              <textarea class="textarea green-claim-textarea" id="green_claim-extracted" name="extracted" rows="10"
+                        autocomplete="off"
+                        aria-describedby="green_claim-extracted-hint green_claim-extracted-count green_claim-extracted-error green_claim-extracted-edited"
+                        placeholder="왼쪽에서 '글자 추출' 또는 'AI 글자 판독'을 누르면 읽은 문구가 여기에 표시됩니다."></textarea>
+              <p class="field-hint" id="green_claim-extracted-hint">추출 결과를 원본과 비교해 빠지거나 잘못 읽힌 부분을 고쳐 주세요. 수정은 검수 입력만 바꾸며 원본 파일은 바뀌지 않습니다.</p>
+              <p class="field-hint green-claim-count" id="green_claim-extracted-count">0 / 20,000자 (공백·줄바꿈 포함)</p>
+              <p class="field-error" id="green_claim-extracted-error" hidden></p>
+              <p class="field-hint" id="green_claim-extracted-edited" hidden>추출·판독 후 문구를 수정했습니다. 추출 요약의 추출 범위(페이지·문단·표·이미지 위치)는 수정 전 기준이라 정확하지 않을 수 있습니다.</p>
+              <p class="visually-hidden" id="green_claim-extracted-live" aria-live="polite"></p>
+            </div>
+          </div>
+        </div>
+
+      <div class="card green-claim-actions green-claim-review-run">
+        <div id="green_claim-review-message" aria-live="polite"></div>
+        <div class="btn-row green-claim-actions-row">
+          <button type="button" class="btn btn-secondary" id="green_claim-step2-back">이전: 자료 입력</button>
+          <span class="green-claim-actions-spacer"></span>
+          <span class="field-hint green-claim-extract-status" id="green_claim-review-status" role="status"></span>
+          <button type="button" class="btn btn-primary" id="green_claim-review" aria-describedby="green_claim-review-hint">검수 실행</button>
+          <span class="green-claim-help">
+            <button type="button" class="green-claim-help-button" aria-expanded="false" aria-controls="green_claim-help-review" aria-label="도움말: 검수 실행">ⓘ</button>
+            <span class="green-claim-popover" id="green_claim-help-review" role="note" hidden>
+              <span class="green-claim-popover-title">검수 실행</span>
+              <span class="green-claim-popover-body">누를 때만 실행됩니다. 지금 선택한 입력 방식의 문구(직접 입력 문구 또는 확인·수정한 추출 문구)가 OpenAI로 전송되어 AI가 표현 위험을 검토하며 요금이 발생할 수 있습니다.
+                파일 원본은 다시 보내지 않습니다. 검수 전에 공식 출처(CDC) 변경 확인을 시도하며, 모두 합쳐 최대 100초 걸릴 수 있습니다.
+                글자 추출·판독 완료는 검수 완료가 아닙니다.</span>
+              <button type="button" class="btn btn-ghost green-claim-popover-close">닫기</button>
+            </span>
+          </span>
+        </div>
+        <p class="field-hint" id="green_claim-review-hint">누를 때만 실행되며, 문구가 OpenAI로 전송되어 요금이 발생할 수 있습니다(최대 100초).</p>
+      </div>
+        </div>
+      </div>
     </section>
   </form>
 
-  <section class="card" id="green_claim-result-card" aria-labelledby="green_claim-result-title" aria-busy="false">
-    <div class="card-header">
+  {# ---------- 3단계 검수 결과 ---------- #}
+  <section class="green-claim-stage" data-step-panel="3" aria-labelledby="green_claim-results-title" hidden>
+    <div class="green-claim-stage-head green-claim-stage-head-row">
       <div>
-        <h2 class="card-title" id="green_claim-result-title">검수 결과</h2>
-        <p class="card-description">문구별 검토 의견·관련 브라질 기준·수정 방향입니다. 표현 위험 스크리닝이며 적법성·사실·인증을 보장하지 않습니다.</p>
+        <h2 class="card-title" id="green_claim-results-title" tabindex="-1">3. 검수 결과</h2>
+        <p class="card-description">강조한 원문과 항목별 검토 의견을 확인하세요. 표현 위험 스크리닝이며 적법성·사실·인증을 보장하지 않습니다.</p>
       </div>
-      <div class="green-claim-header-action">
-        <button type="button" class="btn btn-secondary" id="green_claim-pdf" disabled aria-describedby="green_claim-pdf-pending">PDF 다운로드</button>
-        <span class="field-hint green-claim-extract-status" id="green_claim-pdf-pending" role="status">검수 결과가 있을 때 내려받을 수 있습니다.</span>
+      <button type="button" class="btn btn-secondary" id="green_claim-step3-back">문구 확인으로 돌아가기</button>
+    </div>
+
+    <div class="green-claim-result-grid">
+      <div class="card green-claim-source-card">
+        <section class="green-claim-review-source-box" id="green_claim-review-source-box" aria-labelledby="green_claim-review-source-title" hidden>
+          <h3 class="green-claim-subtitle" id="green_claim-review-source-title">검수한 원문 (검수 시점 사본 · 편집 불가)
+            <span class="green-claim-help">
+              <button type="button" class="green-claim-help-button" aria-expanded="false" aria-controls="green_claim-help-source" aria-label="도움말: 원문 표시">ⓘ</button>
+              <span class="green-claim-popover" id="green_claim-help-source" role="note" hidden>
+                <span class="green-claim-popover-title">원문 표시</span>
+                <span class="green-claim-popover-body">입력칸이 아니라 실제로 검수에 보낸 문구입니다. 표시된 구절의 번호(R1 등)를 누르면 오른쪽(모바일은 아래) 결과 항목으로 이동합니다.
+                  여러 항목이 겹치는 부분은 점선 밑줄로 표시합니다.</span>
+                <button type="button" class="btn btn-ghost green-claim-popover-close">닫기</button>
+              </span>
+            </span>
+          </h3>
+          <p class="field-hint" id="green_claim-review-source-hint">실제로 검수에 보낸 문구입니다. 번호(R1 등)를 누르면 해당 결과 항목으로 이동합니다.</p>
+          <div id="green_claim-review-source-error"></div>
+          <div class="green-claim-review-source" id="green_claim-review-source"></div>
+        </section>
       </div>
-    </div>
-    <div id="green_claim-pdf-message" aria-live="polite"></div>
-    <div class="empty-state" id="green_claim-review-empty">
-      <p class="empty-state-title">아직 결과가 없습니다</p>
-      <p>문구를 확인한 뒤 '검수 실행'을 누르면 결과가 이곳에 표시됩니다.</p>
-    </div>
-    <div id="green_claim-review-stale" class="notice notice-warning" role="status" hidden>
-      <p class="notice-title">입력 내용이 바뀌었습니다. 다시 검수해 주세요.</p>
-      <p id="green_claim-review-stale-text">아래는 이전 문구의 결과입니다. 지금 입력한 문구에 대한 결과가 아닙니다.</p>
-    </div>
-    <div class="stack green-claim-review-result" id="green_claim-review-result" hidden>
-      <p class="green-claim-result-label" id="green_claim-review-result-label"></p>
-      <section aria-labelledby="green_claim-review-summary-title">
-        <h3 class="green-claim-subtitle" id="green_claim-review-summary-title">전체 요약</h3>
-        <div id="green_claim-review-summary"></div>
-      </section>
-      <section aria-labelledby="green_claim-review-items-title">
-        <h3 class="green-claim-subtitle" id="green_claim-review-items-title">검토 항목</h3>
-        <ol class="green-claim-review-items" id="green_claim-review-items"></ol>
-      </section>
-      <section aria-labelledby="green_claim-review-criteria-title">
-        <h3 class="green-claim-subtitle" id="green_claim-review-criteria-title">사용 기준과 확인 상태</h3>
-        <div id="green_claim-review-criteria"></div>
+
+      <section class="card green-claim-result-card" id="green_claim-result-card" aria-labelledby="green_claim-result-title" aria-busy="false">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title" id="green_claim-result-title">검수 결과</h3>
+            <p class="card-description">문구별 검토 의견·관련 브라질 기준·수정 방향입니다.</p>
+          </div>
+          <div class="green-claim-header-action">
+            <button type="button" class="btn btn-secondary" id="green_claim-pdf" disabled aria-describedby="green_claim-pdf-pending">PDF 다운로드</button>
+            <span class="field-hint green-claim-extract-status" id="green_claim-pdf-pending" role="status">검수 결과가 있을 때 내려받을 수 있습니다.</span>
+          </div>
+        </div>
+        <div id="green_claim-pdf-message" aria-live="polite"></div>
+        <div class="empty-state" id="green_claim-review-empty">
+          <p class="empty-state-title">아직 결과가 없습니다</p>
+          <p>문구를 확인한 뒤 '검수 실행'을 누르면 결과가 이곳에 표시됩니다.</p>
+        </div>
+        <div id="green_claim-review-stale" class="notice notice-warning" role="status" hidden>
+          <p class="notice-title">입력 내용이 바뀌었습니다. 다시 검수해 주세요.</p>
+          <p id="green_claim-review-stale-text">아래는 이전 문구의 결과입니다. 지금 입력한 문구에 대한 결과가 아닙니다.</p>
+        </div>
+        <div class="green-claim-result-scroll">
+          <div class="stack green-claim-review-result" id="green_claim-review-result" hidden>
+            <p class="green-claim-result-label" id="green_claim-review-result-label"></p>
+            <section aria-labelledby="green_claim-review-summary-title">
+              <h3 class="green-claim-subtitle" id="green_claim-review-summary-title">전체 요약</h3>
+              <div id="green_claim-review-summary"></div>
+            </section>
+            <section aria-labelledby="green_claim-review-items-title">
+              <h3 class="green-claim-subtitle" id="green_claim-review-items-title">검토 항목</h3>
+              <ol class="green-claim-review-items" id="green_claim-review-items"></ol>
+            </section>
+            <section aria-labelledby="green_claim-review-criteria-title">
+              <h3 class="green-claim-subtitle" id="green_claim-review-criteria-title">사용 기준과 확인 상태</h3>
+              <div id="green_claim-review-criteria"></div>
+            </section>
+          </div>
+        </div>
       </section>
     </div>
   </section>

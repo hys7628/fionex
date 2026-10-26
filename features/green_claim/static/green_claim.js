@@ -23,7 +23,7 @@
         + "화면에서 취소해도 이미 보낸 요청의 처리·요금은 취소되지 않을 수 있습니다.",
     },
   };
-  const OCR_HINT = "필요하면 아래 'AI 글자 판독'을 직접 선택할 수 있습니다(선택한 PDF가 OpenAI로 전송됩니다).";
+  const OCR_HINT = "필요하면 'AI 글자 판독'을 직접 선택할 수 있습니다(선택한 PDF가 OpenAI로 전송됩니다).";
   const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png"];
   const IMAGE_HINT = "이미지는 '글자 추출'로 읽을 수 없습니다. 필요하면 'AI 글자 판독'을 직접 눌러 주세요"
     + "(이미지가 OpenAI로 전송되며 요금이 발생할 수 있습니다).";
@@ -147,6 +147,9 @@
   const extractedField = createTextField("green_claim-extracted");
   if (!textField || !extractedField) return;
 
+  // 단계 화면 연결(아래 "단계 화면"에서 만듦). 처리 상태가 바뀔 때 단계 이동 버튼만 다시 계산합니다.
+  let stepNav = null;
+
   /* ---------- 입력 방식 전환: 각 방식의 문구는 페이지 메모리에 그대로 둡니다 ---------- */
   const modeRadios = Array.from(panel.querySelectorAll('input[name="input_mode"]'));
   const modePanels = Array.from(panel.querySelectorAll("[data-mode-panel]"));
@@ -235,6 +238,7 @@
       spinner.setAttribute("aria-hidden", "true");
       statusEl.append(spinner, REQUESTS[kind].busyText);
     }
+    if (stepNav) stepNav.update();
   }
 
   function clearPending() {
@@ -269,7 +273,7 @@
     if (controller) controller.abort();
     setBusy(null);
     clearPending();
-    let text = "아래 문구는 바뀌지 않았습니다. 필요하면 다시 실행해 주세요.";
+    let text = "입력칸의 문구는 바뀌지 않았습니다. 필요하면 다시 실행해 주세요.";
     // 브라우저 취소는 화면 대기만 멈춥니다. 서버·공급자에 이미 보낸 요청은 취소를 보장하지 않습니다.
     if (wasOcr) text += " 이미 보낸 AI 판독 요청의 처리·요금이 취소되었는지는 보장할 수 없습니다.";
     showMessage("info", title, text);
@@ -284,7 +288,7 @@
     const problem = file ? checkFile(file) : "";
     setFileError(problem);
     const previous = appliedText !== null
-      ? "새 파일로 추출·판독하기 전까지 아래 문구는 이전 파일에서 가져와 수정한 내용입니다." : "";
+      ? "새 파일로 추출·판독하기 전까지 입력칸의 문구는 이전 파일에서 가져와 수정한 내용입니다." : "";
     if (canceled) {
       // 취소 안내를 유지합니다.
     } else if (file && !problem && fileKind(file) === "image") {
@@ -328,7 +332,7 @@
   function renderOcrSummary(data) {
     summaryBox.className = "notice notice-warning";
     let text = "출처: AI 판독(모델 " + data.model + "). 서버가 확인한 전체 " + data.page_count + "페이지의 판독 결과 "
-      + numberFormat.format(data.char_count) + "자를 아래 입력칸에 넣었습니다.";
+      + numberFormat.format(data.char_count) + "자를 추출 문구 입력칸에 넣었습니다.";
     if (data.pages_without_text.length) {
       text += " 글자가 없다고 보고된 페이지: " + data.pages_without_text.join(", ") + ".";
     }
@@ -356,7 +360,7 @@
     summaryBox.className = "notice notice-warning";
     let text = "출처: AI 판독(모델 " + data.model + "). 원본 이미지(" + image.format.toUpperCase() + ", "
       + pixelSize(image.width, image.height) + ")의 판독용 사본에서 판독한 "
-      + numberFormat.format(data.char_count) + "자를 아래 입력칸에 넣었습니다.";
+      + numberFormat.format(data.char_count) + "자를 추출 문구 입력칸에 넣었습니다.";
     if (image.sent_width !== image.width || image.sent_height !== image.height) {
       text += " 방향을 맞춘 사본 크기: " + pixelSize(image.sent_width, image.sent_height) + ".";
     }
@@ -374,7 +378,7 @@
     detectedTitle.textContent = "이 문서에서 감지한 미지원 요소(추출하지 않음):";
     let text = "출처: Word 본문 추출. Word 본문 블록 " + data.block_count + "개(문단 " + data.paragraph_count + "개·표 " + data.table_count
       + "개) 중 " + data.blocks.length + "개 블록에서 텍스트를 읽었습니다. "
-      + numberFormat.format(data.char_count) + "자를 아래 입력칸에 넣었습니다.";
+      + numberFormat.format(data.char_count) + "자를 추출 문구 입력칸에 넣었습니다.";
     if (data.empty_block_count) text += " 내용이 없는 블록 " + data.empty_block_count + "개는 넣지 않았습니다.";
     summaryText.textContent = text;
     data.detected_unsupported.forEach(function (item) { addItem(detectedList, item.label); });
@@ -393,7 +397,7 @@
     const readPages = data.page_count - data.pages_without_text.length;
     summaryBox.className = "notice " + (data.all_pages_have_text ? "notice-info" : "notice-warning");
     let text = "출처: 일반 글자 추출(PDF 안의 텍스트 정보). 전체 " + data.page_count + "페이지 중 " + readPages
-      + "페이지에서 텍스트를 읽었습니다. " + numberFormat.format(data.char_count) + "자를 아래 입력칸에 넣었습니다.";
+      + "페이지에서 텍스트를 읽었습니다. " + numberFormat.format(data.char_count) + "자를 추출 문구 입력칸에 넣었습니다.";
     if (data.pages_without_text.length) {
       text += " 텍스트를 추출하지 못한 페이지: " + data.pages_without_text.join(", ") + ".";
     }
@@ -470,13 +474,13 @@
     const kindOfFile = fileKind(file);
     if (kind === "extract" && kindOfFile === "image") {
       clearPending();
-      showMessage("warning", "이미지는 '글자 추출'을 지원하지 않습니다", IMAGE_HINT + " 아래 문구는 바뀌지 않았습니다.");
+      showMessage("warning", "이미지는 '글자 추출'을 지원하지 않습니다", IMAGE_HINT + " 입력칸의 문구는 바뀌지 않았습니다.");
       return;
     }
     if (kind === "ocr" && kindOfFile === "docx") {
       clearPending();
       showMessage("warning", "Word는 'AI 글자 판독'을 지원하지 않습니다",
-        "AI 글자 판독은 PDF·JPG·JPEG·PNG만 지원합니다. Word는 '글자 추출'을 사용해 주세요. 아래 문구는 바뀌지 않았습니다.");
+        "AI 글자 판독은 PDF·JPG·JPEG·PNG만 지원합니다. Word는 '글자 추출'을 사용해 주세요. 입력칸의 문구는 바뀌지 않았습니다.");
       return;
     }
     clearPending();
@@ -643,6 +647,7 @@
     } else {
       pdfHint.textContent = "현재 결과를 PDF 보고서로 내려받습니다(다시 검수하지 않음).";
     }
+    if (stepNav) stepNav.update();  // 검수·PDF 처리 상태가 바뀔 때마다 단계 이동 가능 여부 갱신
   }
 
   // 결과 유효 여부를 화면·공통 작업 상태에 반영합니다. 다운로드 요청 상태는 PDF 다운로드 때만 AppShell이 바꿉니다.
@@ -1049,6 +1054,7 @@
         renderReview(body.data);
         syncResultState();
         showReviewMessage("success", "검수를 마쳤습니다", "결과는 표현 위험 스크리닝이며 적법성·사실·인증을 보장하지 않습니다.");
+        if (stepNav) stepNav.showResults();  // 검수 성공 후에만 결과 단계로 이동(화면 전환만)
       }
     } catch (err) {
       if (seq !== reviewSeq) return;
@@ -1131,6 +1137,181 @@
 
   pdfButton.addEventListener("click", downloadPdf);
   updatePdfState();
+
+  /* ---------- 단계 화면(자료 입력 → 문구 확인 → 검수 결과): 표시 전환만 합니다 ---------- */
+  // 요청을 만들지 않고 입력·결과·다운로드 상태를 바꾸지 않습니다. 입력칸·파일칸은 하나씩이며 단계 자리 사이로 옮깁니다.
+  // 처리 중(추출·판독·검수·PDF)에는 단계 이동을 막아 기존 취소·늦은 응답 보호와 겹치지 않게 합니다.
+  stepNav = (function () {
+    const STEP_NAMES = { 1: "자료 입력", 2: "문구 확인", 3: "검수 결과" };
+    const stages = Array.from(panel.querySelectorAll("[data-step-panel]"));
+    const navButtons = Array.from(panel.querySelectorAll("[data-step-go]"));
+    const slot = function (name) { return panel.querySelector('[data-slot="' + name + '"]'); };
+    const claimsField = byId("green_claim-claims-field");
+    const fileField = byId("green_claim-file-field");
+    const nextButton = byId("green_claim-step1-next");
+    const backButtons = [byId("green_claim-step2-back"), byId("green_claim-step3-back")];
+    const kindHint = byId("green_claim-file-kind-hint");
+    const liveEl = byId("green_claim-step-live");
+    const titles = { 1: byId("green_claim-input-title"), 2: byId("green_claim-confirm-title"), 3: byId("green_claim-results-title") };
+    const KIND_HINTS = {
+      pdf: "PDF: 텍스트가 든 일반 PDF는 '글자 추출'(외부 전송 없음), 스캔 PDF는 'AI 글자 판독'을 사용하세요.",
+      docx: "Word: '글자 추출'만 지원합니다('AI 글자 판독'은 Word를 지원하지 않음).",
+      image: "이미지: 'AI 글자 판독'만 지원합니다('글자 추출'로 읽을 수 없음).",
+    };
+    let current = 1;
+    let reached = 1;
+
+    function processing() { return busy || !!reviewRunning || pdfRunning; }
+
+    // 입력칸·파일칸을 현재 단계 자리로 옮김(같은 요소라 값·선택 파일·글자 수·오류가 그대로 유지)
+    function place(step) {
+      const at = step === 1 ? "1" : "2";
+      slot("text-" + at).append(claimsField);
+      slot("file-" + at).append(fileField);
+    }
+
+    // 1단계 '다음' 조건: 기존 입력 검사를 그대로 씁니다(오류 표시도 기존 함수).
+    function inputReady() {
+      if (currentMode() === "text") {
+        if (!inspect(textField.textarea.value).problem) return true;
+        textField.showProblem();
+        textField.textarea.focus();
+        return false;
+      }
+      const file = fileInput.files[0];
+      if (!file && extractedField.textarea.value.trim() !== "") return true;  // 이미 가져온 추출 문구가 있음
+      const problem = checkFile(file);
+      setFileError(problem);
+      if (!problem) return true;
+      fileInput.focus();
+      return false;
+    }
+
+    function update() {
+      const locked = processing();
+      navButtons.forEach(function (button) {
+        const n = Number(button.dataset.stepGo);
+        const state = n === current ? "current"
+          : n === 3 ? (reviewResult ? (reviewStale ? "stale" : "done") : "locked")
+          : n === 2 ? (reviewResult && !reviewStale ? "done" : (reached >= 2 ? "visited" : "todo"))
+          : (reached >= 2 ? "done" : "todo");
+        const labels = { current: "현재 단계", done: "완료", visited: "진행 중", stale: "이전 문구의 결과", locked: "검수 후 열림", todo: "" };
+        button.dataset.state = state;
+        button.querySelector("[data-step-state]").textContent = labels[state] ? "(" + labels[state] + ")" : "";
+        button.disabled = locked || n === current || (n === 3 && !reviewResult);
+        if (n === current) button.setAttribute("aria-current", "step");
+        else button.removeAttribute("aria-current");
+      });
+      nextButton.disabled = locked;
+      backButtons.forEach(function (button) { button.disabled = locked; });
+      const file = fileInput.files[0];
+      kindHint.textContent = file && fileKind(file) ? KIND_HINTS[fileKind(file)] : "파일을 선택해 주세요.";
+    }
+
+    // force: 검수 성공 직후(아직 처리 중 표시가 남은 순간)에도 결과 단계로 옮김
+    function go(step, force) {
+      if (step === current || (!force && processing())) return;
+      if (step === 3 && !reviewResult) return;
+      if (step === 2 && current === 1 && !inputReady()) return;
+      current = step;
+      reached = Math.max(reached, step);
+      place(step);
+      stages.forEach(function (stage) { stage.hidden = Number(stage.dataset.stepPanel) !== step; });
+      update();
+      liveEl.textContent = step + "단계 " + STEP_NAMES[step] + " 화면입니다.";
+      titles[step].focus({ preventScroll: true });
+      titles[step].scrollIntoView({ block: "nearest" });
+    }
+
+    navButtons.forEach(function (button) {
+      button.addEventListener("click", function () { go(Number(button.dataset.stepGo)); });
+    });
+    nextButton.addEventListener("click", function () { go(2); });
+    backButtons[0].addEventListener("click", function () { go(1); });
+    backButtons[1].addEventListener("click", function () { go(2); });
+    fileInput.addEventListener("change", update);
+    modeRadios.forEach(function (radio) { radio.addEventListener("change", update); });
+
+    place(1);
+    update();
+    return { update: update, showResults: function () { go(3, true); }, current: function () { return current; } };
+  })();
+  stepNav.update();
+
+  /* ---------- ⓘ 도움말: 클릭·키보드·초점·마우스·터치, Escape·바깥 클릭·닫기 버튼으로 닫음 ---------- */
+  // 화면 안에 보이도록 fixed 위치를 계산합니다(카드 overflow에 잘리지 않음). 상태·요청과 무관합니다.
+  (function () {
+    const helps = Array.from(panel.querySelectorAll(".green-claim-help"));
+    let open = null;  // {help, button, pop, pinned}
+    let refocusing = false;  // 닫으며 버튼으로 초점을 돌릴 때 focusin으로 다시 열리지 않게
+
+    function position(entry) {
+      const rect = entry.button.getBoundingClientRect();
+      const width = Math.min(360, window.innerWidth - 32);
+      entry.pop.style.width = width + "px";
+      const height = entry.pop.offsetHeight;
+      const left = Math.min(Math.max(16, rect.left + rect.width / 2 - width / 2), window.innerWidth - 16 - width);
+      let top = rect.bottom + 8;
+      if (top + height > window.innerHeight - 8 && rect.top - 8 - height >= 8) top = rect.top - 8 - height;
+      entry.pop.style.left = left + "px";
+      entry.pop.style.top = Math.max(8, top) + "px";
+    }
+
+    function close(returnFocus) {
+      if (!open) return;
+      const entry = open;
+      open = null;
+      entry.pop.hidden = true;
+      entry.button.setAttribute("aria-expanded", "false");
+      if (returnFocus) {
+        refocusing = true;
+        entry.button.focus();
+        refocusing = false;
+      }
+    }
+
+    function show(entry, pinned) {
+      if (open && open.help !== entry.help) close(false);
+      entry.pinned = pinned || (open && open.help === entry.help && open.pinned) || false;
+      open = entry;
+      entry.pop.hidden = false;
+      entry.button.setAttribute("aria-expanded", "true");
+      position(entry);
+    }
+
+    helps.forEach(function (help) {
+      const entry = { help: help, button: help.querySelector(".green-claim-help-button"), pop: help.querySelector(".green-claim-popover") };
+      let leaveTimer = null;
+      entry.button.addEventListener("click", function () {
+        if (open && open.help === help && open.pinned) close(false);
+        else show(entry, true);  // 마우스로 열려 있던 것도 누르면 고정
+      });
+      entry.pop.querySelector(".green-claim-popover-close").addEventListener("click", function () { close(true); });
+      help.addEventListener("pointerenter", function (event) {
+        if (event.pointerType !== "mouse") return;
+        clearTimeout(leaveTimer);
+        if (!open || open.help !== help) show(entry, false);
+      });
+      help.addEventListener("pointerleave", function (event) {
+        if (event.pointerType !== "mouse") return;
+        leaveTimer = setTimeout(function () { if (open && open.help === help && !open.pinned) close(false); }, 250);
+      });
+      help.addEventListener("focusin", function () { if (!refocusing && (!open || open.help !== help)) show(entry, false); });
+      help.addEventListener("focusout", function (event) {
+        if (open && open.help === help && !help.contains(event.relatedTarget)) close(false);
+      });
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && open) close(true);
+    });
+    document.addEventListener("pointerdown", function (event) {
+      if (open && !open.help.contains(event.target)) close(false);
+    });
+    window.addEventListener("resize", function () { if (open) position(open); });
+    window.addEventListener("scroll", function () { if (open) position(open); }, true);
+    AppShell.onHide(FEATURE_ID, function () { close(false); });
+  })();
 
   // 입력 작성 상태와 이탈 경고는 공통 shell의 자동 감지와 setResult가 처리합니다(중복 구현 없음).
   // 탭 재방문 시 추출·판독·검수를 다시 실행하지 않고 결과를 무효화하지 않습니다.

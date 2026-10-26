@@ -4,9 +4,10 @@
  * 예) .feature-green_claim .xxx-list { gap: var(--space-3); }
  */
 
-/* 여러 문장·문단을 붙여넣을 수 있도록 입력칸을 넉넉하게 */
+/* 여러 문장·문단을 붙여넣을 수 있도록 입력칸을 넉넉하게(넓은 화면 높이는 아래 단계 배치에서 조정) */
 .feature-green_claim .green-claim-textarea {
   min-height: 240px;
+  resize: vertical;
 }
 
 /* 20,000자 초과 시 글자 수도 오류 색으로(문장 안내는 .field-error가 담당) */
@@ -53,11 +54,7 @@
 
 /* ---------- 검수 실행·결과 ---------- */
 .feature-green_claim .green-claim-review-run {
-  display: flex;
-  flex-direction: column;
   gap: var(--space-2);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border);
 }
 
 .feature-green_claim .green-claim-subtitle {
@@ -260,4 +257,355 @@
   padding: var(--space-3);
   background: var(--color-surface-muted);
   border-radius: var(--radius-sm);
+}
+
+/* ---------- 단계 화면(자료 입력 → 문구 확인 → 검수 결과) ---------- */
+.feature-green_claim .green-claim-flow,
+.feature-green_claim .green-claim-form,
+.feature-green_claim .green-claim-stage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.feature-green_claim .green-claim-flow-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+}
+
+/* 단계 표시: 현재·완료·잠김을 글자(괄호 안 상태)와 모양으로 함께 구분 */
+.feature-green_claim .green-claim-steps-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feature-green_claim .green-claim-steps-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.feature-green_claim .green-claim-steps-list li + li::before {
+  content: "";
+  width: var(--space-6);
+  height: 2px;
+  background: var(--color-border-strong);
+}
+
+.feature-green_claim .green-claim-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: var(--space-1) var(--space-4) var(--space-1) var(--space-1);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.feature-green_claim .green-claim-step:disabled {
+  cursor: default;
+}
+
+.feature-green_claim .green-claim-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-weight: var(--font-weight-bold);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border-control);
+}
+
+.feature-green_claim .green-claim-step-state {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.feature-green_claim .green-claim-step[data-state="current"] {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-text);
+  background: var(--color-primary-soft);
+  border: 2px solid var(--color-primary);
+}
+
+.feature-green_claim .green-claim-step[data-state="current"] .green-claim-step-num {
+  color: var(--color-text-inverse);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.feature-green_claim .green-claim-step[data-state="done"] .green-claim-step-num {
+  color: var(--color-success);
+  background: var(--color-success-soft);
+  border-color: var(--color-success);
+}
+
+.feature-green_claim .green-claim-step[data-state="stale"] .green-claim-step-num {
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+  border-color: var(--color-warning);
+}
+
+.feature-green_claim .green-claim-step[data-state="locked"] {
+  color: var(--color-text-muted);
+  border-style: dashed;
+}
+
+.feature-green_claim .green-claim-scope {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.feature-green_claim .green-claim-stage-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.feature-green_claim .green-claim-stage-head-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* 입력 방식: 선택지를 큰 누름 영역으로(라디오 그대로, 선택 상태는 테두리+굵기) */
+.feature-green_claim .green-claim-mode {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.feature-green_claim .green-claim-mode legend {
+  width: 100%;
+}
+
+.feature-green_claim .green-claim-mode .choice {
+  flex: 1 1 260px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.feature-green_claim .green-claim-mode .choice:has(input:checked) {
+  font-weight: var(--font-weight-bold);
+  background: var(--color-primary-soft);
+  border: 2px solid var(--color-primary);
+}
+
+.feature-green_claim .green-claim-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.feature-green_claim .green-claim-actions-row {
+  justify-content: flex-end;
+}
+
+.feature-green_claim .green-claim-actions-spacer {
+  flex: 1 1 auto;
+}
+
+.feature-green_claim .green-claim-details summary {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.feature-green_claim .green-claim-details[open] summary {
+  margin-bottom: var(--space-2);
+}
+
+/* 2단계: 파일 카드(좁게) + 문구 카드(넓게). 직접 입력은 파일 카드가 숨겨져 문구 카드만 */
+.feature-green_claim .green-claim-confirm-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.feature-green_claim .green-claim-confirm-grid > .card,
+.feature-green_claim .green-claim-confirm-main {
+  min-width: 0;
+}
+
+.feature-green_claim .green-claim-confirm-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* 2단계 파일 카드: 항목 사이 간격을 조금 줄이고, 두 실행 버튼은 한 줄, 요약의 펼쳐보기 두 개는 나란히 */
+.feature-green_claim .green-claim-file-card {
+  gap: var(--space-3);
+}
+
+.feature-green_claim .green-claim-file-actions {
+  gap: var(--space-2);
+}
+
+.feature-green_claim .green-claim-summary-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-5);
+}
+
+/* 3단계: 원문(왼쪽) + 결과(오른쪽) */
+.feature-green_claim .green-claim-result-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+/* ⓘ 도움말: 실제 버튼 + fixed 팝오버(카드 overflow에 잘리지 않음, 위치는 JS가 화면 안으로 계산) */
+.feature-green_claim .green-claim-help {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.feature-green_claim .green-claim-help-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-regular);
+  line-height: 1;
+  color: var(--color-primary-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.feature-green_claim .green-claim-help-button[aria-expanded="true"],
+.feature-green_claim .green-claim-help-button:hover {
+  background: var(--color-primary-soft);
+}
+
+.feature-green_claim .green-claim-popover {
+  position: fixed;
+  z-index: calc(var(--z-sidebar) + 10);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: calc(100vh - 16px);
+  overflow: auto;
+  padding: var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-base);
+  color: var(--color-text);
+  text-align: left;
+  white-space: normal;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.feature-green_claim .green-claim-popover-title {
+  font-weight: var(--font-weight-bold);
+}
+
+.feature-green_claim .green-claim-popover-close {
+  align-self: flex-end;
+}
+
+/* 넓은 화면: 좌우 배치와 화면 높이에 맞춘 내부 스크롤(작은 화면·확대 시에는 페이지 스크롤) */
+@media (min-width: 1100px) {
+  .feature-green_claim .green-claim-confirm-grid {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  /* 파일 카드: 좁게 고정하면 요약·안내가 여러 줄로 접혀 길어지므로 화면 폭에 비례(340~480px).
+     파일·실행 버튼·상태·요약을 위에 두고, 화면보다 길면 카드 안에서 스크롤(페이지 전체는 짧게 유지) */
+  .feature-green_claim .green-claim-file-card {
+    flex: 0 0 clamp(340px, 44%, 480px);
+    max-height: max(420px, calc(100vh - 420px));
+    overflow-y: auto;
+  }
+
+  /* 미지원 요소·불확실 구간 목록이 길면 이 영역 안에서 스크롤(항목은 그대로, 키보드 초점 가능) */
+  .feature-green_claim .green-claim-detected {
+    max-height: 9.5em;
+    overflow: auto;
+  }
+
+  .feature-green_claim .green-claim-confirm-main {
+    flex: 1 1 auto;
+  }
+
+  .feature-green_claim [data-step-panel="1"] .green-claim-textarea {
+    height: clamp(180px, calc(100vh - 690px), 420px);
+    min-height: 180px;
+  }
+
+  .feature-green_claim .green-claim-text-card .green-claim-textarea {
+    height: clamp(200px, calc(100vh - 700px), 600px);
+    min-height: 200px;
+  }
+
+  .feature-green_claim .green-claim-result-grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: start;
+  }
+
+  .feature-green_claim .green-claim-review-source {
+    max-height: max(280px, calc(100vh - 520px));
+  }
+
+  /* 결과 카드 머리: 제목과 PDF 버튼을 한 줄에 두어 결과 영역 높이를 확보 */
+  .feature-green_claim .green-claim-result-card > .card-header {
+    flex-wrap: nowrap;
+  }
+
+  .feature-green_claim .green-claim-result-card .green-claim-header-action {
+    flex: 0 1 260px;
+    text-align: right;
+  }
+
+  .feature-green_claim .green-claim-result-scroll {
+    max-height: max(280px, calc(100vh - 560px));
+    overflow: auto;
+    padding-right: var(--space-2);
+  }
+}
+
+/* 좁은 화면: 단계 사이 연결선을 숨기고 단계 단추를 줄바꿈해 배치(읽기 순서 그대로) */
+@media (max-width: 639.98px) {
+  .feature-green_claim .green-claim-steps-list li + li::before {
+    display: none;
+  }
+
+  .feature-green_claim .green-claim-step {
+    padding-right: var(--space-3);
+  }
 }
