@@ -563,10 +563,12 @@
     } else {
       html += '<p class="field-hint">' + badge("success", "초안 + 5차례 검토 완료") + (a.reused ? " 이미 끝난 분석 결과를 다시 표시했습니다(추가 호출 없음)." : "") + "</p>";
     }
-    if (a.rows.length) {
-      html += '<div class="table-wrap"><table class="table"><caption>AI 분석 · 수치는 코드 계산값과 근거 기사에 있는 값만 허용 · 출처는 코드가 ID로 연결</caption><thead><tr>' +
+    // 출처로 확인된 사실 행만 표시합니다(추정·미확인 행은 서버가 빼고, 이전 결과에 대비해 여기서도 거름).
+    const factRows = a.rows.filter(function (r) { return r.status === "사실"; });
+    if (factRows.length) {
+      html += '<div class="table-wrap"><table class="table"><caption>AI 분석 · 출처로 확인된 사실만 표시 · 수치는 코드 계산값과 근거 기사에 있는 값만 허용</caption><thead><tr>' +
         '<th scope="col">구분</th><th scope="col">핵심 내용</th><th scope="col">영업·마케팅 시사점</th><th scope="col">사실/추정/미확인</th><th scope="col">출처·기준일</th></tr></thead><tbody>';
-      a.rows.forEach(function (r) {
+      factRows.forEach(function (r) {
         const srcs = r.sources.length ? r.sources.map(function (s) {
           return linkHtml(s.url, s.id + " " + s.name) + ' <span class="field-hint">' + esc(s.date) + "</span>";
         }).join("<br>") : "출처 없음";
@@ -591,7 +593,13 @@
         "</td><td>" + esc(r.code_findings_before.length + "건 → " + r.code_findings_after.length + "건") + "</td><td>" +
         badge(r.status === "done" ? "success" : "warning", r.status === "done" ? "완료" : "미완료") + "</td></tr>";
     }
-    html += "</tbody></table></div></details>";
+    html += "</tbody></table></div>";
+    const removed = a.removed_rows || [];
+    if (removed.length) {
+      html += '<p class="field-hint">출처로 확인되지 않아 표에서 뺀 항목 ' + removed.length + "건: " +
+        esc(removed.map(function (r) { return r.section + " · " + r.content; }).join("; ")) + "</p>";
+    }
+    html += "</details>";
     return html + usageHtml(a);
   }
 

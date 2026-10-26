@@ -22,7 +22,8 @@ from common.errors import AIConfigError, AIError
 PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
 # v2(2026-10-26): 일반 뉴스를 GDELT(제목·메타데이터만)로 통일하며 title_only·최초 발견 시각 규칙 추가. v1은 미실행으로 보존.
 DRAFT_PROMPT = "market_analysis_draft_v2.md"
-REVIEW_PROMPT = "market_analysis_review_v2.md"
+# v3(2026-10-26): 매 회차 추정·미확인 행을 출처로 확정하거나 삭제. 최종 표에는 사실 행만 남깁니다(finalize_rows).
+REVIEW_PROMPT = "market_analysis_review_v3.md"
 MAX_OUTPUT_TOKENS = 4096
 TIME_BUDGET_SECONDS = 480.0
 MIN_EVIDENCE_FOR_NO_WIDEN = 5
@@ -219,6 +220,23 @@ def evidence_date(it):
 
 # ---------- 코드 검사 ----------
 _NUM_RE = re.compile(r"[-+]?\d[\d,]*(?:\.\d+)?")
+_MONTH_WORD_RE = re.compile(r"(?<![\d.])(\d{1,2})\s*(?:월|개월)")
+_PCT_RE = re.compile(r"([-+]?\d[\d,]*(?:\.\d+)?)\s*%")
+
+
+def _percents(text):
+    return {float(m.lstrip("+-").replace(",", "")) for m in _PCT_RE.findall(text or "")}
+
+
+def allowed_percents(pack):
+    """근거(facts·evidence)에 '%'로 나온 값. 행의 비율은 이 값이어야 합니다(순위 '1위'의 1로 '1%'가 통과하지 않게)."""
+    pcts = set()
+    for f in pack["facts"]:
+        for line in f["items"]:
+            pcts |= _percents(line)
+    for e in pack["evidence"]:
+        pcts |= _percents(e["title"]) | _percents(e["summary"])
+    return pcts
 
 
 def _numbers(text):
@@ -254,6 +272,7 @@ def check_rows(rows, pack):
     """코드 검사 결과 목록. 각 항목: {row, kind, detail}. row는 0부터."""
     ids = {"S1"} | {e["id"] for e in pack["evidence"]}
     nums = allowed_numbers(pack)
+    pcts = allowed_percents(pack)
     findings = []
     counts = {}
     for i, r in enumerate(rows):
@@ -263,8 +282,15 @@ def check_rows(rows, pack):
             findings.append({"row": i, "kind": "unknown_source", "detail": "존재하지 않는 출처 ID: %s" % ", ".join(bad)})
         if r["status"] == "사실" and not [s for s in r["source_ids"] if s in ids]:
             findings.append({"row": i, "kind": "fact_without_source", "detail": "사실로 표시했지만 유효한 출처가 없음"})
+        if r["status"] != "사실":
+            findings.append({"row": i, "kind": "unconfirmed",
+                             "detail": "%s 행 '%s'이(가) %s 상태: 출처로 확정하거나 삭제" % (r["section"], r["content"][:30], r["status"])})
         text = r["content"] + " " + r["implication"]
-        loose = [n for n in _numbers(text) if n not in nums and not (n.is_integer() and 1 <= n <= 12)]
+        # 근거에 없는 숫자는 문제로 봅니다. 예외는 'N월'·'N개월'처럼 쓰인 1~12뿐입니다
+        # (예전에는 1~12를 모두 허용해 "비중 1% 미만" 같은 근거 없는 문장이 통과함, 2026-10-26 실측).
+        months = {float(m) for m in _MONTH_WORD_RE.findall(text) if 1 <= int(m) <= 12}
+        loose = [n for n in _numbers(text) if n not in nums and n not in months]
+        loose += [n for n in _percents(text) if n not in pcts and n not in loose]  # 비율은 근거의 비율과 단위까지 대조
         if loose:
             findings.append({"row": i, "kind": "unverified_number",
                              "detail": "근거에 없는 수치: %s" % ", ".join(_fmt_plain(n) for n in sorted(loose))})
@@ -287,7 +313,22 @@ def _fmt_plain(n):
 
 
 def finalize_rows(rows, pack, sources):
-    """마지막 코드 검사 결과를 표에 반영. 잘못된 출처 ID 제거, 문제가 남은 행은 미확인으로 낮추고 표시."""
+    """마지막 코드 검사 결과를 표에 반영하고 출처로 확인된 사실 행만 남깁니다.
+
+    잘못된 출처 ID 제거, 문제가 남은 행은 미확인으로 낮춘 뒤, 사실이 아닌 행(추정·미확인)은 표에서 뺍니다(2026-10-26 담당자 지시).
+    반환: (남은 행, 남은 행 기준 검사 결과, 뺀 행 목록)
+    """
+    out, _ = _apply_findings(rows, pack, sources)
+    kept = [r for r in out if r["status"] == "사실"]
+    removed = [{"section": r["section"], "content": r["content"], "status": r["status"], "model_status": r["model_status"],
+                "reason": "; ".join(r["flags"]) or "5차례 검토 후에도 출처로 확정되지 않음(%s)" % r["status"]}
+               for r in out if r["status"] != "사실"]
+    findings = check_rows(kept, pack)
+    return kept, findings, removed
+
+
+def _apply_findings(rows, pack, sources):
+    """코드 검사 결과를 행에 표시. 문제가 남은 행은 미확인으로 낮춥니다."""
     findings = check_rows(rows, pack)
     by_row = {}
     for f in findings:
@@ -300,7 +341,8 @@ def finalize_rows(rows, pack, sources):
         kept[sec] = kept.get(sec, 0) + 1
         if kept[sec] > SECTION_LIMITS[sec][1]:
             continue  # 최대 개수 초과분은 표에서 뺍니다(검토 기록에 남음)
-        flags = [f["detail"] for f in by_row.get(i, [])]
+        # 'unconfirmed'는 검토 회차에 넘기는 지시용 검사라 행 표시(flags)에는 넣지 않습니다.
+        flags = [f["detail"] for f in by_row.get(i, []) if f["kind"] != "unconfirmed"]
         status = r["status"]
         if any(f["kind"] in ("unverified_number", "fact_without_source", "t2t_interpretation", "price_as_quote")
                for f in by_row.get(i, [])):
@@ -425,13 +467,14 @@ def run(state, stats, news, widen_fn=None, generate=None, clock=time.monotonic):
 
 def _finish(state, pack, sources):
     rows = state["rounds"][-1]["rows"] if state["rounds"] else (state["draft"]["rows"] if state["draft"] else [])
-    final_rows, findings = finalize_rows(rows, pack, sources)
+    final_rows, findings, removed = finalize_rows(rows, pack, sources)
     if state["draft"] is None:
         findings = []  # 초안이 없으면 표 검사 결과(0행 등)는 의미가 없습니다. 실패 사유만 보여 줍니다.
     state["result"] = {
         "complete": state["status"] == "complete",
         "has_draft": state["draft"] is not None,
         "rows": final_rows,
+        "removed_rows": removed,  # 출처로 확정되지 않아 표·PDF에서 뺀 행(검토 기록용)
         "gaps": state["draft"]["gaps"] if state["draft"] else [],
         "remaining_findings": [f["detail"] for f in findings],
         "rounds": [{k: v for k, v in r.items() if k != "rows"} for r in state["rounds"]],

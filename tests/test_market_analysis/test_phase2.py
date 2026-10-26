@@ -831,13 +831,12 @@ class AnalysisTest(unittest.TestCase):
         ]
         m = FakeModel(bad)  # 검토에서도 고치지 않는 경우
         res = self.run_with(m)["result"]
-        opp = next(r for r in res["rows"] if r["section"] == "영업 기회")
-        risk = next(r for r in res["rows"] if r["section"] == "위험")
-        self.assertEqual(opp["status"], "미확인")
-        self.assertIn("999999999", " ".join(opp["flags"]))
-        self.assertEqual(risk["source_ids"], [])
-        self.assertEqual(risk["status"], "미확인")
-        self.assertTrue(any("존재하지 않는 출처 ID" in f for f in res["remaining_findings"]))
+        # 검토에서도 고치지 않으면 미확인으로 낮아져 표·PDF에서 빠지고 뺀 사유가 남음(2026-10-26)
+        self.assertFalse(any(r["section"] in ("영업 기회", "위험") for r in res["rows"]))
+        removed = {r["section"]: r for r in res["removed_rows"]}
+        self.assertIn("999999999", removed["영업 기회"]["reason"])
+        self.assertIn("유효한 출처가 없음", removed["위험"]["reason"])
+        self.assertTrue(all(r["status"] == "사실" for r in res["rows"]))
         # 코드 검사 결과가 검토 입력으로 들어감
         self.assertTrue(m.calls[1]["payload"]["code_findings"])
 
@@ -847,12 +846,41 @@ class AnalysisTest(unittest.TestCase):
             {"section": "위험", "content": "평균 수입단가를 견적 기준으로 사용", "implication": "x", "status": "추정", "source_ids": ["S1"]},
         ]
         res = self.run_with(FakeModel(rows))["result"]
-        kinds = " ".join(res["remaining_findings"])
-        self.assertIn("T2T", kinds)
-        self.assertIn("견적", kinds)
+        reasons = " ".join(r["reason"] for r in res["removed_rows"])  # 해석 위험 행은 표에서 빠지고 사유가 남음
+        self.assertIn("T2T", reasons)
+        self.assertIn("견적", reasons)
+
+    def test_unconfirmed_rows_reviewed_five_times_then_removed(self):
+        rows = self.good + [
+            {"section": "영업 기회", "content": "중국 외 공급선 수요가 있을 것", "implication": "x", "status": "추정", "source_ids": ["S1"]},
+            {"section": "위험", "content": "가격 경쟁 심화 가능성", "implication": "x", "status": "미확인", "source_ids": []},
+        ]
+        m = FakeModel(rows)  # 5회 내내 고치지 않는 경우
+        res = self.run_with(m)["result"]
+        self.assertEqual(analysis.REVIEW_PROMPT, "market_analysis_review_v3.md")
+        for call in m.calls[1:]:  # 1~5회차 모두에 '확정하거나 삭제' 검사가 들어감
+            self.assertTrue(any(f["kind"] == "unconfirmed" for f in call["payload"]["code_findings"]))
+        self.assertTrue(all(r["status"] == "사실" for r in res["rows"]))
+        self.assertEqual(sorted(r["status"] for r in res["removed_rows"]), ["미확인", "추정", "추정"])  # 기본 초안의 추정 행 1건 포함
+        self.assertFalse(any("확정하거나 삭제" in f for f in res["remaining_findings"]))
+
+    def test_small_number_not_in_sources_is_flagged_but_month_words_allowed(self):
+        pack, _, _ = analysis.build_pack(self.stats, news_for(self.stats)["items"])
+        rows = [{"section": "핵심 요약", "content": "나머지 국가는 모두 개별 비중이 1% 미만이다", "implication": "x", "status": "사실", "source_ids": ["S1"]},
+                {"section": "핵심 요약", "content": "3개월 연속 증가, 7월 최고", "implication": "x", "status": "사실", "source_ids": ["S1"]}]
+        kinds = {(f["row"], f["kind"]) for f in analysis.check_rows(rows, pack)}
+        self.assertIn((0, "unverified_number"), kinds)      # '1%'는 근거에 없는 수치
+        self.assertNotIn((1, "unverified_number"), kinds)   # 'N개월'·'N월'은 허용
+
+    def test_unconfirmed_row_confirmed_in_review_is_kept(self):
+        draft = self.good + [{"section": "영업 기회", "content": "중국 의존이 높다", "implication": "x", "status": "추정", "source_ids": ["S1"]}]
+        fixed = [dict(r, status="사실", source_ids=["S1"]) for r in draft if r["status"] != "추정" or r["section"] == "영업 기회"]
+        res = self.run_with(FakeModel(draft, review_rows=fixed))["result"]
+        self.assertIn("중국 의존이 높다", [r["content"] for r in res["rows"]])
+        self.assertEqual(res["removed_rows"], [])
 
     def test_section_limits_trimmed(self):
-        rows = self.good + [{"section": "영업 기회", "content": "기회 %d" % i, "implication": "x", "status": "추정", "source_ids": ["N1"]} for i in range(5)]
+        rows = self.good + [{"section": "영업 기회", "content": "기회 %d" % i, "implication": "x", "status": "사실", "source_ids": ["N1"]} for i in range(5)]
         res = self.run_with(FakeModel(rows))["result"]
         self.assertEqual(sum(1 for r in res["rows"] if r["section"] == "영업 기회"), 3)
 
@@ -1152,7 +1180,7 @@ class PdfTest(unittest.TestCase):
         if ai:
             pack, sources, _ = analysis.build_pack(stats, news["items"])
             rows = [{"section": "핵심 요약", "content": "수입액 확인 " + "긴 문장 " * 30, "implication": "포르투갈어 Coreia do Sul · ação", "status": "사실", "source_ids": ["S1", "N1"]}]
-            final, _ = analysis.finalize_rows(rows, pack, sources)
+            final, _, _ = analysis.finalize_rows(rows, pack, sources)
             ai_res = {"complete": False, "rows": final, "gaps": ["T2T 근거 없음"], "remaining_findings": [], "rounds": [
                 {"number": 1, "title": "자료 적합성", "checked": ["범위 확인"], "changes": [], "evidence": ["S1"], "unresolved": [], "status": "done"}],
                 "rounds_total": 5, "usage": {"model": "gpt-5.4-mini", "calls": 2}, "prompt_versions": {"draft": "d", "review": "r"},
@@ -1207,6 +1235,18 @@ class PdfTest(unittest.TestCase):
                  if a.get_object().get("/A") and "/URI" in a.get_object()["/A"]]
         self.assertFalse(any("javascript" in str(u) for u in links))
         self.assertIn("https://dream.kotra.or.kr/r1", [str(u) for u in links])
+
+    def test_pdf_only_fact_rows_and_no_period_notes(self):
+        from pypdf import PdfReader
+        p = self.payload()
+        p["ai"]["rows"].append({"section": "위험", "content": "추정위험문장", "implication": "x", "status": "추정", "model_status": "추정",
+                                "source_ids": [], "sources": [], "flags": []})
+        p["ai"]["removed_rows"] = [{"section": "영업 기회", "content": "뺀항목문장", "status": "미확인", "model_status": "추정", "reason": "r"}]
+        p["news"]["window"]["notes"] = ["일반 뉴스(NewsData.io) 2026-04-27~2026-10-23: 무료 플랜은 최근 48시간 기사만 제공"]
+        text = "\n".join(pg.extract_text() for pg in PdfReader(io.BytesIO(pdf_report.build_pdf(p))).pages)
+        self.assertNotIn("추정위험문장", text)  # 사실이 아닌 행은 PDF 표에 없음
+        self.assertIn("표에서 뺀 항목 1건", text)
+        self.assertNotIn("최근 48시간 기사만 제공", text)  # 검색 기간 제한 안내는 PDF에 넣지 않음(2026-10-26)
 
     def test_supplier_price_has_no_check_flag(self):
         from pypdf import PdfReader

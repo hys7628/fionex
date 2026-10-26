@@ -341,7 +341,8 @@ def _ai_section(ai, W, st):
         out.append(_p("검토 미완료: 5차례 검토 중 %d회만 끝났습니다. %s 아래 표는 마지막으로 끝난 단계의 결과입니다." % (
             len(ai.get("rounds") or []), err.get("message") or ""), st["notice"]))
     rows = [["구분", "핵심 내용", "영업·마케팅 시사점", "사실/추정/미확인", "출처·기준일"]]
-    for r in ai.get("rows") or []:
+    # 출처로 확인된 사실 행만 싣습니다(추정·미확인 행 삭제, 2026-10-26 담당자 지시).
+    for r in [r for r in ai.get("rows") or [] if r.get("status") == "사실"]:
         srcs = [_p("%s %s (%s)" % (x["id"], x.get("name", ""), x.get("date", "")), st["cell"]) for x in r.get("sources") or []] \
             or "출처 없음"
         status = r["status"] + ((" · 확인 필요: " + "; ".join(r["flags"])) if r.get("flags") else "")
@@ -366,6 +367,10 @@ def _ai_section(ai, W, st):
     for n in range(len(ai.get("rounds") or []) + 1, (ai.get("rounds_total") or 5) + 1):
         rrows.append(["%d회차" % n, "-", "-", "-", "미실행"])
     out.append(_table(rrows, [30 * mm, 50 * mm, 45 * mm, 38 * mm, W - 163 * mm], st))
+    removed = ai.get("removed_rows") or []
+    if removed:
+        out.append(_p("출처로 확인되지 않아 표에서 뺀 항목 %d건: %s" % (
+            len(removed), "; ".join("%s · %s" % (r.get("section", ""), r.get("content", "")) for r in removed)), st["small"]))
     return out
 
 
@@ -386,14 +391,13 @@ def _news_section(news, W, st):
     items, others = news.get("items") or [], news.get("other_items") or []
     out.append(_p("요청 수집 기간 %s~%s(최근 %s개월) · 섬유 업계 핵심 기사 %d건 / 중복 제거 후 후보 %d건 · 주제 기준 밖 수집 기사 %d건" % (
         w.get("from", "?"), w.get("to", "?"), w.get("months", "?"), len(items), news.get("candidates", 0), len(others)), st["small"]))
-    for n in w.get("notes") or []:
-        out.append(_p(n, st["notice"]))
+    # 검색 기간 제한 안내(window.notes, 예: NewsData.io 48시간 제한)는 PDF에 넣지 않습니다(2026-10-26 담당자 지시). 화면 토글에는 유지.
     for s in news.get("sources") or []:
         if s.get("stale"):
             out.append(_p("%s: 새 조회 실패로 %s에 받은 이전 자료를 표시했습니다." % (s["label"], s.get("collected_at") or "?"), st["notice"]))
     if any(s.get("source") == "newsdata" and s.get("state") == "ok" for s in news.get("sources") or []):
-        out.append(_p("일반 뉴스: Powered by NewsData.io (https://newsdata.io). 무료 플랜이라 최근 48시간 기사만 검색했고 본문은 받지 않았습니다. "
-                      "언론사 설명은 PDF에 넣지 않고 제목·링크만 수록합니다. 기사 저작권은 각 언론사에 있습니다.", st["small"]))
+        # 이용 조건상 필요한 표기만 둡니다(검색 기간 안내는 PDF에 넣지 않음, 2026-10-26 담당자 지시).
+        out.append(_p("일반 뉴스: Powered by NewsData.io (https://newsdata.io)", st["small"]))
     if any(it.get("source") == "gdelt" for it in items + others):
         out.append(_p("일반 뉴스 출처: The GDELT Project (https://www.gdeltproject.org/). 일반 뉴스는 제목·메타데이터만 확인했고 기사 본문은 확인하지 않았습니다. "
                       "GDELT 시각은 GDELT가 기사를 처음 발견한 시각이며 게시일이 아닙니다.", st["small"]))
