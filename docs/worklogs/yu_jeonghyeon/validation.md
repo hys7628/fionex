@@ -673,3 +673,34 @@
   - PNG 19개: `a.png`, `b.png`, `a_contact_sheet.png`, `a_page_1.png`~`a_page_4.png`, `b_page_1.png`~`b_page_4.png`, `default_page_1.png`~`default_page_4.png`, `restored_page_1.png`~`restored_page_4.png`.
 - 위 파일은 재생성 가능한 검토용 산출물로 커밋 제외 권장. 미추적 테스트 소스 `test_pdf_cover_api.py`, `browser_cover_check.js`, `browser_cover_server.py`, `check_cover_render.py`는 별도의 소스 검토/커밋 대상이며 산출물 제외 목록에 포함하지 않음. 브라우저 스크립트는 문법/기동 확인만 완료한 기존 상태 유지.
 - 기존 추적 서비스 이미지 `catalog_cover_concept.png`, `catalog_material_concept.png` 및 공통 디자인 참고 이미지는 이번 제외 권장 대상이 아님.
+
+## 2026-10-26 develop 병합 충돌 해결 검증(DI-14)
+- 기록 시각: 2026-10-26 15:15 (Asia/Seoul). 작업자 유정현. 아래는 Codex가 이번 최종 파일 상태에서 직접 실행한 결과이며 Claude의 과거 보고나 DI-13 사용자 브라우저 확인과 구분한다.
+- 시작 상태: feature/product_brochure, 정상 merge 진행 중. 병합 대상은 로컬 develop/MERGE_HEAD `7c39f5a`, 공통 조상 `9e2066c`. 충돌 파일은 requirements.txt 1개. rebase/cherry-pick/revert 진행 상태 없음. 자동 병합 스테이징 140개와 stash 1개는 수정하지 않음.
+- 해결 기대/실제: stage 1/2/3과 사용 코드를 비교해 양쪽 기능 의존성·설명을 보존. 최종 패키지 집합이 stage 2와 stage 3의 합집합과 동일하고 중복 없이 9개임을 packaging.Requirement로 확인. ReportLab 5.1.0/Pillow 13.0.0은 양쪽 동일 버전이며 dotenv 1.2.4/docx 1.2.0도 유지. 삭제한 것은 충돌 마커·동일 패키지 중복·더 이상 맞지 않는 PDF 도구 미정/향후 병합 안내뿐.
+
+### 직접 실행한 검증
+환경: `C:/Users/user/miniforge3/envs/jasonenv/python.exe`. 각 unittest 실행 프로세스에서 OpenAI 및 외부 데이터 API 관련 키 환경변수를 제거하고 socket.socket.connect를 실패시키는 가드를 설정한 뒤 기존 모의 테스트를 discover로 실행. .env를 읽는 서버 실행이나 실제 외부 API 요청은 하지 않음.
+
+| 대상/절차 | 실제 결과 |
+|---|---|
+| unittest discover -s tests/test_common | 56개 통과 |
+| unittest discover -s tests/test_product_brochure | 156개 통과(Node 로직 검사 포함) |
+| unittest discover -s tests/test_home | 94개 통과 |
+| unittest discover -s tests/test_market_analysis | 71개 통과 |
+| unittest discover -s features/green_claim/tests | 161개 unittest 항목 중 160개 통과, test_docx_extract 로딩 오류 1개 |
+| 추적 Python 소스 ast.parse | 85개 문법 정상 |
+| node --check: 공통 app_shell 및 home/market_analysis/green_claim/product_brochure JS | 5개 문법 정상 |
+| create_app 및 라우트 등록, 테스트 클라이언트 GET / | Blueprint 5개, 라우트 27개, HTTP 200 |
+| Git 충돌 마커 검사(충돌 파일·공통/기능 소스·관련 규칙 문서), git diff --check | 마커/공백 오류 없음 |
+| 작업 전후 git ls-files --stage 대조 | index 엔트리 동일, 스테이징 변경 없음 |
+| 개인 로그 추가 전 HEAD 대비 제품소개서 기능·개인 기록 diff | 차이 없음: 분석·생성·편집·AI 표지·PDF 및 기존 기록 보존 |
+| MERGE_HEAD 대비 home/market_analysis/green_claim 및 해당 팀원 개인 기록 diff | 차이 없음: 자동 병합된 팀 기능·자산·기록 보존 |
+
+### 실패·기존 경고·미검증 구분
+- 환경 문제: `test_docx_extract`가 `ModuleNotFoundError: No module named 'docx'`로 로딩되지 않음. 설치 메타데이터와 import로 python-docx 부재 확인. DOCX 테스트 본문은 실행되지 않았으며 그린 클레임 전체 통과로 보고하지 않음. 이번 병합 코드 실패라는 근거는 없음.
+- 환경 차이: python-dotenv 설치 버전 1.1.1, 요구 버전 1.2.4. 다른 선언 7개 패키지는 설치 버전과 일치. dotenv 1.2.4 환경 및 .env 자동 로드 동작은 이번 검증 범위 밖. 요구 버전을 환경에 맞춰 바꾸거나 패키지를 설치하지 않음.
+- 기존 경고: 제품소개서 분석 테스트의 임시 업로드 파일 ResourceWarning 재관찰. DI-12 등 기존 이력을 유지하며 이 경고를 해결하려고 무관한 테스트/기능을 변경하지 않음. 모의 오류를 주입하는 테스트의 진단 로그는 unittest 실패와 구분.
+- 미실행: 실제 브라우저 통합 검증, 실제 유료 API·이미지 생성·외부 데이터 호출, DOCX 추출 테스트 본문, 지정 dotenv 버전 환경 검증. 과거 브라우저 도구 중단과 사용자 후속 확인 기록은 그대로 보존하며 이번 직접 확인으로 대체하지 않음.
+- 변경 범위: requirements.txt 및 유정현 prompt_log.md/validation.md만 수정. 공통 앱 등록·AppShell 보호 계약은 사용처를 확인했고 변경하지 않음. 글꼴·이미지·테스트 소스·다른 작업자 기록 변경/삭제 없음.
+- 사용자 후속 처리: requirements.txt 내용 검토 후 GitHub Desktop에서 충돌 해결 표시 및 병합 완료를 직접 수행해야 함. 파일 내용의 마커가 없어도 git status의 UU는 index에 해결 상태를 반영하기 전까지 남음. 자동 병합된 기존 스테이징을 보존하고 개인 기록도 검토할 것. 내용 판단이 남은 충돌은 없음.
