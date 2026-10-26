@@ -612,3 +612,55 @@
   outline: 2px solid var(--color-danger);
   outline-offset: 2px;
 }
+
+/* ----- 하위 탭(1. 자료 조사 → 2. 분석 결과 확인·수정 → 3. 카탈로그 미리보기·AI 표지 배경) -----
+   시장 분석 탭(.ma-subtab)과 같은 모양. 패널은 hidden으로만 숨겨 내용이 유지됩니다. 좁은 화면은 탭 줄만 가로 스크롤 */
+.feature-product_brochure .pb-subtabs {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.feature-product_brochure .pb-subtab {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.feature-product_brochure .pb-subtab:hover { color: var(--color-text); }
+.feature-product_brochure .pb-subtab:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+.feature-product_brochure .pb-subtab[aria-selected="true"] {
+  color: var(--color-primary-text);
+  border-bottom-color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.feature-product_brochure .pb-pane:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.feature-product_brochure .pb-pane > .product_brochure-design,
+.feature-product_brochure .pb-pane > .product_brochure-cover { margin-top: 0; }
+
+/* 단계 넘김: '← 이전' 왼쪽, '다음 →' 오른쪽. 좁으면 줄바꿈 */
+.feature-product_brochure .pb-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.feature-product_brochure .pb-pager .btn { max-width: 100%; white-space: normal; }

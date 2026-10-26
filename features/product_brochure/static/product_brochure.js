@@ -1009,6 +1009,8 @@
   const displayNameConfirmLabel = displayNameConfirm.closest("label");
   const displayNameError = panel.querySelector("[data-display-name-error]");
   const displayNameHint = panel.querySelector("[data-display-name-hint]");
+  const reviewSource = panel.querySelector("[data-review-source]");
+  const reviewSourceName = panel.querySelector("[data-review-source-name]");
 
   let fields = null;          // 현재 검토 중인 항목(브라우저 메모리)
   let fieldsSource = null;    // "example" | "analysis"
@@ -1037,6 +1039,54 @@
   const COVER_TIMEOUT_MS = 210000; // 서버 공통 이미지 timeout(180초)보다 길게. 중단해도 공급자 작업 중단·미과금 보장 없음
   // 카탈로그 표시명(원본 제품명과 별도). edited: 사용자가 직접 고쳤으면 제품명 수정 시 제안값으로 덮지 않음
   let displayName = { value: "", confirmed: false, edited: false, suggestion: null };
+
+  /* 하위 탭(1. 자료 조사 → 2. 분석 결과 확인·수정 → 3. 카탈로그 미리보기·AI 표지 배경).
+     패널은 hidden으로만 숨기므로 앞뒤로 오가도 파일·검토 값·생성 결과·표지 후보가 그대로 남습니다. */
+  const stepTabs = Array.from(panel.querySelectorAll("[data-pb-tab]"));
+
+  function stepPane(tab) {
+    return panel.querySelector('[data-pb-pane="' + tab.dataset.pbTab + '"]');
+  }
+
+  function selectStep(tab, focus) {
+    stepTabs.forEach(function (t) {
+      const on = t === tab;
+      t.setAttribute("aria-selected", on ? "true" : "false");
+      t.tabIndex = on ? 0 : -1;
+      stepPane(t).hidden = !on;
+    });
+    if (focus) tab.focus();
+  }
+
+  // 단계 버튼·자동 넘김: 탭을 고르고 그 단계 제목으로 초점·스크롤을 옮깁니다.
+  function goStep(name) {
+    const tab = stepTabs.filter(function (t) { return t.dataset.pbTab === name; })[0];
+    if (!tab) return;
+    selectStep(tab, false);
+    const heading = stepPane(tab).querySelector(".card-title");
+    if (heading) {
+      if (!heading.hasAttribute("tabindex")) heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+    }
+    tab.scrollIntoView({ block: "nearest", behavior: "auto" });
+  }
+
+  stepTabs.forEach(function (t, i) {
+    t.addEventListener("click", function () { selectStep(t, false); });
+    t.addEventListener("keydown", function (event) {
+      const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+      if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        selectStep(stepTabs[event.key === "Home" ? 0 : stepTabs.length - 1], true);
+      } else if (step) {
+        event.preventDefault();
+        selectStep(stepTabs[(i + step + stepTabs.length) % stepTabs.length], true);
+      }
+    });
+  });
+  panel.querySelectorAll("[data-pb-go]").forEach(function (btn) {
+    btn.addEventListener("click", function () { goStep(btn.dataset.pbGo); });
+  });
 
   function currentSignature() {
     return fields ? Review.inputSignature(fields, displayName) : null;
@@ -1458,6 +1508,12 @@
   }
 
   function renderSourceNotice(meta) {
+    // 검토 중인 자료 이름을 탭 위에 계속 보여 줍니다. 분석 중에는 파일을 바꿀 수 없어 현재 선택이 분석한 PDF입니다.
+    const file = currentFile();
+    reviewSourceName.textContent = fieldsSource === "example"
+      ? "개발용 예시(선택한 PDF와 무관)"
+      : (file ? file.name + " (" + Review.formatSize(file.size) + ")" : "");
+    reviewSource.hidden = !reviewSourceName.textContent;
     exampleNotice.hidden = fieldsSource !== "example";
     analysisNotice.hidden = fieldsSource !== "analysis";
     reviewNotes.replaceChildren();
@@ -1621,6 +1677,7 @@
     resetRequired();
     resetDisplayName();
     groupsRoot.replaceChildren();
+    reviewSource.hidden = true;
     review.hidden = true;
     reviewEmpty.hidden = false;
     syncGenerate();
@@ -1638,6 +1695,7 @@
     renderReview(meta);
     syncControls();
     syncWork();
+    goStep("review"); // 분석·예시를 불러오면 다음 단계(확인·수정)로 넘깁니다
   }
 
   loadExampleBtn.addEventListener("click", function () {
@@ -1740,6 +1798,7 @@
       hideGenerateError();
       syncResultStatus();
       syncWork();
+      goStep("catalog"); // 생성이 끝나면 미리보기 단계로 넘깁니다
     },
     onFailure: function (out) {
       showGenerateError(out); // 적용값·기존 생성 결과는 그대로 둡니다

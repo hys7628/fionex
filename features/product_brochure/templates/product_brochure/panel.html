@@ -1,9 +1,19 @@
-{# 제품소개서 작업 영역: 한국어 PDF 선택 → 분석 요청 → 결과 확인·수정. 카탈로그 생성·PDF 출력은 아직 연결하지 않았습니다. #}
-<div class="workspace">
+{# 제품소개서 작업 영역: 한국어 PDF 선택 → 분석 요청 → 결과 확인·수정 → 카탈로그 미리보기·AI 표지 배경.
+   하위 탭 3개를 순서대로 넘깁니다. 탭 전환은 패널을 hidden으로만 숨겨 입력·파일·결과를 그대로 유지합니다(product_brochure.js). #}
+<div class="pb-subtabs" role="tablist" aria-label="제품소개서 작업 단계">
+  <button type="button" class="pb-subtab" role="tab" id="product_brochure-tab-source" aria-controls="product_brochure-pane-source"
+          aria-selected="true" data-pb-tab="source">1. 자료 조사</button>
+  <button type="button" class="pb-subtab" role="tab" id="product_brochure-tab-review" aria-controls="product_brochure-pane-review"
+          aria-selected="false" tabindex="-1" data-pb-tab="review">2. 분석 결과 확인·수정</button>
+  <button type="button" class="pb-subtab" role="tab" id="product_brochure-tab-catalog" aria-controls="product_brochure-pane-catalog"
+          aria-selected="false" tabindex="-1" data-pb-tab="catalog">3. 카탈로그 미리보기·AI 표지 배경</button>
+</div>
+
+<div class="pb-pane" role="tabpanel" id="product_brochure-pane-source" aria-labelledby="product_brochure-tab-source" data-pb-pane="source">
   <form class="card" aria-labelledby="product_brochure-input-title" novalidate>
     <div class="card-header">
       <div>
-        <h2 class="card-title" id="product_brochure-input-title">자료 선택</h2>
+        <h2 class="card-title" id="product_brochure-input-title" tabindex="-1">자료 선택</h2>
         <p class="card-description">소개서에 사용할 한국어 제품 자료 PDF 1개를 선택합니다.</p>
       </div>
     </div>
@@ -42,14 +52,24 @@
       </div>
     </div>
   </form>
+  <div class="pb-pager">
+    <span></span>
+    <button type="button" class="btn btn-secondary" data-pb-go="review">다음: 분석 결과 확인·수정 →</button>
+  </div>
+</div>
 
+<div class="pb-pane" role="tabpanel" id="product_brochure-pane-review" aria-labelledby="product_brochure-tab-review" data-pb-pane="review" hidden>
   <section class="card" aria-labelledby="product_brochure-review-title" data-review-card data-work-ignore aria-busy="false">
     <div class="card-header">
       <div>
-        <h2 class="card-title" id="product_brochure-review-title">분석 결과 확인·수정</h2>
+        <h2 class="card-title" id="product_brochure-review-title" tabindex="-1">분석 결과 확인·수정</h2>
         <p class="card-description">항목별 값과 상태·가상·확인 여부를 검토합니다.</p>
       </div>
     </div>
+    {# 지금 검토 중인 자료(분석한 PDF 파일명 또는 개발용 예시). 텍스트는 JS가 textContent로만 넣음 #}
+    <dl class="product_brochure-file-info" data-review-source hidden>
+      <div><dt>분석 자료</dt><dd data-review-source-name></dd></div>
+    </dl>
 
     <div class="empty-state" data-review-empty>
       <p class="empty-state-title">아직 분석 결과가 없습니다</p>
@@ -102,12 +122,17 @@
       <div class="notice notice-danger" data-generate-error role="alert" hidden></div>
     </div>
   </section>
+  <div class="pb-pager">
+    <button type="button" class="btn btn-secondary" data-pb-go="source">← 이전: 자료 조사</button>
+    <button type="button" class="btn btn-secondary" data-pb-go="catalog">다음: 카탈로그 미리보기 →</button>
+  </div>
 </div>
 
+<div class="pb-pane" role="tabpanel" id="product_brochure-pane-catalog" aria-labelledby="product_brochure-tab-catalog" data-pb-pane="catalog" hidden>
 <section class="card product_brochure-design" aria-labelledby="product_brochure-design-title">
   <div class="card-header">
     <div>
-      <h2 class="card-title" id="product_brochure-design-title">카탈로그 미리보기</h2>
+      <h2 class="card-title" id="product_brochure-design-title" tabindex="-1">카탈로그 미리보기</h2>
       <p class="card-description" id="product_brochure-design-hint">
         "디자인 시안 보기"는 4페이지 레이아웃을 검토하기 위한 고정 예시입니다(분석 결과·수정값을 쓰지 않고 API를 호출하지 않음).
         "생성 결과 보기"는 마지막으로 성공한 카탈로그 생성 결과를 같은 디자인으로 보여 줍니다.
@@ -190,5 +215,10 @@
     </div>
   </div>
 </section>
+<div class="pb-pager">
+  <button type="button" class="btn btn-secondary" data-pb-go="review">← 이전: 분석 결과 확인·수정</button>
+  <span></span>
+</div>
+</div>
 
 {% include "product_brochure/catalog_preview.html" %}
