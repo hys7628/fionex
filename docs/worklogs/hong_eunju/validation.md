@@ -702,3 +702,56 @@ fixture 서버(5013 many·5014 kotra0, FLASK_SKIP_DOTENV=1, urlopen 차단), 브
 
 ### 미검증
 Firefox·Safari·모바일 기기·화면낭독기 실제 낭독, Firefox에서 disabled 버튼 초점 유지 여부, 시장 분석 AI 분석 실행·성공 화면(유료 호출), 실제 ComexStat 응답으로 조회, 실제 외부 뉴스·환율이 들어온 Home, 그린 클레임 실제 AI 검수·OCR.
+
+## 2026-10-26 결과 초점·키보드·화면낭독 흐름 (DEV-COMMON-005)
+변경: static/js/app_shell.js, static/css/common.css, features/market_analysis(JS·panel·spec), features/home(JS·spec), docs/design_system.md, tests/test_common/test_shell_a11y.py(신규)
+환경: jasonenv Python 3.11.17, Flask 3.1.2. 검증 서버 127.0.0.1:5013(저장소 밖 모의 실행기: FLASK_SKIP_DOTENV=1, API 키 제거, urlopen 차단, ComexStat 가상 수치). 시장 분석 AI는 meta의 ai.ready만 브라우저 route로 true로 바꾸고 /api/market-analysis/ai는 가상 응답(성공·실패). 그린 클레임 검수 성공은 통합 테스트 가상 사례 JSON. Chrome + playwright-core 1.48.2, 키보드는 Playwright keyboard.press(Tab·Shift+Tab·Enter·Space·ArrowLeft/Right·End).
+수정 전 재현: 분석 완료 후 activeElement BODY·결과 제목 top -127, AI 실행 중·완료 후 BODY, 바이어 재시도 성공 후 BODY, aria-live 영역 결과 2,874자·바이어 82,992자.
+
+### 단위 테스트
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| `-s tests/test_common` | 62 OK(신규 test_shell_a11y 6건 포함) | 통과 |
+| `-s tests/test_home` | 94 OK | 통과 |
+| `-s tests/test_market_analysis` | 71 OK | 통과 |
+| `-s features/green_claim/tests` (PYTHONUTF8=1) | 178 OK | 통과 |
+| JS 문법(node vm) app_shell·home·market_analysis | 오류 없음 | 통과 |
+
+### 키보드·초점(41/41 + Home 상세 4/4 통과)
+| 시나리오 | 결과 |
+|---|---|
+| skip link | 첫 Tab에 화면에 보임 → Enter로 main#main-content 초점 |
+| 사이드바 | Enter로 탭 전환 → 탭 h1 초점, Shift+Tab 역순, Space는 링크라 전환 안 함(기본 동작) |
+| 시장 분석 빈 입력 | 첫 오류 필드(품목코드) 초점, aria-invalid, aria-describedby에 오류 문장 |
+| 시장 분석 정상 분석(키보드, 결과 제목이 화면 밖인 상태에서) | '분석 결과' h2 초점, 위 여백 포함 화면 안으로 스크롤, role=status "분석 결과가 준비되었습니다…", Tab → PDF 버튼, Shift+Tab → 왼쪽 열 '다시 불러오기'(DOM 순서) |
+| 시장 분석 AI 성공·실패 | 실행 중·완료 후 '④ AI 분석' region 초점(BODY 아님), 성공 status / 실패 role=alert, Tab으로 영역 안 첫 요소·'AI 분석 실행' 도달 |
+| 시장 분석 PDF 성공·실패 | 작업 끝나면 PDF 버튼으로 초점 복원, 실패 role=alert(성공 안내가 초점 안 뺏음) |
+| 시장 분석 조회 네트워크 실패 | 실행 버튼 초점 복원, 폼 오류 role=alert |
+| 분석 중 Home으로 이동 | 완료돼도 숨긴 시장 분석으로 초점 이동 없음 |
+| 바이어 목록 | 자동 로딩 실패 초점 이동 없음 → 재시도 실패 시 새 재시도 버튼 → 성공 시 목록 제목, 하위 탭 화살표·End 이동 |
+| Home | 자동 로딩 중 사용자가 둔 도시 select 초점 유지, PDF 성공(Enter)·실패(Space) 버튼 초점 복원 + 실패 role=alert, 환율·뉴스 재시도 실패 → 새 재시도 버튼, 전시회 필터 button+aria-pressed Enter 전환 |
+| Home 상세 Google 검색(뉴스 0건이라 숨긴 '더 보기'를 스크립트로 열어 확인) | 실패 → '다시 검색' 버튼, 성공(버튼 숨김) → 결과 건수 문장(role=status), 검색 중 검색창으로 옮기면 초점 유지 |
+| 그린 클레임 | 2단계 이동 시 단계 제목 초점, 검수 실패 → 검수 버튼 복원 + role=alert, 검수 성공 → 3단계 결과 제목 1회, PDF 성공·실패 → PDF 버튼 복원, 중간 단계(추출) 실패 → 추출 버튼 유지 |
+| 제품소개서·홍보 스튜디오 | 입력은 Tab 접근, disabled 버튼은 Tab에서 빠짐 |
+| reduced-motion | 결과 제목 초점 직후 이미 목표 위치(top 24px) — 즉시 스크롤 |
+| 기본 모션 | 초점 직후 이동 중 → 1초 뒤 top 24px(부드러운 스크롤) |
+| 390px | 결과 제목이 sticky 상단바(56px) 아래에 보임, 가로 스크롤 없음 |
+| JS 예외 | 전 시나리오 0건 |
+첫 실행 38/41: 기대값 오류 1(Shift+Tab 앞 요소), PDF 생성 대기 부족 2 → 스크립트 수정 후 41/41. 이후 캡처에서 결과 제목이 화면 맨 위에 붙고 390px에서 상단바에 가려지는 문제 발견 → scroll-margin-top 추가, 위치 기준을 강화(1440 ≥20px, 390 ≥56px)해 재실행 41/41.
+
+### 화면낭독기 관련
+실제 NVDA·VoiceOver 실행: 하지 않음. 브라우저 DOM 점검만: role=status/alert, aria-live 위치(큰 결과·바이어 목록 제거, 짧은 상태 문장만), aria-busy, aria-describedby, 초점 대상(tabindex=-1 제목·region).
+
+### 회귀
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 5개 탭 × 1440/1024/390 캡처 | 15/15, 가로 스크롤 없음, JS 예외 0 | 통과 |
+| 공통 상호작용(DEV-COMMON-002) | 26/26 | 통과 |
+| 로딩·오류·다운로드 UX(DEV-COMMON-004) | 36/36 | 통과 |
+| 초점 캡처 육안(1440 키보드, 1440 기본, 390) | 제목 위 여백, 키보드 초점 테두리 표시, 상단바에 안 가림 | 통과 |
+
+### 외부 호출
+전송 0건. 차단 시도 104건(news.google.com·brasilapi.com.br·olinda.bcb.gov.br).
+
+### 미검증
+실제 화면낭독기 낭독, Firefox·Safari·모바일 기기 초점 동작, 실제 OpenAI AI 분석·그린 클레임 AI 검수, 실제 외부 뉴스가 있는 Home 상세(이번엔 0건 상태에서 확인).

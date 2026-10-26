@@ -152,6 +152,21 @@
 
 **탭 이동** — 작업 중 다른 탭으로 가도 요청은 계속되고, 돌아오면 끝난 상태가 그대로 보인다(DOM 유지). 탭 숨김 때 요청을 취소하지 않는다.
 
+### 결과 및 초점 관리 (2026-10-26 DEV-COMMON-005)
+- **자동 데이터 로딩**(Home 카드, 바이어 목록 첫 로딩 등): 초점을 옮기지 않는다. 오류는 `role="alert"`, 짧은 상태는 `role="status"`.
+- **작업 중 버튼**: 초점이 있던 버튼을 `disabled`로 바꾸면 브라우저가 초점을 body로 옮긴다(focus fixup). `AppShell.ui.setButtonBusy`가 이를 기억해, 끝났을 때 초점이 여전히 비어 있고 버튼을 다시 누를 수 있으면 그 버튼으로 돌려준다. 기능 코드가 결과·오류 칸으로 옮겼으면 그대로 둔다.
+- **사용자가 실행해 큰 결과가 새로 생김**(다음 행동이 결과 안에서 이뤄짐): 결과 제목·영역으로 `AppShell.ui.focusResult(target, { scroll, from })`. 예: 시장 분석 결과 제목, ④ AI 분석 영역, 그린 클레임 3단계 제목.
+- **화면 변화가 작음**(PDF 다운로드 요청, 같은 자리 갱신): 초점 이동 없이 상태 문장만. 성공 안내 때문에 초점을 옮기지 않는다.
+- **단계형 흐름**(그린 클레임): 중간 단계(추출·판독)는 초점 이동 없이 상태 전달, 최종 결과 때만 결과 제목으로 1회.
+- **입력 오류**: 첫 오류 필드로 초점(`aria-invalid`, `aria-describedby`로 `.field-error` 연결). **작업 실패**: 누른 버튼에 초점을 두고(setButtonBusy 복원) 오류 notice `role="alert"`, 재시도 버튼이 사라졌다 다시 생기면 새 재시도 버튼으로.
+- **재시도 성공**: 재시도 버튼이 사라진 자리를 결과 목록·제목으로 이어 준다(Home 목록 `tabindex="-1"`, 바이어 목록 제목).
+- **비활성 → 활성 버튼**: 자동으로 초점을 주지 않는다. 버튼 옆 안내(`aria-describedby`)와 결과 제목 초점으로 인지시킨다.
+- **프로그램 초점 대상**: 제목·영역에 `tabindex="-1"`(Tab 순서에 넣지 않음, `tabindex="0"` 금지). 키보드로 이동했을 때는 공통 `:focus-visible` 테두리가 보이고 마우스 실행 후에는 보이지 않는다.
+- **스크롤**: `focus({ preventScroll: true })` 후 필요한 경우만 `scrollIntoView`. `prefers-reduced-motion: reduce`면 `behavior: "auto"`(즉시), 아니면 `"smooth"`.
+- **초점을 옮기지 않는 경우**: 대상이 숨겨진 탭·화면 안이거나 문서에서 빠졌을 때, 사용자가 작업 중 다른 곳으로 초점을 옮겼을 때(`from` 밖) — 끝난 작업이 초점을 뺏지 않는다.
+- **aria-live**: 큰 결과 본문 전체에 붙이지 않는다(시장 분석 결과·바이어 목록에서 제거). 결과 완료는 짧은 `role="status"` 문장(예: "분석 결과가 준비되었습니다.")으로, 오류는 `role="alert"`.
+- **구조**: `본문으로 건너뛰기` skip link → `<main id="main-content" tabindex="-1">`, 사이드바 `<nav aria-label="주 메뉴">`. 탭 제목 h1 → 카드 h2 → 카드 안 구역 h3. 시각 크기 때문에 heading 단계를 고르지 않는다.
+
 ### 반응형
 - 1200px 미만: 본문 여백 32px → 24px. 960px 미만: 사이드바 접힘(상단 메뉴 버튼), 본문 여백 16px, 카드·머리글 여백 20px, 탭 제목 xl. 1100px 이상: `.workspace` 2열.
 - 공통 스타일은 390px에서 가로 스크롤이 생기지 않아야 한다. 넓은 표는 `.table-wrap` 안에서만 가로 스크롤한다.
@@ -218,7 +233,8 @@
 | `AppShell.work.get(id)` | `{hasDraft, hasUndownloadedResult, downloadRequested}` |
 | `AppShell.current()`, `AppShell.show(id)` | 현재 탭 / 탭 전환(데이터 전달 아님) |
 | `AppShell.onShow(id, fn)`, `AppShell.onHide(id, fn)` | 등록 이후의 탭 표시·숨김 시 호출. 첫 화면 상태는 `AppShell.current()`로 확인 |
-| `AppShell.ui.setButtonBusy(button, "분석 중...")` / `(button, null)` | 버튼 문구를 작업 중 문구로 바꾸고 `aria-busy="true"`(회전 표시). null이면 원래 문구 복원. `disabled`는 바꾸지 않음(기능 코드가 정함) |
+| `AppShell.ui.setButtonBusy(button, "분석 중...")` / `(button, null)` | 버튼 문구를 작업 중 문구로 바꾸고 `aria-busy="true"`(회전 표시). null이면 원래 문구 복원. `disabled`는 바꾸지 않음(기능 코드가 정함). 시작 때 초점이 있었고 끝났을 때 초점이 비어 있으면 버튼으로 초점 복원 |
+| `AppShell.ui.focusResult(target, { scroll: "start"\|"nearest"\|false, from: [요소] })` | 사용자가 실행한 작업의 결과 제목·영역으로 초점(필요 시 `tabindex="-1"` 부여, preventScroll 후 reduced-motion을 따르는 스크롤). 숨겨진 대상이거나 초점이 `from` 밖에 있으면 옮기지 않고 false |
 
 머리글 상태 표시: 작성 중 > 다운로드 요청됨 순. 작성 중이면 사이드바 메뉴에 점(+화면낭독용 텍스트)이 표시된다.
 미다운로드 결과(`setResult`)는 머리글·사이드바에 표시하지 않고 새로고침·종료 경고에만 쓴다(2026-10-26 한윤수 요청으로 변경, 팀 공유 필요).

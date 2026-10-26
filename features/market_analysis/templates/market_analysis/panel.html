@@ -83,7 +83,7 @@
   <section class="card" aria-labelledby="market_analysis-result-title">
     <div class="card-header">
       <div>
-        <h2 class="card-title" id="market_analysis-result-title">분석 결과</h2>
+        <h2 class="card-title" id="market_analysis-result-title" tabindex="-1">분석 결과</h2>
         <p class="card-description">수입액·수입량·평균 수입단가 추세와 공급국 현황을 출처와 함께 표시합니다.</p>
       </div>
       <div class="btn-row">
@@ -92,7 +92,9 @@
       </div>
     </div>
     <div data-ma-pdf-message aria-live="polite"></div>
-    <div data-ma-result aria-live="polite">
+    {# 큰 결과 전체를 낭독하지 않도록 aria-live는 짧은 상태 문장(data-ma-status)에만 둡니다. #}
+    <p class="visually-hidden" role="status" data-ma-status></p>
+    <div data-ma-result>
       <div class="empty-state">
         <p class="empty-state-title">아직 결과가 없습니다</p>
         <p>조회 조건을 확인하고 '분석 실행'을 누르세요.</p>
@@ -106,11 +108,11 @@
   <section class="card" aria-labelledby="market_analysis-buyers-title">
     <div class="card-header">
       <div>
-        <h2 class="card-title" id="market_analysis-buyers-title">바이어 목록 (리젠 T2T 잠재 바이어)</h2>
+        <h2 class="card-title" id="market_analysis-buyers-title" tabindex="-1">바이어 목록 (리젠 T2T 잠재 바이어)</h2>
         <p class="card-description">브라질 원사·원단 제조 기업(국세청 CNPJ 공개 자료). 재생·T2T 관심 근거가 있는 업체를 먼저 표시합니다.
           전체 목록은 '시장 통계' 탭의 PDF(⑥)에도 들어갑니다.</p>
       </div>
     </div>
-    <div data-ma-buyers aria-live="polite"><p class="field-hint">바이어 목록을 불러오는 중입니다.</p></div>
+    <div data-ma-buyers><p class="field-hint">바이어 목록을 불러오는 중...</p></div>
   </section>
 </div>

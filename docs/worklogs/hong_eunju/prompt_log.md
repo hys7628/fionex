@@ -479,3 +479,29 @@
 - 검증: validation.md 2026-10-26 DEV-COMMON-004.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: JS 단위 테스트 체계가 없어 setButtonBusy는 브라우저 검증만. Firefox·Safari·화면낭독기 미확인. 시장 분석 AI 실행 버튼은 실행 시 결과 블록이 다시 그려져 초점이 사라짐(기존 동작, 이번 미수정). 시장 분석 AI 실제 실행·성공 화면은 유료 호출이라 미실행.
+
+## DEV-COMMON-005 결과 영역 초점·키보드·화면낭독 흐름 정리
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통 + market_analysis·home (감사: 5개 탭) (브랜치 feature/common_setup, 작업 전 git status clean, 최근 커밋 65f6e86)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: 결과 생성·갱신 때 초점 상실·위치 인지 문제를 감사 후 정리. 시장 분석 AI 결과 후 초점 상실 우선 재현. 자동 로딩은 초점 이동 금지, 사용자 실행으로 큰 결과가 생기면 결과 제목 초점 검토, 짧은 완료는 status, 오류는 alert·첫 오류 필드, 성공 안내로 초점 뺏지 않음, disabled→enabled 버튼 자동 초점 금지, tabindex=-1, preventScroll + reduced-motion 스크롤, 큰 결과 전체 aria-live 지양, skip link·landmark·heading 확인. API·계산 변경 금지, Git 작업 금지.
+- 정정(DEV-COMMON-004): "Chrome에서 초점 있는 버튼을 disabled로 바꿔도 activeElement 유지"는 잘못된 결론이었음. 렌더링이 없는 빈 테스트 페이지(setContent)에서만 측정한 결과였고, 실제 앱 페이지에서는 disabled로 바꾸는 순간 초점이 body로 이동함(focus fixup, 재현 결과 아래). 그래서 이번 작업에서 공통 복원 처리를 추가함.
+- 재현(수정 전, 모의 서버·키보드 Enter): 분석 완료 후 activeElement BODY, 결과 제목 화면 위치 top -127(화면 밖), 결과 영역 aria-live=polite에 2,874자; AI 실행 중·완료 후 BODY(실행 버튼이 innerHTML로 다시 그려짐), 그 상태에서 Tab → 결과 표 안 링크; 바이어 재시도 성공 후 BODY; 바이어 목록 aria-live=polite에 82,992자. skip link·main#main-content·nav 레이블·탭별 heading(h1→h2→h3)은 정상.
+- 판단:
+  - 같은 패턴(버튼 disabled로 초점 상실, 결과 시작점 초점+스크롤)이 시장 분석 3곳·Home 2곳·그린 클레임 4개 버튼에 반복 → AppShell.ui에 작은 helper 2개.
+    1. setButtonBusy: 시작 때 버튼에 초점이 있었으면 기억, 끝났을 때 초점이 비어 있고(body) 버튼이 활성·보이면 버튼으로 복원(setTimeout 0: disabled 복원이 뒤에 오는 기능 대비). 기능이 결과·오류 칸으로 옮겼으면 건드리지 않음.
+    2. focusResult(target, {scroll, from}): tabindex 없으면 -1 부여, focus(preventScroll) 후 scrollIntoView(reduced-motion이면 auto). 숨겨진 탭/화면·detached 대상, 또는 사용자가 작업 중 from 밖으로 초점을 옮긴 경우 옮기지 않음(탭 이동 중 끝난 작업이 초점을 뺏지 않음).
+  - 시장 분석: 분석 완료 → '분석 결과' h2(tabindex=-1)로 초점·스크롤(넓은 화면 오른쪽 위/좁은 화면 입력 아래에 결과가 생겨 위치 인지가 필요, 다음 행동 PDF·AI·그래프가 결과 안). AI 실행 시작·완료 → '④ AI 분석' region에 초점(버튼이 다시 그려지는 구조는 유지, 대규모 렌더링 리팩터링 안 함). 결과·바이어 aria-live 제거, 숨은 role=status 문장으로 짧게 알림. 바이어 재시도 성공 → 목록 제목, 다시 실패 → 새 재시도 버튼. 입력 오류 첫 필드 초점은 기존 유지. 결과 안 '브라질 수입' 라벨 badge-neutral(분류).
+  - Home: 자동 로딩 초점 이동 없음 유지. PDF 완료/실패는 helper 복원으로 버튼 초점. 업계 소식 상세 'Google News에서 검색'이 검색 중 disabled·성공 후 hidden으로 초점 상실 → 성공 시 결과 건수 문장(role=status), 실패 시 다시 검색 버튼.
+  - 그린 클레임: 기존 구조(중간 단계 초점 이동 없음, 최종 검수 결과 때만 3단계 제목 초점, 단계 aria-live) 유지. 버튼 초점 복원만 helper로 더해짐(코드 변경 없음).
+  - 제품소개서·홍보 스튜디오: 미구현이라 변경 없음(disabled 버튼은 Tab에서 빠지고 '준비 중' 안내 연결은 DEV-COMMON-004에서 완료).
+  - 스크롤 위치: 처음엔 결과 제목이 화면 맨 위에 붙어 초점 테두리가 잘리고, 390px에서는 sticky 상단바(56px)에 가려짐(캡처로 발견, 검증 스크립트 기준이 느슨했음) → common.css에서 [tabindex="-1"] scroll-margin-top 24px(960px 미만 상단바+16px). 그린 클레임 단계 제목·Home 상세 제목에도 적용됨.
+  - skip link·main·nav는 이미 있음 → 추가하지 않음. heading 위계 명백한 오류 없음 → 수정 없음.
+- 변경 파일: static/js/app_shell.js, static/css/common.css, features/market_analysis/static/market_analysis.js·templates/market_analysis/panel.html·feature_spec.md, features/home/static/home.js·feature_spec.md, docs/design_system.md, tests/test_common/test_shell_a11y.py(신규).
+- API contract 변경: 없음. 계산·필터·판정 로직 변경 없음.
+- 외부 호출: 0건 전송(urlopen 차단 시도 104건 모두 차단, ComexStat 모의, OpenAI 키 없음, 시장 분석 AI 응답은 브라우저 route로 가상 응답).
+- 발견 문제(검증 도구): 검증 서버가 템플릿 수정 전에 시작돼 이전 템플릿을 캐시(debug 꺼짐) → 재시작. 테스트 기대값 오류 1건(결과 제목에서 Shift+Tab의 앞 요소는 왼쪽 열 '다시 불러오기'가 맞음), PDF 생성 대기 부족 1건 → 스크립트 수정. Git Bash의 `python -`가 멈춰 해당 프로세스만 종료.
+- 검증: validation.md 2026-10-26 DEV-COMMON-005.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 화면낭독기(NVDA·VoiceOver) 미실행(DOM role·aria 점검만). 작업 중에는 초점이 body에 머무름(끝나면 복원) — disabled 대신 aria-disabled로 바꾸면 작업 중에도 유지되지만 3개 탭 버튼 로직 변경이 커서 이번 범위 밖. Firefox·Safari 초점 동작 미확인. ④ AI 분석 summary 안의 h3(details/summary 안 heading)는 기존 구조 유지.

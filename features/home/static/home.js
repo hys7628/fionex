@@ -744,7 +744,12 @@
         externalSearch = { query: query, status: "error", items: [], message: "Google News 검색 결과를 가져오지 못했습니다." };
       }
     }
-    if (!detail.view.hidden) renderDetail();
+    if (!detail.view.hidden) {
+      renderDetail();
+      // 검색 중 비활성·성공 후 숨김으로 버튼 초점이 사라지므로 결과 건수 문장(실패 시 다시 검색 버튼)으로 이어 줍니다.
+      const ok = externalSearch && externalSearch.query === query && externalSearch.status === "ok";
+      AppShell.ui.focusResult(ok ? detail.externalStatus : detail.externalButton, { scroll: "nearest", from: [detail.external] });
+    }
   }
 
   function openNewsDetail() {

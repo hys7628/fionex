@@ -12,6 +12,8 @@
   const refreshBtn = panel.querySelector("[data-ma-refresh]");
   const formError = panel.querySelector("[data-ma-form-error]");
   const resultBox = panel.querySelector("[data-ma-result]");
+  const resultTitle = panel.querySelector("#market_analysis-result-title");
+  const statusLive = panel.querySelector("[data-ma-status]");
   const periodHint = panel.querySelector("[data-ma-period-hint]");
   const countryList = panel.querySelector("[data-ma-country-list]");
   const countryCount = panel.querySelector("[data-ma-country-count]");
@@ -95,6 +97,12 @@
   function kstTime(iso) {
     if (!iso) return "확인 안 됨";
     return iso.replace("T", " ").replace("+09:00", " KST");
+  }
+
+  // 화면낭독기용 짧은 상태 문장. 같은 문장을 다시 알릴 수 있도록 비운 뒤 다음 차례에 넣습니다.
+  function announce(text) {
+    statusLive.textContent = "";
+    if (text) setTimeout(function () { statusLive.textContent = text; }, 50);
   }
 
   /* ---------- 입력 오류 ---------- */
@@ -235,6 +243,7 @@
     if (Object.keys(localErrors).length) { showFieldErrors(localErrors); return; }
 
     setBusy(true, refresh ? refreshBtn : submitBtn);
+    announce("ComexStat 자료를 불러오는 중입니다.");
     const previous = resultBox.innerHTML;
     resultBox.innerHTML = '<div class="empty-state"><span class="spinner" aria-hidden="true"></span>' +
       '<p class="empty-state-title">ComexStat에서 자료를 불러오는 중입니다</p><p>호출 한도 때문에 수십 초 걸릴 수 있습니다.</p></div>';
@@ -250,6 +259,7 @@
       if (!body.ok) {
         if (body.error.fields) {
           resultBox.innerHTML = previous;
+          announce("");
           showFieldErrors(body.error.fields);
           return;
         }
@@ -263,7 +273,11 @@
       AppShell.work.setResult(FEATURE_ID, true);
       updatePdfButton();
       refreshAiPanel();
+      // 결과는 넓은 화면에서 오른쪽 위, 좁은 화면에서 입력 아래에 생기므로 결과 제목으로 초점·스크롤을 옮깁니다(결과 전체는 낭독하지 않음).
+      const moved = AppShell.ui.focusResult(resultTitle, { scroll: "start", from: [form] });
+      announce("분석 결과가 준비되었습니다." + (moved ? " 결과 제목으로 이동했습니다." : ""));
     } catch (err) {
+      announce("");
       resultBox.innerHTML = previous;
       // 서버 오류 객체({code, message})의 고정 문장만 쓰고, 브라우저·스크립트 오류(Error) 원문은 쓰지 않습니다.
       const serverMessage = err && !(err instanceof Error) && err.message;
@@ -301,7 +315,7 @@
     const caption = "출처: ComexStat · 브라질 수입 · " + q.code_system_label + " " + q.code + " · " + q.from + "~" + q.to;
     let html = "";
 
-    html += '<div class="ma-query">' + badge("info", "브라질 수입") + " " +
+    html += '<div class="ma-query">' + badge("neutral", "브라질 수입") + " " +
       "<span>" + esc(q.code_system_label + " " + q.code + (q.code_name ? " · " + q.code_name : "")) + "</span>" +
       "<span>" + esc(q.from + " ~ " + q.to + " (" + q.months + "개월)") + "</span>" +
       "<span>" + esc(q.countries.length ? "비교 공급국: " + q.countries.map(countryName).join(", ") : "공급국: 전체 국가") + "</span></div>";
@@ -401,8 +415,13 @@
     aiBusy = true;
     box.setAttribute("aria-busy", "true");
     const previous = lastAi ? aiHtml(lastAi) : null;
+    // 실행 버튼이 이 블록과 함께 다시 그려져 초점이 사라지므로, 감싸는 '④ AI 분석' 영역(role=region)에 초점을 둡니다.
+    const region = box.closest('[role="region"]') || box;
     box.innerHTML = '<div class="empty-state"><span class="spinner" aria-hidden="true"></span><p class="empty-state-title">AI 분석 중입니다</p>' +
       "<p>초안 작성 후 5차례 검토를 차례로 진행합니다(1분 안팎). 이 탭을 새로고침하지 마세요.</p></div>";
+    AppShell.ui.focusResult(region, { scroll: false, from: [region] });
+    announce("AI 분석을 시작했습니다. 1분 안팎 걸립니다.");
+    let done = "";
     try {
       const res = await fetch("/api/market-analysis/ai", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -414,6 +433,7 @@
       if (!body.ok) throw body.error;
       lastAi = body.data;
       box.innerHTML = aiHtml(body.data);
+      done = "AI 분석 결과가 준비되었습니다.";
     } catch (err) {
       // 서버 오류 객체의 고정 문장만 쓰고, 브라우저 오류 원문(Failed to fetch 등)은 쓰지 않습니다.
       const message = err && !(err instanceof Error) && err.message
@@ -427,6 +447,9 @@
       refreshAiPanel();
       updatePdfButton();
     }
+    // 결과·오류 시작점(④ 영역)에 초점을 두고 짧게 알립니다. 오류 문장은 notice의 role=alert가 읽습니다.
+    AppShell.ui.focusResult(region, { scroll: "nearest", from: [region] });
+    announce(done);
   }
 
   const STATUS_TONE = { "사실": "success", "추정": "info", "미확인": "warning" };
@@ -783,11 +806,13 @@
     const retry = buyersBox.querySelector("[data-ma-buyers-retry]");
     if (retry) { retry.disabled = true; AppShell.ui.setButtonBusy(retry, "불러오는 중..."); }
     buyersBox.setAttribute("aria-busy", "true");
+    let ok = false;
     try {
       const res = await fetch("/api/market-analysis/buyers");
       const body = await res.json();
       if (!body.ok) throw new Error();
       renderBuyers(body.data);
+      ok = true;
     } catch (e) {
       buyersBox.innerHTML = '<div class="notice notice-danger" role="alert"><p class="notice-title">바이어 목록을 불러오지 못했습니다</p>' +
         '<p>잠시 후 다시 시도해 주세요. 다른 화면의 입력과 결과는 그대로 있습니다.</p>' +
@@ -795,6 +820,12 @@
     } finally {
       buyersBusy = false;
       buyersBox.setAttribute("aria-busy", "false");
+    }
+    // 처음 자동 로딩은 초점을 옮기지 않습니다. 사용자가 재시도한 경우만 버튼이 사라진 자리를 이어 줍니다:
+    // 성공 → 목록 제목, 다시 실패 → 새 재시도 버튼.
+    if (retry) {
+      AppShell.ui.focusResult(ok ? panel.querySelector("#market_analysis-buyers-title") : buyersBox.querySelector("[data-ma-buyers-retry]"),
+        { scroll: false, from: [buyersBox] });
     }
   }
 
