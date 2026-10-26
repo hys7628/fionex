@@ -272,7 +272,7 @@
   // ---------- 콘티 생성 ----------
   const API_URL = "/api/promotion-studio/storyboard";
   const submitBtn = form.querySelector("[data-ps-submit]");
-  const cancelBtn = form.querySelector("[data-ps-cancel]");
+  const cancelBtn = panel.querySelector("[data-ps-cancel]");  // 결과 탭의 생성 중 안내 안
   const resultCard = panel.querySelector("[data-ps-result-card]");
   const busyBox = panel.querySelector("[data-ps-busy]");
   const errorBox = panel.querySelector("[data-ps-error-box]");
@@ -655,7 +655,9 @@
     const name = box.dataset.psError;
     const control = form.querySelector("#" + FEATURE_ID + "-" + name) ||
       form.querySelector('[name="' + name + '"]:not(:disabled)');
-    if (control) control.focus();
+    if (!control) return;
+    showStep(control.closest("[data-ps-pane]").dataset.psPane);  // 숨겨진 탭의 칸이면 그 탭을 먼저 엽니다
+    control.focus();
   }
 
   async function generate() {
@@ -688,6 +690,7 @@
         syncImageGen();
         resultSignature = signature;
         syncStale();
+        syncSteps();
         AppShell.work.setResult(FEATURE_ID, true);
       }
     } catch (err) {
@@ -718,8 +721,149 @@
       focusFirstError();
       return;
     }
+    goStep("result");  // 생성 중 안내·취소·결과는 결과 탭에 표시
     generate();
   });
 
+  // ---------- 하위 탭(1 기본 정보 → 2 영상 설정 → 3 자료 첨부 → 4 입력 확인 → 5 콘티 결과) ----------
+  // 탭은 hidden으로만 숨겨 앞뒤로 오가도 입력·파일 선택·결과가 그대로 남습니다. 1~4는 폼 안 구역, 5는 결과 카드.
+  const stepTabs = Array.from(panel.querySelectorAll("[data-ps-tab]"));
+  const STEP_FIELDS = {  // 끝난 단계 표시(번호 → ✓)에 쓰는 구역별 항목
+    basic: ["audience", "description", "purposes", "purpose_other", "cta"],
+    video: ["tone", "tone_other", "duration", "scene_count", "aspect_ratio", "image_style", "image_style_other", "max_wait_seconds"],
+    files: ["documents", "photos", "logo", "logo_scope"],
+  };
+
+  function showStep(name) {
+    stepTabs.forEach(function (t) {
+      const on = t.dataset.psTab === name;
+      t.setAttribute("aria-selected", on ? "true" : "false");
+      t.tabIndex = on ? 0 : -1;
+      panel.querySelector('[data-ps-pane="' + t.dataset.psTab + '"]').hidden = !on;
+    });
+    form.hidden = name === "result";
+    if (name === "review") renderReview();
+  }
+
+  // 단계 버튼·자동 이동: 탭을 바꾸고 그 단계 제목으로 초점
+  function goStep(name) {
+    showStep(name);
+    const pane = panel.querySelector('[data-ps-pane="' + name + '"]');
+    const heading = pane.querySelector(".ps-section-title, .card-title");
+    if (heading) heading.focus({ preventScroll: true });
+    panel.querySelector(".ps-steps").scrollIntoView({ block: "nearest" });
+  }
+
+  function syncSteps() {
+    const errors = validate().map(function (e) { return e[0]; });
+    stepTabs.forEach(function (t, i) {
+      const key = t.dataset.psTab;
+      const fields = STEP_FIELDS[key];
+      const done = key === "result" ? lastResult !== null
+        : key === "review" ? !errors.length && touched.size > 0
+        : fields.every(function (f) { return errors.indexOf(f) < 0; }) && fields.some(function (f) { return touched.has(f); });
+      t.classList.toggle("ps-step-is-done", done);
+      t.querySelector(".ps-step-no").textContent = done ? "\u2713" : String(i + 1);
+    });
+  }
+
+  // 4단계 입력 확인: 넣은 값을 묶음별로(선택지는 화면 이름 그대로, 파일은 이름·크기). '수정'은 해당 탭으로
+  function choiceText(name) {
+    return Array.from(form.querySelectorAll('input[name="' + name + '"]:checked:not(:disabled)')).map(function (i) {
+      return i.closest("label").textContent.trim();
+    });
+  }
+
+  function withOther(choice, otherName) {
+    const values = choiceText(choice).filter(function (t) { return t !== "기타 직접 입력"; });
+    const o = text(otherName);
+    if (o) values.push("기타: " + o);
+    return values.join(", ");
+  }
+
+  function fileText(name) {
+    const list = files(name);
+    return list.length ? list.map(function (f) { return f.name + " (" + sizeText(f.size) + ")"; }).join(", ") : "없음";
+  }
+
+  function renderReview() {
+    const box = panel.querySelector("[data-ps-review]");
+    const errors = validate().map(function (e) { return e[0]; });
+    const groups = [
+      ["basic", "기본 정보", [
+        ["대상", choiceText("audience").join(", "), "audience"],
+        ["제품 설명", text("description"), "description"],
+        ["홍보 목적", withOther("purposes", "purpose_other"), "purposes"],
+        ["CTA", text("cta") || "없음(CTA를 만들지 않음)", "cta"],
+      ]],
+      ["video", "영상 설정", [
+        ["홍보 톤", withOther("tone", "tone_other"), "tone"],
+        ["영상 길이", choiceText("duration").join(", "), "duration"],
+        ["장면 수", el("scene_count").value + "개", "scene_count"],
+        ["화면 비율", choiceText("aspect_ratio").join(", "), "aspect_ratio"],
+        ["이미지 스타일", withOther("image_style", "image_style_other"), "image_style"],
+        ["최대 대기 시간", text("max_wait_seconds") ? text("max_wait_seconds") + "초" : "", "max_wait_seconds"],
+      ]],
+      ["files", "자료 첨부", [
+        ["보조 문서", fileText("documents"), "documents"],
+        ["제품 사진", fileText("photos"), "photos"],
+        ["로고", fileText("logo"), "logo"],
+      ].concat(files("logo").length ? [["로고 적용 범위", choiceText("logo_scope").join(", "), "logo_scope"]] : [])],
+    ];
+    box.replaceChildren.apply(box, groups.map(function (g) {
+      const section = document.createElement("div");
+      section.className = "ps-review-group";
+      const head = document.createElement("div");
+      head.className = "ps-review-head";
+      const title = document.createElement("p");
+      title.className = "ps-review-title";
+      title.textContent = g[1];
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "btn btn-secondary ps-review-edit";
+      edit.dataset.psGo = g[0];
+      edit.textContent = "수정";
+      edit.setAttribute("aria-label", g[1] + " 수정");
+      head.append(title, edit);
+      const dl = document.createElement("dl");
+      g[2].forEach(function (r) {
+        const problem = errors.indexOf(r[2]) >= 0 || !r[1];
+        const row = document.createElement("div");
+        row.className = "ps-review-row" + (problem ? " ps-review-missing" : "");
+        const dt = document.createElement("dt");
+        dt.textContent = r[0];
+        const dd = document.createElement("dd");
+        dd.textContent = r[1] || "입력 필요";
+        row.append(dt, dd);
+        dl.append(row);
+      });
+      section.append(head, dl);
+      return section;
+    }));
+  }
+
+  stepTabs.forEach(function (t, i) {
+    t.addEventListener("click", function () { showStep(t.dataset.psTab); });
+    t.addEventListener("keydown", function (event) {
+      const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+      let next = null;
+      if (event.key === "Home") next = stepTabs[0];
+      else if (event.key === "End") next = stepTabs[stepTabs.length - 1];
+      else if (step) next = stepTabs[(i + step + stepTabs.length) % stepTabs.length];
+      if (!next) return;
+      event.preventDefault();
+      showStep(next.dataset.psTab);
+      next.focus();
+    });
+  });
+  panel.addEventListener("click", function (event) {
+    const go = event.target.closest("[data-ps-go]");
+    if (go) goStep(go.dataset.psGo);
+  });
+  form.addEventListener("input", syncSteps);
+  form.addEventListener("change", syncSteps);
+  form.addEventListener("focusout", syncSteps);
+
   syncAll();
+  syncSteps();
 })();
