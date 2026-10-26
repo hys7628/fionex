@@ -415,3 +415,26 @@
 - 외부 호출: 없음.
 - 검증: validation.md 2026-10-26 바로가기 제외 항목.
 - 담당자 판단: 미기재(담당자 검토 필요)
+
+## DEV-COMMON-002 공통 블루·아쿠아·민트 대시보드 UI 정리
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 16:31 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통(common_setup) (브랜치 feature/common_setup, 작업 전 git status clean)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: resources/design/dashboard_reference.png의 색감·카드 질감·버튼·상태 표현·인터랙션 분위기만 참고해 fionex 전체 공통 디자인을 밝은 블루·아쿠아·민트 B2B 대시보드로 통일. 배치 복제 금지, 기능 정보 구조·업무 흐름 유지. tokens.css 우선 정리(hex 반복 금지), 배경·사이드바·카드·버튼·입력·숫자·배지/태그·notice·표·인터랙션·탭 진입 효과·reduced-motion·shell 정리. 공통 기능 로직은 필요하면 이유·영향 확인 후 최소 수정. feature 파일은 공통 변경으로 해결 안 될 때만. 5개 탭 × 1440/1024/390 실제 검증, design_system.md 갱신, Git 작업 금지, 한국어 보고.
+- 판단:
+  - 기능 CSS 5개는 hex/rgba 없이 공통 토큰만 사용 → 기존 변수 이름은 유지하고 값만 바꾸면 5개 탭에 일관 반영(기능 파일 수정 불필요). 새 변수는 보조(`-border`, neutral, aqua, primary-gradient, shadow-hover/primary, focus-halo, motion, overlay)만 추가.
+  - 블루는 기존 #1f63d8(royal에 가까움)을 #1d6ad4로 약간 맑게. 주 버튼 그라데이션 끝 색 #1677c4도 흰 글자 4.7:1. hover 그라데이션 후보(#1a80cc 끝)는 4.20:1로 미달 → hover는 색 변경 없이 그림자·1px 상승만.
+  - 모서리: 버튼 pill → 10px(모바일 앱 느낌 제거), 카드 18 → 16px, md 12 → 10px. 배지·상태 칩만 pill 유지.
+  - notice: 4px 왼쪽 선 + 진한 tint → 옅은 tint + 1px 상태 테두리 + 3px 강조선, 제목을 상태 글자색으로(아이콘 없이 뜻 전달), 본문 네이비.
+  - 배지: 기본 `.badge`를 흰 배경→neutral(블루그레이)로. 분류 라벨용 `.badge-neutral`(점 없음)·`.tag` 추가. 기존 기능 코드의 배지는 모두 상태 modifier가 붙어 있어 영향 없음.
+  - 숫자: Home·시장 분석 CSS가 이미 숫자 요소에 tabular-nums 적용 → 공통은 `.num`/`.tabular-nums` 유틸과 표 숫자 칸만 추가(body 전체 적용은 하지 않음).
+  - 탭 진입: CSS만으로 `.feature-panel:not([hidden])`에 220ms 1회 애니메이션(app_shell.js 변경 없음). fill-mode backwards라 끝난 뒤 transform이 남지 않음(그린 클레임 fixed 팝오버 기준 박스 영향 없음).
+  - 공통 기능 로직: 변경 없음. 5개 탭 로딩(.spinner+텍스트+disabled+aria-busy)·오류(.notice-danger/.field-error)가 이미 공통 체계 사용. 일회성 성공 안내는 Home(4초 자동 숨김)·시장 분석(안내 문장)·그린 클레임(다음 상태 변화 때 지움)이 각자 처리 중이고, 그린 클레임 성공 문구는 "브라우저 다운로드 목록에서 확인" 안내·면책 문장을 담고 있어 자동 숨김 시 정보 손실 → 공통 자동 숨김을 강제하지 않음. 통일이 필요하면 opt-in helper(AppShell 쪽)를 담당자 합의 후 추가하도록 제안만 함.
+  - base.html·app_shell.js: DOM·id·data 속성 변경 필요 없음 → 수정하지 않음.
+- 변경 파일: static/css/tokens.css, static/css/common.css, docs/design_system.md. (features/·base.html·app_shell.js·common/·.env.example·requirements.txt 변경 없음)
+- 외부 호출: 0건(검증 서버에서 urllib.request.urlopen 차단, API 키 제거, FLASK_SKIP_DOTENV=1).
+- 발견 문제: 첫 상호작용 검사에서 입력 초점 링이 비어 보였음 → 150ms transition 진행 중 측정한 검증 스크립트 문제, 300ms 대기 후 재측정 통과(코드 수정 없음). Playwright `networkidle` 대기는 페이지 주기 요청으로 끝나지 않아 `load`+3초 대기로 변경.
+- 검증: validation.md 2026-10-26 공통 대시보드 UI 항목.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 사용자 브라우저(Edge·Safari·모바일 기기)·화면낭독기·Windows 고대비 모드 미확인. 다른 담당자 탭은 공통 토큰 변경으로 색·모서리가 함께 바뀜(팀 공유 필요). 시장 분석의 '브라질 · 수입'은 분류 성격이지만 기능 코드가 badge-info를 써서 블루로 남음(담당자 판단 필요).

@@ -607,3 +607,36 @@ fixture 서버(5013 many·5014 kotra0, FLASK_SKIP_DOTENV=1, urlopen 차단), 브
 | 회귀 | 유지 | test_home_layout 78/78, test_home_features 23/23(바로가기 항목 3개를 '영역 없음·사이드바 이동' 확인으로 바꿈), 6차 29/29, 뉴스 상세 46/46, JS 예외 0 | 통과 |
 | `python -m unittest discover -s tests/test_home` | OK | 94 OK | 통과 |
 외부 호출 0건.
+
+## 2026-10-26 공통 블루·아쿠아·민트 대시보드 UI (DEV-COMMON-002)
+변경: static/css/tokens.css, static/css/common.css, docs/design_system.md (기능 파일·base.html·app_shell.js 변경 없음)
+환경: Conda jasonenv Python 3.11.17, Flask 3.1.2. 검증 서버 127.0.0.1:5013(저장소 밖 실행기: FLASK_SKIP_DOTENV=1, API 키 제거, urllib.request.urlopen 차단). 브라우저: 시스템 Chrome + playwright-core 1.48.2(세션 임시 폴더에 설치, 저장소·requirements 미추가).
+
+### 서버·테스트
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| `import app` + test_client `GET /`, tokens.css·common.css | 200 | 200(55,697 bytes), 200, 200 | 통과 |
+| `python -m unittest discover -s tests/test_common` | OK | 56 OK | 통과 |
+| `-s tests/test_home` | OK | 94 OK | 통과 |
+| `-s tests/test_market_analysis` | OK | 71 OK | 통과 |
+| `-s features/green_claim/tests` (PYTHONUTF8=1) | OK | 178 OK (UTF-8 미설정 시 cp949 콘솔 인코딩 오류로 중단 → 환경 문제, 재실행 통과) | 통과 |
+| `-s tests/test_green_claim`·`test_product_brochure`·`test_promotion_studio` | - | 0건(테스트 없음) | 해당 없음 |
+
+### 화면(5개 탭 × 1440·1024·390, 전체 화면 캡처 15장 육안 확인)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| Home·시장 분석·제품소개서·그린 클레임 체크·홍보 스튜디오 진입 | 패널 표시, AppShell.current 일치 | 15/15 일치 | 통과 |
+| 가로 스크롤·화면 밖 요소(스크롤 컨테이너 제외) | 없음 | 15/15 없음 | 통과 |
+| JS 예외·console error | 없음 | 0건(3개 폭) | 통과 |
+| 수정 전 캡처와 비교 | 배치 동일, 색·모서리·테두리·안내 상자만 변경 | 같음(카드 1px 테두리 추가로 높이 2px 차이 수준) | 통과 |
+| 390 Home·홍보 스튜디오 | 카드·안내·버튼 겹침·잘림 없음 | 같음 | 통과 |
+
+### 상호작용(26/26 통과)
+탭 진입 애니메이션 panel-enter·종료 후 opacity 1/transform none, 그린 클레임 입력 → Home → 복귀 시 입력 유지, 사이드바 작성 중 점·머리글 칩·aria-current, active 메뉴 rgb(234,242,253)/rgb(21,89,184), 메뉴 hover rgb(240,245,251), 입력 키보드 초점 블루 테두리 + rgba(29,106,212,.28) 3px 링 + outline 2px(투명), primary hover translateY(-1px)·그림자 증가·radius 10px·그라데이션, Tab 초점 버튼 outline solid 블루, disabled 점선·글자 rgb(84,99,122), 1440 스크롤 500px 후 사이드바 top 0·높이 900, 카드 1px rgb(231,236,243)·16px·그림자, notice info/danger tint·3px 강조·제목 상태색·본문 네이비, 상태 배지 점 있음 vs neutral 점 없음, 표 머리 rgb(246,248,251)·숫자 tabular-nums 오른쪽·행 hover rgb(246,249,254), spinner 회전, 시장 분석 빈 입력 실행 → field-error 3건, 390 메뉴 열림·main inert·메뉴 초점 → Esc 닫힘·토글로 초점 복귀 → 메뉴로 그린 클레임 이동 후 닫힘, reduced-motion에서 탭 진입 애니메이션 none·transition 0s·버튼 hover 이동 none.
+(첫 실행 25/26: 입력 초점을 transition 150ms 중에 측정한 스크립트 문제 → 300ms 대기 후 26/26. 표·notice·배지는 테스트용 임시 요소로 계산 스타일만 확인 후 제거, 화면 데이터 아님)
+
+### 대비(WCAG 계산)
+흰 글자/primary 5.17, /그라데이션 끝 4.70, primary-text/흰 6.66·/soft 5.90, text 15.67, muted/흰 6.10·/배경 5.63, success/soft 5.31, warning/soft 6.17, danger/soft 5.83, info/soft 6.07, neutral 6.61, 입력 테두리 3.50.
+
+### 미검증
+실제 사용자 브라우저(Edge·Safari·Firefox·모바일 기기), 화면낭독기, Windows 고대비 모드, 실제 외부 데이터가 들어온 상태의 표·뉴스·환율 화면(이번 검증은 외부 차단 상태의 오류·설정 필요 화면), 그린 클레임·시장 분석의 실제 분석 결과 화면(유료/외부 호출 필요해 미실행), PDF 출력물(화면 CSS와 별개라 영향 없음으로 판단, 미확인).

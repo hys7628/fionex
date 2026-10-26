@@ -1,7 +1,7 @@
 # 공통 UI 기준
 
-2026-10-24 공통 UI 적용. 참고 이미지: resources/design/dashboard_reference.png
-이미지에서는 흰색 카드, 연한 블루·그레이 배경, 블루·민트 포인트, 둥근 모서리, 은은한 그림자, 넉넉한 여백만 참고했다.
+2026-10-24 공통 UI 적용, 2026-10-26 블루·아쿠아·민트 대시보드 톤으로 정리(홍은주, feature/common_setup). 참고 이미지: resources/design/dashboard_reference.png
+이미지에서는 색감(흰 카드·옅은 블루그레이 배경·블루·아쿠아·민트 포인트·네이비 숫자), 카드 질감(얇은 테두리·은은한 그림자), 버튼, 상태 표현, 인터랙션 분위기만 참고했다. 배치는 복제하지 않는다.
 이미지 속 이름·로고·슬로건·메뉴·수치·차트는 사용하지 않는다. 이미지를 배경으로 붙이지 않고 HTML/CSS로 구성한다.
 서비스명은 `fionex`(2026-10-24 확정, common/config.py의 SERVICE_NAME). 화면과 브라우저 제목은 이 값을 사용한다.
 로그인·프로필·계정 메뉴는 두지 않는다. 웹폰트 사용권이 미정이라 시스템 글꼴을 쓴다.
@@ -27,8 +27,8 @@
 ## CSS 파일 역할
 | 파일 | 내용 | 규칙 |
 |---|---|---|
-| static/css/tokens.css | 색상·글꼴·간격·모서리·그림자·레이아웃 변수 | 디자인 값의 단일 원본. 값 변경은 공통 합의 후 |
-| static/css/common.css | 기본 요소, 앱 shell, 머리글, 카드, 배치, 입력, 버튼, 표, 상태 안내 | 전역 요소(body, button, input…) 기본값은 여기서만 |
+| static/css/tokens.css | 색상·글꼴·간격·모서리·그림자·움직임·레이아웃 변수 | 디자인 값의 단일 원본. 값 변경은 공통 합의 후 |
+| static/css/common.css | 기본 요소, 앱 shell, 머리글, 카드, 배치, 입력, 버튼, 표, 상태 안내, 움직임 | 전역 요소(body, button, input…) 기본값은 여기서만. 색 hex를 직접 쓰지 않고 토큰만 사용 |
 | features/<기능>/static/<기능>.css | 해당 탭 내부 전용 스타일 | 선택자를 `.feature-<기능id>` 안으로 한정 |
 
 탭 CSS 규칙
@@ -43,20 +43,51 @@
 .feature-green_claim .claim-risk { color: var(--color-danger); }
 ```
 
+## 팔레트와 분위기
+밝고 깨끗한 B2B SaaS 대시보드. 흰 면 + 아주 옅은 블루그레이 배경, 블루(주요 동작)·아쿠아(보조 빛)·민트(친환경 강조) 포인트, 제목·숫자는 딥 네이비.
+피한다: 진한 회색 배경, 강한 royal blue, 네온, 과한 그라데이션·glassmorphism, 카드마다 다른 모서리·그림자, 두꺼운 테두리, 모바일 앱처럼 둥근 UI.
+
+| 역할 | 값 | 변수 |
+|---|---|---|
+| 페이지 배경 | #f3f6fa + 모서리 radial 빛(아쿠아 7%·블루 5%) | `--color-bg`, `--color-bg-gradient` |
+| 면 | #ffffff / 옅은 면 #f6f8fb / hover #f0f5fb / 표 행 hover #f6f9fe | `--color-surface`, `--color-surface-muted`, `--color-surface-hover`, `--color-row-hover` |
+| 띄운 면(elevated) | 흰 면 + 그림자 단계로 표현(별도 색 없음) | `--color-surface` + `--shadow-md`/`--shadow-lg` |
+| 머리글 | 블루→아쿠아→민트 아주 옅은 그라데이션 | `--color-hero-gradient` |
+| 블루 | #1d6ad4 (흰 글자 5.2:1), 누름 #1663c4, soft #eaf2fd, 글자 #1559b8 (6.7:1) | `--color-primary`, `-hover`, `-soft`, `-text` |
+| 주 버튼 | #1d6ad4 → #1677c4 (끝 색도 흰 글자 4.7:1) | `--color-primary-gradient` |
+| 아쿠아 | #22b8cf 장식 전용, soft #e5f6f9, 글자 #0c7a8a (5.0:1) | `--color-aqua`, `-soft`, `-text` |
+| 민트 | #23b39b 장식 전용, soft #e6f6f2, 글자 #0a7262 | `--color-accent`, `-soft`, `-text` |
+| 네이비 글자 | #13233f (15.7:1) | `--color-text` |
+| 보조 글자 | #54637a (흰 6.1:1, 배경 5.6:1), placeholder #64738a | `--color-text-muted`, `--color-text-placeholder` |
+| 선 | 카드·표 행 #e7ecf3 / 구분선 #e2e8f0 / 점선·보조 버튼 #c3cedc / 입력 #7b8aa1 (3.5:1) | `--color-border-subtle`, `--color-border`, `--color-border-strong`, `--color-border-control` |
+| 상태 | info #1559b8 · success #0a7262 · warning #8f4b00 · danger #b42318, 각 `-soft` 배경·`-border` 테두리 (글자/soft 5:1 이상) | `--color-info/success/warning/danger` + `-soft`, `-border` |
+| 분류 라벨 | 배경 #eef2f7, 글자 #47566e (6.6:1), 테두리 #dde4ee | `--color-neutral-soft`, `-text`, `-border` |
+| 덮개 | 모바일 메뉴 뒤 rgba(19,35,63,.35) | `--color-overlay` |
+
+대비 수치는 tokens.css 값으로 WCAG 공식 계산한 값이다. 그라데이션 배경 위 보조 글자는 5:1 이상. 아쿠아·민트 원색은 글자에 쓰지 않는다(`-text` 사용).
+
 ## 주요 토큰
 | 분류 | 변수 |
 |---|---|
-| 배경·면 | `--color-bg`, `--color-bg-gradient`, `--color-surface`, `--color-surface-muted`, `--color-hero-gradient` |
-| 글자 | `--color-text`(15.5:1), `--color-text-muted`(흰 배경 5.9:1), `--color-text-inverse` |
-| 포인트 | `--color-primary`(주요 동작), `--color-primary-soft`, `--color-primary-text`, `--color-accent`(민트 보조 강조, 글자에는 `--color-accent-text`) |
-| 상태 | `--color-info/success/warning/danger` + `-soft` 배경 (조합 대비 5:1 이상) |
-| 선 | `--color-border`(구분선), `--color-border-strong`(점선 영역), `--color-border-control`(입력 테두리, 3.5:1) |
 | 간격 | `--space-1`(4px) ~ `--space-12`(48px) |
-| 모서리 | `--radius-sm` 8 / `--radius-md` 12 / `--radius-lg` 18 / `--radius-pill` |
-| 그림자 | `--shadow-sm`, `--shadow-md`(카드), `--shadow-lg`(모바일 메뉴) |
-| 글꼴 | `--font-sans`, `--font-size-xs` ~ `--font-size-2xl`, `--font-weight-*` |
+| 모서리 | `--radius-sm` 8(입력·안내·작은 요소) / `--radius-md` 10(버튼·메뉴·표 틀·빈 상태) / `--radius-lg` 16(카드·머리글) / `--radius-pill`(배지·상태 칩만) |
+| 그림자 | `--shadow-sm`(머리글·보조 버튼), `--shadow-md`(카드), `--shadow-hover`(누를 수 있는 카드 hover), `--shadow-lg`(모바일 메뉴·팝오버), `--shadow-primary`/`-hover`(주 버튼) |
+| 초점 | `--focus-ring`(흰 틈 + 블루 2px), `--focus-halo`(입력칸 옅은 블루 3px 링) |
+| 글꼴 | `--font-sans`, `--font-size-xs` ~ `--font-size-2xl`, `--font-weight-regular/medium/semibold/bold` |
+| 움직임 | `--transition-fast` 150ms, `--transition-base` 200ms, `--duration-enter` 220ms, `--ease-out` |
 
-대비 수치는 tokens.css 값으로 WCAG 공식 계산한 값이다. 그라데이션 배경 위 보조 글자는 5:1 이상.
+## 글자 위계
+| 단계 | 크기·굵기 | 색 |
+|---|---|---|
+| 탭 제목 `.page-title` | 2xl(28px, 960px 미만 xl) · bold · 자간 -0.02em | `--color-text` |
+| 카드 제목 `.card-title` | lg(18px) · bold | `--color-text` |
+| 본문 | md(16px) · regular · 줄 간격 1.6 | `--color-text` |
+| 설명·메타 `.card-description`, `.page-description` | sm(14px) | `--color-text-muted` |
+| 입력 이름 `.field-label` | sm · bold | `--color-text` |
+| 안내·표 머리 `.field-hint`, `.table th` | xs(12px) | `--color-text-muted` |
+| 숫자 데이터 | 기능별 크기, `.num`/`.tabular-nums`(tabular-nums), 표 숫자 칸 medium | `--color-text` |
+
+시간·환율·금액·KPI·D-day·퍼센트는 `font-variant-numeric: tabular-nums`로 자릿수를 맞추고 설명보다 크게·진하게 둔다.
 
 ## 공통 컴포넌트
 | 용도 | 클래스 |
@@ -66,8 +97,40 @@
 | 입력 | `.field` > `.field-label` + `.input` / `.select` / `.textarea` / `.file-input` + `.field-hint` / `.field-error`, 필수 표시 `.field-required`, 묶음 `.fieldset` + `legend.field-label`, 선택지 `.choice` |
 | 버튼 | `.btn` + `.btn-primary` / `.btn-secondary` / `.btn-ghost` / `.btn-icon`, 묶음 `.btn-row` |
 | 표 | `.table-wrap` > `table.table` (`caption`에 출처·단위, 숫자 칸 `.num`) |
-| 상태 | `.empty-state`(+`.empty-state-title`), `.notice.notice-info/-success/-warning/-danger`(+`.notice-title`), `.badge.badge-*`, `.spinner` |
+| 상태 | `.empty-state`(+`.empty-state-title`), `.notice.notice-info/-success/-warning/-danger`(+`.notice-title`), `.badge.badge-info/-success/-warning/-danger`, `.spinner` |
+| 분류 라벨 | `.badge`(기본)·`.badge-neutral`(점 없음), `.tag`(작은 사각 라벨) |
+| 숫자 | `.num`, `.tabular-nums` |
+| 누를 수 있는 카드 | `.card.card-interactive` 또는 `a.card` |
 | 접근성 | `.visually-hidden` |
+
+### 컴포넌트 규칙 (2026-10-26)
+- **카드**: 흰 면, 1px `--color-border-subtle`, `--radius-lg` 16px, `--shadow-md`, 안쪽 여백 24px(960px 미만 20px), 머리→본문 16px, 제목→설명 4px. 모든 카드에 움직임을 넣지 않는다. 누를 수 있는 카드만 `.card-interactive`로 hover 시 2px 상승·`--shadow-hover`·테두리 블루 tint.
+- **머리글** `.page-header`: hero 그라데이션 + 옅은 테두리 + `--shadow-sm`, 여백 24px 32px(작은 화면 20px).
+- **사이드바**: 흰 면 + 오른쪽 1px 옅은 선(그림자 없음). 메뉴 radius 10px, 기본 보조 글자색, hover `--color-surface-hover` + 아이콘 블루, 선택 `--color-primary-soft` 배경 + `--color-primary-text` 글자·아이콘 semibold. 폭 248px 유지.
+- **버튼**: 높이 42px, radius 10px, 글자 sm bold.
+  - primary: 블루 그라데이션 + 흰 글자 + `--shadow-primary`. hover는 색을 바꾸지 않고(대비 유지) 그림자 증가 + 1px 상승, 누름은 `--color-primary-hover`.
+  - secondary: 흰 면 + `--color-border-strong` 테두리 + 블루 글자. hover 블루 테두리·soft 배경.
+  - disabled: 점선 테두리 + 옅은 면 + 보조 글자(6.1:1, 읽힘), 그림자·이동 없음.
+- **입력**: 높이 42px, radius 8px, 테두리 `--color-border-control`(3.5:1). hover 블루 테두리. 키보드 초점은 블루 테두리 + `--focus-halo` 링 + 투명 outline(고대비 모드에서 실제 선). 오류 `aria-invalid` 빨강 테두리(초점 시 빨강 옅은 링). disabled 옅은 면·보조 글자. placeholder `--color-text-placeholder`.
+- **배지/라벨**: 상태(성공=민트그린, 주의=주황, 위험=빨강, 정보=블루)는 `.badge-*`(점 + soft 배경 + 얇은 테두리). Google·KOTRA·ABIT·AI 요약·원사·원단 같은 단순 분류는 `.badge-neutral`/`.tag`(블루그레이)를 쓰고 초록·주황·빨강을 쓰지 않는다.
+- **안내** `.notice`: 옅은 tint 배경 + 1px 상태 테두리 + 왼쪽 3px 강조선, 여백 12px 16px, 제목은 상태 글자색·본문은 네이비. 아이콘 없이 제목 문장으로 뜻을 전달한다. 오류(`danger`)만 진한 tint를 쓰고 일반 안내는 옅게 둔다. 안의 버튼은 왼쪽 정렬.
+- **표**: 틀 1px 옅은 선 + radius 10px, 머리 `--color-surface-muted`·xs 보조 글자, 행 구분 1px `--color-border-subtle`, 행 hover `--color-row-hover`, 숫자 칸 `.num` 오른쪽·tabular-nums·medium. 열 너비는 기능이 정한다.
+- **빈 상태**: 점선 `--color-border-strong` + 옅은 면, radius 10px, 최소 높이 160px.
+- **로딩**: `.spinner`(블루·아쿠아 테두리 회전) + 텍스트, 버튼 `disabled`, 영역 `aria-busy`.
+
+### 움직임
+- 대상: 버튼·카드·메뉴·필터 hover, 입력 초점, 상태 변화. 속성은 opacity·transform·background-color·border-color·box-shadow만, 150~220ms.
+- 탭 진입: 패널이 보일 때 1회 opacity 0→1, translateY 5px→0, 220ms(`panel-enter`). 끝난 뒤 transform이 남지 않는다. 기능 코드는 애니메이션 종료를 기다리지 않는다.
+- 계속 움직이는 장식은 만들지 않는다(로딩 `.spinner`만 예외).
+- `prefers-reduced-motion: reduce`: 모든 transition·animation 0ms, 탭 진입 애니메이션 없음, hover 이동 없음.
+
+### 성공·오류 안내 지속 시간
+- 오류(`notice-danger`)는 자동으로 숨기지 않는다. 사용자가 다시 시도하거나 상태가 바뀔 때 기능 코드가 지운다.
+- 다운로드 요청 같은 일회성 성공은 기능별로 처리한다(2026-10-26 기준: Home은 4초 뒤 숨김, 시장 분석은 버튼 옆 안내 문장, 그린 클레임은 다음 상태 변화 때 지움). 공통 자동 숨김은 두지 않는다. 판단 근거와 제안은 docs/worklogs/hong_eunju/prompt_log.md DEV-COMMON-002.
+
+### 반응형
+- 1200px 미만: 본문 여백 32px → 24px. 960px 미만: 사이드바 접힘(상단 메뉴 버튼), 본문 여백 16px, 카드·머리글 여백 20px, 탭 제목 xl. 1100px 이상: `.workspace` 2열.
+- 공통 스타일은 390px에서 가로 스크롤이 생기지 않아야 한다. 넓은 표는 `.table-wrap` 안에서만 가로 스크롤한다.
 
 ```html
 <div class="workspace">
@@ -105,7 +168,7 @@
 - 모든 입력에 보이는 `<label for>`를 둔다. 안내문은 `aria-describedby`로 연결한다. 오류는 `aria-invalid="true"` + `.field-error` 문장.
 - id는 다른 탭과 겹치지 않게 `기능id-` 접두어를 붙인다(모든 패널이 한 페이지에 있음).
 - 상태는 색상과 텍스트를 함께 표시한다. 색만으로 위험도·성공을 구분하지 않는다.
-- 키보드 초점은 공통 `:focus-visible` 테두리를 쓰고 `outline: none`으로 지우지 않는다.
+- 키보드 초점은 공통 `:focus-visible` 테두리(블루 2px)를 쓰고 `outline: none`으로 지우지 않는다. 입력칸은 블루 테두리 + `--focus-halo`(outline은 투명 2px로 남김).
 - 공통 shell 제공: 본문 건너뛰기 링크, 탭 전환 시 탭 제목으로 초점 이동, 모바일 메뉴 열면 메뉴로 초점·뒤 화면 `inert`, Esc로 닫고 메뉴 버튼으로 초점 복귀.
 - 비동기 처리 중에는 버튼을 `disabled`로 바꿔 중복 실행을 막고, 결과 영역에 `aria-busy="true"`와 `.spinner` + 텍스트를 표시한다.
 
