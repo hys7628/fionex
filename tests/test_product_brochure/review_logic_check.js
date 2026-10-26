@@ -761,6 +761,70 @@ check("PDF 실행기: 무효화 뒤 도착한 오래된 응답은 무시", async
   assert.equal(h.log.success.length + h.log.failure.length, 0);
 });
 
+// 사용자 보고(2026-10-26) 회귀: 생성 → 분석·검토 입력 수정(재적용 없음) → PDF 다운로드 시 이전 결과 확인창
+// 화면과 같은 판정(isResultStale(generation, 현재 입력 서명))을 PDF 실행기의 needsConfirm에 연결해 흐름 전체를 확인
+async function staleFlow(mutate) {
+  const fs = analysisFields();
+  confirmAll(fs, ["product_name", "description", "moq"]);
+  const dn = { value: "regen T2T", confirmed: true };
+  const snap = R.createSnapshot(fs, "analysis", 1, dn);
+  const body = generationBody().data;
+  const generation = { original: R.cloneData(body), current: R.cloneData(body), editedIds: [], signature: snap.signature, version: snap.version };
+  mutate({ fs, dn, generation, get: (k) => fs.find((f) => f.key === k) });
+  const ctx = () => ({ source: "analysis", snapshot: snap, version: 1, currentSignature: R.inputSignature(fs, dn), busy: false });
+  const run = async (accept) => {
+    const sends = [];
+    const confirms = [];
+    const d = R.createPdfDownloader({
+      send: (input) => { sends.push(JSON.parse(input.body)); return Promise.resolve(pdfOk()); },
+      needsConfirm: () => R.isResultStale(generation, ctx()),
+      confirm: (m) => { confirms.push(m); return accept; },
+      onBusy: () => {}, onSuccess: () => {}, onFailure: () => {},
+    });
+    const result = await d.run({ body: JSON.stringify(R.buildPdfPayload(R.cloneData(generation.current))), revision: 1 });
+    return { result, sends, confirms };
+  };
+  return { stale: R.isResultStale(generation, ctx()), cancel: await run(false), accept: await run(true), generation };
+}
+
+check("이전 결과 확인(회귀): MOQ 단위만 수정·재적용 없음 → 확인창, 취소 0회·확인 1회(기존 적용본 그대로)", async () => {
+  const r = await staleFlow(({ get }) => R.setValue(get("moq"), "500 kgs"));
+  assert.equal(r.stale, true);
+  assert.equal(r.cancel.result, "cancelled");
+  assert.deepEqual(r.cancel.confirms, [R.PDF_STALE_MESSAGE]);
+  assert.equal(r.cancel.sends.length, 0);
+  assert.equal(r.accept.result, "success");
+  assert.equal(r.accept.sends.length, 1);
+  assert.equal(r.accept.sends[0].catalog.supply.items[0].value, "500 kg"); // 검토 화면의 수정값을 결과에 몰래 반영하지 않음
+});
+
+check("이전 결과 확인(회귀): 제품 설명·표시명·확인 해제·가상 표시 변경도 감지, 결과 문구 편집만은 감지 안 함", async () => {
+  const cases = {
+    description: ({ get }) => R.setValue(get("description"), "설명 변경(가상)"),
+    display_name: ({ dn }) => { dn.value = "regen T2T X"; },
+    display_confirm: ({ dn }) => { dn.confirmed = false; },
+    unconfirm: ({ get }) => R.setConfirmed(get("moq"), false),
+    virtual: ({ get }) => R.setVirtual(get("description"), true),
+    revert_value: ({ get }) => { R.setValue(get("moq"), "500 kgs"); R.setValue(get("moq"), "500 kg"); }, // 값은 같아도 확인이 해제됨
+  };
+  for (const [name, mutate] of Object.entries(cases)) {
+    const r = await staleFlow(mutate);
+    assert.equal(r.stale, true, name);
+    assert.equal(r.cancel.sends.length, 0, name);
+    assert.equal(r.accept.sends.length, 1, name);
+  }
+  const edited = await staleFlow(({ generation }) => {
+    const values = R.editValues(generation.current);
+    values["supply:moq"] = "800 kg";
+    const out = R.applyEdits(generation.original, generation.current, values);
+    generation.current = out.data;
+    generation.editedIds = out.editedIds;
+  });
+  assert.equal(edited.stale, false);                                    // 출력 편집만으로 입력 불일치 경고 없음
+  assert.deepEqual(edited.accept.confirms, []);
+  assert.equal(edited.accept.sends[0].catalog.supply.items[0].value, "800 kg"); // 적용된 수정본 사용
+});
+
 check("화면 항목명: 3·4쪽 고정 pt-BR 표시명(AI 라벨 대신, PDF와 같은 값)", () => {
   assert.deepEqual(Object.keys(R.CATALOG_ITEM_LABELS).sort(),
     ["carbon_reduction", "certification", "lead_time", "moq", "sample", "yarn_spec"]);

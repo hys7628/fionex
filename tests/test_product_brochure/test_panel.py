@@ -265,6 +265,23 @@ class CatalogPreviewTests(RenderedPanel):
             self.assertNotIn(forbidden, block)
         self.assertNotIn("setResult(", JS)
 
+    def test_pdf_stale_confirm_uses_live_inputs(self):
+        # 사용자 보고(2026-10-26) 회귀: 검토 입력 수정 → 재적용 없이 다운로드 → 이전 결과 확인
+        # 판정은 클릭 시점에 현재 입력 서명으로 계산(캐시 없음)하고 생성 결과 미리보기 경고와 같은 함수를 씀
+        self.assertIn("needsConfirm: function () { return !!generation && Review.isResultStale(generation, generationContext()); }", JS)
+        ctx = JS[JS.index("function generationContext()"):JS.index("function syncGenerate()")]
+        self.assertIn("currentSignature: currentSignature()", ctx)
+        self.assertIn("return fields ? Review.inputSignature(fields, displayName) : null;", JS)
+        # 항목 값·확인·가상 표시와 표시명·표시명 확인 변경이 모두 changed()로 상태를 갱신
+        field = JS[JS.index("  function renderField(field)"):JS.index("  function renderSourceNotice")]
+        self.assertIn("if (Review.setValue(field, input.value)) changed();", field)
+        self.assertEqual(field.count("changed();"), 3)
+        dn = JS[JS.index('displayNameInput.addEventListener("input"'):JS.index("  function changed()")]
+        self.assertEqual(dn.count("changed();"), 2)
+        # 결과 카드 안내·결과 대화상자 경고·PDF 안내·PDF 확인 모두 같은 판정
+        self.assertEqual(JS.count("Review.isResultStale(generation, generationContext())"), 4)
+        self.assertNotIn("isResultStale", JS[JS.index('pdfBtn.addEventListener("click"'):])  # 클릭 처리에서 따로 판정하지 않음
+
     def test_result_revision_invalidates_download_mark(self):
         # 생성 성공·편집 적용·원문 복원마다 결과 버전 증가 → 이전 다운로드 요청 표시를 새 내용에 쓰지 않음
         self.assertEqual(JS.count("resultRevision++"), 3)

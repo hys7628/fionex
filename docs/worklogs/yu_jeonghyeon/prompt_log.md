@@ -446,3 +446,25 @@
 - ResourceWarning 보고 정정(DI-2026_10_26-05·validation 해당 항목): "-W error::ResourceWarning 전체 실행 통과"는 GC 정리 중 발생한 ResourceWarning이 "Exception ignored"로 출력될 뿐 테스트를 실패시키지 않는 상태였음(경고 0건이라는 뜻 아님). "기존 경고 10건"은 경고 줄+"Enable tracemalloc" 줄을 함께 센 줄 수였고 실제 경고는 5건. 파일별 -W always 측정에서 5건 모두 test_analyze_api.py, PDF 테스트 파일은 0건
 - 변경: static/product_brochure.js, static/product_brochure.css, templates/product_brochure/panel.html, feature_spec.md §27, tests/test_product_brochure/review_logic_check.js·test_panel.py·test_review_logic.py
 - 남은 한계: 브라우저 DOM·실제 저장 미확인, 공통 탭 상태 표시가 "다운로드 요청됨" 대신 보호 상태로 보일 수 있음(공통 계약 그대로)
+
+## DI-2026_10_26-07 PDF 다운로드 이전 결과 확인창 미표시 보고 조사
+- 유형: development_instruction / **서비스 프롬프트 변경·실험 없음, OpenAI 호출 없음**
+- 날짜/시간: 2026-10-26 02:40 (Asia/Seoul, 기록 시각) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure
+- 도구·모델: Claude Code (Opus 5.5)
+- 사전 확인: HEAD a6d4fe9, 작업 트리 깨끗, 병합 중 아님, stash@{0} 미조작
+- 사용자 보고(Claude 미관찰): 생성 결과가 있는 상태에서 분석·검토 화면 MOQ 단위 kg 수정 → PDF 다운로드 → "현재 입력과 다를 수 있습니다" 확인창 없이 다운로드됨
+- 코드 확인: 입력 칸 input → setValue → changed() → syncGenerate·syncResultStatus·syncPdf. 다운로드 클릭 시 needsConfirm이 isResultStale(generation, generationContext())를 매번 계산하고, generationContext의 currentSignature는 현재 fields·표시명으로 새로 만든 서명(마지막 적용 스냅샷이 아님). 생성 결과의 signature는 생성 당시 적용 스냅샷 서명
+- 직접 재현(Claude): 로컬 서버(FLASK_SKIP_DOTENV=1, OPENAI_API_KEY 비움, 포트 5091)와 Edge headless를 CDP(Node 24 내장 WebSocket)로 조작. 분석·생성 API는 브라우저에서 가로채 모의 응답, PDF는 실제 서버 렌더러. 스크립트: 저장소 밖 C:\Users\user\AppData\Local\Temp\claude\C--Users-user-Desktop-fionex\36d7c2bf-67d2-469c-9a14-643e83056de0\scratchpad\cdp_repro\repro.mjs
+  - 시나리오별(취소 후 PDF 요청/다운로드 → 확인 후): moq 합성 입력 "500 kgs" 0/0 → 1/1, moq 실제 키 입력(Backspace·문자 입력)+실제 마우스 클릭 "500 KG" 0/0 → 1/1, 실제 키로 원래 값 "500 kg" 복원 0/0 → 1/1(값 변경 때 확인 해제됨), 제품 설명·표시명·확인 해제 모두 0/0 → 1/1, 모든 경우 확인창 문구 일치. 결과 문구 편집·적용만: 확인창 0회, 바로 다운로드
+  - 결론: 현재 코드에서 보고 증상 재현 안 됨. 원인 미확인이므로 코드 수정하지 않음(추측성 변경 회피)
+  - 서버 로그: 분석·생성 요청 0건(모두 브라우저에서 가로챔), PDF 요청 200만 기록. 강제 종료로 로그가 일부 누락된 것으로 보임(실행 횟수보다 적은 16줄)
+  - 정적 JS 응답은 Cache-Control: no-cache(오래된 스크립트 캐시 가능성 낮음)
+- 가능성(미확인): 결과 대화상자 "문구 수정"의 4쪽 MOQ 값을 고친 경우(정상적으로 확인창 없음), 수정 뒤 "확인 내용 적용"과 "카탈로그 생성"까지 진행해 새 결과가 된 경우, 이전 코드로 실행 중이던 서버·탭. 사용자에게 정확한 단계 확인 필요
+- 변경: tests/test_product_brochure/review_logic_check.js(회귀 2개), test_panel.py(이벤트 연결·판정 재사용 정적 검사 1개), feature_spec.md 후속 메모. JS·서버 변경 없음
+- 실제 실패와 수정: 정적 검사에서 isResultStale 호출 수를 3으로 예상했으나 실제 4곳(결과 대화상자 경고 포함) → 기대값 수정
+- 남은 한계: 사용자 환경의 정확한 재현 단계 미확인, 실제 사용자 브라우저(창 모드)에서 미확인
+
+### DI-2026_10_26-07 후속(원인 확인, 사용자 보고)
+- 사용자 확인: MOQ를 바꾼 위치는 분석·검토 화면이 아니라 "생성 결과 보기 → 문구 수정 → 미리보기에 적용"이었음
+- 결론: 결과 문구 편집·적용만으로는 입력 불일치 확인창을 띄우지 않는 것이 명세(§24·§27)대로의 정상 동작. 기존 보고의 원인은 편집 위치 혼동으로 확인됨(위 "가능성" 1번과 일치). 코드 결함 아님, 서비스 코드 변경 없음
+- 남은 확인: 결과 편집으로 바꾼 MOQ 값이 내려받은 PDF에 반영됐는지는 사용자 확인 전(Claude는 모의 데이터로 요청 본문에 수정본 값이 들어가는 것만 확인)
