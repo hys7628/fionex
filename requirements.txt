@@ -17,4 +17,10 @@ reportlab==5.1.0
 # PDF 입력 검사(common/pdf_utils.py). BSD-3-Clause, Python 3.11에서 추가 의존성 없음. jasonenv 설치·모의 테스트 확인(2026-10-25).
 # pdf_utils가 pypdf 내부 메서드(PdfReader._handle_encryption)를 덮어쓰므로 버전을 바꾸면 tests/test_common/test_pdf.py로 재확인한다.
 pypdf==6.21.2
-# PDF 출력 도구는 기능 개발 단계에서 선정·검증 후 추가한다.
+# PDF 출력(features/market_analysis/pdf_report.py). BSD 라이선스. 2026-10-25 공통 담당 합의(한윤수 확인) 후 추가.
+# 설치 시 pillow, charset-normalizer가 함께 설치된다. 글꼴은 features/market_analysis/fonts(Noto Sans KR, OFL).
+# 공통 PDF 입력 검사(pypdf)와는 별개 기능이다.
+reportlab==5.1.0
+# .env 자동 로드(Flask app.run·flask run이 설치돼 있으면 실행 위치에서 상위 방향으로 찾은 .env를 읽음, 이미 설정된 환경변수 우선).
+# 2026-10-26 담당자(한윤수) 추가. BSD-3-Clause, Python 3.11 지원. 앱 코드는 .env를 직접 읽지 않는다.
+python-dotenv==1.2.4

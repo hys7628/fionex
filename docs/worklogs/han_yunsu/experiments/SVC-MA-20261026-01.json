@@ -1,0 +1,375 @@
+{
+ "experiment_id": "SVC-MA-20261026-01",
+ "type": "service_prompt_experiment",
+ "date_kst": "2026-10-26 00:07~00:08 (서버 로그 기준)",
+ "worker": "한윤수",
+ "feature": "market_analysis",
+ "model_response": "gpt-5.4-mini-2026-03-17",
+ "prompt_versions": {
+  "draft": "market_analysis_draft_v2.md",
+  "review": "market_analysis_review_v2.md"
+ },
+ "settings": {
+  "max_output_tokens": 4096,
+  "store": false,
+  "calls_limit": 6,
+  "time_budget_seconds": 480
+ },
+ "input": {
+  "query": "NCM 54023310, 브라질 수입, 2023-10~2026-09(36개월), 공급국 전체 (ComexStat 실제 조회, 화면 기본값)",
+  "facts": "S1 = 코드 계산값(features/market_analysis/analysis.py build_facts)",
+  "evidence_articles": "AI 입력 0건(KOTRA 2건은 이용 범위 미확인으로 제외, 일반 뉴스 공급자 선택 대기)"
+ },
+ "output": {
+  "status": "complete",
+  "complete": true,
+  "rows": [
+   {
+    "content": "브라질의 NCM 54023310 수입은 2023-10~2026-09 기준 FOB USD 925,142,540, 797,257.8t이다.",
+    "flags": [],
+    "implication": "브라질 DTY 전체 시장 규모와 수입 흐름을 기준으로 영업 우선순위를 잡을 수 있다.",
+    "model_status": "사실",
+    "section": "핵심 요약",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09",
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/"
+     }
+    ],
+    "status": "사실"
+   },
+   {
+    "content": "전년 동기 대비 수입액은 +6.8%, 수입량은 +9.7%였고 평균 수입단가는 -2.6%였다.",
+    "flags": [],
+    "implication": "물량은 늘었지만 단가 압력도 있었던 시장으로 보이며, 가격 경쟁력이 중요하다.",
+    "model_status": "사실",
+    "section": "핵심 요약",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09",
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/"
+     }
+    ],
+    "status": "사실"
+   },
+   {
+    "content": "공급국 1위는 중국으로 83.3%를 차지했고, 2위 인도는 15.2%였다.",
+    "flags": [],
+    "implication": "공급 집중도가 매우 높아 기존 강자와의 직접 경쟁 또는 틈새 공략 전략이 필요하다.",
+    "model_status": "사실",
+    "section": "핵심 요약",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09",
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/"
+     }
+    ],
+    "status": "사실"
+   },
+   {
+    "content": "월 수입액은 2026-05에 USD 43,173,786로 최고였고, 2023-10에 USD 14,681,241로 최저였다.",
+    "flags": [],
+    "implication": "월별 변동성이 있어 월간 발주 타이밍과 재고 관리가 중요하다.",
+    "model_status": "사실",
+    "section": "변화 배경",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09",
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/"
+     }
+    ],
+    "status": "사실"
+   },
+   {
+    "content": "한국은 16위로 비중이 0.0%, 수입액은 USD 39,600였다.",
+    "flags": [],
+    "implication": "한국산은 현재 존재감이 낮아 신규 거래처 발굴과 샘플 테스트가 필요하다.",
+    "model_status": "사실",
+    "section": "변화 배경",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09",
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/"
+     }
+    ],
+    "status": "사실"
+   },
+   {
+    "content": "수입량이 전년 동기 대비 증가한 만큼, 기존 수요를 겨냥한 공급 제안 여지가 있다.",
+    "flags": [],
+    "implication": "브라질 바이어 대상의 안정 공급, 리드타임, 품질 일관성 중심 제안이 유효할 수 있다.",
+    "model_status": "추정",
+    "section": "영업 기회",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09",
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/"
+     }
+    ],
+    "status": "추정"
+   },
+   {
+    "content": "중국과 인도에 수입이 집중되어 있어, 대체 공급선이 필요한 수요처를 찾을 수 있다.",
+    "flags": [],
+    "implication": "가격 외에 납기, 소량 대응, 품질 차별화로 중견 바이어를 공략할 수 있다.",
+    "model_status": "추정",
+    "section": "영업 기회",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09",
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/"
+     }
+    ],
+    "status": "추정"
+   },
+   {
+    "content": "평균 수입단가가 전년 동기 대비 하락했다.",
+    "flags": [],
+    "implication": "가격 경쟁 압력이 있었을 가능성은 있으나, 마진 악화를 단정할 수는 없다.",
+    "model_status": "추정",
+    "section": "위험",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09",
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/"
+     }
+    ],
+    "status": "추정"
+   },
+   {
+    "content": "재생·T2T 관련 기사 근거는 없다.",
+    "flags": [
+     "전체 DTY 통계(S1)를 T2T 수요·시장 규모로 해석했을 수 있음"
+    ],
+    "implication": "재생 원사나 T2T 수요 확대를 이 통계로 해석하면 안 된다.",
+    "model_status": "미확인",
+    "section": "위험",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09",
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/"
+     }
+    ],
+    "status": "미확인"
+   }
+  ],
+  "gaps": [
+   "재생·T2T 관련 기사 근거가 없어 관련 시사점을 기사로 뒷받침할 수 없다.",
+   "evidence 목록이 비어 있어 뉴스 기반의 변화 배경이나 위험 요인을 확인할 수 없다."
+  ],
+  "remaining_findings": [
+   "전체 DTY 통계(S1)를 T2T 수요·시장 규모로 해석했을 수 있음"
+  ],
+  "rounds": [
+   {
+    "changes": [
+     "핵심 요약 1행의 수치 표기를 근거 범위에 맞게 간결화하고, 모든 숫자가 S1의 월·기간 합계 값임이 분명하도록 정리",
+     "변화 배경 1행의 월 최고·최저 수치를 S1 값으로 유지하되, 불필요한 세부 숫자 나열을 줄여 가독성을 개선",
+     "변화 배경 2행의 한국 수치 표기를 S1 값(USD 39,600)과 일치하도록 유지",
+     "영업 기회 1행의 표현에서 '전체 DTY 통계상'에 근거한 일반적 수요 추정으로 완화하여 T2T 단정 해석을 피하도록 조정",
+     "위험 2행은 재생·T2T 근거 부재를 분명히 하되, 현재 통계로 해석할 수 없다는 취지로 유지"
+    ],
+    "checked": [
+     "핵심 요약 3행의 수치가 S1의 값과 일치하는지 확인",
+     "변화 배경 2행의 월 최고·최저 수치가 S1에 있는지 확인",
+     "영업 기회·위험 문구가 전체 DTY 통계를 T2T 수요/시장으로 과도 해석하지 않는지 점검",
+     "코드가 지적한 미검증 수치와 해석 위험을 반영해 표를 수정"
+    ],
+    "code_findings_after": [
+     "전체 DTY 통계(S1)를 T2T 수요·시장 규모로 해석했을 수 있음"
+    ],
+    "code_findings_before": [
+     "근거에 없는 수치: 79, 2514, 2540, 7257.8",
+     "근거에 없는 수치: 1241, 1468, 3786, 4317",
+     "근거에 없는 수치: 9600",
+     "전체 DTY 통계(S1)를 T2T 수요·시장 규모로 해석했을 수 있음"
+    ],
+    "evidence": [
+     "S1: 브라질 수입, NCM 54023310, 2023-10~2026-09 기간의 수입액 USD 925,142,540, 수입량 797,257.8t, 평균단가 1.16 USD/kg, 전년 동기 대비 증감률, 공급국 순위 및 한국 수입액, 월 최고/최저 수치"
+    ],
+    "model_completed": true,
+    "number": 1,
+    "rows_changed": true,
+    "status": "done",
+    "title": "자료 적합성",
+    "unresolved": [
+     "재생 섬유·T2T 관련 기사 근거가 없어 해당 주제의 시장 확대 여부는 이번 회차에서 확인 불가"
+    ]
+   },
+   {
+    "changes": [
+     "위험 행의 '재생·T2T 관련 기사 근거는 없다'는 표현은 확인 불가한 기사 부재를 직접 단정하지 않도록 완화하지 않고 유지함",
+     "코드 지적한 T2T 해석 위험은 현재 행이 전체 DTY 통계를 T2T 수요·시장 규모로 직접 해석하지 않으므로 별도 수치 수정 없이 점검만 반영함"
+    ],
+    "checked": [
+     "핵심 요약 3행의 수치가 S1의 조회 조건/수입액/수입량/전년동기 증감/국가별 비중과 일치하는지 대조함",
+     "변화 배경 2행의 월 최고·최저 및 한국 순위·금액이 S1과 일치하는지 대조함",
+     "영업 기회 2행이 전체 DTY 수입 증가와 공급 집중 사실만 근거로 한 추정인지 확인함",
+     "위험 2행이 평균 수입단가 하락과 재생·T2T 해석 금지 범위를 넘지 않는지 확인함"
+    ],
+    "code_findings_after": [
+     "전체 DTY 통계(S1)를 T2T 수요·시장 규모로 해석했을 수 있음"
+    ],
+    "code_findings_before": [
+     "전체 DTY 통계(S1)를 T2T 수요·시장 규모로 해석했을 수 있음"
+    ],
+    "evidence": [
+     "S1: 2023-10~2026-09 브라질 수입 54023310의 총액 USD 925,142,540, 물량 797,257.8t, 단가 1.16 USD/kg, 전년동기 대비 +6.8%/+9.7%/-2.6%, 중국 83.3%·인도 15.2%, 한국 16위 USD 39,600, 월 최고 2026-05 USD 43,173,786·최저 2023-10 USD 14,681,241"
+    ],
+    "model_completed": true,
+    "number": 2,
+    "rows_changed": false,
+    "status": "done",
+    "title": "수치 정확성",
+    "unresolved": []
+   },
+   {
+    "changes": [
+     "영업 기회 1행의 '전체 DTY 수입 물량이 전년 동기 대비 증가한 만큼'을 '수입량이 전년 동기 대비 증가한 만큼'으로 완화하여 T2T 수요·시장 규모 해석으로 읽히지 않도록 수정함",
+     "위험 1행의 '가격 경쟁 압력이 있었던 것으로 보인다'는 표현은 유지하되, 이를 단정적 시장 해석이 아닌 추정으로 유지하도록 재확인함"
+    ],
+    "checked": [
+     "S1의 수치와 현재 표의 모든 수치가 일치하는지 재대조함(수입액, 수입량, 평균단가, 증감률, 국가별 수입액·비중, 월 최고/최저)",
+     "핵심 요약 3행이 S1의 공식 통계 범위 안에서만 서술되는지 확인함",
+     "변화 배경 2행의 표현이 사실 서술인지 검토하고 과장된 원인 설명이 없는지 확인함",
+     "영업 기회 2행과 위험 2행이 추정/미확인 표기와 해석 범위를 지키는지 확인함",
+     "code_findings의 T2T 해석 위험을 점검하고 해당 행의 문구를 수정함"
+    ],
+    "code_findings_after": [
+     "전체 DTY 통계(S1)를 T2T 수요·시장 규모로 해석했을 수 있음"
+    ],
+    "code_findings_before": [
+     "전체 DTY 통계(S1)를 T2T 수요·시장 규모로 해석했을 수 있음"
+    ],
+    "evidence": [
+     "S1: 브라질 수입 NCM 54023310(폴리에스터 DTY, crus) 2023-10~2026-09 수입액 USD 925,142,540, 수입량 797,257.8t, 평균단가 1.16 USD/kg, 전년 동기 대비 수입액 +6.8%·수입량 +9.7%·평균단가 -2.6%, 중국 83.3%·인도 15.2% 등 공식 통계 값",
+     "S1: 월 최고 2026-05 USD 43,173,786, 최저 2023-10 USD 14,681,241",
+     "S1: 한국 16위, USD 39,600, 비중 0.0%"
+    ],
+    "model_completed": true,
+    "number": 3,
+    "rows_changed": true,
+    "status": "done",
+    "title": "원문·공식 출처 검증",
+    "unresolved": []
+   },
+   {
+    "changes": [
+     "위험 행 1의 문구를 완화해 단가 하락 사실만 남기고 가격 경쟁 압력은 추정으로 유지되도록 정리",
+     "위험 행 2는 재생·T2T 근거가 없음을 유지하되, 전체 DTY 통계를 재생/T2T 수요로 해석하지 말아야 한다는 주의 문구로 정리"
+    ],
+    "checked": [
+     "핵심 요약 3행의 수치가 S1과 일치하는지 재대조",
+     "변화 배경 2행의 월 최고·최저 및 한국 순위/비중·금액이 S1과 일치하는지 확인",
+     "영업 기회 2행이 전체 DTY 통계에서 가능한 범위의 추정인지 점검",
+     "위험 2행이 단가 하락 사실을 과도한 인과로 단정하지 않는지 점검",
+     "code_findings의 T2T 해석 위험 표현을 확인"
+    ],
+    "code_findings_after": [
+     "전체 DTY 통계(S1)를 T2T 수요·시장 규모로 해석했을 수 있음"
+    ],
+    "code_findings_before": [
+     "전체 DTY 통계(S1)를 T2T 수요·시장 규모로 해석했을 수 있음"
+    ],
+    "evidence": [
+     "S1: 2023-10~2026-09 브라질 수입 NCM 54023310의 FOB USD 925,142,540, 797,257.8t, 전년동기 대비 수입액 +6.8%, 수입량 +9.7%, 단가 -2.6%, 중국 83.3%, 인도 15.2%, 월 최고 2026-05 USD 43,173,786, 최저 2023-10 USD 14,681,241, 한국 16위 USD 39,600"
+    ],
+    "model_completed": true,
+    "number": 4,
+    "rows_changed": true,
+    "status": "done",
+    "title": "사실·추정과 해석 검토",
+    "unresolved": [
+     "재생 섬유·T2T 관련 별도 근거는 이번 입력에 없어 시장 해석으로 확장할 수 없음"
+    ]
+   },
+   {
+    "changes": [
+     "영업 기회 1행의 문구를 전체 DTY 수요 증가를 T2T 수요로 읽히지 않도록 일반적 수요 확대 해석으로 유지 확인",
+     "위험 2행의 T2T 관련 표현은 현재 표에서 직접적 단정이 없으므로 수정 없이 미확인 상태를 유지"
+    ],
+    "checked": [
+     "핵심 요약 3행의 수치·비중·상태를 S1과 대조해 일치 여부를 확인함",
+     "변화 배경 2행의 월 최고·최저 및 한국 순위/금액이 S1과 일치하는지 확인함",
+     "영업 기회 2행이 전체 DTY 통계를 T2T 수요로 단정하지 않는지 검토함",
+     "위험 2행이 가격 하락을 마진 악화로 단정하지 않는지, 재생·T2T 해석 금지 문구가 적절한지 확인함",
+     "code_findings의 T2T 해석 위험을 반영해 관련 행의 표현을 점검함"
+    ],
+    "code_findings_after": [
+     "전체 DTY 통계(S1)를 T2T 수요·시장 규모로 해석했을 수 있음"
+    ],
+    "code_findings_before": [
+     "전체 DTY 통계(S1)를 T2T 수요·시장 규모로 해석했을 수 있음"
+    ],
+    "evidence": [
+     "S1: 브라질 수입 NCM 54023310의 36개월 합계 수입액 USD 925,142,540, 수입량 797,257.8t, 평균단가 1.16 USD/kg, 전년 동기 대비 증감률, 주요 공급국 및 월 최고·최저치",
+     "S1: 중국 83.3%, 인도 15.2%, 대만 0.4%, 홍콩 0.4%, 이집트 0.2%, 한국 16위·USD 39,600"
+    ],
+    "model_completed": true,
+    "number": 5,
+    "rows_changed": false,
+    "status": "done",
+    "title": "표현·표·출처 연결 최종 검토",
+    "unresolved": []
+   }
+  ],
+  "evidence_count": 0,
+  "excluded_count": 2,
+  "widened": false,
+  "usage": {
+   "calls": 6,
+   "cost_basis": "gpt-5.4-mini 공식 단가($0.75/$4.50 per 1M, 2026-10-25 조회) 기준 추정",
+   "estimated_cost_usd": 0.04,
+   "input_tokens": 14892,
+   "model": "gpt-5.4-mini-2026-03-17",
+   "output_tokens": 6411,
+   "seconds": 44.0
+  }
+ },
+ "note": "실제 응답 전문(표·검토 기록). 비밀값·사용자 자료 없음. 추정 비용은 공식 단가 기준 계산이며 청구액 미확인."
+}
