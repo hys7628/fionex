@@ -25,12 +25,19 @@
 
   const pdfBtn = panel.querySelector("[data-ma-pdf]");
   const pdfHint = panel.querySelector("[data-ma-pdf-hint]");
+  const pdfMessage = panel.querySelector("[data-ma-pdf-message]");
 
   let meta = null;
   let busy = false;
   let lastResult = null;  // 통계(analyze 응답)
   let lastAi = null;      // AI 분석(ai 응답)
   let aiBusy = false;
+  let pdfBusy = false;    // PDF 요청 중(조회·AI 분석이 끝나도 PDF 버튼을 다시 켜지 않게 함)
+  // 다운로드 요청 안내는 잠깐만 보여 줍니다(Home 일일 브리핑과 같은 4초). 오류 안내는 다음 시도 때까지 둡니다.
+  const PDF_SUCCESS_MS = 4000;
+  let pdfMessageTimer = null;
+  // fetch 거부(TypeError)·응답 해석 실패 같은 브라우저 오류 원문은 화면에 쓰지 않습니다.
+  const CONNECTION_ERROR = "서버에 연결하지 못했거나 응답을 읽지 못했습니다.";
   let chartMetric = "fob";
 
   /* ---------- 숫자 표시 (계산은 서버 원본 값, 여기서는 반올림 표시만) ---------- */
@@ -209,10 +216,13 @@
     };
   }
 
-  function setBusy(value) {
+  // button: 누른 버튼(분석 실행 또는 다시 불러오기). 그 버튼만 '작업 중' 문구로 바꿉니다.
+  function setBusy(value, button) {
     busy = value;
     submitBtn.disabled = value;
     refreshBtn.disabled = value;
+    if (value) AppShell.ui.setButtonBusy(button, button === refreshBtn ? "불러오는 중..." : "분석 중...");
+    else { AppShell.ui.setButtonBusy(submitBtn, null); AppShell.ui.setButtonBusy(refreshBtn, null); }
     resultBox.setAttribute("aria-busy", value ? "true" : "false");
     updatePdfButton();
   }
@@ -224,7 +234,7 @@
     const localErrors = clientValidate(payload);
     if (Object.keys(localErrors).length) { showFieldErrors(localErrors); return; }
 
-    setBusy(true);
+    setBusy(true, refresh ? refreshBtn : submitBtn);
     const previous = resultBox.innerHTML;
     resultBox.innerHTML = '<div class="empty-state"><span class="spinner" aria-hidden="true"></span>' +
       '<p class="empty-state-title">ComexStat에서 자료를 불러오는 중입니다</p><p>호출 한도 때문에 수십 초 걸릴 수 있습니다.</p></div>';
@@ -247,6 +257,7 @@
       }
       lastResult = body.data;
       lastAi = null;
+      showPdfMessage(null);  // 이전 결과에 대한 PDF 안내를 새 결과에 남기지 않음
       renderResult(body.data);
       refreshBtn.hidden = false;
       AppShell.work.setResult(FEATURE_ID, true);
@@ -254,7 +265,9 @@
       refreshAiPanel();
     } catch (err) {
       resultBox.innerHTML = previous;
-      showFormError("자료 조회 실패", (err && err.message) || "네트워크 오류로 조회하지 못했습니다. 다시 시도해 주세요.");
+      // 서버 오류 객체({code, message})의 고정 문장만 쓰고, 브라우저·스크립트 오류(Error) 원문은 쓰지 않습니다.
+      const serverMessage = err && !(err instanceof Error) && err.message;
+      showFormError("자료 조회 실패", serverMessage || CONNECTION_ERROR + " 입력은 그대로이며 다시 실행할 수 있습니다.");
       refreshBtn.hidden = false;
     } finally {
       setBusy(false);
@@ -395,13 +408,19 @@
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bundle_id: lastResult.bundle_id }),
       });
-      const body = await res.json();
+      let body = null;
+      try { body = await res.json(); } catch (e) { body = null; }
+      if (!body || typeof body.ok !== "boolean") throw new Error("unreadable");
       if (!body.ok) throw body.error;
       lastAi = body.data;
       box.innerHTML = aiHtml(body.data);
     } catch (err) {
+      // 서버 오류 객체의 고정 문장만 쓰고, 브라우저 오류 원문(Failed to fetch 등)은 쓰지 않습니다.
+      const message = err && !(err instanceof Error) && err.message
+        ? err.message
+        : CONNECTION_ERROR + " 이미 보낸 요청의 처리·요금이 취소되었는지는 보장할 수 없습니다.";
       box.innerHTML = (previous || "") + '<div class="notice notice-danger" role="alert"><p class="notice-title">AI 분석을 실행하지 못했습니다</p><p>' +
-        esc((err && err.message) || "네트워크 오류입니다.") + "</p></div>" + (previous ? "" : aiIdleHtml());
+        esc(message) + "</p></div>" + (previous ? "" : aiIdleHtml());
     } finally {
       aiBusy = false;
       box.setAttribute("aria-busy", "false");
@@ -481,37 +500,58 @@
 
   /* ---------- PDF ---------- */
   function updatePdfButton() {
-    const ready = !!lastResult && !busy && !aiBusy;
+    const ready = !!lastResult && !busy && !aiBusy && !pdfBusy;
     pdfBtn.disabled = !ready;
     pdfHint.textContent = !lastResult ? "분석 결과가 생기면 화면 내용 그대로 A4 PDF로 받을 수 있습니다."
+      : pdfBusy ? "현재 화면 내용으로 PDF를 만들고 있습니다."
       : aiBusy ? "AI 분석이 끝나면 PDF를 받을 수 있습니다."
       : "현재 화면의 통계" + (lastAi ? "·AI 분석" : "") + "로 PDF를 만듭니다. 다시 조회하거나 분석하지 않습니다.";
   }
 
+  // type: "success" | "danger" | null(지움). 성공은 PDF_SUCCESS_MS 뒤 사라지고 오류는 다음 시도까지 남습니다.
+  function showPdfMessage(type, title, text) {
+    clearTimeout(pdfMessageTimer);
+    pdfMessage.replaceChildren();
+    if (!type) return;
+    const box = document.createElement("div");
+    box.className = "notice notice-" + type;
+    box.setAttribute("role", type === "danger" ? "alert" : "status");
+    box.innerHTML = '<p class="notice-title">' + esc(title) + "</p>" + (text ? "<p>" + esc(text) + "</p>" : "");
+    pdfMessage.append(box);
+    if (type === "success") pdfMessageTimer = setTimeout(function () { box.remove(); }, PDF_SUCCESS_MS);
+  }
+
   pdfBtn.addEventListener("click", async function () {
-    if (pdfBtn.disabled || !lastResult) return;
-    pdfBtn.disabled = true;
-    pdfHint.textContent = "PDF를 만드는 중입니다.";
+    if (pdfBusy || pdfBtn.disabled || !lastResult) return;  // 중복 요청 방지
+    pdfBusy = true;
+    AppShell.ui.setButtonBusy(pdfBtn, "PDF 준비 중...");
+    showPdfMessage(null);
+    updatePdfButton();
+    const target = lastResult;
     try {
       const res = await fetch("/api/market-analysis/pdf", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stats: lastResult, ai: lastAi }),
+        body: JSON.stringify({ stats: target, ai: lastAi }),
       });
-      if (!res.ok) {
-        let msg = "PDF를 만들지 못했습니다.";
-        try { msg = (await res.json()).error.message; } catch (e) { /* 기본 문장 */ }
-        throw new Error(msg);
+      if (!res.ok || (res.headers.get("Content-Type") || "").indexOf("application/pdf") !== 0) {
+        let msg = "서버에서 PDF를 받지 못했습니다.";
+        try { msg = (await res.json()).error.message || msg; } catch (e) { /* JSON 아님: 기본 문장 */ }
+        throw { message: msg };
       }
-      const q = lastResult.query;
-      AppShell.work.downloadBlob(FEATURE_ID, await res.blob(), "market_analysis_" + q.code + "_" + q.from + "_" + q.to + ".pdf");
+      const blob = await res.blob();
+      const q = target.query;
+      AppShell.work.downloadBlob(FEATURE_ID, blob, "market_analysis_" + q.code + "_" + q.from + "_" + q.to + ".pdf");
       // 머리글의 '다운로드 요청됨 · 저장 여부는 브라우저에서 확인' 표시를 띄우지 않습니다(2026-10-26 담당자 지시).
       // clear는 downloadBlob이 해제한 것과 같은 경고 상태에 다운로드 요청 표시만 추가로 끕니다(공통 코드 변경 없음).
       AppShell.work.clear(FEATURE_ID);
-      updatePdfButton();
-      pdfHint.textContent = "PDF 다운로드를 요청했습니다.";
+      showPdfMessage("success", "PDF 다운로드를 요청했습니다", "저장 여부는 브라우저의 다운로드 목록에서 확인해 주세요.");
     } catch (err) {
+      const message = err && !(err instanceof Error) && err.message ? err.message : CONNECTION_ERROR;
+      showPdfMessage("danger", "PDF를 만들지 못했습니다", message + " 결과는 화면에 그대로 있으며 다시 시도할 수 있습니다.");
+    } finally {
+      pdfBusy = false;
+      AppShell.ui.setButtonBusy(pdfBtn, null);
       updatePdfButton();
-      pdfHint.textContent = err.message;
     }
   });
 
@@ -734,16 +774,33 @@
     buyersBox.innerHTML = html;
   }
 
+  // 새로고침을 안내하지 않습니다(다른 탭의 작성 중 입력·결과가 사라짐). 같은 자리에서 다시 시도합니다.
+  let buyersBusy = false;
+
   async function loadBuyers() {
+    if (buyersBusy) return;
+    buyersBusy = true;
+    const retry = buyersBox.querySelector("[data-ma-buyers-retry]");
+    if (retry) { retry.disabled = true; AppShell.ui.setButtonBusy(retry, "불러오는 중..."); }
+    buyersBox.setAttribute("aria-busy", "true");
     try {
       const res = await fetch("/api/market-analysis/buyers");
       const body = await res.json();
       if (!body.ok) throw new Error();
       renderBuyers(body.data);
     } catch (e) {
-      buyersBox.innerHTML = '<div class="notice notice-danger" role="alert"><p>바이어 목록을 불러오지 못했습니다. 새로고침해 주세요.</p></div>';
+      buyersBox.innerHTML = '<div class="notice notice-danger" role="alert"><p class="notice-title">바이어 목록을 불러오지 못했습니다</p>' +
+        '<p>잠시 후 다시 시도해 주세요. 다른 화면의 입력과 결과는 그대로 있습니다.</p>' +
+        '<button type="button" class="btn btn-secondary" data-ma-buyers-retry>바이어 목록 다시 불러오기</button></div>';
+    } finally {
+      buyersBusy = false;
+      buyersBox.setAttribute("aria-busy", "false");
     }
   }
+
+  buyersBox.addEventListener("click", function (event) {
+    if (event.target.closest("[data-ma-buyers-retry]")) loadBuyers();
+  });
 
   /* ---------- 하위 탭(시장 통계 / 바이어 목록) ---------- */
   const tabs = Array.from(panel.querySelectorAll("[data-ma-tab]"));

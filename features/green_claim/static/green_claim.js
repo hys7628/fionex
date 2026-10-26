@@ -13,13 +13,13 @@
       url: "/api/green-claim/extract",
       timeoutMs: 45000,
       failTitle: "글자 추출에 실패했습니다",
-      busyText: " 글자를 추출하는 중입니다. 최대 30초 걸릴 수 있습니다.",
+      busyText: "글자를 추출하는 중입니다. 최대 30초 걸릴 수 있습니다.",
     },
     ocr: {
       url: "/api/green-claim/ocr",
       timeoutMs: 150000,
       failTitle: "AI 글자 판독에 실패했습니다",
-      busyText: " AI가 글자를 판독하는 중입니다. 2분 넘게 걸릴 수 있습니다. "
+      busyText: "AI가 글자를 판독하는 중입니다. 2분 넘게 걸릴 수 있습니다. "
         + "화면에서 취소해도 이미 보낸 요청의 처리·요금은 취소되지 않을 수 있습니다.",
     },
   };
@@ -230,14 +230,11 @@
     busyKind = kind;
     extractButton.disabled = busy;
     ocrButton.disabled = busy;
+    // 누른 버튼만 '작업 중' 문구·회전 표시(공통 AppShell.ui), 옆 상태 문장은 소요 시간 안내
+    AppShell.ui.setButtonBusy(extractButton, kind === "extract" ? "글자 추출 중..." : null);
+    AppShell.ui.setButtonBusy(ocrButton, kind === "ocr" ? "AI 판독 중..." : null);
     fileSection.setAttribute("aria-busy", busy ? "true" : "false");
-    statusEl.replaceChildren();
-    if (busy) {
-      const spinner = document.createElement("span");
-      spinner.className = "spinner";
-      spinner.setAttribute("aria-hidden", "true");
-      statusEl.append(spinner, REQUESTS[kind].busyText);
-    }
+    statusEl.textContent = busy ? REQUESTS[kind].busyText : "";
     if (stepNav) stepNav.update();
   }
 
@@ -531,7 +528,7 @@
   // 공통 텍스트 AI timeout 60초 + 여유(처음 값은 기준 확인 30초 포함. 2026-10-26부터 자동 확인은 없으나 대기 제한은 그대로, feature_spec.md "저장 기준 검수")
   const REVIEW_URL = "/api/green-claim/review";
   const REVIEW_TIMEOUT_MS = 100000;
-  const REVIEW_BUSY_TEXT = " 검수 중입니다. 저장된 기준으로 AI가 검토하며 최대 100초 걸릴 수 있습니다. "
+  const REVIEW_BUSY_TEXT = "검수 중입니다. 저장된 기준으로 AI가 검토하며 최대 100초 걸릴 수 있습니다. "
     + "화면에서 기다림을 멈춰도 이미 보낸 요청의 처리·요금은 취소되지 않을 수 있습니다.";
   const ACTION_LABELS = { revise_recommended: "수정 권고", needs_review: "검토 필요", judgment_withheld: "판단 보류" };
   const ACTION_TONES = { revise_recommended: "danger", needs_review: "warning", judgment_withheld: "info" };
@@ -607,13 +604,9 @@
 
   function setReviewBusy(on) {
     reviewButton.disabled = on || pdfRunning;
+    AppShell.ui.setButtonBusy(reviewButton, on ? "검수 중..." : null);
     resultCard.setAttribute("aria-busy", on ? "true" : "false");
-    reviewStatusEl.replaceChildren();
-    if (on) {
-      const spinner = el("span", "spinner");
-      spinner.setAttribute("aria-hidden", "true");
-      reviewStatusEl.append(spinner, REVIEW_BUSY_TEXT);
-    }
+    reviewStatusEl.textContent = on ? REVIEW_BUSY_TEXT : "";
     updatePdfState();
   }
 
@@ -631,11 +624,10 @@
   function updatePdfState() {
     const valid = !!reviewResult && !reviewStale;
     pdfButton.disabled = !valid || !!reviewRunning || pdfRunning;
+    AppShell.ui.setButtonBusy(pdfButton, pdfRunning ? "PDF 준비 중..." : null);
     pdfHint.replaceChildren();
     if (pdfRunning) {
-      const spinner = el("span", "spinner");
-      spinner.setAttribute("aria-hidden", "true");
-      pdfHint.append(spinner, " PDF 보고서를 만드는 중입니다. 최대 30초 걸릴 수 있습니다.");
+      pdfHint.textContent = "PDF 보고서를 만드는 중입니다. 최대 30초 걸릴 수 있습니다.";
     } else if (!reviewResult) {
       pdfHint.textContent = "검수 결과가 있을 때 내려받을 수 있습니다.";
     } else if (reviewStale) {

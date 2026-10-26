@@ -650,3 +650,55 @@ fixture 서버(5013 many·5014 kotra0, FLASK_SKIP_DOTENV=1, urlopen 차단), 브
 | 5개 탭 × 1440/1024/390 재캡처(검증 서버 5013, 외부 차단) | 가로 스크롤 없음, JS 예외 0 | 15/15, 예외 0 | 통과 |
 | 공통 상호작용 재실행 | 26/26 | 26/26 | 통과 |
 외부 호출 0건.
+
+## 2026-10-26 로딩·오류·성공·다운로드 UX 정리 (DEV-COMMON-004)
+변경: static/js/app_shell.js, static/css/common.css, features/home(home.js·panel.html·feature_spec), features/market_analysis(market_analysis.js·panel.html·feature_spec), features/green_claim(green_claim.js·feature_spec), features/product_brochure·promotion_studio panel.html, docs/design_system.md
+환경: Conda jasonenv Python 3.11.17, Flask 3.1.2. 검증 서버 127.0.0.1:5013(저장소 밖 실행기: FLASK_SKIP_DOTENV=1, API 키 제거, urlopen 차단, ComexStat get_latest_month·query_imports·lookup_code를 가상 수치로 대체 — 기존 test_market_analysis와 같은 패치 방식, 실제 통계 아님). 그린 클레임 검수 성공 응답은 features/green_claim/tests/test_review_report_flow.py의 가상 사례 A + 모의 AI로 만든 JSON을 브라우저 route로 반환. 지연·500·네트워크 끊김은 Playwright route로 주입. 브라우저: 시스템 Chrome + playwright-core 1.48.2(세션 임시 폴더).
+
+### 단위 테스트
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| `python -m unittest discover -s tests/test_common` | 56 OK | 통과 |
+| `-s tests/test_home` | 94 OK | 통과 |
+| `-s tests/test_market_analysis` | 71 OK | 통과 |
+| `-s features/green_claim/tests` (PYTHONUTF8=1) | 178 OK | 통과 |
+| `-s tests/test_green_claim`·`test_product_brochure`·`test_promotion_studio` | 0건(테스트 없음) | 해당 없음 |
+| JS 문법(node vm 파싱) app_shell·home·market_analysis·green_claim | 오류 없음 | 통과 |
+새 JS helper 단위 테스트: JS 테스트 체계가 없어 추가하지 않음(브라우저 검증으로 대신).
+
+### UX 상호작용(36/36 통과, 첫 실행 34/36은 검증 실행기 문제 — 아래)
+| 항목 | 결과 |
+|---|---|
+| 시장 분석 실행 중 | 버튼 '분석 중...'·disabled·aria-busy, 결과 영역 aria-busy, 중복 클릭·requestSubmit 재제출에도 analyze 요청 1회, 완료 후 '분석 실행'·활성·결과 표시 |
+| 시장 분석 PDF | 'PDF 준비 중...'·disabled·aria-busy, PDF 생성 중 '다시 불러오기' 완료 후에도 PDF 버튼 비활성 유지(수정 전 버그 시나리오), 요청 1회·다운로드 발생, notice-success role=status → 4초 뒤 제거, 버튼 복원 |
+| 시장 분석 PDF 500 | notice-danger role=alert·서버 문장·5초 뒤에도 유지·버튼 복원·결과 표 유지 |
+| 시장 분석 PDF 네트워크 끊김 | 고정 문장('연결하지 못했거나'), Failed to fetch 등 원문 없음, notice 1개 |
+| 시장 분석 조회 네트워크 끊김 | 폼 오류 role=alert 고정 문장, 원문 없음, 이전 결과 유지, 버튼 복원 |
+| 시장 분석 실행 중 탭 이동 → 복귀 | 완료 상태(버튼 '분석 실행'·활성, aria-busy false, 오류 없음) |
+| 바이어 목록 500(HTML 응답) | '새로고침' 안내 없음, 재시도 버튼 → 다시 불러와 표 표시 |
+| Home 일일 브리핑 PDF | 'PDF 준비 중...'·disabled·aria-busy(버튼·영역), 중복 클릭에도 요청 1회, 실제 서버 PDF 다운로드, 버튼 복원, '다운로드를 요청했습니다.' 4초 뒤 숨김 |
+| Home PDF 500 / 네트워크 끊김 | notice-danger role=alert 5초 뒤에도 유지·버튼 복원 / '서버에 연결하지 못했습니다' 고정 문장, notice 1개 |
+| Home 환율·뉴스 재시도 실패 2회 | 요청 오류 notice 각 1개(누적 없음), role=alert, aria-busy 해제 |
+| Home 로딩 문구 | 4개 모두 '...' |
+| 그린 클레임 검수(키 없음 실제 서버, 900ms 지연) | '검수 중...'·disabled·aria-busy, 옆 안내 문장 유지·스피너 중복 없음, 요청 1회, notice-danger role=alert, 버튼 복원 |
+| 그린 클레임 검수 성공(모의 응답) → PDF(실제 서버 생성) | 'PDF 준비 중...'·안내 '30초', 요청 1회, 다운로드 발생, 버튼 복원, notice-success, 5초 뒤에도 유지(B 유형) |
+| 그린 클레임 PDF 네트워크 끊김 | notice-danger 1개·고정 문장·버튼 복원 |
+| 그린 클레임 파일 추출 500(지연 800ms) | 누른 버튼만 '글자 추출 중...', 두 버튼 disabled, 실패 notice-danger role=alert, '글자 추출' 복원 |
+| 제품소개서·홍보 스튜디오 | 버튼 4개 모두 disabled + '준비 중' 안내 aria-describedby 연결 |
+| 390px 작업 중 버튼 | 가로 스크롤 없음 |
+| reduced-motion | 작업 중 버튼 회전 animation-duration 0s |
+| JS 예외 | 모든 페이지 0건 |
+첫 실행 실패 2건: 모의 실행기에 `if __name__ == "__main__"`가 없어 그린 클레임 PDF 별도 프로세스(Windows spawn)가 실행기를 다시 실행 → 서버 PDF 30초 시간 제한. 이때도 화면은 실패 notice·버튼 복원으로 처리됨. 실행기 수정 후 36/36.
+
+### 공통 회귀
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 5개 탭 × 1440/1024/390 캡처 | 15/15 표시, 가로 스크롤·화면 밖 요소 없음, JS 예외 0 | 통과 |
+| 공통 상호작용(DEV-COMMON-002 스크립트) | 26/26 | 통과 |
+| 작업 중 화면 캡처 육안(시장 분석 1440·390 버튼, Home PDF, 그린 클레임 검수, 바이어 오류) | 원래 색 + 회전 표시, 문구 잘림 없음 | 통과 |
+
+### 외부 호출
+전송 0건. 차단된 시도 45건(news.google.com·brasilapi.com.br·olinda.bcb.gov.br), ComexStat는 모의 함수, OpenAI 키 없음.
+
+### 미검증
+Firefox·Safari·모바일 기기·화면낭독기 실제 낭독, Firefox에서 disabled 버튼 초점 유지 여부, 시장 분석 AI 분석 실행·성공 화면(유료 호출), 실제 ComexStat 응답으로 조회, 실제 외부 뉴스·환율이 들어온 Home, 그린 클레임 실제 AI 검수·OCR.

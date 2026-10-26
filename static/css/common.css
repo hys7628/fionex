@@ -735,6 +735,39 @@ a.card:hover {
   cursor: not-allowed;
 }
 
+/* 작업 중 버튼(AppShell.ui.setButtonBusy): 비활성이지만 '사용 불가'(점선)와 구분해 원래 색을 두고 회전 표시를 붙입니다. */
+.btn[aria-busy="true"] {
+  cursor: progress;
+}
+
+.btn[aria-busy="true"]::before {
+  content: "";
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.btn-primary[aria-busy="true"]:disabled {
+  border: 1px solid transparent;
+  background: var(--color-primary);
+  background-image: var(--color-primary-gradient);
+  color: var(--color-text-inverse);
+  box-shadow: none;
+  cursor: progress;
+}
+
+.btn-secondary[aria-busy="true"]:disabled {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-primary-text);
+  box-shadow: none;
+  cursor: progress;
+}
+
 .btn-row {
   display: flex;
   flex-wrap: wrap;

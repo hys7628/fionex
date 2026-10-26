@@ -453,3 +453,29 @@
 - API contract 변경: 없음.
 - 검증: validation.md 2026-10-26 DEV-COMMON-003.
 - 담당자 판단: 미기재(담당자 검토 필요)
+
+## DEV-COMMON-004 5개 탭 로딩·오류·성공·다운로드 UX 점검과 공통 패턴 정리
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통 + home·market_analysis·green_claim·product_brochure·promotion_studio (브랜치 feature/common_setup, 작업 전 git status clean, 최근 커밋 8e6bb38)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: 5개 탭의 로딩·오류·성공·다운로드 UX를 먼저 감사하고, 버튼 disabled·aria-busy·작업 중 문구, 중복 요청 방지, 오류 notice(자동 제거 금지·원문 노출 금지), 성공 A(일회성 3~5초)/B(유지) 구분, 다운로드 공통 helper·Blob URL 해제, finally 복원, race·탭 이동, 접근성을 정리. 비즈니스 로직·API contract 변경 금지(명백한 UX 버그만 최소 수정). Git 작업 금지.
+- 감사 결과 요약: Home·그린 클레임은 busy 플래그·finally 복원·재시도·고정 문장 오류가 이미 갖춰짐(그린 클레임은 요청 번호·AbortController·시간 제한까지). 다운로드는 3개 탭 모두 AppShell.work.downloadBlob(60초 뒤 revoke) 사용, 탭별 임시 <a> 구현 없음. 제품소개서·홍보 스튜디오는 미구현(버튼 disabled, API 없음).
+- 발견 문제와 판단:
+  1. 시장 분석 PDF 중복 요청 가능(버그): PDF 요청 중 플래그가 없어, PDF 생성 중 '다시 불러오기'·AI 분석이 끝나면 updatePdfButton이 PDF 버튼을 다시 켬 → pdfBusy 추가.
+  2. 시장 분석 브라우저 오류 원문 노출(버그): 조회·AI·PDF catch가 err.message를 그대로 표시 → fetch 실패 시 "Failed to fetch", AI 응답이 JSON이 아니면 SyntaxError 문장. 서버 오류 객체({code,message})만 표시하고 Error는 고정 문장으로.
+  3. 시장 분석 PDF 결과가 작은 안내 문장에만 표시되고 화면낭독기 전달 없음, 성공 문구는 다음 상태 변화까지 남음 → 결과 카드에 aria-live 안내 영역 추가, 성공 notice-success 4초 뒤 제거(A), 실패 notice-danger role=alert 유지. 응답이 application/pdf가 아니면 실패 처리(서버는 항상 application/pdf로 응답, 정상 흐름 영향 없음).
+  4. 시장 분석 바이어 목록 실패 시 "새로고침해 주세요"(새로고침하면 다른 탭 작업 소실, 앱 정책과 충돌) → 같은 자리 재시도 버튼.
+  5. Home 오류 notice(뉴스·환율 요청 실패, PDF 실패)에 role 없음 → 화면낭독기 전달 안 됨 → role=alert, 전시회 확인 불가는 role=status.
+  6. 5개 탭 모두 실행 중 버튼 문구가 그대로 → 공통 AppShell.ui.setButtonBusy(button, label) 추가(문구 교체·aria-busy, disabled는 기능 코드가 계속 관리해 기존 활성 조건과 충돌 없음). CSS로 작업 중 버튼은 원래 색 + 작은 회전 표시(점선 '사용 불가'와 구분). 버튼 옆 스피너가 있던 Home PDF 진행 문구는 삭제, 그린 클레임 상태 문장은 스피너만 뺌.
+  7. 로딩 문구 혼재("~하는 중"/"검색 중...") → Home 영역 문장 '...'로 통일. 소요 시간·요금 안내 문장은 의미가 있어 유지.
+  8. 제품소개서·홍보 스튜디오 결과 카드 PDF 버튼이 '준비 중' 안내와 연결 안 됨 → aria-describedby로 기존 안내 연결.
+- 문제 없음으로 판단(수정 안 함): 오류 후 버튼 영구 disabled(모든 경로 finally/취소 함수에서 복원), Blob URL 미해제(downloadBlob 60초 revoke), 같은 notice 누적(Home은 id로 교체, 그린 클레임 replaceChildren), 성공 메시지 누적, 오류가 빨리 사라짐(자동 제거 없음), 탭 이동 후 loading 꼬임(브라우저 확인), race(그린 클레임 seq, Home·시장 분석은 버튼 잠금으로 순서 보장 → AbortController 추가 안 함). 일회성 성공 자동 제거 공통 helper는 2곳(Home·시장 분석)뿐이라 만들지 않고 4초를 문서 기준으로 둠.
+- Chrome에서 초점 있는 버튼을 disabled로 바꿔도 activeElement 유지 확인 → 초점 복구 코드 추가 안 함(다른 브라우저 미확인).
+- 변경 파일: static/js/app_shell.js(AppShell.ui.setButtonBusy), static/css/common.css(작업 중 버튼), features/home/static/home.js·templates/home/panel.html, features/market_analysis/static/market_analysis.js·templates/market_analysis/panel.html, features/green_claim/static/green_claim.js, features/product_brochure/templates/product_brochure/panel.html, features/promotion_studio/templates/promotion_studio/panel.html, docs/design_system.md, features/home·market_analysis·green_claim/feature_spec.md.
+- API contract 변경: 없음(요청·응답 형식, 라우트, 서버 코드 변경 없음).
+- 외부 호출: 0건 전송. 검증 서버에서 urlopen 차단(시도 45건 모두 차단: news.google.com·brasilapi.com.br·olinda.bcb.gov.br), ComexStat 함수는 가상 수치 모의, OpenAI 키 없음.
+- 발견 문제(검증 도구): 모의 실행기에 `if __name__ == "__main__"`가 없어 그린 클레임 PDF 별도 프로세스(Windows spawn)가 실행기를 다시 실행 → PDF 30초 시간 제한 실패(UI는 실패 notice·버튼 복원으로 올바르게 처리). 실행기 수정 후 재실행 통과. 앱 코드 문제 아님.
+- 검증: validation.md 2026-10-26 DEV-COMMON-004.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: JS 단위 테스트 체계가 없어 setButtonBusy는 브라우저 검증만. Firefox·Safari·화면낭독기 미확인. 시장 분석 AI 실행 버튼은 실행 시 결과 블록이 다시 그려져 초점이 사라짐(기존 동작, 이번 미수정). 시장 분석 AI 실제 실행·성공 화면은 유료 호출이라 미실행.

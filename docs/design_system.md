@@ -116,7 +116,7 @@
 - **안내** `.notice`: 옅은 tint 배경 + 1px 상태 테두리 + 왼쪽 3px 강조선, 여백 12px 16px, 제목은 상태 글자색·본문은 네이비. 아이콘 없이 제목 문장으로 뜻을 전달한다. 오류(`danger`)만 진한 tint를 쓰고 일반 안내는 옅게 둔다. 안의 버튼은 왼쪽 정렬.
 - **표**: 틀 1px 옅은 선 + radius 10px, 머리 `--color-surface-muted`·xs 보조 글자, 행 구분 1px `--color-border-subtle`, 행 hover `--color-row-hover`, 숫자 칸 `.num` 오른쪽·tabular-nums·medium. 열 너비는 기능이 정한다.
 - **빈 상태**: 점선 `--color-border-strong` + 옅은 면, radius 10px, 최소 높이 160px.
-- **로딩**: `.spinner`(블루·아쿠아 테두리 회전) + 텍스트, 버튼 `disabled`, 영역 `aria-busy`.
+- **로딩**: `.spinner`(블루·아쿠아 테두리 회전) + 텍스트, 버튼 `disabled`, 영역 `aria-busy`. 누른 버튼은 아래 '작업 중 버튼'.
 
 ### 움직임
 - 대상: 버튼·카드·메뉴·필터 hover, 입력 초점, 상태 변화. 속성은 opacity·transform·background-color·border-color·box-shadow만, 150~220ms.
@@ -124,9 +124,33 @@
 - 계속 움직이는 장식은 만들지 않는다(로딩 `.spinner`만 예외).
 - `prefers-reduced-motion: reduce`: 모든 transition·animation 0ms, 탭 진입 애니메이션 없음, hover 이동 없음.
 
-### 성공·오류 안내 지속 시간
-- 오류(`notice-danger`)는 자동으로 숨기지 않는다. 사용자가 다시 시도하거나 상태가 바뀔 때 기능 코드가 지운다.
-- 다운로드 요청 같은 일회성 성공은 기능별로 처리한다(2026-10-26 기준: Home은 4초 뒤 숨김, 시장 분석은 버튼 옆 안내 문장, 그린 클레임은 다음 상태 변화 때 지움). 공통 자동 숨김은 두지 않는다. 판단 근거와 제안은 docs/worklogs/hong_eunju/prompt_log.md DEV-COMMON-002.
+### 로딩·오류·성공·다운로드 (2026-10-26 DEV-COMMON-004)
+**작업 중 버튼** — 실행·생성·분석·다운로드 버튼을 누르면:
+1. 기능 코드가 busy 플래그를 세우고 버튼을 `disabled`로 바꾼다(중복 요청 방지는 플래그로 한다. disabled만 믿지 않는다).
+2. `AppShell.ui.setButtonBusy(button, "분석 중...")`로 문구를 바꾼다. 버튼에 `aria-busy="true"`가 붙고 원래 색 + 작은 회전 표시가 나온다(점선 '사용 불가'와 구분).
+3. 결과·작업 영역에 `aria-busy="true"`. 시간이 오래 걸리면 버튼 옆이나 결과 영역에 소요 시간 안내 문장을 둔다(스피너는 버튼 하나만).
+4. 끝나면 성공·실패와 관계없이 `finally`에서 플래그 해제, `setButtonBusy(button, null)`, `disabled` 복원(다시 누를 수 있는지는 기능 상태로 계산), `aria-busy="false"`.
+
+**문구** — 버튼은 짧게 `~중...`: `분석 중...` · `불러오는 중...` · `검수 중...` · `글자 추출 중...` · `AI 판독 중...` · `PDF 준비 중...`. 영역 로딩 문장도 `~하는 중...`(예: `환율을 불러오는 중...`). 소요 시간·요금 안내처럼 뜻이 있는 문장은 그대로 둔다. `Loading...`·`처리중`은 쓰지 않는다.
+
+**오류**
+- 서버·네트워크 실패는 `.notice-danger` + `role="alert"`. 제목은 무엇이 실패했는지, 본문은 다음 행동(다시 시도·입력 유지 여부).
+- 서버가 준 고정 문장(`{"ok": false, "error": {"message"}}`)만 표시한다. 브라우저 오류 원문(`Failed to fetch`, JSON 파싱 오류), 예외 객체, 내부 URL, 키는 표시하지 않는다. 연결 실패는 고정 문장("서버에 연결하지 못했습니다" 계열)으로 바꾼다.
+- 오류는 자동으로 숨기지 않는다. 다음 시도를 시작할 때 지운다. 같은 자리 오류는 교체한다(누적 금지).
+- 실패해도 이전에 성공한 결과와 사용자 입력은 지우지 않는다.
+- 재시도는 같은 자리의 버튼으로 한다. 새로고침을 안내하지 않는다(다른 탭의 작업이 사라짐).
+- 입력 검증 오류는 해당 입력 옆 `.field-error` + `aria-invalid="true"` + `aria-describedby`, 첫 오류 칸으로 초점.
+
+**성공**
+- A. 일회성 완료(다운로드 요청·복사 등): 짧게 표시 후 4초 뒤 자동 제거(Home 일일 브리핑 상태 문장, 시장 분석 PDF `notice-success`).
+- B. 이후 행동에 필요한 안내(면책 문구, 다운로드 목록 확인 안내, 결과 위치): 자동 제거하지 않고 다음 상태 변화 때 지운다(그린 클레임 검수 완료·PDF 안내).
+- 성공 안내는 `role="status"`(또는 `aria-live="polite"` 영역 안).
+
+**다운로드** — fetch → 응답 `Content-Type: application/pdf` 확인 → Blob → `AppShell.work.downloadBlob(id, blob, 파일명)`. 새 창·`location.href`·탭별 임시 `<a>` 구현을 쓰지 않는다. Blob URL은 `downloadBlob`이 60초 뒤 해제한다. "다운로드 요청됨"은 저장 완료가 아니다.
+
+**경쟁 요청** — 같은 기능에서 입력을 바꿔 다시 요청할 수 있으면 요청 번호(seq)로 늦게 온 응답을 버린다(그린 클레임 추출·검수·PDF). 버튼을 잠가 순서가 보장되는 기능(Home·시장 분석)은 추가하지 않는다.
+
+**탭 이동** — 작업 중 다른 탭으로 가도 요청은 계속되고, 돌아오면 끝난 상태가 그대로 보인다(DOM 유지). 탭 숨김 때 요청을 취소하지 않는다.
 
 ### 반응형
 - 1200px 미만: 본문 여백 32px → 24px. 960px 미만: 사이드바 접힘(상단 메뉴 버튼), 본문 여백 16px, 카드·머리글 여백 20px, 탭 제목 xl. 1100px 이상: `.workspace` 2열.
@@ -170,7 +194,7 @@
 - 상태는 색상과 텍스트를 함께 표시한다. 색만으로 위험도·성공을 구분하지 않는다.
 - 키보드 초점은 공통 `:focus-visible` 테두리(블루 2px)를 쓰고 `outline: none`으로 지우지 않는다. 입력칸은 블루 테두리 + `--focus-halo`(outline은 투명 2px로 남김).
 - 공통 shell 제공: 본문 건너뛰기 링크, 탭 전환 시 탭 제목으로 초점 이동, 모바일 메뉴 열면 메뉴로 초점·뒤 화면 `inert`, Esc로 닫고 메뉴 버튼으로 초점 복귀.
-- 비동기 처리 중에는 버튼을 `disabled`로 바꿔 중복 실행을 막고, 결과 영역에 `aria-busy="true"`와 `.spinner` + 텍스트를 표시한다.
+- 비동기 처리 중에는 버튼을 `disabled`로 바꿔 중복 실행을 막고(`AppShell.ui.setButtonBusy`로 문구·`aria-busy`), 결과 영역에 `aria-busy="true"`와 텍스트를 표시한다. 오류 `role="alert"`, 성공·상태 `role="status"`. 자세한 규칙은 '로딩·오류·성공·다운로드'.
 
 ## 공통 동작
 - 탭 전환은 해시(`#market_analysis`) 변경으로 처리하며 페이지를 다시 불러오지 않는다. 비활성 패널은 `hidden`만 적용되어 입력값·선택 파일·결과 DOM이 그대로 유지된다.
@@ -194,6 +218,7 @@
 | `AppShell.work.get(id)` | `{hasDraft, hasUndownloadedResult, downloadRequested}` |
 | `AppShell.current()`, `AppShell.show(id)` | 현재 탭 / 탭 전환(데이터 전달 아님) |
 | `AppShell.onShow(id, fn)`, `AppShell.onHide(id, fn)` | 등록 이후의 탭 표시·숨김 시 호출. 첫 화면 상태는 `AppShell.current()`로 확인 |
+| `AppShell.ui.setButtonBusy(button, "분석 중...")` / `(button, null)` | 버튼 문구를 작업 중 문구로 바꾸고 `aria-busy="true"`(회전 표시). null이면 원래 문구 복원. `disabled`는 바꾸지 않음(기능 코드가 정함) |
 
 머리글 상태 표시: 작성 중 > 다운로드 요청됨 순. 작성 중이면 사이드바 메뉴에 점(+화면낭독용 텍스트)이 표시된다.
 미다운로드 결과(`setResult`)는 머리글·사이드바에 표시하지 않고 새로고침·종료 경고에만 쓴다(2026-10-26 한윤수 요청으로 변경, 팀 공유 필요).

@@ -592,6 +592,7 @@
     if (old) old.remove();
     const notice = make("div", "notice notice-danger");
     notice.id = "home-news-request-error";
+    notice.setAttribute("role", "alert");
     notice.append(make("p", "notice-title", "업계 소식 불러오기 실패"));
     notice.append(make("p", "", "서버에서 뉴스 목록을 받지 못했습니다. 잠시 후 다시 시도하세요."));
     const button = make("button", "btn btn-secondary", "업계 소식 다시 시도");
@@ -896,6 +897,7 @@
     if (old) old.remove();
     const notice = make("div", "notice notice-danger");
     notice.id = "home-fx-request-error";
+    notice.setAttribute("role", "alert");
     notice.append(make("p", "notice-title", "환율 불러오기 실패"));
     notice.append(make("p", "", "서버에서 환율을 받지 못했습니다. 잠시 후 다시 시도하세요."));
     const button = make("button", "btn btn-secondary", "환율 다시 시도");
@@ -1081,6 +1083,7 @@
     fairsEl.filter.hidden = true;
     fairsEl.filterEmpty.hidden = true;
     const notice = make("div", "notice notice-warning");
+    notice.setAttribute("role", "status");
     notice.append(make("p", "notice-title", "일정 확인 불가"),
       make("p", "", "전시회 일정 자료를 확인할 수 없습니다. 다른 홈 기능은 그대로 사용할 수 있습니다."));
     const button = make("button", "btn btn-secondary", "전시회 일정 다시 시도");
@@ -1133,7 +1136,6 @@
   const reportEl = {
     body: panel.querySelector("#home-report-body"),
     button: panel.querySelector("#home-report-button"),
-    loading: panel.querySelector("#home-report-loading"),
     status: panel.querySelector("#home-report-status"),
     notices: panel.querySelector("#home-report-notices"),
     city: panel.querySelector("#home-report-city"),
@@ -1150,6 +1152,7 @@
 
   function showReportError(message) {
     const notice = make("div", "notice notice-danger");
+    notice.setAttribute("role", "alert");
     notice.append(make("p", "notice-title", "PDF를 만들지 못했습니다"),
       make("p", "", message + " 버튼을 다시 눌러 시도할 수 있습니다."));
     reportEl.notices.replaceChildren(notice);
@@ -1159,8 +1162,8 @@
     if (reportBusy) return;
     reportBusy = true;
     reportEl.button.disabled = true;
+    AppShell.ui.setButtonBusy(reportEl.button, "PDF 준비 중...");
     reportEl.body.setAttribute("aria-busy", "true");
-    reportEl.loading.hidden = false;
     clearTimeout(reportStatusTimer);
     reportEl.status.hidden = true;
     reportEl.notices.replaceChildren();
@@ -1184,8 +1187,8 @@
     } finally {
       reportBusy = false;
       reportEl.button.disabled = false;
+      AppShell.ui.setButtonBusy(reportEl.button, null);
       reportEl.body.setAttribute("aria-busy", "false");
-      reportEl.loading.hidden = true;
     }
   }
 

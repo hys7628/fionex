@@ -221,12 +221,29 @@
     },
   };
 
+  /* ---------- 작업 중 버튼 ---------- */
+  // 실행·다운로드 버튼을 '작업 중' 모양으로 바꿉니다(문구 교체 + aria-busy, 회전 표시는 common.css).
+  // label이 없으면 원래 문구로 되돌립니다. disabled는 바꾸지 않습니다: 다시 누를 수 있는 시점(중복 실행 방지)은 기능 코드가 정합니다.
+  function setButtonBusy(button, label) {
+    if (!button) return;
+    if (label) {
+      if (!("idleLabel" in button.dataset)) button.dataset.idleLabel = button.textContent;
+      button.textContent = label;
+      button.setAttribute("aria-busy", "true");
+    } else if ("idleLabel" in button.dataset) {
+      button.textContent = button.dataset.idleLabel;
+      delete button.dataset.idleLabel;
+      button.removeAttribute("aria-busy");
+    }
+  }
+
   window.AppShell = {
     current: function () { return currentId; },
     show: function (id) { if (known(id)) window.location.hash = id; },
     onShow: function (id, fn) { if (known(id)) (handlers.show[id] = handlers.show[id] || []).push(fn); },
     onHide: function (id, fn) { if (known(id)) (handlers.hide[id] = handlers.hide[id] || []).push(fn); },
     work: work,
+    ui: { setButtonBusy: setButtonBusy },
   };
 
   showTab(idFromHash() || firstId);

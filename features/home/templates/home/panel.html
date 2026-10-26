@@ -12,7 +12,6 @@
         <p class="home-toolbar-hint" id="home-report-hint">바이어 시간·환율·뉴스·전시회를 PDF로 정리<span class="visually-hidden"> · 기준 도시 <span id="home-report-city">상파울루</span></span></p>
       </div>
       <div class="home-toolbar-actions">
-        <p class="home-news-loading" id="home-report-loading" hidden><span class="spinner" aria-hidden="true"></span>PDF를 만드는 중</p>
         <p class="home-toolbar-status" id="home-report-status" role="status" hidden></p>
         <button type="button" class="btn btn-primary" id="home-report-button" aria-describedby="home-report-hint">일일 브리핑 PDF</button>
       </div>
@@ -76,7 +75,7 @@
         <h2 class="card-title" id="home-fx-title">환율</h2>
       </div>
       <div class="home-card-body" id="home-fx-body" aria-busy="true">
-        <p class="home-news-loading" id="home-fx-loading"><span class="spinner" aria-hidden="true"></span>환율을 불러오는 중</p>
+        <p class="home-news-loading" id="home-fx-loading"><span class="spinner" aria-hidden="true"></span>환율을 불러오는 중...</p>
         <ul class="home-fx-tiles" id="home-fx-list" aria-label="환율 목록" tabindex="-1" hidden></ul>
         <div class="stack" id="home-fx-notices"></div>
       </div>
@@ -103,8 +102,8 @@
           <ul class="home-news-sources" id="home-news-sources" aria-label="수집 경로별 상태"></ul>
         </details>
         <div class="stack" id="home-news-notices"></div>
-        <p class="home-news-loading" id="home-news-loading"><span class="spinner" aria-hidden="true"></span>뉴스를 불러오는 중</p>
-        <p class="home-news-loading" id="home-news-summary-loading" hidden><span class="spinner" aria-hidden="true"></span>AI 요약을 만드는 중 · 원문 제목은 먼저 표시됩니다</p>
+        <p class="home-news-loading" id="home-news-loading"><span class="spinner" aria-hidden="true"></span>뉴스를 불러오는 중...</p>
+        <p class="home-news-loading" id="home-news-summary-loading" hidden><span class="spinner" aria-hidden="true"></span>AI 요약을 만드는 중... 원문 제목은 먼저 표시됩니다.</p>
         <p class="field-hint" id="home-news-summary-status" role="status" hidden></p>
         <ul class="home-news-list" id="home-news-list" aria-label="뉴스 목록" tabindex="-1" hidden></ul>
         <p class="field-hint" id="home-news-filter-empty" hidden>선택한 조건에 해당하는 뉴스가 없습니다.</p>
@@ -131,7 +130,7 @@
       </div>
       <div class="home-card-body" id="home-fairs-body" aria-busy="true">
         <div class="home-news-filter" id="home-fairs-filter" role="group" aria-label="지역별 보기" hidden></div>
-        <p class="home-news-loading" id="home-fairs-loading"><span class="spinner" aria-hidden="true"></span>전시회 일정을 불러오는 중</p>
+        <p class="home-news-loading" id="home-fairs-loading"><span class="spinner" aria-hidden="true"></span>전시회 일정을 불러오는 중...</p>
         <ul class="home-fair-list" id="home-fairs-list" aria-label="전시회 목록" tabindex="-1" hidden></ul>
         <p class="field-hint" id="home-fairs-filter-empty" hidden>선택한 지역의 예정 전시회가 없습니다.</p>
         <div class="empty-state" id="home-fairs-empty" hidden>
