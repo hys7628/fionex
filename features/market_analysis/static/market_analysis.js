@@ -995,11 +995,12 @@
           (f[0] === "all" ? "전체" : '<span class="ma-grade ma-grade-' + f[0] + '">' + f[0] + "</span>") +
           '<span class="ma-filter-count">' + fmtInt.format(f[0] === "all" ? list.length : (g[f[0]] || 0)) + "</span>" +
           (f[0] === "all" ? "" : '<span class="visually-hidden">등급</span>') + "</button>";
-      }).join("") + "</div></div>" +
+      }).join("") + "</div></div>" + buyerMoreTools(list) +
       '<p class="ma-buyer-count" id="market_analysis-buyer-count" role="status" data-ma-buyer-count></p>' +
       '<p class="field-hint" id="market_analysis-briefing-row-hint">' + esc("'상세 보기'는 행 아래에 업체 정보를 펼칩니다. 'AI 브리핑'은 업체 상세와 브리핑을 창으로 열며, 받은 적 없는 업체는 바로 OpenAI를 1회 호출합니다(유료, 같은 업체는 다시 호출하지 않음).") + "</p>" +
       "<div data-ma-buyer-results></div>";
     buyersBox.innerHTML = html;
+    Object.assign(buyerView, { query: "", grade: "all", uf: "", cnae: "", phone: false, domain: false, sort: "grade" });
     buyerView.list = list.map(function (c) {
       return { c: c, hay: plainText([c.razao_social, c.nome_fantasia, c.cnpj, c.municipio, c.uf, c.cnae, c.cnae_label, c.cnae_desc, c.domain].join(" ")) };
     });
@@ -1007,7 +1008,60 @@
   }
 
   /* ---------- 바이어 검색 ---------- */
-  const buyerView = { list: [], rows: [], query: "", grade: "all" };
+  const buyerView = { list: [], rows: [], query: "", grade: "all", uf: "", cnae: "", phone: false, domain: false, sort: "grade" };
+
+  // 정렬 방법(받은 목록 안에서만, 추가 요청 없음). grade = 서버가 준 우선순위 등급순 그대로
+  const BUYER_SORTS = [
+    ["grade", "우선순위 등급순"],
+    ["name", "회사명 가나다순"],
+    ["oldest", "업력 오래된 순"],
+    ["newest", "업력 짧은 순"],
+    ["sites", "대상 업종 사업장 많은 순"],
+    ["uf", "주(UF)별"],
+  ];
+
+  // 주·업종 선택, 연락처 조건, 정렬, 초기화(보기 설정이라 작성 중 감지에서 제외: 바깥 data-work-ignore 안이 아니므로 여기서 붙임)
+  function buyerMoreTools(list) {
+    const count = function (key) {
+      const out = {};
+      list.forEach(function (c) { out[c[key]] = (out[c[key]] || 0) + 1; });
+      return out;
+    };
+    const ufs = count("uf"), cnaes = count("cnae");
+    const ufOptions = Object.keys(ufs).sort().map(function (k) {
+      return '<option value="' + esc(k) + '">' + esc(k + " (" + fmtInt.format(ufs[k]) + ")") + "</option>";
+    }).join("");
+    const cnaeOptions = Object.keys(cnaes).sort(function (a, b) { return cnaes[b] - cnaes[a]; }).map(function (k) {
+      return '<option value="' + esc(k) + '">' + esc((CNAE_SHORT[k] || k) + " (" + fmtInt.format(cnaes[k]) + ")") + "</option>";
+    }).join("");
+    return '<div class="ma-buyer-more" data-work-ignore>' +
+      '<div class="field"><label class="field-label" for="market_analysis-buyer-uf">주(UF)</label>' +
+      '<select class="select" id="market_analysis-buyer-uf" data-ma-buyer-uf><option value="">전체 주</option>' + ufOptions + "</select></div>" +
+      '<div class="field"><label class="field-label" for="market_analysis-buyer-cnae">업종</label>' +
+      '<select class="select" id="market_analysis-buyer-cnae" data-ma-buyer-cnae><option value="">전체 업종</option>' + cnaeOptions + "</select></div>" +
+      '<fieldset class="fieldset ma-buyer-contact"><legend class="field-label">연락처</legend><div class="ma-buyer-checks">' +
+      '<label class="choice"><input type="checkbox" data-ma-buyer-phone> 대표 전화 있음</label>' +
+      '<label class="choice"><input type="checkbox" data-ma-buyer-domain> 회사 도메인 있음</label></div></fieldset>' +
+      '<div class="field"><label class="field-label" for="market_analysis-buyer-sort">정렬</label>' +
+      '<select class="select" id="market_analysis-buyer-sort" data-ma-buyer-sort>' +
+      BUYER_SORTS.map(function (o) { return '<option value="' + o[0] + '">' + esc(o[1]) + "</option>"; }).join("") + "</select></div>" +
+      '<button type="button" class="btn btn-ghost ma-buyer-reset" data-ma-buyer-reset>조건 초기화</button></div>';
+  }
+
+  function sortBuyers(rows) {
+    const by = buyerView.sort;
+    if (by === "grade") return rows;  // 서버 순서(우선순위 등급순) 유지
+    const copy = rows.slice();
+    const name = function (c) { return plainText(c.razao_social); };
+    const cmp = {
+      name: function (a, b) { return name(a).localeCompare(name(b)); },
+      oldest: function (a, b) { return String(a.inicio_atividade || "99999999").localeCompare(String(b.inicio_atividade || "99999999")); },
+      newest: function (a, b) { return String(b.inicio_atividade || "").localeCompare(String(a.inicio_atividade || "")); },
+      sites: function (a, b) { return (b.sites_matched || 0) - (a.sites_matched || 0); },
+      uf: function (a, b) { return String(a.uf).localeCompare(String(b.uf)) || name(a).localeCompare(name(b)); },
+    }[by];
+    return cmp ? copy.sort(cmp) : copy;
+  }
   const BUYERS_SHOWN_FILTERED = 20;
   let buyerSearchTimer = null;
 
@@ -1021,28 +1075,60 @@
     const countEl = buyersBox.querySelector("[data-ma-buyer-count]");
     if (!box) return;
     const words = plainText(buyerView.query).split(/\s+/).filter(Boolean);
-    const filtered = !words.length && buyerView.grade === "all";
-    const rows = buyerView.list.filter(function (x) {
-      return (buyerView.grade === "all" || x.c.grade === buyerView.grade) && words.every(function (w) { return x.hay.indexOf(w) !== -1; });
-    }).map(function (x) { return x.c; });
+    const v = buyerView;
+    const narrowed = words.length || v.grade !== "all" || v.uf || v.cnae || v.phone || v.domain;
+    const filtered = !narrowed && v.sort === "grade";
+    const rows = sortBuyers(v.list.filter(function (x) {
+      const c = x.c;
+      return (v.grade === "all" || c.grade === v.grade) && (!v.uf || c.uf === v.uf) && (!v.cnae || c.cnae === v.cnae) &&
+        (!v.phone || (c.phones && c.phones.length)) && (!v.domain || c.domain) &&
+        words.every(function (w) { return x.hay.indexOf(w) !== -1; });
+    }).map(function (x) { return x.c; }));
+    const sortLabel = BUYER_SORTS.filter(function (o) { return o[0] === v.sort; })[0][1];
     buyerView.rows = rows;
     const total = buyerView.list.length;
-    countEl.textContent = filtered ? "전체 " + fmtInt.format(total) + "곳 · 우선순위 등급순"
-      : "검색 결과 " + fmtInt.format(rows.length) + "곳 / 전체 " + fmtInt.format(total) + "곳";
+    countEl.textContent = (narrowed ? "검색 결과 " + fmtInt.format(rows.length) + "곳 / 전체 " + fmtInt.format(total) + "곳"
+      : "전체 " + fmtInt.format(total) + "곳") + " · " + sortLabel;
+    const reset = buyersBox.querySelector("[data-ma-buyer-reset]");
+    if (reset) reset.disabled = filtered && !words.length;
     if (!rows.length) {
       box.innerHTML = '<div class="empty-state"><p class="empty-state-title">조건에 맞는 업체가 없습니다</p>' +
-        "<p>검색어를 줄이거나 등급을 '전체'로 바꿔 보세요. 회사명·상호·CNPJ·도시·주·업종으로 찾을 수 있습니다.</p></div>";
+        "<p>검색어를 줄이거나 등급·주·업종·연락처 조건을 풀어 보세요('조건 초기화'). 회사명·상호·CNPJ·도시·주·업종으로 찾을 수 있습니다.</p></div>";
       updateBriefButtons();
       return;
     }
     const shown = filtered ? BUYERS_SHOWN : BUYERS_SHOWN_FILTERED;
-    let html = buyerTable(rows.slice(0, shown), 0, (filtered ? "우선순위 등급순 · 첫 " : "검색 결과 · 첫 ") + Math.min(shown, rows.length) + "곳");
+    let html = buyerTable(rows.slice(0, shown), 0, (filtered ? "우선순위 등급순 · 첫 " : sortLabel + " · 첫 ") + Math.min(shown, rows.length) + "곳");
     if (rows.length > shown) {
       html += '<details class="ma-details"><summary>나머지 ' + fmtInt.format(rows.length - shown) + "곳 보기</summary>" +
         buyerTable(rows.slice(shown), shown, filtered ? "나머지 업체" : "나머지 검색 결과") + "</details>";
     }
     box.innerHTML = html;
     updateBriefButtons();
+  }
+
+  buyersBox.addEventListener("change", function (event) {
+    const t = event.target;
+    if (t.matches("[data-ma-buyer-uf]")) buyerView.uf = t.value;
+    else if (t.matches("[data-ma-buyer-cnae]")) buyerView.cnae = t.value;
+    else if (t.matches("[data-ma-buyer-phone]")) buyerView.phone = t.checked;
+    else if (t.matches("[data-ma-buyer-domain]")) buyerView.domain = t.checked;
+    else if (t.matches("[data-ma-buyer-sort]")) buyerView.sort = t.value;
+    else return;
+    renderBuyerResults();
+  });
+
+  function resetBuyerFilters() {
+    Object.assign(buyerView, { query: "", grade: "all", uf: "", cnae: "", phone: false, domain: false, sort: "grade" });
+    buyersBox.querySelector("[data-ma-buyer-query]").value = "";
+    buyersBox.querySelector("[data-ma-buyer-uf]").value = "";
+    buyersBox.querySelector("[data-ma-buyer-cnae]").value = "";
+    buyersBox.querySelector("[data-ma-buyer-phone]").checked = false;
+    buyersBox.querySelector("[data-ma-buyer-domain]").checked = false;
+    buyersBox.querySelector("[data-ma-buyer-sort]").value = "grade";
+    buyersBox.querySelectorAll("[data-ma-grade-filter]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.maGradeFilter === "all")); });
+    renderBuyerResults();
+    buyersBox.querySelector("[data-ma-buyer-query]").focus();
   }
 
   buyersBox.addEventListener("input", function (event) {
@@ -1091,6 +1177,7 @@
 
   buyersBox.addEventListener("click", function (event) {
     if (event.target.closest("[data-ma-buyers-retry]")) loadBuyers();
+    if (event.target.closest("[data-ma-buyer-reset]")) resetBuyerFilters();
     const chip = event.target.closest("[data-ma-grade-filter]");
     if (chip) {
       buyerView.grade = chip.dataset.maGradeFilter;

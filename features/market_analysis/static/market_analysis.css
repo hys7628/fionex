@@ -850,3 +850,38 @@
 
 /* 행 버튼: 같은 폭으로 정렬 */
 .feature-market_analysis .ma-row-actions .btn { width: 100%; }
+
+/* 바이어 목록 추가 조건(주·업종·연락처·정렬·초기화): 검색 줄 아래 옅은 유리 줄 한 줄, 좁으면 줄바꿈 */
+.feature-market_analysis .ma-buyer-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-inner);
+}
+
+.feature-market_analysis .ma-buyer-more > .field { flex: 1 1 10rem; min-width: 0; }
+.feature-market_analysis .ma-buyer-more .select { width: 100%; }
+.feature-market_analysis .ma-buyer-contact { flex: 0 1 auto; }
+.feature-market_analysis .ma-buyer-checks { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.feature-market_analysis .ma-buyer-checks .choice {
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.feature-market_analysis .ma-buyer-checks .choice:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.feature-market_analysis .ma-buyer-reset { flex: none; }
