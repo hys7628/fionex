@@ -94,3 +94,15 @@
 |---|---|---|---|---|---|
 | NewsData.io Latest API 실제 응답 | NewsData.io | https://newsdata.io/api/1/latest | 2026-10-26 | apikey 쿼리 인자, 필드 article_id·title·link·description·content(유료 전용)·pubDate(UTC)·source_id·source_name·language("portuguese")·country(["brazil"])·category·keywords·ai_summary(유료 전용)·sentiment, nextPage, 헤더 X-RateLimit-Limit 60·X-API-Limit-Remaining | 약관: 내부 업무 목적 라이선스, 'Powered by NewsData.io' 표기 |
 | NewsData.io Archive API 실제 응답 | NewsData.io | https://newsdata.io/api/1/archive | 2026-10-26 | 무료 키 403 AccessDenied(유료 필요) | — |
+
+## 2026-10-26 바이어 목록 1단계: 공식 무료 자료 확인
+| 자료명 | 기관 | URL | 조회일 | 확인한 내용 | 사용권 |
+|---|---|---|---|---|---|
+| Estatísticas de Comércio Exterior em Dados Abertos | MDIC | https://www.gov.br/mdic/pt-br/assuntos/comercio-exterior/estatisticas/base-de-dados-bruta | 2026-10-26 | NCM별 파일(연·월·NCM·국가·UF·운송·세관·kg·FOB)과 기업 소재 시·군별 파일(SH4·국가·UF·시군·kg·FOB). 기업명·CNPJ 없음. 기업 명단 데이터셋 없음 | CC BY-ND 3.0(페이지 표기) |
+| Perguntas Frequentes - FAQ (2번) | MDIC | https://www.gov.br/mdic/pt-br/assuntos/comercio-exterior/estatisticas/perguntas-frequentes-faq | 2026-10-26 | 원문: "não são fornecidas listas de empresas exportadoras ou importadoras ou listas de empresas que comercializem um determinado tipo de produto … conforme artigo 13 do Decreto nº 11.544 de 1º de junho de 2023". 기업명·CNPJ·품목·거래량은 세무 기밀 | — |
+| Manual de utilização dos dados estatísticos | MDIC/SECEX | https://balanca.economia.gov.br/balanca/manual/Manual.pdf | 2026-10-26(내려받아 확인) | 8장 '기밀 공개': 기업별 상세 통계 미공개, 기업별 공개 자료는 'Empresas Brasileiras Exportadoras e Importadoras' 메뉴 등으로 한정(현재 gov.br에는 해당 메뉴·페이지 없음, 이전 mdic.gov.br 주소는 403) | — |
+| Exportação e Importação por Porte Fiscal | MDIC | https://balanca.economia.gov.br/balanca/outras/porte/relatorio_porte.html | 2026-10-26 | 규모·업종별 합계(csv·xlsx). 기업명 없음 | — |
+| Base dos Dados 'Cadastro Empresas Exportadoras e Importadoras' | Base dos Dados(제3자) | https://basedosdados.org/dataset/be51227c-149b-4935-b851-adbe949b62ad | 2026-10-26 | 원출처 SECEX 표기, 표·항목·기간·라이선스 페이지에 미표시. 현재 공식 제공 여부와 모순(FAQ) | 미확인 |
+| Novo Layout DADOS ABERTOS do CNPJ | Receita Federal | https://www.gov.br/receitafederal/dados/cnpj-metadados.pdf | 2026-10-26(내려받아 확인) | EMPRESAS: 회사명(razão social)·법인 형태 코드·자본금·규모(00 미상/01 소기업/03 소규모/05 그 외). ESTABELECIMENTOS: 상호·영업 상태(02 활성 등)·CNAE 주·부·주소·UF·시군·전화1·2·팩스·이메일. SIMPLES: MEI 여부. 수출입 여부 항목 없음 | 라이선스 공식 문구 미확인 |
+| Dados abertos do CNPJ(다운로드) | Receita Federal | https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/ | 2026-10-26 | 명령줄 접근 시 404(자바스크립트 앱 'SERPRO+'). 검색 결과상 전체 cnpj.tar.gz 약 60GB·월별 폴더(미확인) | 미확인 |
+| CNAE 13 분류(검색 결과 요약) | 제3자(IBGE 표 인용 사이트) | https://www.diariofiscal.com.br/13___fabricacao_de_produtos_texteis.html | 2026-10-26 | 1313-8/00 인조·합성섬유 방적, 1323-5/00 인조·합성섬유 직조, 1330-8/00 편직물, 1340-5/01 날염·가공사(texturização), 1340-5/02 표백·염색·연사. 섬유 자체 제조는 20번(2040-1/00). IBGE 공식 표·API(servicodados.ibge.gov.br)는 이 네트워크에서 연결 시간 초과로 대조 못 함 | — |

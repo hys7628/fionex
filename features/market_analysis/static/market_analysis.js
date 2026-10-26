@@ -672,5 +672,59 @@
     svg.addEventListener("pointerleave", function () { tip.hidden = true; });
   }
 
+  /* ---------- ⑥ 바이어 목록 (기준 자료 파일, 첫 5곳만 펼쳐 표시) ---------- */
+  const buyersBox = panel.querySelector("[data-ma-buyers]");
+  const BUYERS_SHOWN = 5;
+
+  function buyerRow(c, i) {
+    const name = esc(c.razao_social) + (c.nome_fantasia ? '<br><span class="field-hint">' + esc(c.nome_fantasia) + "</span>" : "");
+    const ev = c.evidence.length ? c.evidence.map(function (e) {
+      return linkHtml(e.url, e.title) + '<br><span class="field-hint">확인 ' + esc(e.checked_at) + "</span>";
+    }).join("<br>") : "—";
+    const contact = c.phones.map(esc).concat(c.email ? [esc(c.email)] : []).join("<br>") || "등록 없음";
+    return "<tr><td>" + (i + 1) + "</td><td>" + name + "<br><span class=\"field-hint\">CNPJ " + esc(c.cnpj) + "</span></td><td>" +
+      esc((c.uf || "") + " · " + (c.municipio || "")) + "</td><td>" + esc(c.cnae + " " + (c.cnae_desc || "")) + "</td><td>" +
+      contact + "</td><td>" + ev + "</td></tr>";
+  }
+
+  function buyerTable(rows, offset, caption) {
+    return '<div class="table-wrap"><table class="table"><caption>' + esc(caption) + "</caption><thead><tr>" +
+      '<th scope="col">#</th><th scope="col">회사명</th><th scope="col">지역(주·시)</th><th scope="col">업종(CNAE)</th>' +
+      '<th scope="col">법인 대표 연락처</th><th scope="col">재생·T2T 근거</th></tr></thead><tbody>' +
+      rows.map(function (c, i) { return buyerRow(c, offset + i); }).join("") + "</tbody></table></div>";
+  }
+
+  function renderBuyers(d) {
+    let html = d.notes.map(function (n) { return '<div class="notice notice-info"><p>' + esc(n) + "</p></div>"; }).join("");
+    if (!d.ready) {
+      buyersBox.innerHTML = html + '<div class="empty-state"><p class="empty-state-title">기준 자료가 아직 없습니다</p>' +
+        "<p>buyer_data_builder로 국세청 공개 자료에서 목록을 만든 뒤 표시됩니다.</p></div>";
+      return;
+    }
+    const list = d.companies;
+    html += '<p class="field-hint">' + esc("전체 " + list.length + "곳 · 재생·T2T 근거 " + d.counts.with_evidence + "곳" +
+      (d.counts.with_evidence ? "" : "(검토된 근거 없음)") + " · 조건: 주 업종 대상 CNAE, 활성, 법인, 규모 '" + d.filters.porte + "'") + "</p>";
+    html += buyerTable(list.slice(0, BUYERS_SHOWN), 0, "바이어 목록 · 첫 " + Math.min(BUYERS_SHOWN, list.length) + "곳");
+    if (list.length > BUYERS_SHOWN) {
+      html += '<details class="ma-details"><summary>나머지 ' + (list.length - BUYERS_SHOWN) + "곳 보기</summary>" +
+        buyerTable(list.slice(BUYERS_SHOWN), BUYERS_SHOWN, "바이어 목록 · 나머지") + "</details>";
+    }
+    html += '<p class="field-hint">출처: ' + esc(d.source.name) + " · " + linkHtml(d.source.url) + " · " +
+      esc("자료 기준월 " + d.source.reference_month + " · 생성 " + kstTime(d.source.generated_at)) + "</p>";
+    buyersBox.innerHTML = html;
+  }
+
+  async function loadBuyers() {
+    try {
+      const res = await fetch("/api/market-analysis/buyers");
+      const body = await res.json();
+      if (!body.ok) throw new Error();
+      renderBuyers(body.data);
+    } catch (e) {
+      buyersBox.innerHTML = '<div class="notice notice-danger" role="alert"><p>바이어 목록을 불러오지 못했습니다. 새로고침해 주세요.</p></div>';
+    }
+  }
+
   loadMeta();
+  loadBuyers();
 })();

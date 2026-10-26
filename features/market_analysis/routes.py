@@ -5,6 +5,7 @@ API(docs/data_contracts.md 응답 형식)
 - POST /api/market-analysis/analyze  조회 조건(JSON) → 통계 결과 + bundle_id
 - POST /api/market-analysis/ai       {bundle_id} → AI 분석(초안+5차례 검토). 유료 호출. 끝난 묶음은 재호출 없음
 - POST /api/market-analysis/pdf      화면에 표시된 결과 {stats, ai} → PDF 파일(재조회·재분석 없음)
+- GET  /api/market-analysis/buyers   바이어 목록(⑥). 기준 자료 파일만 읽습니다(외부 호출 없음)
 요청·응답 필드: features/market_analysis/feature_spec.md
 """
 import logging
@@ -13,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, Response, jsonify, request
 
 from common.errors import AIError
-from features.market_analysis import pdf_report, service
+from features.market_analysis import buyers, pdf_report, service
 from features.market_analysis.comexstat_client import ComexStatError
 
 PDF_MAX_REQUEST_BYTES = 3 * 1024 * 1024  # 화면 결과 JSON 상한(PDF 요청)
@@ -84,6 +85,16 @@ def ai():
         logger.error("AI 분석 중 예상하지 못한 오류")
         return _fail("MA_INTERNAL_ERROR", "AI 분석 중 알 수 없는 오류가 발생했습니다.", 500)
     # 분석이 실패·중단돼도 끝난 단계까지의 결과와 상태를 200으로 돌려줍니다(화면이 '검토 미완료'로 표시).
+    return jsonify({"ok": True, "data": data})
+
+
+@bp.get("/api/market-analysis/buyers")
+def buyer_list():
+    try:
+        data = buyers.load()
+    except (OSError, ValueError, KeyError, TypeError):
+        logger.error("바이어 목록 자료를 읽지 못함")
+        return _fail("MA_BUYERS_FAILED", "바이어 목록 자료를 읽지 못했습니다.", 500)
     return jsonify({"ok": True, "data": data})
 
 

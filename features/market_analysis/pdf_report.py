@@ -22,6 +22,8 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle)
 
+from features.market_analysis import buyers
+
 
 FONT_DIR = Path(__file__).resolve().parent / "fonts"
 FONT, FONT_BOLD = "NotoSansKR", "NotoSansKR-Bold"
@@ -308,6 +310,10 @@ def build_pdf(payload):
     story.append(_p("자료 갱신일 %s · 최신 제공 월 %s · 자료 받은 시각 %s" % (
         src.get("data_updated") or "확인 안 됨", src.get("latest_month") or "확인 안 됨", src.get("fetched_at") or "확인 안 됨"), st["small"]))
 
+    # ⑥ 바이어 목록(화면과 같은 기준 자료 파일, 전체 목록)
+    story.append(_p("⑥ 바이어 목록 (리젠 T2T 잠재 바이어)", st["h2"]))
+    story.extend(_buyer_section(buyers.load(), W, st))
+
     def footer(canvas, d):
         canvas.saveState()
         canvas.setFont(FONT, 7)
@@ -318,6 +324,29 @@ def build_pdf(payload):
 
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
     return buf.getvalue()
+
+
+def _buyer_section(d, W, st):
+    out = [_p(n, st["notice"]) for n in d["notes"]]
+    if not d["ready"]:
+        out.append(_p("기준 자료가 아직 없습니다(buyer_data_builder로 생성 후 표시).", st["body"]))
+        return out
+    lst = d["companies"]
+    out.append(_p("전체 %d곳 · 재생·T2T 근거 %d곳 · 조건: 주 업종 대상 CNAE, 활성, 법인, 규모 '%s'. 근거 업체를 먼저 표시." % (
+        len(lst), d["counts"]["with_evidence"], d["filters"]["porte"]), st["small"]))
+    rows = [["#", "회사명 · CNPJ", "지역(주·시)", "업종(CNAE)", "법인 대표 연락처", "재생·T2T 근거"]]
+    for i, c in enumerate(lst, 1):
+        name = [_p(c["razao_social"], st["cell"])] + ([_p(c["nome_fantasia"], st["small"])] if c.get("nome_fantasia") else []) + \
+            [_p("CNPJ " + c["cnpj"], st["small"])]
+        contact = " / ".join(c["phones"] + ([c["email"]] if c.get("email") else [])) or "등록 없음"
+        ev = [p for e in c["evidence"] for p in (_link(e.get("url"), st["cell"], e.get("title")), _p("확인 " + str(e.get("checked_at")), st["small"]))]
+        rows.append([str(i), name, "%s · %s" % (c.get("uf") or "", c.get("municipio") or ""),
+                     "%s %s" % (c["cnae"], c.get("cnae_desc") or ""), contact, ev or "—"])
+    out.append(_table(rows, [9 * mm, 46 * mm, 26 * mm, 36 * mm, 38 * mm, W - 155 * mm], st, num_cols=(0,)))
+    src = d["source"]
+    out.append(_p("출처: %s · 자료 기준월 %s · 생성 %s" % (src["name"], src["reference_month"], src.get("generated_at")), st["small"]))
+    out.append(_link(src["url"], st["cell"]))
+    return out
 
 
 def _supplier_table(lst, W, st):
