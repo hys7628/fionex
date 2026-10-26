@@ -377,7 +377,7 @@ def _news_section(news, W, st):
     # 출처별 연결 상태(화면과 같은 3열). 건수는 데이터(count)에만 남기고 표에는 넣지 않습니다.
     srows = [["출처", "상태", "안내"]]
     for s in news.get("sources") or []:
-        srows.append([s["label"], s["status_text"], s.get("message") or s.get("usage_note") or ""])
+        srows.append([s["label"], s["status_text"], s.get("message") or ""])  # 화면과 같이 이용 조건 설명은 넣지 않음
     if len(srows) == 1:
         srows.append(["-", "-", "출처 상태 정보가 없습니다."])
     out.append(Spacer(1, 4))

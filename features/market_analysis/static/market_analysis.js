@@ -290,7 +290,11 @@
       "<span>" + esc(q.countries.length ? "비교 공급국: " + q.countries.map(countryName).join(", ") : "공급국: 전체 국가") + "</span></div>";
     html += '<p class="field-hint">무역 통계는 해당 코드의 전체 시장입니다. 일반 원사·재생 원사·리젠 T2T를 구분하지 않으므로 T2T 수요나 시장 규모로 해석하지 마세요. 평균 수입단가는 FOB 기준이며 견적·판매가격·도착가격이 아닙니다.</p>';
 
-    d.notes.forEach(function (n) { html += '<div class="notice notice-info"><p>' + esc(n) + "</p></div>"; });
+    // 통계 참고 사항(코드표 기준·재수입 제외·수치 재집계 등)은 접어 둡니다. T2T 해석 주의와 '이전 자료 사용' 경고는 항상 표시.
+    if (d.notes.length) {
+      html += '<details class="ma-details ma-period-notes"><summary>통계 참고 사항 ' + d.notes.length + "건 보기</summary>" +
+        d.notes.map(function (n) { return '<div class="notice notice-info"><p>' + esc(n) + "</p></div>"; }).join("") + "</details>";
+    }
     if (src.cache_status === "stale") {
       html += '<div class="notice notice-warning" role="status"><p class="notice-title">이전 자료 사용</p><p>ComexStat 조회에 실패해 ' +
         esc(kstTime(src.fetched_at)) + "에 받은 자료로 표시했습니다. 최신 자료가 아닐 수 있습니다.</p></div>";
@@ -410,8 +414,8 @@
   function translationHtml(t) {
     if (!t || t.status === "none") return "";
     if (t.status === "ok" || t.status === "partial") {
-      return '<p class="field-hint">포르투갈어·스페인어 제목 ' + t.count + "건에 한국어 AI 번역(OpenAI 기계 번역)을 붙였습니다. 번역은 이해를 돕기 위한 것이며 원문 제목이 기준입니다. " +
-        esc(TRANSLATION_TEXT[t.status]) + "</p>";
+      // 제목마다 'AI 번역' 표시가 있으므로 건수 설명 없이 기준만 알립니다.
+      return '<p class="field-hint">AI 번역은 OpenAI 기계 번역이며 원문 제목이 기준입니다. ' + esc(TRANSLATION_TEXT[t.status]) + "</p>";
     }
     return '<p class="field-hint">' + esc(t.reason || "제목 번역을 하지 못해 원문 제목만 표시합니다.") + "</p>";
   }
@@ -423,7 +427,8 @@
     let html = '<div class="table-wrap ma-source-wrap"><table class="table ma-source-table ma-stack-table"><caption>출처별 연결 상태 · 요청 수집 기간 ' + esc(n.window.from + " ~ " + n.window.to) +
       " (최근 " + esc(n.window.months) + "개월)</caption><thead><tr><th scope=\"col\">출처</th><th scope=\"col\">상태</th><th scope=\"col\">안내</th></tr></thead><tbody>";
     n.sources.forEach(function (s) {
-      const info = [s.message || s.usage_note || "", coverageText(s.coverage), s.collected_at ? "수집 시각 " + kstTime(s.collected_at) : ""]
+      // 안내 칸에는 오류·대기 사유, 검색 기간, 수집 시각만 둡니다(이용 조건 설명 usage_note는 응답에만 유지).
+      const info = [s.message || "", coverageText(s.coverage), s.collected_at ? "수집 시각 " + kstTime(s.collected_at) : ""]
         .filter(Boolean).join(" · ");
       html += '<tr><th scope="row" data-label="출처">' + esc(s.label) + '</th><td data-label="상태">' + badge(STATE_TONE[s.state] || "info", s.status_text) +
         '</td><td data-label="안내">' + esc(info) + "</td></tr>";
@@ -433,7 +438,7 @@
     const notes = n.window.notes || [];
     if (notes.length) {
       // 검색 기간 제한 안내는 기본으로 접어 둡니다(펼치면 전체 문장).
-      html += '<details class="ma-details ma-period-notes"><summary>검색 기간 제한 안내 ' + notes.length + "건 보기</summary>" +
+      html += '<details class="ma-details ma-period-notes"><summary>검색 기간 제한 안내</summary>' +
         notes.map(function (note) { return '<div class="notice notice-warning"><p>' + esc(note) + "</p></div>"; }).join("") + "</details>";
     }
     const failed = n.sources.filter(function (s) { return s.state !== "ok" && s.state !== "pending"; });
@@ -445,10 +450,13 @@
     const hasGdelt = items.concat(others).some(function (it) { return it.source === "gdelt"; });
     const hasNewsdata = n.sources.some(function (s) { return s.source === "newsdata" && s.state === "ok"; });
     if (hasNewsdata) {
-      html += '<p class="field-hint">일반 뉴스: <a href="https://newsdata.io" target="_blank" rel="noopener noreferrer">Powered by NewsData.io</a> · 무료 플랜이라 최근 48시간 기사만 검색하며(12시간 지연) 본문은 받지 않습니다. 기사 저작권은 각 언론사에 있습니다.</p>';
+      // 이용 조건상 필요한 표기만 둡니다. 48시간 제한은 '검색 기간 제한 안내' 토글에 있습니다.
+      html += '<p class="field-hint">일반 뉴스: <a href="https://newsdata.io" target="_blank" rel="noopener noreferrer">Powered by NewsData.io</a></p>';
     }
-    html += '<p class="field-hint">핵심 기사: 섬유 업계 주제(섬유·의류 산업, 폴리에스터 원사·DTY, 재생 섬유·T2T)가 제목·품목·기사 앞부분에 있는 기사만 ' + items.length + "건 / 중복 제거 후 후보 " + n.candidates + "건." +
-      (hasGdelt ? " 일반 뉴스 출처: The GDELT Project — 제목·메타데이터만 확인했고 본문은 확인하지 않았습니다. GDELT 시각은 처음 발견한 시각이며 게시일이 아닙니다." : "") + "</p>";
+    // 핵심 기사 건수·기준은 표 제목(caption)에 있으므로 별도 안내 문단을 두지 않습니다.
+    if (hasGdelt) {
+      html += '<p class="field-hint">일반 뉴스 출처: The GDELT Project — 제목·메타데이터만 확인했고 본문은 확인하지 않았습니다. GDELT 시각은 처음 발견한 시각이며 게시일이 아닙니다.</p>';
+    }
     html += translationHtml(n.translation);
     if (!items.length && !others.length) {
       const anyOk = n.sources.some(function (s) { return s.state === "ok"; });
@@ -493,8 +501,9 @@
         diagHtml({ kind: "config", label: missing.map(function (m) { return DIAG_ENV_TEXT[m] || m; }).join("·") || "설정 누락", env_missing: missing,
           detail: ".env 파일은 앱이 직접 읽지 않습니다(python-dotenv 미설치 시). 서버를 시작하는 셸의 환경변수로 넣어야 합니다." }) + "</div>";
     }
-    return html + '<p class="field-hint">근거 자료를 불러온 뒤 실행할 수 있습니다. 초안 1회와 5차례 검토(자료 적합성 → 수치 정확성 → 원문·공식 출처 → 사실·추정 해석 → 최종 검토)로 OpenAI를 최대 6번 호출하는 유료 기능이며 수 분 걸릴 수 있습니다. ' +
-      "같은 조회 결과로는 한 번만 실행되고, 끝난 결과는 다시 호출하지 않습니다.</p>" +
+    // 소요 시간은 2026-10-26 실제 실행 3회(44~56초) 기준. 회차별 검토 항목은 실행 후 '5차례 검토 기록'에 나옵니다.
+    return html + '<p class="field-hint">근거 자료를 불러온 뒤 실행할 수 있습니다. OpenAI를 최대 6번 호출하는 유료 기능(초안 1회 + 5차례 검토)이며 1분 안팎 걸립니다. ' +
+      "같은 조회 결과로는 한 번만 실행됩니다.</p>" +
       '<button type="button" class="btn btn-primary" data-ma-ai-run disabled>AI 분석 실행</button>';
   }
 
@@ -510,7 +519,7 @@
     box.setAttribute("aria-busy", "true");
     const previous = lastAi ? aiHtml(lastAi) : null;
     box.innerHTML = '<div class="empty-state"><span class="spinner" aria-hidden="true"></span><p class="empty-state-title">AI 분석 중입니다</p>' +
-      "<p>초안 작성 후 5차례 검토를 차례로 진행합니다. 수 분 걸릴 수 있으니 이 탭을 새로고침하지 마세요.</p></div>";
+      "<p>초안 작성 후 5차례 검토를 차례로 진행합니다(1분 안팎). 이 탭을 새로고침하지 마세요.</p></div>";
     try {
       const res = await fetch("/api/market-analysis/ai", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -618,8 +627,11 @@
       }
       const q = lastResult.query;
       AppShell.work.downloadBlob(FEATURE_ID, await res.blob(), "market_analysis_" + q.code + "_" + q.from + "_" + q.to + ".pdf");
+      // 머리글의 '다운로드 요청됨 · 저장 여부는 브라우저에서 확인' 표시를 띄우지 않습니다(2026-10-26 담당자 지시).
+      // clear는 downloadBlob이 해제한 것과 같은 경고 상태에 다운로드 요청 표시만 추가로 끕니다(공통 코드 변경 없음).
+      AppShell.work.clear(FEATURE_ID);
       updatePdfButton();
-      pdfHint.textContent = "다운로드를 요청했습니다. 저장 여부는 브라우저에서 확인해 주세요.";
+      pdfHint.textContent = "PDF 다운로드를 요청했습니다.";
     } catch (err) {
       updatePdfButton();
       pdfHint.textContent = err.message;

@@ -270,6 +270,7 @@
   - 포르투갈어·스페인어 제목은 OpenAI로 한국어 번역을 붙여 'AI 번역'으로 표시(translation.py, prompts/news_title_translate_v1.md, 수집 1회당 1호출, 같은 날 같은 제목 재사용, 실패해도 원문 표시). 번역 실제 테스트 승인 최대 3회 중 1회 사용.
   - 평균 수입단가 검증: 대만 4.18·불가리아 4.98 USD/kg가 ComexStat 원자료 직접 합산과 일치(worklogs validation.md).
   - 공급국 표의 단가 '확인 필요' 표시와 기사 제목 아래 확보·이용 범위 문구(배지)는 화면·PDF에서 표시하지 않음. 판정 데이터(price_flag, access·ai_input)와 월별 표의 '확인 필요'는 유지. 키 없이 실제 확인: https://newsdata.io/api/1/latest·/api/1/archive, 키는 apikey 쿼리 인자, 키 없음·잘못된 키는 HTTP 401 + {"status":"error","results":{"code":"Unauthorized"}}. 무료 플랜은 최근 48시간·12시간 지연(요금표)이라 '최근 6개월' 조건과 맞지 않음 → 6개월 확보 방법(유료 Archive 등)·조건 조정은 담당자 확인 필요. 환경변수 이름 제안 NEWSDATA_API_KEY(.env.example 추가는 공통 합의).
+  - 화면 문구 정리(2026-10-26): PDF 다운로드 후 머리글 '다운로드 요청됨' 표시를 띄우지 않음(탭 코드에서 AppShell.work.clear 호출, 공통 파일 변경 없음). 통계 참고 사항은 토글, 출처 표 안내 칸은 오류·검색 기간·수집 시각만, NewsData는 'Powered by NewsData.io' 표기만, AI 안내 소요 시간 '1분 안팎'(실측 44~56초).
 - 실제 휴대폰 브라우저 검증: 생략(2026-10-26 담당자 결정). 헤드리스 Chrome 390px 확인으로 대신함.
 - AI 해석 오류(SVC-MA-20261026-02): 근거의 점 표기 코드(5402.33.10)를 조회 코드(54023310)와 다른 범위로 해석. 코드 표기 동일성 안내·검사 추가 후보.
 - KITA: 자동 수집용 공식 API·RSS 미확인. kita.net 저작권 정책은 상업적 이용·자동 수집 금지. 자료 제공·제휴 여부는 KITA 문의 필요(문의 내용은 worklogs sources.md).
