@@ -1407,10 +1407,9 @@
     } else {
       root.append(field.provided ? badge("제공됨", "info") : badge("미제공", "warning"));
     }
-    if (field.virtual) root.append(badge("가상 정보", "warning"));
+    // 가상 정보·사용자 확인 여부는 같은 줄의 토글 칩(체크 상태·색)으로 보여 주므로 배지를 겹쳐 달지 않습니다.
     if (field.userAdded) root.append(badge("사용자 추가 정보", "info"));
     if (field.userModified) root.append(badge("사용자 수정", "info"));
-    root.append(field.confirmed ? badge("사용자 확인", "success") : badge("미확인"));
   }
 
   // 항목별로 다른 안내만 표시합니다. 공통 설명은 검토 영역 상단에 있습니다.
@@ -1449,8 +1448,7 @@
   function renderField(field) {
     const id = FEATURE_ID + "-field-" + field.key;
     const required = Review.REQUIRED_KEYS.indexOf(field.key) >= 0;
-    // 긴 항목·필수 항목(제품명·제품 설명)은 전체 폭(기본 정보 묶음에 빈 칸이 남지 않게)
-    const wrap = el("div", "field product_brochure-item pb-item" + (field.multiline || required ? " product_brochure-item-wide" : ""));
+    const wrap = el("div", "field product_brochure-item pb-item" + (field.multiline ? " product_brochure-item-wide" : ""));
     const label = el("label", "field-label", field.label);
     label.htmlFor = id;
     if (required) label.append(el("span", "field-required", "필수"));
@@ -1514,13 +1512,14 @@
     });
 
     sync();
-    // 항목 카드: 머리(이름 + 상태 배지) → 입력 → 안내·경고 → 근거 → 확인 토글
+    // 항목 카드: 머리(왼쪽 이름 + 상태 배지, 오른쪽 확인·가상 토글) → 입력 → 안내·경고 → 근거
     const head = el("div", "pb-item-head");
-    head.append(label, badges);
+    const title = el("div", "pb-item-title");
+    title.append(label, badges);
+    head.append(title, choices);
     wrap.append(head, input, hint, error);
     const details = renderDetails(field);
     if (details) wrap.append(details);
-    wrap.append(choices);
     return wrap;
   }
 
