@@ -13,6 +13,11 @@
   const formError = panel.querySelector("[data-ma-form-error]");
   const resultBox = panel.querySelector("[data-ma-result]");
   const resultTitle = panel.querySelector("#market_analysis-result-title");
+  const formTitle = panel.querySelector("#market_analysis-input-title");
+  const resultView = panel.querySelector('[data-ma-view="result"]');
+  const stepBar = panel.querySelector(".ma-step-bar");
+  const toResultBtn = panel.querySelector("[data-ma-to-result]");
+  const querySummary = panel.querySelector("[data-ma-query-summary]");
   const statusLive = panel.querySelector("[data-ma-status]");
   const periodHint = panel.querySelector("[data-ma-period-hint]");
   const countryList = panel.querySelector("[data-ma-country-list]");
@@ -236,14 +241,33 @@
     updatePdfButton();
   }
 
+  // 시장 통계 화면 전환: "form"(① 조회 조건) / "result"(② 분석 결과). focusEl이 있으면 그 제목에 초점, 화면은 그 화면 맨 위부터.
+  function showView(name, focusEl) {
+    form.hidden = name !== "form";
+    resultView.hidden = name !== "result";
+    toResultBtn.hidden = !lastResult;
+    if (!focusEl) return;
+    AppShell.ui.focusResult(focusEl, { scroll: false });
+    (name === "result" ? stepBar : form).scrollIntoView({ block: "start", behavior: "auto" });
+  }
+
+  function summaryText(payload) {
+    const n = payload.countries.length;
+    return (payload.code_system === "hs6" ? "HS " : "NCM ") + payload.code + " · " + payload.from + " ~ " + payload.to + " · " +
+      (n ? "공급국 " + n + "곳 비교" : "전체 국가");
+  }
+
   async function run(refresh) {
     if (busy) return;
     clearErrors();
     const payload = collect(refresh);
     const localErrors = clientValidate(payload);
-    if (Object.keys(localErrors).length) { showFieldErrors(localErrors); return; }
+    if (Object.keys(localErrors).length) { showView("form"); showFieldErrors(localErrors); return; }
 
+    querySummary.textContent = summaryText(payload);
+    showView("result", resultTitle);  // 결과 화면으로 넘어가서 불러오는 중 표시
     setBusy(true, refresh ? refreshBtn : submitBtn);
+    let failed = false;
     announce("ComexStat 자료를 불러오는 중입니다.");
     const previous = resultBox.innerHTML;
     resultBox.innerHTML = '<div class="empty-state"><span class="spinner" aria-hidden="true"></span>' +
@@ -261,6 +285,7 @@
         if (body.error.fields) {
           resultBox.innerHTML = previous;
           announce("");
+          showView("form");
           showFieldErrors(body.error.fields);
           return;
         }
@@ -274,23 +299,33 @@
       AppShell.work.setResult(FEATURE_ID, true);
       updatePdfButton();
       refreshAiPanel();
-      // 결과는 넓은 화면에서 오른쪽 위, 좁은 화면에서 입력 아래에 생기므로 결과 제목으로 초점·스크롤을 옮깁니다(결과 전체는 낭독하지 않음).
-      const moved = AppShell.ui.focusResult(resultTitle, { scroll: "start", from: [form] });
+      // 결과 화면으로 넘어갈 때 이미 결과 제목에 초점을 두었습니다. 그사이 사용자가 결과 화면 안 다른 곳으로 옮겼으면 그대로 둡니다(결과 전체는 낭독하지 않음).
+      const moved = AppShell.ui.focusResult(resultTitle, { scroll: false, from: [resultView] });
       announce("분석 결과가 준비되었습니다." + (moved ? " 결과 제목으로 이동했습니다." : ""));
     } catch (err) {
       announce("");
       resultBox.innerHTML = previous;
       // 서버 오류 객체({code, message})의 고정 문장만 쓰고, 브라우저·스크립트 오류(Error) 원문은 쓰지 않습니다.
       const serverMessage = err && !(err instanceof Error) && err.message;
+      // 실패하면 조회 조건 화면으로 돌아가 오류 안내(role=alert)를 보여 줍니다(보이는 상태에서 넣어야 읽힘). 이전 결과가 있으면 '분석 결과 보기'로 볼 수 있습니다.
+      showView("form");
       showFormError("자료 조회 실패", serverMessage || CONNECTION_ERROR + " 입력은 그대로이며 다시 실행할 수 있습니다.");
-      refreshBtn.hidden = false;
+      failed = true;
     } finally {
       setBusy(false);
+    }
+    // 다시 시도하기 쉽게 '분석 실행'에 초점(오류 안내 바로 아래). 결과 화면의 '다시 불러오기'에서 실패해도 같음.
+    if (failed) {
+      submitBtn.focus({ preventScroll: true });
+      formError.scrollIntoView({ block: "nearest", behavior: "auto" });
+      submitBtn.scrollIntoView({ block: "nearest", behavior: "auto" });
     }
   }
 
   form.addEventListener("submit", function () { run(false); }); // 기본 제출은 공통 shell이 막음
   refreshBtn.addEventListener("click", function () { run(true); });
+  panel.querySelector("[data-ma-to-form]").addEventListener("click", function () { showView("form", formTitle); });
+  toResultBtn.addEventListener("click", function () { showView("result", resultTitle); });
 
   /* ---------- 결과 ---------- */
   function badge(tone, text) { return '<span class="badge badge-' + tone + '">' + esc(text) + "</span>"; }

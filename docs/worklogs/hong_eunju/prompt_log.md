@@ -668,3 +668,16 @@
 - 검증: validation.md DEV-MA-BUYER-006.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 실제 OpenAI 브리핑 미실행.
+
+## DEV-MA-STATS-007 시장 통계 조회 조건 → 분석 결과 두 화면
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis (브랜치 feature/common_setup, DEV-MA-BUYER-006 미커밋 상태에서 이어서 작업)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "시장 바이오분석탭에서 시장통계에서 조회조건 다음창으로 분석결과 넘어가게 해줘야지" (중간에 세션이 끊겨 "계속 진행해"로 재개)
+- 판단: 2열 workspace를 두 화면 순서로 변경. 수십 초 걸리는 조회를 기다리는 동안 결과 화면에서 진행 상태를 보이도록 '분석 실행' 즉시 전환. 실패는 입력 수정이 필요할 수 있어 조건 화면으로 되돌림(이전 결과 유지). '다시 불러오기'는 결과 화면 막대로 이동. 조건 요약을 막대에 둬 결과 화면에서도 무엇을 조회했는지 보이게 함.
+- 변경 파일: features/market_analysis/templates/market_analysis/panel.html, static/market_analysis.js·css, feature_spec.md. Python·API 변경 없음.
+- 외부 호출: 0건.
+- 검증: validation.md DEV-MA-STATS-007.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 ComexStat 조회로는 확인하지 않음(모의 서버), 브라우저 뒤로 가기와 연결하지 않음.
