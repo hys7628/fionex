@@ -372,6 +372,7 @@
   }
 
   function updatePager(tab) {
+    if (tab.dataset.maRtab === "s2") drawChart();  // ② 탭이 보일 때 실제 칸 폭으로 다시 그림
     const list = Array.from(resultBox.querySelectorAll("[data-ma-rtab]"));
     const i = list.indexOf(tab);
     // 좁은 화면에서 탭 줄이 가로로 넘치면 선택한 탭이 보이게 탭 줄만 옮깁니다(페이지 세로 스크롤은 그대로).
@@ -753,44 +754,92 @@
     return fmt2.format(v);
   }
 
+  // 그래프 요약(화면 표시만): 기록 있는 달의 최고·최저·월평균과 마지막 달. 값은 받은 월별 자료에서 그대로 계산합니다.
+  function chartStats(months, values, metric) {
+    const rows = months.map(function (m, i) { return { month: m.month, v: values[i] }; }).filter(function (r) { return r.v != null; });
+    if (!rows.length) return "";
+    const hi = rows.reduce(function (a, b) { return b.v > a.v ? b : a; });
+    const lo = rows.reduce(function (a, b) { return b.v < a.v ? b : a; });
+    const avg = rows.reduce(function (a, b) { return a + b.v; }, 0) / rows.length;
+    const last = rows[rows.length - 1];
+    const item = function (label, value, sub) {
+      return '<div class="ma-chart-stat"><span class="ma-chart-stat-label">' + esc(label) + '</span><span class="ma-chart-stat-value">' +
+        esc(value) + '</span><span class="ma-chart-stat-sub">' + esc(sub) + "</span></div>";
+    };
+    return '<div class="ma-chart-stats">' +
+      item("최근 달", metric.text(last.v), last.month) +
+      item("최고", metric.text(hi.v), hi.month) +
+      item("최저", metric.text(lo.v), lo.month) +
+      item("월평균", metric.text(avg), "기록 있는 " + rows.length + "개월") + "</div>";
+  }
+
   function drawChart() {
     const fig = resultBox.querySelector("[data-ma-chart]");
     if (!fig || !lastResult) return;
     const metric = METRICS[chartMetric];
     const months = lastResult.monthly;
-    const W = 720, H = 280, L = 64, R = 16, T = 16, B = 40;
+    // 실제 칸 폭으로 그려 글자·막대가 화면 크기와 관계없이 같은 크기로 보이게 합니다(높이 고정).
+    const W = fig.clientWidth > 0 ? Math.max(320, Math.round(fig.clientWidth - 42)) : 720;  // 숨겨진 탭이면 기본 폭, 보일 때 다시 그림
+    const H = W < 520 ? 240 : 300, L = W < 520 ? 52 : 64, R = 16, T = 20, B = 44;
     const values = months.map(function (m) { return m.has_record ? metric.value(m) : null; });
-    const max = niceMax(Math.max.apply(null, values.filter(function (v) { return v != null; }).concat([0])));
+    const present = values.filter(function (v) { return v != null; });
+    const isLine = chartMetric === "unit_price";
+    // 막대(수입액·수입량)는 0부터, 단가 선은 값 범위에 맞춘 눈금(작은 변화도 보이게)
+    let min = 0, max = niceMax(Math.max.apply(null, present.concat([0])));
+    if (isLine && present.length) {
+      const hiV = Math.max.apply(null, present), loV = Math.min.apply(null, present);
+      const tick = niceMax(Math.max(hiV - loV, hiV * 0.1) / 4);
+      min = Math.max(0, Math.floor(loV / tick) * tick - tick);
+      max = Math.ceil(hiV / tick) * tick + tick;
+    }
+    const avg = present.length ? present.reduce(function (a, b) { return a + b; }, 0) / present.length : null;
     const step = (W - L - R) / months.length;
-    const y = function (v) { return T + (H - T - B) * (1 - v / max); };
-    let svg = '<svg viewBox="0 0 ' + W + " " + H + '" class="ma-svg" role="img" aria-labelledby="market_analysis-chart-title">';
+    const y = function (v) { return T + (H - T - B) * (1 - (v - min) / (max - min)); };
+    let svg = '<svg viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H + '" class="ma-svg" role="img" aria-labelledby="market_analysis-chart-title">';
     svg += '<title id="market_analysis-chart-title">' + esc(metric.label + " 월별 추이 (" + metric.unit + ")") + "</title>";
+    svg += '<defs><linearGradient id="market_analysis-bar-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ma-fill-top"/><stop offset="1" class="ma-fill-bottom"/></linearGradient>' +
+      '<linearGradient id="market_analysis-area-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ma-area-top"/><stop offset="1" class="ma-area-bottom"/></linearGradient></defs>';
+    // 해마다 번갈아 옅은 띠(연도 구분)와 1월 위치 연도 표시
+    let bandStart = 0;
+    months.forEach(function (m, i) {
+      const next = months[i + 1];
+      if (!next || next.month.slice(0, 4) !== m.month.slice(0, 4)) {
+        const year = Number(m.month.slice(0, 4));
+        if (year % 2 === 0) svg += '<rect class="ma-year-band" x="' + (L + step * bandStart) + '" y="' + T + '" width="' + step * (i + 1 - bandStart) + '" height="' + (H - T - B) + '"/>';
+        if (step * (i + 1 - bandStart) >= 38) svg += '<text class="ma-axis ma-axis-year" x="' + (L + step * bandStart + 4) + '" y="' + (T + 12) + '">' + year + "</text>";  // 띠가 좁으면 연도 생략
+        bandStart = i + 1;
+      }
+    });
     for (let i = 0; i <= 4; i++) {
-      const v = max * i / 4, yy = y(v);
+      const v = min + (max - min) * i / 4, yy = y(v);
       svg += '<line class="ma-grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + yy + '" y2="' + yy + '"/>';
       svg += '<text class="ma-axis" x="' + (L - 8) + '" y="' + (yy + 4) + '" text-anchor="end">' + esc(axisText(v, chartMetric)) + "</text>";
     }
-    const labelEvery = Math.max(1, Math.ceil(months.length / 8));
-    const isLine = chartMetric === "unit_price";
-    let path = "";
+    // x축: 칸 폭에 맞춰 몇 달마다 'YY.MM' 표시
+    const labelEvery = Math.max(1, Math.ceil(months.length / Math.max(4, Math.floor((W - L - R) / 64))));
+    let path = "", area = "", firstX = null, lastX = null;
     let penDown = false; // 값이 없는 달에서 선을 끊습니다.
     months.forEach(function (m, i) {
       const cx = L + step * i + step / 2;
       const v = values[i];
-      if (i % labelEvery === 0) svg += '<text class="ma-axis" x="' + cx + '" y="' + (H - B + 18) + '" text-anchor="middle">' + m.month + "</text>";
+      if (i % labelEvery === 0) svg += '<text class="ma-axis" x="' + cx + '" y="' + (H - B + 20) + '" text-anchor="middle">' + m.month.slice(2).replace("-", ".") + "</text>";
       if (v == null) { penDown = false; return; }
       if (isLine) {
         path += (penDown ? "L" : "M") + cx.toFixed(1) + "," + y(v).toFixed(1);
+        if (firstX === null) firstX = cx;
+        lastX = cx;
+        area += (area ? "L" : "M") + cx.toFixed(1) + "," + y(v).toFixed(1);
         penDown = true;
       } else {
-        const bw = Math.max(2, step - 2), top = y(v), h = (H - B) - top;
-        const r = Math.min(4, bw / 2, h);
+        const bw = Math.max(2, Math.min(28, step * 0.72)), top = y(v), h = (H - B) - top;
+        const r = Math.min(3, bw / 2, h);
         const x0 = cx - bw / 2, x1 = cx + bw / 2, base = H - B;
-        // 위쪽 모서리만 둥글게(기준선 쪽은 각지게)
-        svg += '<path class="ma-bar" d="M' + x0 + "," + base + "V" + (top + r) + "Q" + x0 + "," + top + " " + (x0 + r) + "," + top +
+        // 위쪽 모서리만 둥글게(기준선 쪽은 각지게). 마지막 달은 진하게
+        svg += '<path class="ma-bar' + (i === months.length - 1 ? " ma-bar-last" : "") + '" data-i="' + i + '" d="M' + x0 + "," + base + "V" + (top + r) + "Q" + x0 + "," + top + " " + (x0 + r) + "," + top +
           "H" + (x1 - r) + "Q" + x1 + "," + top + " " + x1 + "," + (top + r) + "V" + base + 'Z"/>';
       }
     });
+    if (isLine && area) svg += '<path class="ma-area" d="' + area + "L" + lastX.toFixed(1) + "," + (H - B) + "L" + firstX.toFixed(1) + "," + (H - B) + 'Z"/>';
     if (isLine) {
       if (path) svg += '<path class="ma-line" d="' + path + '"/>';
       months.forEach(function (m, i) {
@@ -799,16 +848,34 @@
         svg += '<circle class="ma-dot' + (m.price_flag ? " ma-dot-flag" : "") + '" cx="' + cx + '" cy="' + y(values[i]) + '" r="' + (m.price_flag ? 5 : 3) + '"/>';
       });
     }
+    // 월평균 점선
+    if (avg != null) {
+      const ya = y(avg);
+      svg += '<line class="ma-avg" x1="' + L + '" x2="' + (W - R) + '" y1="' + ya + '" y2="' + ya + '"/>' +
+        '<text class="ma-axis ma-avg-label" x="' + (L + 6) + '" y="' + (ya - 6) + '">월평균 ' + esc(axisText(avg, chartMetric)) + "</text>";
+    }
     svg += '<line class="ma-baseline" x1="' + L + '" x2="' + (W - R) + '" y1="' + (H - B) + '" y2="' + (H - B) + '"/>';
+    svg += '<line class="ma-cursor" x1="0" x2="0" y1="' + T + '" y2="' + (H - B) + '" hidden/>';
     months.forEach(function (m, i) {
       svg += '<rect class="ma-hit" data-i="' + i + '" x="' + (L + step * i) + '" y="' + T + '" width="' + step + '" height="' + (H - T - B) + '"/>';
     });
     svg += "</svg>";
-    fig.innerHTML = '<figcaption class="ma-chart-title">' + esc(metric.label + " 월별 추이 (" + metric.unit + ")") + "</figcaption>" + svg +
+    fig.innerHTML = '<figcaption class="ma-chart-title">' + esc(metric.label + " 월별 추이 (" + metric.unit + ")") + "</figcaption>" +
+      chartStats(months, values, metric) + '<div class="ma-chart-plot">' + svg + "</div>" +
       '<div class="ma-tooltip" role="status" hidden></div>' +
-      (isLine ? '<p class="field-hint">큰 점은 \'확인 필요\' 단가입니다(중앙값의 ½ 미만 또는 2배 초과). 끊긴 구간은 기록이 없거나 계산 불가인 달입니다.</p>' : '<p class="field-hint">막대가 없는 달은 수입 기록이 없는 달입니다.</p>');
+      (isLine ? '<p class="field-hint">큰 점은 \'확인 필요\' 단가입니다(중앙값의 ½ 미만 또는 2배 초과). 끊긴 구간은 기록이 없거나 계산 불가인 달입니다.</p>' : '<p class="field-hint">막대가 없는 달은 수입 기록이 없는 달입니다. 진한 막대는 마지막 달, 점선은 월평균입니다.</p>');
     bindTooltip(fig, months, metric);
   }
+
+  // 화면 폭이 바뀌면 칸 폭에 맞춰 다시 그립니다(자료 요청 없음).
+  let chartResizeTimer = null;
+  window.addEventListener("resize", function () {
+    clearTimeout(chartResizeTimer);
+    chartResizeTimer = setTimeout(function () {
+      const fig = resultBox.querySelector("[data-ma-chart]");
+      if (fig && fig.offsetParent) drawChart();
+    }, 150);
+  });
 
   function bindTooltip(fig, months, metric) {
     const tip = fig.querySelector(".ma-tooltip");
@@ -826,12 +893,24 @@
       }
       tip.innerHTML = "<strong>" + esc(m.month) + "</strong><br>" + esc(text);
       tip.hidden = false;
+      const cursor = svg.querySelector(".ma-cursor");
+      const cx = Number(hit.getAttribute("x")) + Number(hit.getAttribute("width")) / 2;
+      cursor.setAttribute("x1", cx);
+      cursor.setAttribute("x2", cx);
+      cursor.removeAttribute("hidden");
+      svg.querySelectorAll(".ma-bar-hover").forEach(function (b) { b.classList.remove("ma-bar-hover"); });
+      const bar = svg.querySelector('.ma-bar[data-i="' + hit.dataset.i + '"]');
+      if (bar) bar.classList.add("ma-bar-hover");
       const box = fig.getBoundingClientRect();
       const x = Math.min(event.clientX - box.left + 12, box.width - tip.offsetWidth - 4);
       tip.style.left = Math.max(4, x) + "px";
       tip.style.top = (event.clientY - box.top + 12) + "px";
     });
-    svg.addEventListener("pointerleave", function () { tip.hidden = true; });
+    svg.addEventListener("pointerleave", function () {
+      tip.hidden = true;
+      svg.querySelector(".ma-cursor").setAttribute("hidden", "");
+      svg.querySelectorAll(".ma-bar-hover").forEach(function (b) { b.classList.remove("ma-bar-hover"); });
+    });
   }
 
   /* ---------- ⑥ 바이어 목록 (기준 자료 파일, 첫 5곳만 펼쳐 표시) ---------- */
