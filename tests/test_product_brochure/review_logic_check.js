@@ -606,6 +606,168 @@ check("재생성 확인: 수정본이 있으면 대체 안내, 취소 시 요청
   assert.equal(sends.length, 0);
 });
 
+/* ---------- 카탈로그 PDF 다운로드 ---------- */
+function pdfOk(over) {
+  return Object.assign({ status: 200, contentType: "application/pdf", size: 1000, head: "%PDF-", blob: { fake: true }, revision: 7 }, over || {});
+}
+function pdfHarness(opts) {
+  const log = { sends: [], busy: [], success: [], failure: [], confirms: [] };
+  const d = R.createPdfDownloader({
+    send: (input) => { log.sends.push(input); return opts.send(input); },
+    blocked: () => !!opts.blocked,
+    needsConfirm: () => !!opts.stale,
+    confirm: (m) => { log.confirms.push(m); return opts.confirm !== false; },
+    onBusy: (v) => log.busy.push(v),
+    onSuccess: (data) => log.success.push(data),
+    onFailure: (o) => log.failure.push(o),
+  });
+  return { d: d, log: log };
+}
+function pdfInput(current, revision) {
+  return { body: JSON.stringify(R.buildPdfPayload(current)), revision: revision === undefined ? 7 : revision };
+}
+
+check("PDF 요청 본문: 적용본의 허용 필드·가상 표시만(AI 원본·라벨·근거·검토 표시·메타데이터 제외)", () => {
+  const original = editableBody();
+  const values = R.editValues(original);
+  values.tagline = "Texto aplicado & <editado>";
+  values["supply:moq"] = "800 kg";
+  const current = R.applyEdits(original, R.cloneData(original), values).data;
+  const payload = R.buildPdfPayload(current);
+  assert.deepEqual(Object.keys(payload), ["catalog"]);
+  const c = payload.catalog;
+  assert.deepEqual(Object.keys(c), ["language", "cover", "intro", "details", "supply"]);
+  assert.equal(c.language, "pt-BR");
+  assert.deepEqual(c.cover.tagline, { text: "Texto aplicado & <editado>", virtual: false }); // 적용본(원본 아님)
+  assert.deepEqual(c.supply.items, [{ key: "moq", value: "800 kg", virtual: true }]);
+  assert.deepEqual(c.intro.paragraphs, [{ text: "Parágrafo.", virtual: true }]);
+  assert.deepEqual(c.details.items, [{ key: "yarn_spec", value: "75D/36F", virtual: true }]);
+  const json = JSON.stringify(payload);
+  for (const banned of ["label", "source_keys", "review_flags", "origin", "fictitious_notice", "notices", "model",
+                        "display_name", "used_keys", "empty_message", "prompt_version"]) {
+    assert.ok(!json.includes('"' + banned + '"'), banned);
+  }
+  current.pages.cover.tagline.text = "바뀜";                       // 요청 본문은 독립 복사본
+  assert.equal(c.cover.tagline.text, "Texto aplicado & <editado>");
+  const truthy = R.cloneData(current);
+  truthy.pages.supply.items[0].virtual = "yes";                     // 불리언이 아닌 값은 true로 부풀리지 않음
+  assert.equal(R.buildPdfPayload(truthy).catalog.supply.items[0].virtual, false);
+});
+
+check("PDF 가능 조건: 결과 없음·진행 중·미적용 편집·32 KiB 초과는 거부, 고정 안내", () => {
+  const base = { hasResult: true, editDirty: false, busy: false, bodyBytes: 1000 };
+  assert.equal(R.evaluatePdfDownload(base).ok, true);
+  assert.equal(R.evaluatePdfDownload(Object.assign({}, base, { hasResult: false })).reason, "no_result");
+  assert.equal(R.evaluatePdfDownload(Object.assign({}, base, { busy: true })).reason, "busy");
+  const pending = R.evaluatePdfDownload(Object.assign({}, base, { editDirty: true }));
+  assert.equal(pending.message, "문구를 적용하거나 편집을 취소한 뒤 다운로드하세요.");
+  assert.equal(R.evaluatePdfDownload(Object.assign({}, base, { bodyBytes: 32 * 1024 })).ok, true);
+  assert.equal(R.evaluatePdfDownload(Object.assign({}, base, { bodyBytes: 32 * 1024 + 1 })).reason, "too_large");
+  assert.equal(R.utf8Bytes("ação"), 6);                              // 글자 수가 아닌 UTF-8 바이트
+});
+
+check("PDF 응답 해석: 정상만 통과, MIME·빈 파일·서명·HTML·JSON 오류·알 수 없는 코드 구분", () => {
+  assert.equal(R.interpretPdfResponse(pdfOk()).ok, true);
+  assert.equal(R.interpretPdfResponse(pdfOk({ contentType: "application/pdf; charset=binary" })).ok, true);
+  assert.equal(R.interpretPdfResponse(pdfOk({ contentType: "application/octet-stream" })).ok, false);
+  assert.equal(R.interpretPdfResponse(pdfOk({ size: 0 })).kind, "invalid_response");
+  assert.equal(R.interpretPdfResponse(pdfOk({ head: "<html" })).kind, "invalid_response");
+  assert.equal(R.interpretPdfResponse(pdfOk({ status: 201 })).ok, false);
+  const html = R.interpretPdfResponse({ status: 502, contentType: "text/html", json: undefined });
+  assert.equal(html.kind, "not_json");
+  assert.ok(!html.message.includes("<"));
+  const htmlOk = R.interpretPdfResponse({ status: 200, contentType: "text/html", json: undefined });
+  assert.equal(htmlOk.kind, "invalid_response");
+  const codes = { BROCHURE_PDF_INVALID_INPUT: 400, BROCHURE_PDF_BUSY: 429, BROCHURE_PDF_LAYOUT_OVERFLOW: 422,
+    BROCHURE_PDF_GLYPH_MISSING: 422, BROCHURE_PDF_ASSET_UNAVAILABLE: 500, BROCHURE_PDF_RENDER_FAILED: 500,
+    BROCHURE_PDF_INVALID_JSON: 400 };
+  const messages = new Set();
+  for (const [code, status] of Object.entries(codes)) {
+    const out = R.interpretPdfResponse({ status: status, contentType: "application/json",
+      json: { ok: false, error: { code: code, message: "3쪽 " + XSS } } });
+    assert.equal(out.code, code);
+    assert.equal(out.message, R.PDF_ERROR_MESSAGES[code]);            // 서버 원문 미표시
+    assert.ok(!out.message.includes(XSS));
+    messages.add(out.message);
+  }
+  assert.equal(messages.size, Object.keys(codes).length);            // 오류마다 다른 안내
+  const big = R.interpretPdfResponse({ status: 413, contentType: "text/html" });
+  assert.equal(big.code, "BROCHURE_PDF_REQUEST_TOO_LARGE");
+  const unknown = R.interpretPdfResponse({ status: 500, contentType: "application/json", json: { ok: false, error: { code: "X", message: XSS } } });
+  assert.equal(unknown.code, null);
+  assert.ok(!unknown.message.includes(XSS));
+  assert.equal(R.interpretPdfResponse({ networkError: true, aborted: true }).kind, "timeout");
+  assert.ok(R.interpretPdfResponse({ networkError: true, aborted: true }).message.includes("멈췄다는 뜻은 아닙니다"));
+  assert.equal(R.interpretPdfResponse({ networkError: true }).kind, "network");
+});
+
+check("PDF 실행기: 이전 결과 확인 취소·진행 중·크기 초과면 요청 0회", async () => {
+  const current = editableBody();
+  const cancel = pdfHarness({ stale: true, confirm: false, send: () => Promise.resolve(pdfOk()) });
+  assert.equal(await cancel.d.run(pdfInput(current)), "cancelled");
+  assert.deepEqual(cancel.log.confirms, [R.PDF_STALE_MESSAGE]);
+  assert.equal(R.PDF_STALE_MESSAGE, "이 결과는 현재 입력과 다를 수 있습니다. 현재 미리보기 내용으로 PDF를 다운로드할까요?");
+  assert.equal(cancel.log.sends.length, 0);
+  const blocked = pdfHarness({ blocked: true, send: () => Promise.resolve(pdfOk()) });
+  assert.equal(await blocked.d.run(pdfInput(current)), "blocked");
+  assert.equal(blocked.log.sends.length, 0);
+  const big = pdfHarness({ send: () => Promise.resolve(pdfOk()) });
+  assert.equal(await big.d.run({ body: "x".repeat(32 * 1024 + 1), revision: 1 }), "invalid");
+  assert.equal(big.log.sends.length, 0);
+  const fresh = pdfHarness({ stale: false, send: () => Promise.resolve(pdfOk()) });
+  assert.equal(await fresh.d.run(pdfInput(current)), "success");
+  assert.equal(fresh.log.confirms.length, 0);                          // 이전 결과가 아니면 확인 없음
+});
+
+check("PDF 실행기: 정상 응답이면 성공 1회(blob·요청 당시 버전), 중복 클릭은 요청 1회", async () => {
+  const gate = deferred();
+  const h = pdfHarness({ send: (input) => gate.p.then(() => pdfOk({ revision: input.revision })) });
+  const first = h.d.run(pdfInput(editableBody(), 3));
+  assert.equal(await h.d.run(pdfInput(editableBody(), 3)), "busy");   // 중복 클릭
+  gate.resolve();
+  assert.equal(await first, "success");
+  assert.equal(h.log.sends.length, 1);
+  assert.equal(h.log.success.length, 1);
+  assert.deepEqual(h.log.success[0], { blob: { fake: true }, revision: 3 });
+  assert.deepEqual(h.log.busy, [true, false]);
+});
+
+check("PDF 실행기: 잘못된 응답·실패는 다운로드 없음, 실패 후 사용자가 다시 시도 가능(자동 재시도 없음)", async () => {
+  const bad = [pdfOk({ head: "PK\u0003\u0004" }), pdfOk({ size: 0 }), pdfOk({ contentType: "text/html", json: undefined }),
+    { status: 422, contentType: "application/json", json: { ok: false, error: { code: "BROCHURE_PDF_LAYOUT_OVERFLOW", message: "x" } } }];
+  let n = 0;
+  const h = pdfHarness({ send: () => Promise.resolve(bad[n++] || pdfOk()) });
+  for (let i = 0; i < bad.length; i++) assert.equal(await h.d.run(pdfInput(editableBody())), "failure");
+  assert.equal(h.log.success.length, 0);
+  assert.equal(h.log.failure.length, bad.length);
+  assert.equal(h.log.sends.length, bad.length);                        // 실패마다 요청 1회(재시도 없음)
+  assert.equal(await h.d.run(pdfInput(editableBody())), "success");   // 사용자가 다시 누르면 요청
+  const thrown = pdfHarness({ send: () => Promise.reject(new Error("net")) });
+  assert.equal(await thrown.d.run(pdfInput(editableBody())), "failure");
+  assert.equal(thrown.log.failure[0].kind, "network");
+  const timeout = pdfHarness({ send: () => Promise.resolve({ networkError: true, aborted: true }) });
+  assert.equal(await timeout.d.run(pdfInput(editableBody())), "failure");
+  assert.equal(timeout.log.failure[0].kind, "timeout");
+  assert.deepEqual(timeout.log.busy, [true, false]);                   // 잠금 해제
+});
+
+check("PDF 실행기: 무효화 뒤 도착한 오래된 응답은 무시", async () => {
+  const gate = deferred();
+  const h = pdfHarness({ send: () => gate.p.then(() => pdfOk()) });
+  const pending = h.d.run(pdfInput(editableBody()));
+  h.d.invalidate();
+  gate.resolve();
+  assert.equal(await pending, "stale");
+  assert.equal(h.log.success.length + h.log.failure.length, 0);
+});
+
+check("화면 항목명: 3·4쪽 고정 pt-BR 표시명(AI 라벨 대신, PDF와 같은 값)", () => {
+  assert.deepEqual(Object.keys(R.CATALOG_ITEM_LABELS).sort(),
+    ["carbon_reduction", "certification", "lead_time", "moq", "sample", "yarn_spec"]);
+  assert.equal(R.CATALOG_ITEM_LABELS.moq, "Pedido mínimo (MOQ)");
+  assert.equal(R.PDF_FILENAME, "fionex_catalog_pt-BR.pdf");
+});
+
 (async () => {
   let failed = 0;
   for (const [name, fn] of checks) {

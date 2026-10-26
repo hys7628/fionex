@@ -125,9 +125,9 @@ class PanelRenderTests(RenderedPanel):
         for label in ("카탈로그 생성", "PDF 다운로드"):
             self.assertIn(label, self.text)
         disabled = [a for t, a in self.parser.elements if t == "button" and "disabled" in a]
-        # 처음 화면: PDF 분석·카탈로그 생성(조건 충족 전)·PDF 다운로드(미구현)·생성 결과 보기(결과 없음)·AI 원문 되돌리기(수정 없음)
+        # 처음 화면: PDF 분석·카탈로그 생성(조건 충족 전)·PDF 다운로드(생성 결과 없음)·생성 결과 보기(결과 없음)·AI 원문 되돌리기(수정 없음)
         self.assertEqual(len(disabled), 5)
-        for marker in ("data-analyze", "data-generate", "data-result-open", "data-result-edit-restore"):
+        for marker in ("data-analyze", "data-generate", "data-pdf-download", "data-result-open", "data-result-edit-restore"):
             self.assertTrue(any(marker in a for a in disabled), marker)
         generate = [a for t, a in self.parser.elements if t == "button" and "data-generate" in a]
         self.assertEqual(len(generate), 1)
@@ -248,6 +248,48 @@ class CatalogPreviewTests(RenderedPanel):
                           "setResult", "Storage", "innerHTML"):
             self.assertNotIn(forbidden, block)
 
+    def test_pdf_download_wiring(self):
+        start = JS.index("/* ---------- 카탈로그 PDF 다운로드 ----------")
+        block = JS[start:]
+        self.assertEqual(JS.count("downloadBlob("), 1)                 # 다운로드 호출은 성공 경로 한 곳
+        self.assertEqual(JS.count("fetch("), 2)                        # 기존 postRequest + PDF 전용 sendPdf
+        self.assertIn("Review.PDF_URL", block)
+        self.assertIn("const PDF_TIMEOUT_MS = 30000;", JS)
+        self.assertIn("buildPdfPayload(Review.cloneData(generation.current))", block)  # 클릭 시점 적용본 스냅샷
+        # downloadBlob(→markDownloadRequested) 뒤 이 탭의 보호 대상을 다시 반영
+        after = block[block.index("downloadBlob("):]
+        self.assertLess(after.index("recheckInputs(FEATURE_ID)"), after.index("onFailure"))
+        self.assertLess(after.index("syncWork()"), after.index("onFailure"))
+        for forbidden in ("setResult(", "innerHTML", "Storage", "generator.run", "analyzer.run", "generation.original",
+                          "editing.values", "setInterval"):
+            self.assertNotIn(forbidden, block)
+        self.assertNotIn("setResult(", JS)
+
+    def test_result_revision_invalidates_download_mark(self):
+        # 생성 성공·편집 적용·원문 복원마다 결과 버전 증가 → 이전 다운로드 요청 표시를 새 내용에 쓰지 않음
+        self.assertEqual(JS.count("resultRevision++"), 3)
+        self.assertIn("downloadedRevision === resultRevision", JS)
+        self.assertIn("data.revision !== resultRevision", JS)
+        for handler in ("editApplyBtn.addEventListener", "editRestoreBtn.addEventListener"):
+            seg = JS[JS.index(handler):JS.index("});", JS.index(handler))]
+            self.assertIn("working()", seg)                            # PDF 요청 중 잠금
+            self.assertIn("resultRevision++", seg)
+
+    def test_pdf_controls_markup(self):
+        html = create_app().test_client().get("/").get_data(as_text=True)
+        start = html.index('data-pdf-download')
+        button = html[html.rindex("<button", 0, start):html.index("</button>", start)]
+        self.assertIn("disabled", button)
+        self.assertIn('aria-describedby="product_brochure-pdf-status"', button)
+        self.assertIn('data-pdf-status role="status"', html)
+        self.assertIn('data-pdf-error role="alert" hidden', html)
+        self.assertNotIn("product_brochure-next-pending", html)       # "준비 중" 안내 제거
+        # 생성 결과의 3·4쪽 항목명은 템플릿이 아닌 JS 고정값(CATALOG_ITEM_LABELS)으로 채움. 시안의 4쪽 항목명은 그대로
+        self.assertIn("Pedido mínimo (MOQ)", html[:html.index("data-result-dialog")])
+        self.assertIn('data-slot="supply"', html[html.index("data-result-dialog"):])
+        self.assertEqual(JS.count("Review.CATALOG_ITEM_LABELS[item.key]"), 2)  # 3쪽 dt·4쪽 항목명
+        self.assertNotIn("item.label", JS[JS.index("function infoItem"):JS.index("function renderInfoPage")])
+
     def test_preview_code_does_not_touch_review_state(self):
         # 미리보기 공통 블록과 디자인 시안 블록(생성 결과 블록 전까지)
         start = JS.index("/* ---------- 카탈로그 미리보기 공통")
@@ -260,9 +302,15 @@ class CatalogPreviewTests(RenderedPanel):
 
 class StaticRuleTests(unittest.TestCase):
     def test_only_known_requests_and_no_browser_storage(self):
-        # 이전: "분석 API 1곳만". 현재: 공통 요청 함수 1곳(fetch)으로 분석·생성 API만 요청, 파일 내용을 브라우저에서 읽거나 저장하지 않음
-        self.assertEqual(len(re.findall(r"\bfetch\s*\(", JS)), 1)
+        # 이전: "분석 API 1곳만" → "공통 요청 함수 1곳". 현재(PDF 다운로드 연결 후): 분석·생성은 공통 postRequest,
+        # PDF는 응답을 Blob으로 받는 sendPdf 한 곳. 사용자 파일 내용을 브라우저에서 읽거나 저장하지 않음
+        self.assertEqual(len(re.findall(r"\bfetch\s*\(", JS)), 2)
         self.assertIn("fetch(url, {", JS)
+        self.assertIn("fetch(Review.PDF_URL, {", JS)
+        self.assertEqual(len(re.findall(r"pdfDownloader\.run\(", JS)), 1)   # 버튼 클릭 한 곳(자동 요청·재시도 없음)
+        # 응답 PDF 서명 확인(앞 5바이트)만 arrayBuffer 허용. 다른 곳(업로드 파일)에서는 읽지 않음
+        self.assertEqual(len(re.findall(r"\.arrayBuffer\s*\(", JS)), 1)
+        self.assertIn("await blob.slice(0, 5).arrayBuffer()", JS[JS.index("async function sendPdf"):])
         self.assertIn('ANALYZE_URL = "/api/product-brochure/analyze"', JS)
         self.assertIn('GENERATE_URL = "/api/product-brochure/generate"', JS)
         self.assertEqual(len(re.findall(r"postRequest\(Review\.(ANALYZE|GENERATE)_URL", JS)), 2)
@@ -273,7 +321,7 @@ class StaticRuleTests(unittest.TestCase):
         # Content-Type 헤더를 직접 지정하지 않음(multipart 경계·JSON 타입은 본문에 맞춰 브라우저가 설정)
         self.assertIsNone(re.search(r"""["']?Content-Type["']?\s*:""", JS, re.I))
         for pattern in (r"XMLHttpRequest", r"sendBeacon", r"localStorage", r"sessionStorage", r"indexedDB",
-                        r"FileReader", r"\.arrayBuffer\s*\(", r"\.text\s*\(", r"setInterval"):
+                        r"FileReader", r"\.text\s*\(", r"setInterval"):
             self.assertIsNone(re.search(pattern, JS), pattern)
         # 분석·생성 요청은 각각 사용자 조작(submit·버튼 클릭) 한 곳에서만 시작(자동 실행·자동 재시도 없음)
         self.assertEqual(len(re.findall(r"analyzer\.run\(", JS)), 1)
@@ -286,9 +334,10 @@ class StaticRuleTests(unittest.TestCase):
             self.assertIsNone(re.search(pattern, JS), pattern)
 
     def test_example_not_marked_as_result(self):
-        # 다운로드 기능이 없으므로 결과 상태(setResult)를 만들지 않고 draft로만 보호
+        # 결과 상태(setResult)를 만들지 않고 draft로만 보호(PDF 다운로드 연결 후에도 유지, 명세 §27).
+        # downloadBlob은 PDF 다운로드 성공 경로에서만 사용(test_pdf_download_wiring)
         self.assertIsNone(re.search(r"setResult\s*\(", JS))
-        self.assertNotIn("downloadBlob", JS)
+        self.assertEqual(JS.count("downloadBlob("), 1)
         self.assertIn("AppShell.work.setDraft(FEATURE_ID, protect)", JS)
 
     def test_example_values_and_virtual_flags(self):

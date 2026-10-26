@@ -110,6 +110,11 @@
   margin-top: var(--space-6);
 }
 
+/* PDF 다운로드 실패 안내(미리보기 카드 아래) */
+.feature-product_brochure .product_brochure-pdf-error {
+  margin-top: var(--space-4);
+}
+
 .feature-product_brochure .catalog-dialog {
   --catalog-paper: #f7f5ef;
   --catalog-paper-deep: #efebe2;

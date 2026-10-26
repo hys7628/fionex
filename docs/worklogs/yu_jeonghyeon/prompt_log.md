@@ -427,3 +427,22 @@
   - 라우트 소스 검사 금지어 "exc)"가 type(exc).__name__에 걸림 → 예외 원문 노출 패턴(str(exc·repr(exc·exc_info 등)으로 수정
 - 변경: features/product_brochure/routes.py, pdf_download.py(신규), feature_spec.md §26, tests/test_product_brochure/test_pdf_download_api.py(신규)·test_pdf_catalog.py(라우트 미연결 단언 제거, 소스 검사 대상에 pdf_download 추가)
 - 남은 한계: 화면 다운로드 미구현, 여러 워커 전역 동시 제한 없음, 렌더링 강제 시간 제한 없음
+
+## DI-2026_10_26-06 화면 "PDF 다운로드" 버튼 연결
+- 유형: development_instruction / **서비스 프롬프트 변경·실험 없음, OpenAI 호출 없음**
+- 날짜/시간: 2026-10-26 02:17 (Asia/Seoul, 기록 시각) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure
+- 도구·모델: Claude Code (Opus 5.5)
+- 사전 확인: HEAD b63ae74, 작업 트리 깨끗, 병합 중 아님, stash@{0} 미조작. app_shell.js의 work API(downloadBlob → markDownloadRequested가 inputs·draft·result 모두 해제, setDraft는 downloadRequested 해제), product_brochure.js의 generation·editing·syncWork·createRunner, pdf_download.py·parse_catalog 계약을 실제 코드로 확인
+- 지시 요약: 적용된 최신 편집본으로 PDF 다운로드, 가능 조건(결과·미적용 편집·진행 중), 이전 결과 확인창, 허용 필드만 요청, 32 KiB 사전 검사, 30초 대기, MIME·서명 확인, 고정 파일명, 오류 매핑, 결과 버전별 다운로드 표시, 이탈 보호 재반영, 화면 항목명을 PDF 상수로 정렬, ResourceWarning 보고 표현 확인
+- 설계 이유
+  - 기존 공통 실행기(createRunner)를 재사용해 중복 방지·오래된 응답 무시·재시도 없음 규칙을 분석·생성과 같게 유지
+  - 결과 버전(resultRevision)을 생성·편집 적용·원문 복원마다 올려 다운로드 표시가 이후 내용에 붙지 않게 함
+  - downloadBlob이 탭 보호를 모두 해제하는 공통 계약이라, 공통 파일을 바꾸지 않고 직후 recheckInputs·syncWork로 재반영
+  - 버튼을 미리보기 카드로 옮겨 결과 보기와 같은 위치에서 대상(생성 결과)을 분명히 함
+- 실제 실패와 수정
+  - Python heredoc 일괄 수정 명령이 셸 따옴표 오류로 실행되지 않음(변경 0 확인) → Edit 도구로 개별 수정
+  - test_panel 3건 실패: 새 테스트가 시안에 없는 항목명을 기대(시안은 4쪽 항목명만 있음) → 기대값 수정. 이전 단계 규칙("downloadBlob 없음", "fetch 1곳", "arrayBuffer 금지")이 남아 실패 → 현재 규칙(성공 경로 downloadBlob 1회, fetch 2곳, 응답 서명 확인용 arrayBuffer 1곳만)으로 갱신
+  - downloadBlob 개수 검사가 주석의 단어까지 셈 → 호출 형태 "downloadBlob("로 수정
+- ResourceWarning 보고 정정(DI-2026_10_26-05·validation 해당 항목): "-W error::ResourceWarning 전체 실행 통과"는 GC 정리 중 발생한 ResourceWarning이 "Exception ignored"로 출력될 뿐 테스트를 실패시키지 않는 상태였음(경고 0건이라는 뜻 아님). "기존 경고 10건"은 경고 줄+"Enable tracemalloc" 줄을 함께 센 줄 수였고 실제 경고는 5건. 파일별 -W always 측정에서 5건 모두 test_analyze_api.py, PDF 테스트 파일은 0건
+- 변경: static/product_brochure.js, static/product_brochure.css, templates/product_brochure/panel.html, feature_spec.md §27, tests/test_product_brochure/review_logic_check.js·test_panel.py·test_review_logic.py
+- 남은 한계: 브라우저 DOM·실제 저장 미확인, 공통 탭 상태 표시가 "다운로드 요청됨" 대신 보호 상태로 보일 수 있음(공통 계약 그대로)

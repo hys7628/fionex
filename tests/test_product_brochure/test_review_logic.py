@@ -42,6 +42,80 @@ process.stdout.write(JSON.stringify(R.buildGeneratePayload(R.createSnapshot(fs, 
 """
 
 
+# 생성 응답 형태의 가상 데이터를 화면 로직으로 편집·적용한 뒤 PDF 요청 본문과 화면 고정값을 출력
+PDF_PAYLOAD_SCRIPT = r"""
+const R = require(process.argv[1]);
+const copy = (text, keys, virtual) => ({ text, source_keys: keys, virtual, origins: {}, review_flags: ["claim_term"] });
+const info = (key, value, virtual) => ({ key, label: "AI rótulo " + key, value, source_keys: [key], virtual,
+  origin: "extracted", review_flags: [], fictitious_notice: virtual ? "Condições fictícias para demonstração." : undefined });
+const data = { status: "draft_needs_review", language: "pt-BR", prompt_version: "v", model: "m",
+  display_name: { value: "Fibra Exemplo D1", confirmed: true },
+  notices: { unofficial: "u", fictitious: "f" },
+  pages: {
+    cover: { page: 1, product_name: copy("Fibra Exemplo D1", ["product_name"], false), tagline: copy("Original.", ["description"], false) },
+    intro: { page: 2, paragraphs: [copy("Parágrafo original.", ["description"], true)] },
+    details: { page: 3, items: [info("yarn_spec", "75D/36F", false), info("carbon_reduction", "Dado fictício.", true)], empty: false, empty_message: null },
+    supply: { page: 4, items: [info("moq", "500 kg", true), info("lead_time", "30 dias", true)], empty: false, empty_message: null },
+  }, used_keys: [], excluded: [], input_meta: {} };
+const original = R.cloneData(data);
+const values = R.editValues(original);
+values.display_name = "Fio Ação & Têxtil";
+values.tagline = "Texto aplicado <editado> & ação.";
+values["supply:moq"] = "800 kg";
+const current = R.applyEdits(original, R.cloneData(original), values).data;
+process.stdout.write(JSON.stringify({ payload: R.buildPdfPayload(current), labels: R.CATALOG_ITEM_LABELS,
+  filename: R.PDF_FILENAME, maxBytes: R.MAX_PDF_REQUEST_BYTES }));
+"""
+
+
+class PdfCrossTests(unittest.TestCase):
+    """화면 JS가 만든 PDF 요청 본문을 실제 서버 계약(parse_catalog·라우트)으로 확인합니다(OpenAI 호출 없음)."""
+
+    @classmethod
+    def setUpClass(cls):
+        node = shutil.which("node")
+        if not node:
+            raise unittest.SkipTest("node 없음")
+        result = subprocess.run([node, "-e", PDF_PAYLOAD_SCRIPT, str(JS)], capture_output=True, text=True,
+                                encoding="utf-8", timeout=60)
+        if result.returncode != 0:
+            raise AssertionError(result.stderr)
+        cls.out = json.loads(result.stdout)
+
+    def test_payload_accepted_by_parse_catalog(self):
+        from features.product_brochure import pdf_catalog, pdf_download
+        catalog = pdf_download.parse_request(self.out["payload"])
+        parsed = pdf_catalog.parse_catalog(catalog)
+        self.assertEqual(parsed["product_name"], {"text": "Fio Ação & Têxtil", "virtual": False})
+        self.assertEqual(parsed["tagline"]["text"], "Texto aplicado <editado> & ação.")   # 적용본 사용
+        self.assertEqual(parsed["paragraphs"], [{"text": "Parágrafo original.", "virtual": True}])
+        self.assertEqual([(i["key"], i["value"], i["virtual"]) for i in parsed["supply"]],
+                         [("moq", "800 kg", True), ("lead_time", "30 dias", True)])
+        self.assertEqual([(i["key"], i["virtual"]) for i in parsed["details"]],
+                         [("yarn_spec", False), ("carbon_reduction", True)])
+        self.assertNotIn("AI rótulo", json.dumps(self.out["payload"], ensure_ascii=False))  # AI 라벨 미전송
+
+    def test_payload_downloads_through_route(self):
+        import io
+        from pypdf import PdfReader
+        from app import create_app
+        client = create_app().test_client()
+        res = client.post("/api/product-brochure/pdf", json=self.out["payload"])
+        self.addCleanup(res.close)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.mimetype, "application/pdf")
+        texts = " ".join(" ".join(p.extract_text().split()) for p in PdfReader(io.BytesIO(res.get_data())).pages)
+        self.assertIn("Fio Ação & Têxtil", texts)
+        self.assertIn("800 kg", texts)
+        self.assertIn("Condições fictícias para demonstração.", texts)
+
+    def test_screen_constants_match_server(self):
+        from features.product_brochure import pdf_catalog, pdf_download
+        self.assertEqual(self.out["labels"], pdf_catalog.ITEM_LABELS)          # 화면·PDF 항목명 일치
+        self.assertEqual(self.out["filename"], pdf_download.DOWNLOAD_NAME)
+        self.assertEqual(self.out["maxBytes"], pdf_download.MAX_REQUEST_BYTES)
+
+
 class ReviewLogicTests(unittest.TestCase):
     def node(self):
         node = shutil.which("node")

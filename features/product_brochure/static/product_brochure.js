@@ -666,7 +666,117 @@
       return out;
     }
 
+    /* ----- 카탈로그 PDF 다운로드(서버 계약: features/product_brochure/pdf_download.py·pdf_catalog.parse_catalog, 명세 §26·§27) ----- */
+    const PDF_URL = "/api/product-brochure/pdf";
+    const PDF_FILENAME = "fionex_catalog_pt-BR.pdf";    // 서버 pdf_download.DOWNLOAD_NAME과 같은 고정 이름
+    const MAX_PDF_REQUEST_BYTES = 32 * 1024;             // 서버 pdf_download.MAX_REQUEST_BYTES와 같은 값
+    // 3·4쪽 항목명: 서버 pdf_catalog.ITEM_LABELS와 같은 고정 pt-BR 표시명(화면·PDF 일치, AI 라벨 미사용)
+    const CATALOG_ITEM_LABELS = {
+      yarn_spec: "Especificação do fio",
+      certification: "Certificações",
+      carbon_reduction: "Redução de carbono",
+      moq: "Pedido mínimo (MOQ)",
+      sample: "Amostra",
+      lead_time: "Prazo de entrega",
+    };
+    const PDF_STALE_MESSAGE = "이 결과는 현재 입력과 다를 수 있습니다. 현재 미리보기 내용으로 PDF를 다운로드할까요?";
+    const PDF_EDIT_PENDING_MESSAGE = "문구를 적용하거나 편집을 취소한 뒤 다운로드하세요.";
+
+    // 적용된 편집본(generation.current)에서 parse_catalog가 받는 필드만 명시적으로 복사합니다.
+    // AI 원본·편집 중 임시 값·항목명·근거·검토 표시·출처 메타데이터는 넣지 않습니다. virtual은 불리언으로 보존.
+    function buildPdfPayload(current) {
+      const p = current.pages;
+      const text = function (c) { return { text: c.text, virtual: c.virtual === true }; };
+      const item = function (i) { return { key: i.key, value: i.value, virtual: i.virtual === true }; };
+      return {
+        catalog: {
+          language: "pt-BR",
+          cover: { product_name: text(p.cover.product_name), tagline: text(p.cover.tagline) },
+          intro: { paragraphs: p.intro.paragraphs.map(text) },
+          details: { items: p.details.items.map(item) },
+          supply: { items: p.supply.items.map(item) },
+        },
+      };
+    }
+
+    function utf8Bytes(str) {
+      return new TextEncoder().encode(str).length;
+    }
+
+    // 다운로드 가능 조건. ctx: { hasResult, editDirty, busy, bodyBytes }
+    function evaluatePdfDownload(ctx) {
+      if (!ctx.hasResult) return { ok: false, reason: "no_result", message: "카탈로그를 생성한 뒤 PDF를 다운로드할 수 있습니다(디자인 시안은 대상이 아님)." };
+      if (ctx.busy) return { ok: false, reason: "busy", message: "다른 요청이 진행 중입니다. 끝난 뒤 다운로드하세요." };
+      if (ctx.editDirty) return { ok: false, reason: "edit_pending", message: PDF_EDIT_PENDING_MESSAGE };
+      if (ctx.bodyBytes > MAX_PDF_REQUEST_BYTES) {
+        return { ok: false, reason: "too_large", message: "PDF 요청 크기가 허용 범위(32 KiB)를 넘습니다. 긴 문구를 줄여 적용한 뒤 다시 시도하세요." };
+      }
+      return { ok: true, reason: null, message: "" };
+    }
+
+    // 알려진 오류 코드 → 고정 한국어 안내(서버 메시지·HTML은 표시하지 않음).
+    // 넘침 오류 응답에는 구조화된 위치 정보가 없으므로(code·message만) 위치를 추측하지 않습니다.
+    const PDF_ERROR_MESSAGES = {
+      BROCHURE_PDF_INVALID_JSON: "PDF 요청 형식이 올바르지 않습니다. 다시 시도하세요.",
+      BROCHURE_PDF_INVALID_INPUT: "PDF로 만들 수 없는 문구가 있습니다(빈 값·길이·한글·쓸 수 없는 문자). 문구를 확인한 뒤 다시 시도하세요.",
+      BROCHURE_PDF_REQUEST_TOO_LARGE: "PDF 요청 크기가 허용 범위(32 KiB)를 넘습니다. 긴 문구를 줄여 적용한 뒤 다시 시도하세요.",
+      BROCHURE_PDF_BUSY: "PDF를 만드는 요청이 많습니다. 잠시 후 다시 시도하세요.",
+      BROCHURE_PDF_LAYOUT_OVERFLOW: "PDF 페이지의 정해진 영역에 들어가지 않는 문구가 있습니다. 긴 문구를 줄여 적용한 뒤 다시 시도하세요.",
+      BROCHURE_PDF_GLYPH_MISSING: "PDF 글꼴로 표시할 수 없는 문자(이모지 등)가 있습니다. 해당 문자를 지운 뒤 다시 시도하세요.",
+      BROCHURE_PDF_ASSET_UNAVAILABLE: "PDF에 필요한 이미지·글꼴을 불러오지 못했습니다. 관리자에게 문의하세요.",
+      BROCHURE_PDF_RENDER_FAILED: "카탈로그 PDF를 만들지 못했습니다. 잠시 후 다시 시도하세요.",
+    };
+
+    // res: { networkError, aborted } 또는 { status, contentType, json, size, head }(head: 본문 앞 5바이트 문자열)
+    function interpretPdfResponse(res) {
+      if (!res || res.networkError) {
+        return { ok: false, kind: res && res.aborted ? "timeout" : "network",
+          message: res && res.aborted
+            ? "PDF 응답이 30초 안에 오지 않아 화면에서 기다리기를 중단했습니다. 서버의 PDF 생성이 멈췄다는 뜻은 아닙니다. 잠시 후 다시 시도하세요."
+            : "서버에 연결하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도하세요." };
+      }
+      const type = (res.contentType || "").split(";")[0].trim().toLowerCase();
+      if (res.status === 200 && type === "application/pdf") {
+        if (!(res.size > 0) || res.head !== "%PDF-") {
+          return { ok: false, kind: "invalid_response", message: "받은 파일이 올바른 PDF가 아니어서 다운로드하지 않았습니다. 다시 시도하세요." };
+        }
+        return { ok: true, data: null };
+      }
+      if (res.status === 413) return { ok: false, kind: "server_error", code: "BROCHURE_PDF_REQUEST_TOO_LARGE",
+        message: PDF_ERROR_MESSAGES.BROCHURE_PDF_REQUEST_TOO_LARGE };
+      const body = res.json;
+      if (isObj(body) && body.ok === false) {
+        const code = isObj(body.error) && isStr(body.error.code) ? body.error.code : null;
+        const known = code && Object.prototype.hasOwnProperty.call(PDF_ERROR_MESSAGES, code);
+        return { ok: false, kind: "server_error", code: known ? code : null,
+          message: known ? PDF_ERROR_MESSAGES[code] : "PDF 요청을 처리하지 못했습니다(HTTP " + res.status + "). 다시 시도하세요." };
+      }
+      return { ok: false, kind: res.status === 200 ? "invalid_response" : "not_json",
+        message: res.status === 200
+          ? "받은 응답이 PDF가 아니어서 다운로드하지 않았습니다. 다시 시도하세요."
+          : "서버 응답을 해석하지 못했습니다(HTTP " + res.status + "). 잠시 후 다시 시도하세요." };
+    }
+
+    // input: { body: JSON 문자열, revision: 요청 당시 결과 버전 }. 공통 실행기(중복 방지·오래된 응답 무시·재시도 없음)
+    function createPdfDownloader(deps) {
+      return createRunner(deps, {
+        validate: function (input) {
+          return !!input && isStr(input.body) && utf8Bytes(input.body) <= MAX_PDF_REQUEST_BYTES;
+        },
+        interpret: function (res) {
+          const out = interpretPdfResponse(res);
+          if (out.ok) out.data = { blob: res.blob, revision: res.revision };
+          return out;
+        },
+        confirmMessage: PDF_STALE_MESSAGE,
+      });
+    }
+
     return {
+      PDF_URL: PDF_URL, PDF_FILENAME: PDF_FILENAME, MAX_PDF_REQUEST_BYTES: MAX_PDF_REQUEST_BYTES,
+      CATALOG_ITEM_LABELS: CATALOG_ITEM_LABELS, PDF_STALE_MESSAGE: PDF_STALE_MESSAGE, PDF_EDIT_PENDING_MESSAGE: PDF_EDIT_PENDING_MESSAGE,
+      PDF_ERROR_MESSAGES: PDF_ERROR_MESSAGES, buildPdfPayload: buildPdfPayload, utf8Bytes: utf8Bytes,
+      evaluatePdfDownload: evaluatePdfDownload, interpretPdfResponse: interpretPdfResponse, createPdfDownloader: createPdfDownloader,
       ANALYZE_URL: ANALYZE_URL, MAX_FILE_BYTES: MAX_FILE_BYTES, REPLACE_MESSAGE: REPLACE_MESSAGE,
       GROUPS: GROUPS, EXAMPLE_FIELDS: EXAMPLE_FIELDS, FIELD_KEYS: FIELD_KEYS,
       createFields: createFields, createFieldsFromAnalysis: createFieldsFromAnalysis, validateAnalysis: validateAnalysis,
@@ -698,6 +808,8 @@
   // 중단해도 서버 처리·과금이 취소된다는 보장은 없습니다.
   const REQUEST_TIMEOUT_MS = 180000;
   const GENERATE_TIMEOUT_MS = 120000;
+  // PDF 응답 대기 상한. 화면에서 기다리기를 멈출 뿐 서버의 렌더링 종료를 보장하지 않습니다.
+  const PDF_TIMEOUT_MS = 30000;
   const panel = document.querySelector('[data-feature-panel="' + FEATURE_ID + '"]');
   if (!panel) return;
 
@@ -726,6 +838,9 @@
   const generateError = panel.querySelector("[data-generate-error]");
   const resultOpenBtn = panel.querySelector("[data-result-open]");
   const resultStatus = panel.querySelector("[data-result-status]");
+  const pdfBtn = panel.querySelector("[data-pdf-download]");
+  const pdfStatus = panel.querySelector("[data-pdf-status]");
+  const pdfError = panel.querySelector("[data-pdf-error]");
   const displayNameBox = panel.querySelector("[data-display-name]");
   const displayNameInput = panel.querySelector("#product_brochure-display-name");
   const displayNameConfirm = panel.querySelector("#product_brochure-display-name-confirm");
@@ -743,6 +858,11 @@
   let lastFile = null;        // 파일 교체 취소 시 되돌릴 이전 선택
   let busy = false;           // PDF 분석 중
   let generating = false;     // 카탈로그 생성 중
+  let pdfBusy = false;        // 카탈로그 PDF 요청 중
+  // 미리보기 적용본(generation.current)이 바뀔 때마다 증가: 생성 성공·편집 적용·원문 복원.
+  // 다운로드 요청 표시는 요청 당시 버전에만 연결합니다(이후 수정본에 그대로 적용하지 않음).
+  let resultRevision = 0;
+  let downloadedRevision = null;
   // 카탈로그 표시명(원본 제품명과 별도). edited: 사용자가 직접 고쳤으면 제품명 수정 시 제안값으로 덮지 않음
   let displayName = { value: "", confirmed: false, edited: false, suggestion: null };
 
@@ -751,7 +871,7 @@
   }
 
   function working() {
-    return busy || generating;
+    return busy || generating || pdfBusy;
   }
 
   function el(tag, className, text) {
@@ -762,7 +882,8 @@
   }
 
   /* 작업 상태: 진행 중 요청·분석 결과·생성 초안(재요청 비용)은 보호, 예시는 수정했을 때만 보호.
-     다운로드 기능이 없으므로 setResult는 쓰지 않습니다. 조건을 OR로 묶어 한 상태 변화로 보호가 꺼지지 않게 합니다. */
+     setResult는 쓰지 않습니다(PDF 다운로드 뒤에도 생성 결과·편집본이 남으므로 setDraft 보호를 유지).
+     조건을 OR로 묶어 한 상태 변화로 보호가 꺼지지 않게 합니다. */
   function syncWork() {
     const protect = working() || !!generation || !!editing ||
       (!!fields && (fieldsSource === "analysis" || Review.isDirty(fields)));
@@ -829,6 +950,8 @@
       analyzeStatus.append(el("span", "spinner"), document.createTextNode(" PDF를 분석하고 있습니다. 최대 몇 분 걸릴 수 있습니다."));
     } else if (generating) {
       analyzeStatus.textContent = "카탈로그 문구를 생성하는 중에는 파일을 바꾸거나 분석할 수 없습니다.";
+    } else if (pdfBusy) {
+      analyzeStatus.textContent = "PDF를 만드는 중에는 파일을 바꾸거나 분석할 수 없습니다.";
     } else {
       analyzeStatus.textContent = valid
         ? "분석을 요청하면 PDF가 서버로 전송되어 OpenAI API로 분석됩니다."
@@ -863,7 +986,8 @@
   }
 
   function syncResultStatus() {
-    resultOpenBtn.disabled = !generation || generating;
+    resultOpenBtn.disabled = !generation || working(); // PDF 요청 중에는 편집·원문 복원을 열지 않음
+    syncPdf();
     resultStatus.replaceChildren();
     if (!generation) {
       resultStatus.textContent = "아직 생성 결과가 없습니다.";
@@ -891,6 +1015,44 @@
   function hideGenerateError() {
     generateError.hidden = true;
     generateError.replaceChildren();
+  }
+
+  /* PDF 다운로드 버튼·안내 */
+  function pdfEvaluation() {
+    const body = generation ? JSON.stringify(Review.buildPdfPayload(generation.current)) : "";
+    return Review.evaluatePdfDownload({
+      hasResult: !!generation, editDirty: editDirty(), busy: working(), bodyBytes: Review.utf8Bytes(body),
+    });
+  }
+
+  function syncPdf() {
+    const ev = pdfEvaluation();
+    pdfBtn.disabled = !ev.ok;
+    pdfBtn.setAttribute("aria-busy", pdfBusy ? "true" : "false");
+    pdfStatus.replaceChildren();
+    if (pdfBusy) {
+      pdfStatus.append(el("span", "spinner"), document.createTextNode(" PDF 만드는 중…"));
+    } else if (!ev.ok) {
+      pdfStatus.textContent = ev.message;
+    } else if (downloadedRevision === resultRevision) {
+      pdfStatus.textContent = "다운로드 요청됨 · 저장 여부는 브라우저에서 확인하세요. 문구를 수정·복원하거나 다시 생성하면 새로 다운로드해야 합니다.";
+    } else {
+      pdfStatus.textContent = "현재 미리보기에 적용된 문구로 A4 4쪽 PDF를 만듭니다. AI 검토 표시·사용자 수정 문구가 검토 완료되었다는 뜻은 아닙니다." +
+        (Review.isResultStale(generation, generationContext()) ? " 이 결과는 현재 입력과 다를 수 있습니다(다운로드 전에 확인)." : "");
+    }
+  }
+
+  function showPdfError(out) {
+    pdfError.replaceChildren(
+      el("p", "notice-title", "PDF를 다운로드하지 못했습니다"),
+      el("p", "", out.message),
+      el("p", "", "입력·생성 결과·적용된 문구는 그대로 남아 있습니다. 다시 시도할 수 있습니다."));
+    pdfError.hidden = false;
+  }
+
+  function hidePdfError() {
+    pdfError.hidden = true;
+    pdfError.replaceChildren();
   }
 
   function showError(out) {
@@ -1206,7 +1368,7 @@
 
   const analyzer = Review.createAnalyzer({
     send: sendAnalysis,
-    blocked: function () { return generating; },
+    blocked: function () { return generating || pdfBusy; },
     needsConfirm: function () { return !!fields && Review.isDirty(fields); },
     confirm: function (msg) { return window.confirm(msg); },
     onBusy: function (value) {
@@ -1238,7 +1400,7 @@
 
   const generator = Review.createGenerator({
     send: sendGeneration,
-    blocked: function () { return busy; },
+    blocked: function () { return busy || pdfBusy; },
     canGenerate: function () { return Review.evaluateGeneration(generationContext()).ok; },
     needsConfirm: function () { return !!generation; },
     // 직접 수정한 문구나 편집 중 내용이 있으면 대체된다는 점을 따로 알립니다.
@@ -1261,6 +1423,7 @@
         signature: snapshot.signature, version: snapshot.version,
       };
       editing = null;
+      resultRevision++;
       renderResult();
       hideGenerateError();
       syncResultStatus();
@@ -1444,11 +1607,11 @@
     node.dataset.key = item.key;
     if (isSupply) {
       node.append(
-        el("p", "catalog-term-label", item.label),
+        el("p", "catalog-term-label", Review.CATALOG_ITEM_LABELS[item.key]), // PDF와 같은 고정 항목명(AI 라벨 미사용)
         // 짧은 값(수량·기간)은 큰 숫자 위계, 긴 조건 문장은 본문 크기로(넘침 방지, 글자를 과도하게 줄이지 않음)
         el("p", item.value.length <= 24 ? "catalog-term-value" : "catalog-term-value catalog-term-value-long", item.value));
     } else {
-      node.append(el("dt", "", item.label), el("dd", "", item.value));
+      node.append(el("dt", "", Review.CATALOG_ITEM_LABELS[item.key]), el("dd", "", item.value));
     }
     if (item.fictitious_notice) node.append(el(isSupply ? "p" : "dd", "catalog-fictitious", item.fictitious_notice));
     return node;
@@ -1547,6 +1710,7 @@
       input.addEventListener("input", function () {
         editing.values[entry.id] = input.value;
         syncWork();
+        syncPdf(); // 미적용 편집이 있으면 다운로드 불가
       });
       editFields.append(wrap);
     });
@@ -1576,6 +1740,7 @@
     editFields.replaceChildren();
     editErrors.hidden = true;
     syncWork();
+    syncPdf();
   }
 
   function editDirty() {
@@ -1595,6 +1760,7 @@
     if (!editing) editing = { values: Review.editValues(generation.current) };
     showEditSection(true);
     syncWork();
+    syncPdf();
   });
 
   editCancelBtn.addEventListener("click", function () {
@@ -1602,6 +1768,7 @@
   });
 
   editApplyBtn.addEventListener("click", function () {
+    if (!generation || !editing || working()) return;
     const r = Review.applyEdits(generation.original, generation.current, editing.values);
     if (!r.ok) {
       renderEditForm(r.errors); // 하나라도 틀리면 아무것도 반영하지 않음
@@ -1612,6 +1779,7 @@
     // 검증을 통과하면 한 번에 반영. 입력 스냅샷·표시명 상태·메타데이터는 바꾸지 않음
     generation.current = r.data;
     generation.editedIds = r.editedIds;
+    resultRevision++; // 이전 다운로드 요청 표시를 수정본에 적용하지 않음
     endEdit();
     renderResult();
     resultPreview.checkOverflow();
@@ -1620,9 +1788,11 @@
   });
 
   editRestoreBtn.addEventListener("click", function () {
+    if (!generation || working()) return;
     if (!window.confirm("마지막으로 생성된 AI 원문으로 되돌릴까요? 직접 수정한 문구가 모두 사라집니다.")) return;
     generation.current = Review.cloneData(generation.original);
     generation.editedIds = [];
+    resultRevision++;
     if (editing) {
       editing.values = Review.editValues(generation.current);
       renderEditForm();
@@ -1640,5 +1810,75 @@
     if (editing) showEditSection(false); // 탭 이동 등으로 닫혔던 편집 임시 값 복원
     else { editSection.hidden = true; editOpenBtn.hidden = false; }
     resultPreview.open();
+  });
+
+  /* ---------- 카탈로그 PDF 다운로드 ----------
+     클릭 시점의 적용본에서 허용 필드만 뽑아 JSON으로 보냅니다(AI 원본·편집 중 값·항목명·근거 미포함, OpenAI 호출 없음).
+     자동 요청·자동 재시도 없음. 실패·취소·시간 초과 시 입력·생성 원본·적용본·편집 상태를 바꾸지 않습니다. */
+  async function sendPdf(input) {
+    const controller = new AbortController();
+    const timer = setTimeout(function () { controller.abort(); }, PDF_TIMEOUT_MS);
+    try {
+      const res = await fetch(Review.PDF_URL, {
+        method: "POST", body: new Blob([input.body], { type: "application/json" }), signal: controller.signal,
+        headers: { Accept: "application/pdf, application/json" },
+      });
+      const contentType = res.headers.get("content-type") || "";
+      const out = { status: res.status, contentType: contentType, revision: input.revision };
+      if (contentType.toLowerCase().indexOf("application/pdf") === 0) {
+        const blob = await res.blob(); // 본문 수신까지 같은 시간 상한 안에서 기다림
+        out.blob = blob;
+        out.size = blob.size;
+        out.head = String.fromCharCode.apply(null, new Uint8Array(await blob.slice(0, 5).arrayBuffer()));
+      } else if (contentType.indexOf("application/json") >= 0) {
+        try { out.json = await res.json(); } catch (e) { out.json = undefined; }
+      } // 그 밖의 본문(HTML 등)은 읽거나 표시하지 않음
+      return out;
+    } catch (e) {
+      return { networkError: true, aborted: !!e && e.name === "AbortError" };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  const pdfDownloader = Review.createPdfDownloader({
+    send: sendPdf,
+    blocked: function () { return busy || generating; },
+    needsConfirm: function () { return !!generation && Review.isResultStale(generation, generationContext()); },
+    confirm: function (msg) { return window.confirm(msg); },
+    onBusy: function (value) {
+      pdfBusy = value;
+      if (value) hidePdfError();
+      syncControls();
+      if (!value) AppShell.work.recheckInputs(FEATURE_ID);
+      syncWork();
+    },
+    onSuccess: function (data) {
+      // 요청 뒤 미리보기 내용이 바뀌었다면(방어 경로) 이전 PDF를 내려받거나 다운로드 표시를 갱신하지 않습니다.
+      if (!generation || data.revision !== resultRevision) {
+        showPdfError({ message: "요청한 뒤 미리보기 내용이 바뀌어 이전 PDF를 다운로드하지 않았습니다. 다시 다운로드하세요." });
+        return;
+      }
+      hidePdfError();
+      AppShell.work.downloadBlob(FEATURE_ID, data.blob, Review.PDF_FILENAME);
+      downloadedRevision = data.revision;
+      // downloadBlob → markDownloadRequested가 이 탭의 inputs·draft·result를 모두 해제하므로,
+      // 남아 있는 생성 결과·편집본·분석 결과·파일 선택 보호를 다시 반영합니다(다른 탭 상태는 건드리지 않음).
+      AppShell.work.recheckInputs(FEATURE_ID);
+      syncWork();
+      syncPdf();
+    },
+    onFailure: function (out) {
+      showPdfError(out);
+    },
+  });
+
+  pdfBtn.addEventListener("click", function () {
+    const ev = pdfEvaluation();
+    if (!ev.ok) { syncPdf(); return; } // 미생성·미적용 편집·진행 중·크기 초과: 요청하지 않음
+    pdfDownloader.run({
+      body: JSON.stringify(Review.buildPdfPayload(Review.cloneData(generation.current))), // 클릭 시점 독립 스냅샷
+      revision: resultRevision,
+    });
   });
 })();

@@ -608,3 +608,20 @@ PDF 선택
 - 동시 실행: 기능 전용 `threading.BoundedSemaphore(2)`, 대기열 없이 즉시 429. 형식 검사를 먼저 해 잘못된 요청은 슬롯·렌더러를 쓰지 않음. 성공·실패 모두 finally로 반환. **프로세스(워커)당 제한이며 여러 워커·서버 전체의 전역 제한이 아님.**
 - OpenAI 재호출·업로드 원본 재분석·디스크 저장·이력 저장·입력/PDF 로그 없음. OpenAI 키 없이 동작.
 - 화면 연결 시 미정 정책(§25 이전 점검 제안): 적용하지 않은 편집이 있을 때·"현재 입력과 다를 수 있음" 상태에서의 다운로드 처리, setDraft/setResult 연동, 화면 미리보기 항목명(AI 라벨)과 PDF 상수 라벨 정렬.
+
+## 27. 화면 "PDF 다운로드" 연결 (2026-10-26, 브라우저 미확인)
+범위 [확정, 담당자 지시]: 버튼·요청·응답 처리·작업 상태·화면 항목명 정렬. 서버 API·생성 API·서비스 프롬프트 변경 없음.
+
+- 위치: "카탈로그 미리보기" 카드의 "PDF 다운로드"(이전 검토 카드의 비활성 자리 표시와 "준비 중" 안내는 제거). 상태 안내 `data-pdf-status`(role=status), 실패 안내 `data-pdf-error`(role=alert), 모두 textContent.
+- 가능 조건(`Review.evaluatePdfDownload`): 마지막 성공한 생성 결과 있음(디자인 시안 제외) · 분석/생성/PDF 요청 중 아님 · 적용하지 않은 편집 변경 없음("문구를 적용하거나 편집을 취소한 뒤 다운로드하세요.") · 요청 본문 UTF-8 32 KiB 이하. 하나라도 아니면 버튼 비활성 + 이유 안내, 요청 0회.
+- "현재 입력과 다를 수 있음"(isResultStale)이면 요청 전 확인: "이 결과는 현재 입력과 다를 수 있습니다. 현재 미리보기 내용으로 PDF를 다운로드할까요?" 취소 시 요청 없음.
+- 요청 본문(`Review.buildPdfPayload`): 클릭 시점 generation.current에서 §25 parse_catalog 필드만 명시 복사(language·cover.product_name/tagline·intro.paragraphs·details/supply items의 key·value·virtual). virtual은 `=== true`만 true. AI 원본·편집 중 값·항목명·근거·검토 표시·출처 메타데이터·HTML·URL·경로 미포함.
+- 요청: 공통 실행기(중복 클릭 무시·요청 번호로 오래된 응답 무시·자동 재시도 없음). 대기 상한 30초(AbortController). **화면에서 기다리기를 멈출 뿐 서버의 렌더링 종료를 보장하지 않음.** 탭 이동으로 재요청·결과 삭제 없음.
+- 응답: 200 + `application/pdf` + 비어 있지 않음 + 앞 5바이트 `%PDF-`일 때만 `AppShell.work.downloadBlob(id, blob, "fionex_catalog_pt-BR.pdf")` 1회. 그 밖(JSON 오류·HTML·다른 MIME·빈 파일·잘못된 서명·네트워크·시간 초과)은 다운로드하지 않고 고정 한국어 안내(BROCHURE_PDF_* 코드별, 넘침 오류는 구조화된 위치 정보가 없어 위치를 추측하지 않음). 실패해도 입력·생성 원본·적용본·편집 상태 유지.
+- 진행 중: "PDF 만드는 중…", 분석·생성·확인 적용·파일 선택·생성 결과 보기(편집·원문 복원) 잠금, finally에서 해제.
+- 결과 버전(resultRevision): 생성 성공·편집 적용·원문 복원마다 증가. 다운로드 요청 표시는 요청 당시 버전에만 연결("다운로드 요청됨 · 저장 여부는 브라우저에서 확인"). 응답 시점에 버전이 다르면 내려받지 않음(방어 경로). 실제 저장 완료로 표시하지 않음.
+- 작업 상태: `downloadBlob`이 내부에서 `markDownloadRequested`(이 탭의 inputs·draft·result 해제)를 호출하므로, 직후 `recheckInputs`와 `syncWork()`로 남은 보호(생성 결과·편집본·분석 결과·파일 선택)를 다시 반영. setResult는 쓰지 않고 setDraft 보호 유지. 그 결과 공통 탭 상태 표시는 "다운로드 요청됨" 대신 보호 상태(작성 중)로 보일 수 있고, 다운로드 요청 여부는 이 기능의 안내 문구로 표시. 다른 탭 상태는 건드리지 않음.
+- 항목명: 생성 결과 미리보기 3·4쪽은 AI 라벨 대신 `Review.CATALOG_ITEM_LABELS`(서버 `pdf_catalog.ITEM_LABELS`와 같은 값, 테스트로 일치 확인) 사용. 생성 API 응답의 label은 검증만 하고 표시하지 않음. 한국어 검토 목록(review_flags 위치 등)은 기존 한국어 항목명 유지.
+- AI 검토 표시·사용자 수정 안내는 다운로드로 검토 완료 처리하지 않음.
+
+미검증: 실제 브라우저의 버튼 상태·확인창·다운로드 저장·초점·스크린리더 안내, 실제 생성 결과로 받은 PDF.

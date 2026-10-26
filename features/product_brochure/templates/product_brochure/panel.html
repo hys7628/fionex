@@ -95,10 +95,8 @@
       <div class="btn-row">
         <button type="button" class="btn btn-primary" data-apply>확인 내용 적용</button>
         <button type="button" class="btn btn-secondary" data-generate disabled aria-describedby="product_brochure-generate-status">카탈로그 생성</button>
-        <button type="button" class="btn btn-secondary" disabled aria-describedby="product_brochure-next-pending">PDF 다운로드</button>
       </div>
       <p class="field-hint" id="product_brochure-generate-status" data-generate-status role="status"></p>
-      <p class="field-hint" id="product_brochure-next-pending">준비 중: PDF 다운로드와 생성 문구 편집은 아직 사용할 수 없습니다.</p>
       <div class="notice notice-danger" data-generate-error role="alert" hidden></div>
     </div>
   </section>
@@ -113,14 +111,21 @@
         "생성 결과 보기"는 마지막으로 성공한 카탈로그 생성 결과를 같은 디자인으로 보여 줍니다.
       </p>
       <p class="field-hint" id="product_brochure-result-status" data-result-status role="status">아직 생성 결과가 없습니다.</p>
+      {# PDF 다운로드: 미리보기에 적용된 생성 결과만 대상(디자인 시안 제외). 안내는 JS가 textContent로만 넣음 #}
+      <p class="field-hint" id="product_brochure-pdf-status" data-pdf-status role="status" aria-live="polite">
+        카탈로그를 생성한 뒤 PDF를 다운로드할 수 있습니다(디자인 시안은 대상이 아님).
+      </p>
     </div>
     <div class="btn-row">
       <button type="button" class="btn btn-secondary" data-catalog-open aria-haspopup="dialog"
               aria-describedby="product_brochure-design-hint">디자인 시안 보기</button>
       <button type="button" class="btn btn-primary" data-result-open aria-haspopup="dialog" disabled
               aria-describedby="product_brochure-result-status">생성 결과 보기</button>
+      <button type="button" class="btn btn-secondary" data-pdf-download disabled
+              aria-describedby="product_brochure-pdf-status">PDF 다운로드</button>
     </div>
   </div>
+  <div class="notice notice-danger product_brochure-pdf-error" data-pdf-error role="alert" hidden></div>
 </section>
 
 {% include "product_brochure/catalog_preview.html" %}

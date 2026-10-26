@@ -475,3 +475,30 @@
 - 화면 다운로드 버튼(미구현), 실제 브라우저 다운로드·저장, 실제 생성·편집 결과로 만든 PDF
 - 여러 워커 환경의 동시 제한(프로세스당 제한만 구현), 큰 부하에서 메모리·시간, 렌더링 강제 시간 제한(없음)
 - 이번 단계 PDF 육안 확인(새 샘플 미생성, 기존 샘플 삭제·덮어쓰기 없음)
+
+## 2026-10-26 화면 "PDF 다운로드" 연결 — 모의·정적 검증
+- 변경 내용: product_brochure.js(PDF 순수 로직·화면 연결·항목명), panel.html(버튼·안내 위치), product_brochure.css, 테스트 3개 파일, feature_spec.md §27
+- 실제 OpenAI 호출·서버 API 변경 없음
+
+### Claude가 직접 실행한 검증
+- `node --check product_brochure.js` → 오류 없음
+- `node tests/test_product_brochure/review_logic_check.js` → 40개 통과(신규 PDF 8개)
+  - 요청 본문: 적용본 값·가상 표시만, 금지 필드(label·source_keys·review_flags·origin·안내·model·display_name 등) 없음, 독립 복사본, 불리언 아닌 virtual 미부풀림
+  - 가능 조건: 결과 없음·진행 중·미적용 편집(고정 문구)·32 KiB 초과(UTF-8 바이트) 거부, 경계 32 KiB 허용
+  - 응답 해석: 정상 PDF만 통과, 다른 MIME·빈 파일·잘못된 서명·201·HTML(200/502)·413·알려진 오류 7종(서로 다른 고정 안내, 서버 문구 미표시)·알 수 없는 코드·네트워크·시간 초과
+  - 실행기: 이전 결과 확인 취소·다른 요청 진행 중·크기 초과 → 요청 0회, 중복 클릭 → 요청 1회·성공 1회(blob·요청 당시 버전), 잘못된 응답·실패 → 다운로드 0회·재시도 없음·이후 재요청 가능, 시간 초과 후 잠금 해제, 무효화 뒤 오래된 응답 무시
+- `python -W error::ResourceWarning -m unittest discover -s tests/test_product_brochure` → 1차 test_panel 3건 실패(prompt_log DI-2026_10_26-06) → 수정 후 128개 OK
+  - JS가 만든 요청 본문을 실제 서버 parse_request·parse_catalog가 받음(편집값·가상 표시 일치, AI 라벨 미전송), 같은 본문으로 라우트 200·application/pdf·편집값·가상 안내 텍스트 확인
+  - 화면 항목명·파일명·32 KiB 상수가 서버 값과 같음
+  - 정적: downloadBlob 호출 1곳(성공 경로) 뒤 recheckInputs·syncWork, setResult·innerHTML·저장소 없음, fetch 2곳(postRequest·sendPdf), pdfDownloader.run 1곳, resultRevision 증가 3곳(생성·편집 적용·원문 복원), 편집 적용·원문 복원은 진행 중 잠금, 버튼 초기 비활성·상태/오류 영역 역할, "준비 중" 안내 제거
+- `python -W error::ResourceWarning -m unittest discover -s tests/test_common` → 56개 OK, `pip check` 이상 없음
+
+### ResourceWarning 측정(이전 보고 정정)
+- 위 제품소개서 전체 실행 출력에 "Exception ignored" 5건과 "ResourceWarning: unclosed file" 5건이 있었고 결과는 OK. GC 정리 중 경고는 -W error에서도 테스트를 실패시키지 않으므로 "경고를 오류로 처리한 실행 통과"가 경고 0건을 뜻하지 않음
+- `-W always::ResourceWarning`로 파일별 실행: test_analyze_api.py 5건, test_pdf_download_api.py·test_pdf_catalog.py·test_generate_api.py·test_panel.py·test_review_logic.py 0건
+- 이전 기록의 "10건"은 경고 줄과 "Enable tracemalloc" 안내 줄을 함께 센 줄 수(실제 경고 5건). 기존 분석 테스트 경고는 이번 범위에서 수정하지 않음
+- 각 경고가 정확히 어느 테스트에서 생겼는지(GC 시점)는 미확인
+
+### 미실행·미검증(브라우저 도구 없음)
+- 실제 브라우저의 버튼 활성/비활성 전환, 확인창, "PDF 만드는 중…" 표시, 다운로드 저장, 초점·스크린리더 안내, 탭 이동 중 요청 유지
+- 실제 생성 결과·편집본으로 받은 PDF 육안 확인, 다른 뷰어·인쇄
