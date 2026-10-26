@@ -4,15 +4,56 @@
  * 예) .feature-green_claim .xxx-list { gap: var(--space-3); }
  */
 
-/* 여러 문장·문단을 붙여넣을 수 있도록 입력칸을 넉넉하게(넓은 화면 높이는 아래 단계 배치에서 조정) */
+/* 여러 문장·문단을 붙여넣을 수 있도록 입력칸을 넉넉하게(넓은 화면 높이는 아래 단계 배치에서 조정).
+   읽기 쉽게 본문 크기·넉넉한 줄 간격·안쪽 여백 */
 .feature-green_claim .green-claim-textarea {
   min-height: 240px;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-md);
+  line-height: 1.75;
   resize: vertical;
+}
+
+/* 문구 입력칸 묶음(1단계 직접 입력·2단계 추출 문구): 제목 줄 오른쪽에 글자 수 칩, 아래로 입력칸·안내·오류.
+   마크업 순서는 그대로 두고 grid 배치만 바꿈 */
+.feature-green_claim #green_claim-claims-field,
+.feature-green_claim .green-claim-text-card .field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-2) var(--space-3);
+}
+
+.feature-green_claim #green_claim-claims-field > *,
+.feature-green_claim .green-claim-text-card .field > * {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.feature-green_claim #green_claim-claims-field > .field-label,
+.feature-green_claim .green-claim-text-card .field > .field-label {
+  grid-column: 1;
+  grid-row: 1;
+  font-size: var(--font-size-md);
+}
+
+.feature-green_claim #green_claim-claims-field > .green-claim-count,
+.feature-green_claim .green-claim-text-card .field > .green-claim-count {
+  grid-column: 2;
+  grid-row: 1;
+  padding: 2px var(--space-3);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-pill);
+  background: var(--color-glass-card-strong);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* 20,000자 초과 시 글자 수도 오류 색으로(문장 안내는 .field-error가 담당) */
 .feature-green_claim .green-claim-count[data-state="over"] {
   color: var(--color-danger);
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-soft);
   font-weight: var(--font-weight-medium);
 }
 
@@ -55,6 +96,25 @@
 /* ---------- 검수 실행·결과 ---------- */
 .feature-green_claim .green-claim-review-run {
   gap: var(--space-2);
+}
+
+/* 검수 실행 줄: '이전'(왼쪽) ↔ '검수 실행'·도움말(오른쪽)을 한 줄에 고정하고,
+   진행 중 안내 문장은 버튼 사이에 끼지 않도록 줄 아래 전체 폭으로(비어 있으면 자리 없음) */
+.feature-green_claim .green-claim-review-run .green-claim-actions-row {
+  justify-content: flex-start;
+}
+
+.feature-green_claim .green-claim-review-run #green_claim-review-status {
+  order: 10;
+  flex: 1 1 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+.feature-green_claim .green-claim-review-run #green_claim-review-status:empty {
+  display: none;
 }
 
 .feature-green_claim .green-claim-subtitle {
@@ -700,10 +760,17 @@
   }
 }
 
-/* 좁은 화면: 단계 막대는 가로 스크롤, 단계 안쪽 여백 축소 */
+/* 좁은 화면: 단계 막대는 가로 스크롤, 단계 안쪽 여백 축소, 문구 제목과 글자 수 칩은 위아래로(제목이 꺾이지 않게) */
 @media (max-width: 639.98px) {
   .feature-green_claim .green-claim-step {
     padding: var(--space-2) var(--space-3);
+  }
+
+  .feature-green_claim #green_claim-claims-field > .green-claim-count,
+  .feature-green_claim .green-claim-text-card .field > .green-claim-count {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    justify-self: start;
   }
 }
 
