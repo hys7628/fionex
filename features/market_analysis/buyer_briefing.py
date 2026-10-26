@@ -92,8 +92,10 @@ def build_pack(company, buyers_data, stats, today):
     if stats:
         market_facts = analysis.build_facts(stats)
         s = stats["sources"][0]
+        snapshot = s.get("cache_status") == "snapshot"  # ComexStat 점검으로 MDIC 공개 원본 스냅샷을 쓴 통계
         sources["S1"] = {"name": s["name"], "url": s["url"],
-                         "date": "자료 갱신 %s · 최신 월 %s" % (s.get("data_updated") or "?", s.get("latest_month") or "?")}
+                         "date": ("MDIC 공개 원본 자료(기준: %s) · 최신 월 %s" % (str(s.get("fetched_at") or "")[:10], s.get("latest_month") or "?"))
+                         if snapshot else "자료 갱신 %s · 최신 월 %s" % (s.get("data_updated") or "?", s.get("latest_month") or "?")}
     evidence = []
     for i, e in enumerate(company.get("evidence") or [], 1):
         eid = "T%d" % i
@@ -106,6 +108,9 @@ def build_pack(company, buyers_data, stats, today):
         "context": {"notes": [
             "이 회사의 수입 실적·수입 품목은 공개 자료로 확인할 수 없다.",
             "S1은 해당 품목코드의 브라질 전체 수입 통계다. 일반·재생·T2T 원사를 구분하지 않는다.",
+        ] + ([
+            "S1은 ComexStat 조회 실패로 MDIC가 공개한 원본 CSV를 미리 받아 요약한 자료로 계산했다(실시간 조회 아님).",
+        ] if stats and stats["sources"][0].get("cache_status") == "snapshot" else []) + [
             "평균 수입단가는 FOB 기준이며 견적·판매가·도착가격이 아니다.",
             "관세·반덤핑 자료는 입력에 없다.",
             "evidence가 비어 있으면 재생·T2T 관련 공개 근거가 없다." if not evidence else "evidence는 사람이 검토한 공개 근거다.",

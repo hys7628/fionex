@@ -182,8 +182,17 @@ def build_pack(stats):
         "evidence": [],
     }
     src = stats["sources"][0]
-    sources = {"S1": {"name": src["name"], "url": src["url"],
-                      "date": "자료 갱신 %s · 최신 월 %s" % (src.get("data_updated") or "?", src.get("latest_month") or "?")}}
+    if src.get("cache_status") == "snapshot":
+        # ComexStat 점검·장애로 MDIC 공개 원본 CSV 스냅샷을 쓴 경우: 모델과 출처 표에 그 사실을 그대로 알립니다.
+        basis = str(src.get("fetched_at") or "")[:10]
+        pack["context"]["data_source"] = "MDIC 공개 원본 자료(Comex Stat 기본 데이터 CSV, 기준: %s). ComexStat 실시간 조회가 아님" % basis
+        pack["context"]["notes"].append(
+            "이번 통계는 ComexStat 조회 실패로 MDIC가 공개한 원본 CSV를 미리 받아 요약한 자료(기준 %s, 최신 월 %s)로 계산했다. "
+            "같은 MDIC 공식 통계이지만 실시간 조회가 아니므로 최신성을 단정하지 않는다." % (basis, src.get("latest_month") or "?"))
+        date = "MDIC 공개 원본 자료(기준: %s) · 최신 월 %s" % (basis, src.get("latest_month") or "?")
+    else:
+        date = "자료 갱신 %s · 최신 월 %s" % (src.get("data_updated") or "?", src.get("latest_month") or "?")
+    sources = {"S1": {"name": src["name"], "url": src["url"], "date": date}}
     return pack, sources
 
 

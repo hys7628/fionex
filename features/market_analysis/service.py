@@ -120,21 +120,26 @@ _rows_cache = {}     # (system, code) → {"at", "used", "year_from", "year_to",
 # build_snapshot.py로 수동 생성한 MDIC 공개 원본 CSV 요약. ComexStat 조회가 실패하고 메모리 캐시도 없을 때만 씁니다.
 SNAPSHOT_FILE = Path(__file__).resolve().parent / "data" / "comexstat_snapshot.json"
 SNAPSHOT_LABEL = "MDIC 공개 원본 자료"
-_snapshot_state = {"loaded": False, "data": None}
+_snapshot_state = {"mtime": None, "data": None}
 
 
 def load_snapshot():
-    """스냅샷 dict 또는 None(파일 없음·깨짐). 처음 한 번만 읽습니다."""
+    """스냅샷 dict 또는 None(파일 없음·깨짐). 파일이 새로 생기거나 바뀌면(수정 시각 비교) 서버를 다시 시작하지 않아도 다시 읽습니다."""
+    try:
+        mtime = SNAPSHOT_FILE.stat().st_mtime
+    except OSError:
+        mtime = None
     with _cache_lock:
-        if not _snapshot_state["loaded"]:
+        if mtime != _snapshot_state["mtime"]:
             data = None
-            try:
-                data = json.loads(SNAPSHOT_FILE.read_text(encoding="utf-8"))
-                if not isinstance(data.get("rows"), list) or not data.get("source", {}).get("latest_month"):
+            if mtime is not None:
+                try:
+                    data = json.loads(SNAPSHOT_FILE.read_text(encoding="utf-8"))
+                    if not isinstance(data.get("rows"), list) or not data.get("source", {}).get("latest_month"):
+                        data = None
+                except (OSError, ValueError, AttributeError):
                     data = None
-            except (OSError, ValueError, AttributeError):
-                data = None
-            _snapshot_state.update(loaded=True, data=data)
+            _snapshot_state.update(mtime=mtime, data=data)
         return _snapshot_state["data"]
 
 
@@ -237,7 +242,7 @@ def clear_cache():
     with _cache_lock:
         _latest_cache.clear()
         _rows_cache.clear()
-        _snapshot_state.update(loaded=False, data=None)  # 스냅샷 파일을 다시 읽게 함
+        _snapshot_state.update(mtime=None, data=None)  # 스냅샷 파일을 다시 읽게 함
     with _ai_cache_lock:
         _ai_cache.clear()
 

@@ -162,6 +162,30 @@ class SnapshotFallbackTest(unittest.TestCase):
         with self.assertRaises(ComexStatError):
             service.analyze(self.payload())
 
+    def test_snapshot_created_while_server_running_is_picked_up(self):
+        """서버가 '스냅샷 없음'을 한 번 본 뒤 파일이 생겨도 다시 시작 없이 읽음(수정 시각 비교)."""
+        saved = self.path.read_bytes()
+        self.path.unlink()
+        service.clear_cache()
+        with self.assertRaises(ComexStatError):
+            service.analyze(self.payload())
+        self.path.write_bytes(saved)
+        self.assertEqual(service.analyze(self.payload())["sources"][0]["cache_status"], "snapshot")
+
+    def test_ai_and_briefing_inputs_name_snapshot(self):
+        from features.market_analysis import analysis, buyer_briefing, buyers
+        r = service.analyze(self.payload())
+        pack, sources = analysis.build_pack(r)
+        self.assertIn("MDIC 공개 원본 자료(Comex Stat 기본 데이터 CSV, 기준: 2026-10-27)", pack["context"]["data_source"])
+        self.assertTrue(any("원본 CSV" in n for n in pack["context"]["notes"]))
+        self.assertEqual(sources["S1"]["date"], "MDIC 공개 원본 자료(기준: 2026-10-27) · 최신 월 2026-02")
+        self.assertEqual(pack["facts"][0]["items"][1], "수입액(FOB) USD 1,400")  # 스냅샷 수치로 계산
+        data = buyers.load()
+        if data.get("ready") and data["companies"]:
+            bpack, bsrc = buyer_briefing.build_pack(data["companies"][0], data, r, datetime(2026, 10, 27).date())
+            self.assertTrue(bsrc["S1"]["date"].startswith("MDIC 공개 원본 자료(기준: 2026-10-27)"))
+            self.assertTrue(any("원본 CSV" in n for n in bpack["context"]["notes"]))
+
     def test_pdf_shows_snapshot_label(self):
         r = service.analyze(self.payload())
         pdf = pdf_report.build_pdf({"stats": r, "ai": None})
