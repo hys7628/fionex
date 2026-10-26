@@ -135,3 +135,9 @@
 | Noto Sans KR(Google Fonts 공식 저장소) | https://github.com/google/fonts/tree/main/ofl/notosanskr | 2026-10-26 | NotoSansKR[wght].ttf 가변 글꼴 1개만 | 사용 안 함 |
 | Bitstream Vera | 설치된 reportlab 5.1.0의 reportlab/fonts/Vera.ttf·VeraBd.ttf·bitstream-vera-license.txt | 2026-10-26 | 라이선스: 복제·배포 허용, 다른 소프트웨어와 묶음 배포·판매 가능, 글꼴만 단독 판매 불가, 수정 시 이름 변경 | 라틴 문자 글꼴(저장소에 복사하지 않음) |
 - 실제 검수·기준 갱신·유료 API 호출 없음. 공식 기준(CDC·CONAR) 사이트 조회 없음.
+
+## 2026-10-26 실제 테스트 계획용 요금 출처 (DEV-2026_10_26-06)
+| 자료 | 위치 | 조회일 | 확인 내용 | 적용 |
+|---|---|---|---|---|
+| OpenAI API 가격표(공식) | https://developers.openai.com/api/docs/pricing (platform.openai.com/docs/pricing에서 이동) | 2026-10-26 | gpt-5.4-mini Standard 1M 토큰당 입력 $0.75·출력 $4.50·캐시 입력 $0.075. 페이지에 갱신일 표시 없음 | 실제 1회 테스트 비용 계산식만(토큰 미측정이라 총액 추정 안 함). 모델은 미확정 |
+- 공식 기준(CDC·CONAR) 사이트·OpenAI API 호출 없음.
