@@ -340,10 +340,63 @@
       '<p class="ma-tile-sub">전년 동기 대비 ' + esc(yoyText(yoy)) + "</p>" + (extra || "") + "</div>";
   }
 
-  // ③~⑤는 접어 둡니다(①·② 핵심만 펼침). 제목을 누르면 펼쳐집니다. 닫는 쪽은 "</div></details>".
-  function foldOpen(id, title) {
-    return '<details class="ma-section ma-fold"><summary class="ma-fold-summary"><h3 class="ma-h3" id="market_analysis-' + id + '">' +
-      esc(title) + '</h3></summary><div class="ma-fold-body" role="region" aria-labelledby="market_analysis-' + id + '">';
+  // 결과 ①~⑤는 하위 탭으로 하나씩 봅니다(아래 '← 이전 / 다음 →'으로도 넘김). 닫는 쪽은 "</section>".
+  // shown이면 탭 없이 바로 보임(조회 결과가 없어 ⑤ 근거 자료만 있을 때).
+  const RESULT_TABS = [["s1", "① 핵심 수치"], ["s2", "② 시장 추세"], ["s3", "③ 공급국"], ["s4", "④ AI 분석"], ["s5", "⑤ 근거 자료"]];
+  let selectResultTab = null;
+
+  function paneOpen(id, title, shown) {
+    return '<section class="ma-section ma-rpane"' + (shown ? "" : ' role="tabpanel" id="market_analysis-rpane-' + id +
+      '" aria-labelledby="market_analysis-rtab-' + id + '" hidden') + ' data-ma-rpane="' + id + '"><h3 class="ma-h3" id="market_analysis-' + id + '">' +
+      esc(title) + "</h3>";
+  }
+
+  function resultTabsHtml() {
+    return '<div class="ma-subtabs ma-result-tabs" role="tablist" aria-label="분석 결과 항목">' + RESULT_TABS.map(function (t) {
+      return '<button type="button" class="ma-subtab" role="tab" id="market_analysis-rtab-' + t[0] + '" aria-controls="market_analysis-rpane-' + t[0] +
+        '" aria-selected="false" tabindex="-1" data-ma-rtab="' + t[0] + '">' + esc(t[1]) + "</button>";
+    }).join("") + "</div>";
+  }
+
+  function pagerHtml() {
+    return '<div class="ma-pager" data-ma-pager><button type="button" class="btn btn-secondary" data-ma-rstep="-1"></button>' +
+      '<span class="ma-pager-pos" data-ma-pager-pos></span><button type="button" class="btn btn-secondary" data-ma-rstep="1"></button></div>';
+  }
+
+  // 결과를 새로 그린 뒤 탭을 연결하고 ① 핵심 수치부터 보여 줍니다.
+  function setupResultTabs() {
+    const list = Array.from(resultBox.querySelectorAll("[data-ma-rtab]"));
+    if (!list.length) { selectResultTab = null; return; }
+    selectResultTab = bindTabs(list, function (t) { return resultBox.querySelector('[data-ma-rpane="' + t.dataset.maRtab + '"]'); }, updatePager);
+    selectResultTab(list[0], false);
+  }
+
+  function updatePager(tab) {
+    const list = Array.from(resultBox.querySelectorAll("[data-ma-rtab]"));
+    const i = list.indexOf(tab);
+    // 좁은 화면에서 탭 줄이 가로로 넘치면 선택한 탭이 보이게 탭 줄만 옮깁니다(페이지 세로 스크롤은 그대로).
+    const bar = tab.parentElement;
+    if (tab.offsetLeft < bar.scrollLeft) bar.scrollLeft = tab.offsetLeft;
+    else if (tab.offsetLeft + tab.offsetWidth > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = tab.offsetLeft + tab.offsetWidth - bar.clientWidth;
+    resultBox.querySelector("[data-ma-pager-pos]").textContent = (i + 1) + " / " + list.length;
+    resultBox.querySelectorAll("[data-ma-rstep]").forEach(function (b) {
+      const next = list[i + Number(b.dataset.maRstep)];
+      b.disabled = !next;
+      b.textContent = Number(b.dataset.maRstep) < 0 ? "← 이전" + (next ? ": " + next.textContent : "") : "다음" + (next ? ": " + next.textContent : "") + " →";
+    });
+  }
+
+  // '← 이전 / 다음 →': 누른 버튼에 초점을 두고(끝이라 비활성이 되면 반대쪽 버튼), 새 항목 머리가 화면 밖이면 탭 줄로 올립니다.
+  function stepResult(button) {
+    const list = Array.from(resultBox.querySelectorAll("[data-ma-rtab]"));
+    const cur = list.findIndex(function (t) { return t.getAttribute("aria-selected") === "true"; });
+    const next = list[cur + Number(button.dataset.maRstep)];
+    if (!next) return;
+    selectResultTab(next, false);
+    if (button.disabled) resultBox.querySelector('[data-ma-rstep="' + (-Number(button.dataset.maRstep)) + '"]').focus();
+    const bar = resultBox.querySelector(".ma-result-tabs");
+    if (bar.getBoundingClientRect().top < 0) bar.scrollIntoView({ block: "start", behavior: "auto" });
+    announce(next.textContent + " 항목을 표시합니다.");
   }
 
   function renderResult(d) {
@@ -369,13 +422,15 @@
 
     if (!d.has_data) {
       html += '<div class="empty-state"><p class="empty-state-title">조회 결과 없음</p><p>이 조건에는 ComexStat 수입 기록이 없습니다. 자료 조회 실패가 아니며, 수입액이 0으로 확인된 것도 아닙니다.</p></div>';
-      html += sourcesHtml(d);
+      html += sourcesHtml(d, true);
       resultBox.innerHTML = html;
+      setupResultTabs();
       return;
     }
 
+    html += resultTabsHtml();
     // ① 핵심 수치
-    html += '<section class="ma-section" aria-labelledby="market_analysis-s1"><h3 class="ma-h3" id="market_analysis-s1">① 핵심 수치</h3>';
+    html += paneOpen("s1", "① 핵심 수치");
     html += '<div class="ma-tiles">' +
       tile("수입액 (FOB)", usd(s.fob), s.yoy.fob) +
       tile("수입량 (순중량)", tons(s.kg), s.yoy.kg) +
@@ -384,7 +439,7 @@
     html += '<p class="field-hint">전년 동기: ' + esc(s.prior_period.from + " ~ " + s.prior_period.to) + ". 증감률 = (현재 − 전년 동기) ÷ 전년 동기 × 100. 평균 수입단가 = FOB 합계 ÷ 순중량 합계.</p></section>";
 
     // ② 시장 추세
-    html += '<section class="ma-section" aria-labelledby="market_analysis-s2"><h3 class="ma-h3" id="market_analysis-s2">② 시장 추세 (월별)</h3>';
+    html += paneOpen("s2", "② 시장 추세 (월별)");
     html += '<div class="ma-metric-switch" role="radiogroup" aria-label="그래프 지표" data-work-ignore>' +
       Object.keys(METRICS).map(function (k) {
         return '<label class="choice"><input type="radio" name="market_analysis-metric" value="' + k + '"' + (k === chartMetric ? " checked" : "") + "> " + esc(METRICS[k].label) + "</label>";
@@ -393,20 +448,21 @@
     html += "<details class=\"ma-details\"><summary>월별 상세 표 보기</summary>" + monthlyTable(d, caption) + "</details></section>";
 
     // ③ 공급국
-    html += foldOpen("s3", "③ 공급국 비교");
+    html += paneOpen("s3", "③ 공급국 비교");
     html += '<p class="field-hint">수입액 기준 순위. 비중의 분모는 같은 품목·기간의 브라질 전체 수입액입니다. 공급국은 ComexStat 기준 원산지 국가이며 판매 회사의 국가가 아닙니다(MDIC 통계 이용 매뉴얼). 기간 내 공급국 ' + d.suppliers.count + "개국.</p>";
     html += koreaHtml(d.suppliers);
     html += supplierTable(d.suppliers.top, caption + " · 상위 " + d.suppliers.top.length + "개국");
     if (d.suppliers.selected.length) {
       html += '<h4 class="ma-h4">선택한 공급국</h4>' + supplierTable(d.suppliers.selected, caption + " · 선택한 공급국 (비중은 전체 시장 기준)");
     }
-    html += "</div></details>";
+    html += "</section>";
 
     // ④ AI 분석(사용자가 직접 실행하는 유료 호출)
-    html += foldOpen("s4", "④ AI 분석") + '<div data-ma-ai>' + aiIdleHtml() + "</div></div></details>";
+    html += paneOpen("s4", "④ AI 분석") + '<div data-ma-ai>' + aiIdleHtml() + "</div></section>";
 
-    html += sourcesHtml(d);
+    html += sourcesHtml(d) + pagerHtml();
     resultBox.innerHTML = html;
+    setupResultTabs();
     drawChart();
   }
 
@@ -451,8 +507,8 @@
     aiBusy = true;
     box.setAttribute("aria-busy", "true");
     const previous = lastAi ? aiHtml(lastAi) : null;
-    // 실행 버튼이 이 블록과 함께 다시 그려져 초점이 사라지므로, 감싸는 '④ AI 분석' 영역(role=region)에 초점을 둡니다.
-    const region = box.closest('[role="region"]') || box;
+    // 실행 버튼이 이 블록과 함께 다시 그려져 초점이 사라지므로, 감싸는 '④ AI 분석' 탭 패널에 초점을 둡니다.
+    const region = box.closest("[data-ma-rpane]") || box;
     box.innerHTML = '<div class="empty-state"><span class="spinner" aria-hidden="true"></span><p class="empty-state-title">AI 분석 중입니다</p>' +
       "<p>초안 작성 후 5차례 검토를 차례로 진행합니다(1분 안팎). 이 탭을 새로고침하지 마세요.</p></div>";
     AppShell.ui.focusResult(region, { scroll: false, from: [region] });
@@ -616,6 +672,8 @@
 
   resultBox.addEventListener("click", function (event) {
     if (event.target.closest("[data-ma-ai-run]")) runAi();
+    const step = event.target.closest("[data-ma-rstep]");
+    if (step && !step.disabled) stepResult(step);
   });
 
   function koreaHtml(sup) {
@@ -660,14 +718,14 @@
       "</tr></thead><tbody>" + rows.join("") + "</tbody></table></div>";
   }
 
-  function sourcesHtml(d) {
+  function sourcesHtml(d, shown) {
     const src = d.sources[0];
     const cache = { fresh: "이번 조회에서 받음", cached: "오늘 받은 자료 재사용", stale: "이전 자료 사용(최신 조회 실패)" }[src.cache_status];
-    let html = foldOpen("s5", "⑤ 근거 자료") + '<ul class="ma-sources">';
+    let html = paneOpen("s5", "⑤ 근거 자료", shown) + '<ul class="ma-sources">';
     html += "<li><strong>" + esc(src.name) + "</strong> · " + linkHtml(src.url) + "<br>" +
       esc("지표: " + src.metrics + " · 자료 갱신일 " + (src.data_updated || "확인 안 됨") + " · 최신 제공 월 " + (src.latest_month || "확인 안 됨") +
         " · 자료 받은 시각 " + kstTime(src.fetched_at) + " · " + cache) + "</li>";
-    return html + "</ul></div></details>";
+    return html + "</ul></section>";
   }
 
   /* ---------- 그래프 (SVG, 단일 계열 → 범례 없이 제목으로 지표 표시) ---------- */

@@ -694,3 +694,16 @@
 - 외부 호출: 0건.
 - 검증: validation.md DEV-MERGE-001.
 - 남은 한계: 홍보 스튜디오·제품소개서 PDF는 아직 Noto Sans KR(Pretendard 통일 미적용). 두 탭 실제 OpenAI 기능은 미실행.
+
+## DEV-MA-STATS-008 조회 조건 한 줄 + 분석 결과 ①~⑤ 하위 탭
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis (브랜치 feature/common_setup, 최근 커밋 c3f0e67 develop 병합, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "코드 체계/ 품목코드/ 시작월 / 종료월 입력하는거 한줄로 해서 보기 좋게 하고 분석결과 1,2,3,4,5 서브탭 처럼 하나씩 넘겨보게 하는 걸로 갔으면 좋겠어"
+- 판단: 네 칸 높이를 맞추려고 긴 안내 두 개를 줄 아래로 모음. 결과 탭은 바이어 창과 같은 bindTabs 사용, '하나씩 넘겨보기'를 위해 아래 이전/다음 버튼(다음 항목 이름 표시) 추가. 항상 봐야 하는 해석 주의·경고는 탭 밖 위쪽에 유지. 좁은 화면 탭 줄 가로 스크롤 시 선택 탭이 가려져 탭 줄만 옮기도록 보완.
+- 변경 파일: features/market_analysis/templates/market_analysis/panel.html, static/market_analysis.js·css, feature_spec.md. Python·API 변경 없음.
+- 외부 호출: 0건.
+- 검증: validation.md DEV-MA-STATS-008.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 ComexStat·실제 AI 분석 화면 미확인(모의 서버).

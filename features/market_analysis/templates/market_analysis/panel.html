@@ -24,7 +24,8 @@
       <p class="field-hint">대상 시장은 브라질로 고정됩니다.</p>
     </div>
 
-    <div class="grid ma-code-grid">
+    {# 코드 체계 · 품목코드 · 시작 월 · 종료 월을 한 줄로(좁은 화면은 2열 → 1열). 긴 안내는 줄 아래에 모아 칸 높이를 맞춥니다. #}
+    <div class="ma-cond-row">
       <div class="field">
         <label class="field-label" for="market_analysis-code_system">코드 체계<span class="field-required">필수</span></label>
         <select class="select" id="market_analysis-code_system" name="code_system" aria-describedby="market_analysis-code_system-error">
@@ -37,12 +38,8 @@
         <label class="field-label" for="market_analysis-code">품목코드<span class="field-required">필수</span></label>
         <input class="input" id="market_analysis-code" name="code" type="text" inputmode="numeric" autocomplete="off"
                aria-describedby="market_analysis-code-hint market_analysis-code-error">
-        <p class="field-hint" id="market_analysis-code-hint">기본값 54023310: 폴리에스터 DTY 미염색(시장 분석용 후보, 수출 신고 코드 확정 아님). 점(.)은 넣어도 됩니다.</p>
         <p class="field-error" id="market_analysis-code-error" data-error-for="code" hidden></p>
       </div>
-    </div>
-
-    <div class="grid ma-period-grid">
       <div class="field">
         <label class="field-label" for="market_analysis-from">시작 월<span class="field-required">필수</span></label>
         <input class="input" id="market_analysis-from" name="from" type="month"
@@ -56,7 +53,10 @@
         <p class="field-error" id="market_analysis-to-error" data-error-for="to" hidden></p>
       </div>
     </div>
-    <p class="field-hint" id="market_analysis-period-hint" data-ma-period-hint>최신 제공 월을 확인하는 중입니다.</p>
+    <div class="ma-cond-hints">
+      <p class="field-hint" id="market_analysis-code-hint">품목코드 기본값 54023310: 폴리에스터 DTY 미염색(시장 분석용 후보, 수출 신고 코드 확정 아님). 점(.)은 넣어도 됩니다.</p>
+      <p class="field-hint" id="market_analysis-period-hint" data-ma-period-hint>최신 제공 월을 확인하는 중입니다.</p>
+    </div>
 
     <fieldset class="fieldset">
       <legend class="field-label">공급국 비교 <span class="field-hint">(선택)</span></legend>
