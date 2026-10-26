@@ -403,3 +403,15 @@
 - 검증: validation.md 2026-10-26 업계 소식 상세 항목.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 브라우저 뒤로 가기로 상세→홈 복귀 안 됨(← 홈으로 버튼 사용). 실제 사용자 브라우저·화면낭독기 미확인.
+
+## DEV-HOME-020 다른 탭 바로가기 제외
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/home, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: Home 하단 '다른 탭 바로가기'(시장 분석·제품소개서·그린 클레임 체크·홍보 스튜디오)를 구현하지 않음. 이미 구현됐으면 Home에서 그 영역만 제거. 공통 사이드바·다른 탭 주소는 수정 금지. feature_spec 정리, worklog에 실제 이유 기록. Git 작업 금지.
+- 변경 이유: 중복 navigation 방지 및 Home 단순화를 위해 제외(공통 왼쪽 사이드바에 같은 탭 이동이 이미 있음).
+- 변경 파일: features/home/templates/home/panel.html(바로가기 nav 삭제), static/home.css(바로가기 스타일 2곳 삭제), feature_spec.md(6절을 '제외'로, 화면 배치 문장에서 바로가기 삭제). JS·Python·공통 파일 변경 없음.
+- 외부 호출: 없음.
+- 검증: validation.md 2026-10-26 바로가기 제외 항목.
+- 담당자 판단: 미기재(담당자 검토 필요)

@@ -144,22 +144,6 @@
     </article>
   </div>
 
-  {# 다른 탭 바로가기: 사이드바와 같은 해시 링크(#기능id)로 이동만 합니다(데이터·상태 전달 없음).
-     제목·안내는 각 탭 routes.py FEATURE의 label·description(사이드바·머리글과 같은 원본)을 그대로 씁니다. #}
-  <nav class="home-shortcuts" aria-labelledby="home-shortcuts-title">
-    <h2 class="visually-hidden" id="home-shortcuts-title">다른 탭 바로가기</h2>
-    <ul class="home-shortcut-list">
-      {% for t in features if t.id != "home" %}
-      <li>
-        <a class="home-shortcut" href="#{{ t.id }}">
-          <span class="home-shortcut-title">{{ t.label }}<span class="home-shortcut-arrow" aria-hidden="true">→</span></span>
-          <span class="home-shortcut-desc">{{ t.description }}</span>
-        </a>
-      </li>
-      {% endfor %}
-    </ul>
-  </nav>
-
   {# 카드에 있던 긴 안내·출처 문장을 모읍니다. 내용은 줄이지 않고 위치만 옮겼습니다. #}
   <details class="card home-notes" id="home-notes">
     <summary class="home-notes-summary"><h2 class="card-title">출처 및 유의사항</h2></summary>
