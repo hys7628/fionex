@@ -142,7 +142,8 @@ def prepare_candidate(name, root=cl.DATA_ROOT):
 
 def read_review(directory):
     """후보의 검토 기록(review.json). 사람이 작성한 개발용 파일이며 사용자 요청 필드가 아닙니다.
-    필수: reviewed_by·reviewed_at·scope(비어 있지 않은 문자열), translation_reviewed·guidance_reviewed가 true."""
+    필수: reviewed_by·reviewed_at·scope(비어 있지 않은 문자열), translation_reviewed·guidance_reviewed가 true,
+    criteria_updated_on(이 기준 자료가 실제로 갱신된 날짜 YYYY-MM-DD, 화면·PDF의 "기준 자료 업데이트 날짜")."""
     try:
         review = json.loads((Path(directory) / REVIEW_FILE).read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -155,6 +156,9 @@ def read_review(directory):
     for name in REVIEW_REQUIRED_TRUE:
         if review.get(name) is not True:
             raise cl.CriteriaError("CRITERIA_REVIEW_MISSING", name)
+    updated = review.get("criteria_updated_on")
+    if not isinstance(updated, str) or not cl._DATE.match(updated) or not cl._valid_date(updated):
+        raise cl.CriteriaError("CRITERIA_REVIEW_MISSING", "criteria_updated_on")
     rechecked = review.get("sources_rechecked", [])
     if not isinstance(rechecked, list) or not all(isinstance(value, str) for value in rechecked):
         raise cl.CriteriaError("CRITERIA_REVIEW_MISSING", "sources_rechecked")
@@ -223,7 +227,7 @@ def activate_candidate(name, root=cl.DATA_ROOT):
                 os.rename(partial, target)
             new_pointer = _write_pointer(root, version_id, current, {
                 "content_hash": content_hash,
-                "review": {key: review[key] for key in ("reviewed_by", "reviewed_at", "scope")},
+                "review": {key: review[key] for key in ("reviewed_by", "reviewed_at", "scope", "criteria_updated_on")},
             })
         except cl.CriteriaError:
             _cleanup_partials(root)

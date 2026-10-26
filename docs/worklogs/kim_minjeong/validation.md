@@ -626,3 +626,20 @@
 - 구분 3. Claude 직접 검증(모의, 실제 소켓 차단): 수정 후 tests/test_criteria_update.py 29개 통과. 신규 test_server_closed_is_distinguished_and_kept_failed: robots 요청 RemoteDisconnected(직접·URLError 감쌈)·페이지 요청 RemoteDisconnected → reason_code server_closed·failed_step robots/page·status failed·success false, robots 실패 시 페이지 요청 없음, 마지막 성공 시각 유지, criteria_usable·"기존 기준" 경고 유지, 상태 파일 last_reason_code·last_failed_step 기록, 연결 거부는 계속 network_error, 다음 정상 확인에서 failed_step None
   - 회귀: 기준 로더 14, 검수 서버 38, 서버 통합 2, 보고서 12, Word 18, 이미지 판독 32, 스캔 PDF 판독 14, PDF 추출 17, 공통 56 통과. 화면 코드 변경 없어 브라우저 회귀는 이번에 미실행
 - 미검증: 수정 후 코드로의 실제 조회(추가 조회 안 함), 다른 네트워크·사용자 서버 환경에서의 결과, 서버가 연결을 끊는 실제 이유, robots.txt 이후 공식 페이지 조회·조항 비교
+
+## 2026-10-26 저장 기준 검수와 기준 자료 업데이트 날짜 (DEV-2026_10_26-13)
+- 구분 3. Claude 직접 검증(모의, 실제 소켓 차단, 검수 중 criteria_check.check_sources·default_open 호출 시 실패, OpenAI·공식 사이트 호출 0회, 사용자 서버 미호출). 실행 환경 jasonenv(reportlab 5.1.0)
+  - test_review 38개 통과. 조회 0건·임시 data 폴더 파일 생성·수정 없음, check_mode stored_only·check_overall null·출처별 auto_check_off(이유·시도 시각 null)·경고 없음, 안내 문구 "최신성을 자동으로 확인하지 않았습니다", 옛 기준 확인 제한값 제거, 이전 수동 확인 실패는 previous_*·마지막 성공 시각으로만 보이고 "확인하지 못했습니다" 문장 없음, 미반영 변경 계속 표시
+  - 업데이트 날짜: base null, 활성 버전 2026-09-30, 반복 검수 후 그대로, 두 번째 버전 2026-10-20, rollback 시 2026-09-30, 다시 rollback 시 2026-10-20, 버전 폴더 review.json의 값이 없음·형식 오류(2026-02-30, 슬래시, 시각 포함, 숫자, 빈 문자열)·JSON 손상·파일 없음이면 null이고 검수는 진행, activate는 criteria_updated_on 없음·형식 오류를 CRITERIA_REVIEW_MISSING으로 거부하고 기존 기준 유지
+  - 기준 손상(ID 변조)·JSON 깨짐·폴더 없음 → REVIEW_CRITERIA_NOT_READY, AI 호출 0회. AI 호출 중 기준 교체 시 응답 버전·해시·업데이트 날짜는 보낸 기준 값 유지
+  - test_report 13개 통과: 실제 검수 응답(이전 수동 확인 기록 있음·업데이트 날짜 있음 포함) 계약 통과, 옛 check_mode·이번 요청 시도 시각·이유·failed 상태·업데이트 날짜 누락/시각/잘못된 날짜/숫자·옛 제한값 거부, PDF에 "기준 자료 업데이트 날짜 업데이트 날짜 미기록"·"저장된 기준 사용 · 최신성 자동 확인 안 함"·"자동 확인 안 함(저장된 기준 사용)" 표시와 옛 "이번 요청에서 확인하지 못함"·"확인을 시도함" 없음, 날짜 있는 버전은 PDF에 2026-09-30
+  - test_review_report_flow 2개 통과: 실제 라우트 검수→PDF에서 조회 0건, 임시 data 폴더에 파일 생성 없음, 실제 data 폴더 변경 없음, PDF에 업데이트 날짜 미기록·저장 기준 안내
+  - 회귀: 기준 로더 14, 기준 갱신 29, Word 18, 이미지 판독 32, 스캔 PDF 판독 14, PDF 추출 17, 공통 56 통과. green_claim.js node --check 통과(문법만)
+- 미검증: 실제 브라우저 화면 표시(업데이트 날짜·안내 문구·도움말), 실제 AI 검수, 실제 PDF 눈 확인, 실제 기준 버전에 날짜를 적어 활성화하는 운영 절차
+
+## 2026-10-26 후속: 화면·PDF 표시 확인과 이전 기록 문구 수정 (DEV-2026_10_26-13)
+- 구분 1. 사용자 화면 확인(사용자 보고, Claude 미확인): 화면에서 기준 자료 업데이트 날짜·"저장된 기준 사용"·자동 확인 중단 안내가 PDF와 같게 표시됨
+- 구분 2. ChatGPT PDF 본문 확인(사용자 전달, Claude 미확인): PDF 본문 글자에서 같은 날짜·안내가 표시됨. PDF 전체 시각 배치·쪽 넘김·링크 클릭은 확인 범위가 아니며 검증하지 않음
+- 지적: 과거 기록에는 예전 자동 조회 결과도 있어 "이전 수동 확인" 표시가 사실과 다름 → 표시 문구만 수정
+- 구분 3. Claude 직접 검증(모의, 실제 소켓 차단, 외부 호출 0회): test_report 14개 통과(신규 test_previous_check_labels: 이전 확인 기록이 있는 검수 응답으로 만든 PDF에 "이전 출처 확인 기록(이번 검수 아님)"·"마지막 성공 확인(이전 기록, 조항 비교 완료)" 표시, "이전 수동 확인" 없음, 기록된 시각 그대로), test_review 38·test_review_report_flow 2 통과, green_claim.js node --check 통과(문법만)
+- 미검증: 수정한 문구의 실제 브라우저 화면 표시, PDF 시각 배치·링크 클릭

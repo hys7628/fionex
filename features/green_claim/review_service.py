@@ -1,6 +1,6 @@
 """그린워싱 문구 검수(feature_spec.md "그린워싱 문구 검수 서버").
 
-- 입력 검사 → 기준 변경 확인(criteria_check, 공식 조회 단계) → 사용할 기준 묶음을 한 번 고정 →
+- 입력 검사 → 저장된 활성 기준 묶음을 한 번 고정(공식 출처 자동 조회 없음, feature_spec.md "저장 기준 검수") →
   공통 generate_structured 1회 호출(OpenAI 단계) → 서버 검증 → 응답 조립.
 - 모델·기준·프롬프트는 서버가 정합니다. 요청에서 받는 값은 text뿐입니다.
 - 모델 응답을 그대로 믿지 않습니다: 상태값·길이·기준 ID·인용 위치·URL·조항 표기·예시 숫자를 서버가 확인하고,
@@ -12,14 +12,12 @@ import logging
 import re
 import threading
 import unicodedata
-from datetime import datetime
 from pathlib import Path
 
 from common import config
-from features.green_claim import criteria_check as cc
 from features.green_claim import criteria_loader as cl
+from features.green_claim import criteria_store as cs
 from features.green_claim import service
-from features.green_claim.criteria_build import KST
 from features.green_claim.service import ExtractError
 
 logger = logging.getLogger(__name__)
@@ -45,7 +43,7 @@ NOTICES = [
     "발견한 항목 수가 문구의 모든 위험을 뜻하지 않습니다. 항목이 없어도 안전하거나 그린워싱이 없다는 뜻이 아닙니다.",
     "수치·환경 성능·인증 보유·유효성, 제품 소개서와의 일치, 디자인·로고는 확인하지 않았습니다.",
     "대체 문장은 예시입니다. 원문에 없는 사실이 들어가지 않았는지 사람이 확인해야 하며, 근거 자료가 필요한 내용은 수정 방향만 안내합니다.",
-    "기준 번역은 이해를 돕는 비공식 번역입니다. 기준은 아래 확인 상태에 적힌 범위의 저장 기준이며 최신 개정 전체를 확인한 것이 아닙니다.",
+    "기준 번역은 이해를 돕는 비공식 번역입니다. 저장된 기준을 사용했으며 검수할 때 공식 출처의 최신성을 자동으로 확인하지 않았습니다(최신 개정 전체를 확인한 것이 아님).",
     "위치(start·end)는 정규화한 원문의 Unicode 코드 포인트 기준입니다(브라우저 JavaScript 문자열 위치와 이모지 등에서 다를 수 있음).",
 ]
 
@@ -91,19 +89,8 @@ def parse_request(raw):
 
 # ---------- 기준 ----------
 
-def run_criteria_check(root, now, opener=None):
-    """기준 변경 확인 단계. 검수 요청마다 확인을 시도합니다(이전 결과로 생략하지 않음).
-    반환 (확인 결과, 방식). 방식: checked(이번 요청에서 확인 시도) / status_only_busy(다른 확인·교체 진행 중) /
-    status_only_error(확인 단계 예외). 뒤의 두 경우는 이번 요청에서 확인하지 못했으며 마지막 확인 기록만 돌려줍니다.
-    공식 조회 정책·제한은 criteria_check 그대로이며 보류 출처를 켜지 않습니다."""
-    try:
-        result = cc.check_sources(root=root, opener=opener, now=now.isoformat())
-    except Exception:
-        logger.warning("기준 변경 확인 단계 실패: code=CRITERIA_CHECK_ERROR")
-        return cc.criteria_status(root), "status_only_error"
-    if result.get("overall") == "busy":
-        return result, "status_only_busy"
-    return result, "checked"
+CHECK_MODE_STORED_ONLY = "stored_only"   # 검수 때 공식 출처를 자동 확인하지 않음(2026-10-26 팀 합의)
+CHECK_STATUS_AUTO_OFF = "auto_check_off"  # 출처별: 이번 검수에서 자동 확인 안 함(실패가 아님)
 
 
 def criteria_payload(loaded):
@@ -132,54 +119,42 @@ def build_input(text, loaded):
     }, ensure_ascii=False)
 
 
-def _criteria_info(loaded, check, mode):
-    """응답에 붙일 기준 정보(서버가 고정 사본·확인 결과에서 만듦)."""
-    by_source = {item["source_id"]: item for item in check.get("sources", [])}
-    warnings = list(check.get("warnings", []))
-    active = check.get("active") or {}
-    if active.get("content_hash") and active["content_hash"] != loaded["bundle"]["content_hash"]["value"]:
-        warnings.insert(0, "기준 확인 직후 활성 기준이 바뀌었습니다. 확인 결과는 이전 기준에 대한 것이며 이 검수는 아래 기준 버전으로 했습니다.")
-    checked_now = mode == "checked"
-    if mode == "status_only_busy":
-        warnings.insert(0, "이번 요청에서 공식 출처 변경을 확인하지 못했습니다(다른 기준 확인·교체가 진행 중). 기존 정상 기준을 사용합니다.")
-    elif mode == "status_only_error":
-        warnings.insert(0, "이번 요청에서 공식 출처 변경을 확인하지 못했습니다(확인 단계 오류). 기존 정상 기준을 사용합니다.")
+def _criteria_info(loaded, state):
+    """응답에 붙일 기준 정보(고정 사본에서). 이번 검수는 공식 출처를 조회하지 않으므로 출처별 상태는 auto_check_off이고
+    시도 시각·이유는 null입니다. 개발자가 따로 실행한 수동 확인 기록(state)은 지우지 않고 이전 기록(previous_*·
+    check_last_success_at)으로만 붙이며, 과거 실패 이유를 이번 검수의 경고로 넣지 않습니다."""
+    recorded = state.get("sources", {})
     sources = []
     for source in loaded["sources"]:
-        state = by_source.get(source["id"], {})
-        entry = {
+        last = recorded.get(source["id"], {})
+        sources.append({
             "id": source["id"],
             "title": source["title"],
             "legal_nature": source["legal_nature"],
             "official_url": source["url"],
             "retrieved_at": source["retrieved_at"],
             "usage_rights_status": source["usage_rights"]["status"],
-            # 이번 요청의 확인 결과. 확인하지 못한 요청이면 not_checked_this_request이고 시각은 null
-            "check_status": state.get("status") if checked_now else "not_checked_this_request",
-            "check_reason": state.get("reason") if checked_now else None,
-            "check_attempted_at": state.get("attempted_at") if checked_now else None,
-            # 마지막으로 대상 조항을 실제로 읽어 비교를 끝낸 시각(이번 요청이 실패하면 이전 값 그대로)
-            "check_last_success_at": state.get("last_success_at"),
-            # 이번 요청에서 확인하지 못했을 때 참고용 이전 기록
-            "previous_check_status": None if checked_now else state.get("status"),
-            "previous_check_attempted_at": None if checked_now else state.get("attempted_at"),
-        }
-        if checked_now and state.get("status") == cc.STATUS_FAILED:
-            warnings.append(f"{source['id']}: 이번 요청에서 공식 출처 변경을 확인하지 못했습니다. 기존 정상 기준을 사용합니다.")
-        sources.append(entry)
+            "check_status": CHECK_STATUS_AUTO_OFF,
+            "check_reason": None,
+            "check_attempted_at": None,
+            "check_last_success_at": last.get("last_success_at"),
+            "previous_check_status": last.get("last_status"),
+            "previous_check_attempted_at": last.get("last_attempt_at"),
+        })
     return {
         "bundle_id": loaded["bundle"]["bundle_id"],
         "bundle_version": loaded["bundle"]["bundle_version"],
         "schema_version": loaded["bundle"]["schema_version"],
         "content_hash": loaded["bundle"]["content_hash"]["value"],
         "active_version": loaded.get("active_version"),
+        "criteria_updated_on": loaded.get("criteria_updated_on"),  # 실제 갱신일(기록 없으면 None = 업데이트 날짜 미기록)
         "freshness_mode": loaded["freshness"]["mode"],
-        "check_mode": mode,
-        "check_overall": check.get("overall"),
+        "check_mode": CHECK_MODE_STORED_ONLY,
+        "check_overall": None,
         "unresolved_changes": [{key: item.get(key) for key in ("source_id", "detected_at", "criteria_ids")}
-                               for item in check.get("unresolved_changes", [])],
+                               for item in state.get("unresolved_changes", [])],
         "sources": sources,
-        "warnings": warnings,
+        "warnings": [],
     }
 
 
@@ -429,21 +404,20 @@ def _load_ai():
     return generate_structured, ReviewResult
 
 
-def run_review_request(raw, root=cl.DATA_ROOT, opener=None, now=None):
-    """요청 본문 bytes → 응답 data. root·opener·now는 테스트용 내부 인자(사용자 요청 값 아님).
+def run_review_request(raw, root=cl.DATA_ROOT):
+    """요청 본문 bytes → 응답 data. root는 테스트용 내부 인자(사용자 요청 값 아님). 공식 출처를 조회하지 않습니다.
     오류: ExtractError(기능 코드) 또는 common.errors.AIError(공통 코드)."""
     text = parse_request(raw)
     if not _slots.acquire(blocking=False):
         raise ExtractError("REVIEW_BUSY")
     try:
         generate, schema = _load_ai()
-        now = now or datetime.now(KST).replace(microsecond=0)
-        check, mode = run_criteria_check(root, now, opener)
         try:
             loaded = cl._load_active(root)  # 이 요청에서 쓸 기준을 한 번 고정(이후 교체돼도 섞이지 않음)
         except cl.CriteriaError:
             logger.warning("검수 기준 준비 불가: code=REVIEW_CRITERIA_NOT_READY")
             raise ExtractError("REVIEW_CRITERIA_NOT_READY") from None
+        state = cs.read_check_state(root)  # 읽기만(검수 때 상태 파일을 쓰지 않음)
         result = generate(instructions=load_instructions(), input_text=build_input(text, loaded), schema=schema)
         data = result.data.model_dump() if hasattr(result.data, "model_dump") else result.data
         items, model_summary, limitations = validate_output(data, text, loaded)
@@ -459,14 +433,12 @@ def run_review_request(raw, root=cl.DATA_ROOT, opener=None, now=None):
         "model_limitations": limitations,
         "model": result.model,
         "prompt_version": PROMPT_VERSION,
-        "criteria": _criteria_info(loaded, check, mode),
+        "criteria": _criteria_info(loaded, state),
         "notices": list(NOTICES),
         "limits": {
             "max_chars": MAX_CHARS,
             "max_request_bytes": MAX_REQUEST_BYTES,
             "ai_timeout_seconds": config.TEXT_TIMEOUT_SECONDS,
             "ai_max_output_tokens": config.TEXT_MAX_OUTPUT_TOKENS,
-            "criteria_check_request_timeout_seconds": cc.REQUEST_TIMEOUT_SECONDS,
-            "criteria_check_total_timeout_seconds": cc.TOTAL_TIMEOUT_SECONDS,
         },
     }

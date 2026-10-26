@@ -4,7 +4,7 @@
 
 실제 Flask 라우트(POST /api/green-claim/review → POST /api/green-claim/report)와 실제 review_service·report_service·
 별도 프로세스 PDF 생성을 그대로 통과합니다. 외부 경계만 모의합니다: 공통 generate_structured 자리의 가짜 AI,
-공식 기준 페이지 조회의 가짜 응답(test_review와 같은 FakeWeb, 실제 소켓 차단), 기준 확인 상태를 쓸 임시 data 폴더.
+저장 기준을 읽을 임시 data 폴더. 검수는 공식 출처를 조회하지 않으며 조회 함수가 불리면 실패합니다(실제 소켓 차단).
 가짜 AI 결과는 실제 검수 품질·번역 검증이 아니며 문구는 모두 가상 문구입니다(실제 제품 성능 주장 아님).
 """
 import functools
@@ -62,7 +62,7 @@ class ReviewReportFlowTest(Base):
         cls.client = create_app().test_client()
 
     def setUp(self):
-        super().setUp()  # 임시 data 폴더·실제 소켓 차단·가짜 공식 페이지(self.web)
+        super().setUp()  # 임시 data 폴더·실제 소켓 차단
         self.real_before = real_state_snapshot()
         self.ai_calls = []
         self.web_calls = []
@@ -75,12 +75,14 @@ class ReviewReportFlowTest(Base):
 
         def opener(url, timeout):
             self.web_calls.append(url)
-            return self.web(url, timeout)
+            raise AssertionError("검수·보고서 중 공식 출처 요청")
 
         real = rs.run_review_request
-        # 실제 라우트가 부르는 실제 검수 함수에 테스트 경계(임시 data 폴더·가짜 공식 페이지)만 넘김
+        # 실제 라우트가 부르는 실제 검수 함수에 테스트 경계(임시 data 폴더)만 넘김. 공식 확인 함수는 불리면 실패
         for patcher in (mock.patch.object(rs, "_load_ai", return_value=(generate, FakeSchema)),
-                        mock.patch.object(rs, "run_review_request", functools.partial(real, root=self.root, opener=opener))):
+                        mock.patch.object(rs, "run_review_request", functools.partial(real, root=self.root)),
+                        mock.patch.object(cc, "check_sources", side_effect=AssertionError("검수 중 공식 출처 확인")),
+                        mock.patch.object(cc, "default_open", side_effect=opener)):
             patcher.start()
             self.addCleanup(patcher.stop)
 
@@ -102,9 +104,8 @@ class ReviewReportFlowTest(Base):
         self.assertEqual(res.status_code, 200, res.get_data(as_text=True)[:200])
         data = res.get_json()["data"]
         self.assertEqual((len(self.ai_calls), self.ai_calls[0]), (1, CASE_A))  # AI 1회, 재시도 없음
-        web_after_review = len(self.web_calls)
-        self.assertEqual(web_after_review, 2)  # CDC robots.txt·본문, CONAR 보류
-        self.assertFalse(any("conar" in url for url in self.web_calls))
+        self.assertEqual(self.web_calls, [])  # 저장 기준 사용: 공식 출처 조회 0건
+        self.assertEqual((data["criteria"]["check_mode"], data["criteria"]["criteria_updated_on"]), ("stored_only", None))
         self.assertEqual([it["id"] for it in data["items"]], ["R1", "R2", "R3"])
 
         # PDF: 기준 로드·공식 확인·AI를 다시 부르면 실패하도록 막은 상태에서 실제 라우트·별도 프로세스 생성
@@ -115,14 +116,15 @@ class ReviewReportFlowTest(Base):
         self.assertEqual(pdf_res.status_code, 200, pdf_res.get_data()[:200])
         self.assertEqual(pdf_res.mimetype, "application/pdf")
         self.assertEqual(pdf_res.headers["Content-Disposition"], 'attachment; filename="green_claim_review_report.pdf"')
-        self.assertEqual((len(self.ai_calls), len(self.web_calls)), (1, web_after_review))
+        self.assertEqual((len(self.ai_calls), len(self.web_calls)), (1, 0))
 
         # 화면에 쓰이는 검수 응답과 PDF의 원문·항목·기준 버전·해시 일치
         reader = PdfReader(io.BytesIO(pdf_res.data))
         flat = squash("\n".join(page.extract_text() or "" for page in reader.pages))
         flat = re.sub(re.escape(squash(rw.FOOTER)) + r"\d+/\d+", "", flat)
         criteria = data["criteria"]
-        expected = [criteria["bundle_version"], criteria["content_hash"], "2026-10-2610:00:05(한국시간)"]
+        expected = [criteria["bundle_version"], criteria["content_hash"], "2026-10-2610:00:05(한국시간)",
+                    "기준 자료 업데이트 날짜" + rw.UPDATED_UNRECORDED, rw.CHECK_MODE_LABELS["stored_only"]]
         expected += [it["id"] + "·" + it["action_label_ko"] for it in data["items"]] + [it["quote"] for it in data["items"]]
         expected += [f"{cid}·" for cid in data["criteria_refs"]]
         for value in expected:
@@ -149,7 +151,7 @@ class ReviewReportFlowTest(Base):
         # 실제 data 폴더는 이 테스트에서 쓰지 않음: 처음부터 비어 있다고 가정하지 않고 실행 전후 목록을 비교(내용은 읽지 않음)
         self.assertEqual(real_state_snapshot(), self.real_before)
         written = [p for p in Path(self.root).rglob("*") if p.is_file() and "brazil_claim_criteria" not in p.parts]
-        self.assertTrue(any(p.name == "check_state.json" for p in written))  # 확인 상태는 임시 data 폴더에만 생김
+        self.assertEqual(written, [])  # 저장 기준 검수는 확인 상태 파일도 만들지 않음
 
     def test_ai_failure_returns_fixed_error_once(self):
         self.ai_error = errors.AITimeoutError()

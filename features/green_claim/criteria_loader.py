@@ -28,6 +28,9 @@ BASE_VERSION = "base"
 BUNDLE_FILE = "criteria_bundle.json"
 REGISTER_FILE = "source_register.md"
 REVIEW_FILE = "review_criteria_ko.md"
+# 활성화한 버전 폴더에 함께 보관되는 검토 기록(criteria_store.REVIEW_FILE과 같은 이름). 여기서는 업데이트 날짜만 읽습니다.
+ACTIVATION_RECORD_FILE = "review.json"
+_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 SOURCES_META_FILE = "sources_meta.json"
 SUPPORTED_SCHEMA_VERSIONS = (1, 2)
 VERSION_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$")
@@ -141,7 +144,28 @@ def _load_active(root):
         raise
     result = _load_from(directory)
     result["active_version"] = version
+    result["criteria_updated_on"] = read_updated_on(directory)
     return result
+
+
+def read_updated_on(directory):
+    """그 버전 기준 자료가 실제로 갱신된 날짜(YYYY-MM-DD). 활성화 때 담당자가 review.json에 적은 값만 쓰며,
+    base처럼 기록이 없거나 형식이 맞지 않으면 None(화면·PDF "업데이트 날짜 미기록"). 확보일·생성일·파일 시각으로 채우지 않습니다."""
+    try:
+        record = json.loads((Path(directory) / ACTIVATION_RECORD_FILE).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    value = record.get("criteria_updated_on") if isinstance(record, dict) else None
+    return value if isinstance(value, str) and _DATE.match(value) and _valid_date(value) else None
+
+
+def _valid_date(value):
+    from datetime import date
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
 
 
 def _load_from(directory):

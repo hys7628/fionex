@@ -2,9 +2,11 @@
 
     python -m unittest features.green_claim.tests.test_review -v
 
-공통 generate_structured 자리에 가짜 함수를 넣고, 기준 확인의 공식 페이지 조회는 가짜 응답으로 대신합니다(실제 소켓 차단).
+공통 generate_structured 자리에 가짜 함수를 넣습니다. 검수는 저장된 기준만 쓰며 공식 출처 확인 함수가 불리면 실패합니다(실제 소켓 차단).
+이전 수동 확인 기록은 테스트에서 criteria_check를 가짜 공식 페이지로 따로 실행해 만듭니다.
 가짜 결과 통과는 실제 그린워싱 판단 정확도·번역·대체 문장 품질 검증이 아닙니다. 문구는 모두 가상 문구입니다.
 """
+import contextlib
 import io
 import json
 import os
@@ -71,6 +73,24 @@ def body(text):
     return json.dumps({"text": text}, ensure_ascii=False).encode("utf-8")
 
 
+@contextlib.contextmanager
+def no_lookup():
+    """검수 중 공식 출처 확인·요청 함수가 불리면 실패(저장 기준 검수, 조회 0건)."""
+    with mock.patch.object(cc, "check_sources", side_effect=AssertionError("검수 중 공식 출처 확인 호출")), \
+            mock.patch.object(cc, "default_open", side_effect=AssertionError("검수 중 공식 출처 요청")):
+        yield
+
+
+def activate(root, name, bundle_version, updated_on="2026-09-30"):
+    """가상 후보를 만들어 활성화(검토 기록의 criteria_updated_on은 담당자가 적는 실제 갱신일 자리)."""
+    cs.prepare_candidate(name, root=root)
+    cb.build_candidate(name, bundle_version, root=root, created_at="2026-10-26T09:00:00+09:00")
+    review = {"reviewed_by": "가상 검토자", "reviewed_at": "2026-10-26T09:00:00+09:00", "scope": "테스트",
+              "translation_reviewed": True, "guidance_reviewed": True, "criteria_updated_on": updated_on}
+    (cb.candidate_directory(name, root) / cs.REVIEW_FILE).write_text(json.dumps(review, ensure_ascii=False), encoding="utf-8")
+    return cs.activate_candidate(name, root=root)
+
+
 class Base(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
@@ -88,9 +108,11 @@ class Base(unittest.TestCase):
         self._tmp.cleanup()
 
     def run_review(self, text=TEXT_KO, data=None, raises=None, hook=None, now=NOW, web=None):
+        # 2026-10-26부터 검수는 공식 출처를 조회하지 않음: 모든 검수 테스트에서 조회·확인 함수가 불리면 실패(now·web은 예전 호출 호환용, 쓰지 않음)
         generate, calls = fake_ai(data, raises, hook)
-        with mock.patch.object(rs, "_load_ai", return_value=(generate, FakeSchema)):
-            result = rs.run_review_request(body(text), root=self.root, opener=web or self.web, now=now)
+        with mock.patch.object(rs, "_load_ai", return_value=(generate, FakeSchema)), no_lookup():
+            result = rs.run_review_request(body(text), root=self.root)
+        self.assertEqual(self.web.requests, [])
         return result, calls
 
     def assert_invalid(self, data, text=TEXT_KO):
@@ -133,10 +155,10 @@ class RouteTest(unittest.TestCase):
         guard = mock.patch.object(socket, "socket", side_effect=AssertionError("실제 네트워크 사용 금지"))
         guard.start()
         self.addCleanup(guard.stop)
-        # 실제 data 폴더에 확인 상태를 쓰지 않도록 확인 단계를 네트워크 없는 상태 조회로 바꿈
-        check = mock.patch.object(rs, "run_criteria_check", side_effect=lambda root, now, opener=None: (cc.criteria_status(root), "checked"))
-        check.start()
-        self.addCleanup(check.stop)
+        # 실제 data 폴더는 읽기만 함: 검수 중 공식 출처 확인이 불리면 실패
+        check = no_lookup()
+        check.__enter__()
+        self.addCleanup(check.__exit__, None, None, None)
 
     def post(self, raw, content_type="application/json"):
         return self.client.post("/api/green-claim/review", data=raw, content_type=content_type)
@@ -187,126 +209,141 @@ class RouteTest(unittest.TestCase):
 
 
 class CriteriaConnectionTest(Base):
-    def test_check_runs_and_attaches_server_criteria_info(self):
+    def cdc(self, result):
+        return {source["id"]: source for source in result["criteria"]["sources"]}["SRC-CDC"]
+
+    def manual_check(self, web, now=NOW):
+        """개발자가 따로 실행한 수동 확인(검수 밖). 가짜 공식 페이지만 사용."""
+        return cc.check_sources(root=self.root, opener=web, now=now.isoformat())
+
+    def test_stored_criteria_used_without_lookup(self):
+        before = {p: p.stat().st_mtime_ns for p in self.root.rglob("*") if p.is_file()}
         result, calls = self.run_review()
         info = result["criteria"]
-        self.assertEqual((info["check_mode"], info["active_version"], info["bundle_version"]), ("checked", "base", "2026-10-26.1"))
+        self.assertEqual((info["check_mode"], info["check_overall"], info["active_version"], info["bundle_version"]),
+                         ("stored_only", None, "base", "2026-10-26.1"))
+        self.assertIsNone(info["criteria_updated_on"])  # base는 실제 업데이트 날짜 기록 없음 → 화면·PDF "업데이트 날짜 미기록"
+        for source in info["sources"]:
+            with self.subTest(source["id"]):
+                self.assertEqual((source["check_status"], source["check_reason"], source["check_attempted_at"]),
+                                 ("auto_check_off", None, None))
         sources = {source["id"]: source for source in info["sources"]}
-        self.assertEqual(sources["SRC-CDC"]["retrieved_at"], "2026-10-25T16:31:44+09:00")
-        self.assertEqual(sources["SRC-CONAR-WEB"]["check_status"], "deferred")
+        self.assertEqual(sources["SRC-CDC"]["retrieved_at"], "2026-10-25T16:31:44+09:00")  # 확보일은 따로 유지
         self.assertEqual(sources["SRC-CONAR-WEB"]["usage_rights_status"], "ai_use_permission_unconfirmed")
-        self.assertIn(sources["SRC-CDC"]["check_status"], ("partial_checked", "change_detected"))
-        self.assertTrue(info["warnings"])
-        self.assertEqual([url for url, _ in self.web.requests], ["https://www.planalto.gov.br/robots.txt", CDC_URL])
+        self.assertEqual(info["warnings"], [])
+        self.assertEqual(len(calls), 1)
         sent = json.loads(calls[0]["input_text"])
         self.assertEqual(sent["criteria_bundle"]["content_hash"], info["content_hash"])
         self.assertEqual(len(sent["criteria"]), 24)
         self.assertNotIn("http", json.dumps(sent["criteria"]))  # URL은 모델에 보내지 않음(서버가 붙임)
         self.assertNotIn("최신 기준", json.dumps(result, ensure_ascii=False))
+        self.assertTrue(any("최신성을 자동으로 확인하지 않았습니다" in notice for notice in result["notices"]))
+        self.assertFalse({"criteria_check_request_timeout_seconds", "criteria_check_total_timeout_seconds"} & set(result["limits"]))
+        after = {p: p.stat().st_mtime_ns for p in self.root.rglob("*") if p.is_file()}
+        self.assertEqual(after, before)  # 검수는 상태·기준 파일을 쓰지 않음
 
-    def test_check_failures_still_use_existing_criteria(self):
-        web = FakeWeb({"https://www.planalto.gov.br/robots.txt": FakeResponse(404, b"", "text/plain"),
-                       CDC_URL: FakeResponse(500, b"<html>erro</html>")})
-        result, calls = self.run_review(web=web)
-        sources = {source["id"]: source for source in result["criteria"]["sources"]}
-        self.assertEqual(sources["SRC-CDC"]["check_status"], "failed")
-        self.assertEqual(len(calls), 1)
-        self.assertTrue(any("기존 기준" in warning for warning in result["criteria"]["warnings"]))
-        (self.root / cl.BASE_DIR_NAME / cc.COVERAGE_FILE).unlink()  # 비교 범위 없음 → 부분 확인만
-        result, _ = self.run_review(now=NOW + timedelta(hours=1))
-        self.assertEqual({s["id"]: s["check_status"] for s in result["criteria"]["sources"]}["SRC-CDC"], "partial_checked")
+    def test_previous_manual_failure_not_reported_as_this_request(self):
+        failing = FakeWeb({"https://www.planalto.gov.br/robots.txt": FakeResponse(404, b"", "text/plain"),
+                           CDC_URL: FakeResponse(500, b"<html>erro</html>")})
+        self.manual_check(self.web, NOW)                          # 성공 확인(비교 완료)
+        self.manual_check(failing, NOW + timedelta(minutes=1))    # 그 뒤 수동 확인 실패
+        self.web.requests.clear()
+        result, calls = self.run_review()
+        cdc = self.cdc(result)
+        self.assertEqual((cdc["check_status"], cdc["check_reason"], cdc["check_attempted_at"]), ("auto_check_off", None, None))
+        self.assertEqual((cdc["previous_check_status"], cdc["previous_check_attempted_at"]),
+                         ("failed", (NOW + timedelta(minutes=1)).isoformat()))
+        self.assertEqual(cdc["check_last_success_at"], NOW.isoformat())
+        self.assertEqual(result["criteria"]["warnings"], [])  # 과거 실패를 이번 검수 경고로 넣지 않음
+        self.assertNotIn("확인하지 못했습니다", json.dumps(result, ensure_ascii=False))
+        self.assertEqual((len(calls), result["criteria"]["bundle_version"]), (1, "2026-10-26.1"))
 
-    def test_unresolved_change_warning(self):
+    def test_unresolved_change_still_shown(self):
         changed = page(self.loaded["criteria"], "SRC-CDC", CDC_MARKER,
                        replace=("É proibida toda publicidade enganosa ou abusiva.", "É proibida toda publicidade enganosa."))
-        web = FakeWeb({"https://www.planalto.gov.br/robots.txt": FakeResponse(404, b"", "text/plain"),
-                       CDC_URL: FakeResponse(200, changed)})
-        result, calls = self.run_review(web=web)
-        self.assertEqual(result["criteria"]["check_overall"], "change_pending_review")
+        self.manual_check(FakeWeb({"https://www.planalto.gov.br/robots.txt": FakeResponse(404, b"", "text/plain"),
+                                   CDC_URL: FakeResponse(200, changed)}))
+        result, calls = self.run_review()
         self.assertTrue(result["criteria"]["unresolved_changes"])
+        self.assertIsNone(result["criteria"]["check_overall"])
         self.assertEqual(len(calls), 1)  # 기존 정상 기준으로 계속 진행
         self.assertEqual(result["criteria"]["bundle_version"], "2026-10-26.1")
 
-    def cdc(self, result):
-        return {source["id"]: source for source in result["criteria"]["sources"]}["SRC-CDC"]
+    def test_updated_on_follows_active_version(self):
+        """기준 자료 업데이트 날짜는 활성 버전에 보관된 값. 검수로 바뀌지 않고, 교체·복원하면 그 버전의 날짜."""
+        first_pointer = activate(self.root, "c1", "2026-10-26.8", updated_on="2026-09-30")
+        first, _ = self.run_review()
+        again, _ = self.run_review()
+        self.assertEqual((first["criteria"]["active_version"], first["criteria"]["criteria_updated_on"]),
+                         (first_pointer["active"], "2026-09-30"))
+        self.assertEqual(again["criteria"]["criteria_updated_on"], "2026-09-30")  # 검수 실행만으로 바뀌지 않음
+        self.assertEqual(first_pointer["review"]["criteria_updated_on"], "2026-09-30")
+        activate(self.root, "c2", "2026-10-26.9", updated_on="2026-10-20")
+        second, _ = self.run_review()
+        self.assertEqual(second["criteria"]["criteria_updated_on"], "2026-10-20")
+        cs.rollback(root=self.root)  # 이전 버전 복원 → 그 버전의 날짜(복원 시각이 아님)
+        restored, _ = self.run_review()
+        self.assertEqual((restored["criteria"]["active_version"], restored["criteria"]["criteria_updated_on"]),
+                         (first_pointer["active"], "2026-09-30"))
+        cs.rollback(root=self.root)  # 다시 c2
+        self.assertEqual(cl._load_active(self.root)["criteria_updated_on"], "2026-10-20")
 
-    def test_every_request_tries_check(self):
-        """검수 요청마다 확인을 시도(간격과 관계없이 생략 없음). CONAR 보류는 그대로."""
-        first, _ = self.run_review(now=NOW)
-        second, _ = self.run_review(now=NOW + timedelta(seconds=30))
-        self.assertEqual([url for url, _ in self.web.requests],
-                         ["https://www.planalto.gov.br/robots.txt", CDC_URL] * 2)
-        self.assertEqual((first["criteria"]["check_mode"], second["criteria"]["check_mode"]), ("checked", "checked"))
-        self.assertEqual(self.cdc(second)["check_attempted_at"], (NOW + timedelta(seconds=30)).isoformat())
-        self.assertEqual(self.cdc(second)["check_last_success_at"], (NOW + timedelta(seconds=30)).isoformat())
-        conar = {source["id"]: source for source in second["criteria"]["sources"]}["SRC-CONAR-WEB"]
-        self.assertEqual(conar["check_status"], "deferred")
-        self.assertFalse(any("conar" in url for url, _ in self.web.requests))
-        self.assertNotIn("criteria_check_reuse_seconds", second["limits"])
+    def test_updated_on_missing_or_invalid_is_unrecorded(self):
+        pointer = activate(self.root, "c1", "2026-10-26.8")
+        record = cl.version_directory(self.root, pointer["active"]) / cl.ACTIVATION_RECORD_FILE
+        original = json.loads(record.read_text(encoding="utf-8"))
+        for value in (None, "2026-02-30", "2026/09/30", "2026-09-30T00:00:00+09:00", 20260930, ""):
+            with self.subTest(value=value):
+                record.write_text(json.dumps({**original, "criteria_updated_on": value}), encoding="utf-8")
+                self.assertIsNone(cl._load_active(self.root)["criteria_updated_on"])
+        record.write_text("{", encoding="utf-8")
+        self.assertIsNone(cl._load_active(self.root)["criteria_updated_on"])
+        record.unlink()
+        result, _ = self.run_review()  # 날짜 기록이 없어도 기준 자체가 정상이면 검수 진행
+        self.assertIsNone(result["criteria"]["criteria_updated_on"])
+        self.assertIsNone(cl.read_updated_on(self.root / cl.BASE_DIR_NAME))
 
-    def test_failed_check_keeps_previous_success_time(self):
-        self.run_review(now=NOW)  # 성공 확인(비교 완료)
-        failing = FakeWeb({"https://www.planalto.gov.br/robots.txt": FakeResponse(404, b"", "text/plain"),
-                           CDC_URL: lambda: (_ for _ in ()).throw(socket.timeout("slow"))})
-        later = NOW + timedelta(minutes=1)
-        result, calls = self.run_review(now=later, web=failing)
-        cdc = self.cdc(result)
-        self.assertEqual((cdc["check_status"], cdc["check_attempted_at"]), ("failed", later.isoformat()))
-        self.assertEqual(cdc["check_last_success_at"], NOW.isoformat())  # 과거 성공 시각을 이번 시각으로 바꾸지 않음
-        self.assertTrue(any("SRC-CDC: 이번 요청에서 공식 출처 변경을 확인하지 못했습니다" in w for w in result["criteria"]["warnings"]))
-        self.assertEqual((len(calls), result["criteria"]["bundle_version"]), (1, "2026-10-26.1"))  # 기존 기준으로 진행
-
-    def test_busy_and_error_not_checked_this_request(self):
-        self.run_review(now=NOW)
-        with cs.criteria_lock(self.root):
-            with mock.patch.object(cs, "LOCK_WAIT_SECONDS", 0.2):
-                busy, calls = self.run_review(now=NOW + timedelta(minutes=1))
-        with mock.patch.object(cc, "check_sources", side_effect=RuntimeError("boom")):
-            error, _ = self.run_review(now=NOW + timedelta(minutes=2))
-        for result, mode, reason in ((busy, "status_only_busy", "진행 중"), (error, "status_only_error", "확인 단계 오류")):
-            with self.subTest(mode):
-                cdc = self.cdc(result)
-                self.assertEqual(result["criteria"]["check_mode"], mode)
-                self.assertEqual((cdc["check_status"], cdc["check_attempted_at"]), ("not_checked_this_request", None))
-                self.assertEqual((cdc["previous_check_attempted_at"], cdc["check_last_success_at"]),
-                                 (NOW.isoformat(), NOW.isoformat()))  # 이전 기록은 이전 시각 그대로
-                self.assertIn("이번 요청에서 공식 출처 변경을 확인하지 못했습니다", result["criteria"]["warnings"][0])
-                self.assertIn(reason, result["criteria"]["warnings"][0])
-        self.assertEqual(len(calls), 1)
-        self.assertEqual(len(self.web.requests), 2)  # 첫 요청만 조회
+    def test_activation_requires_valid_updated_on(self):
+        for index, value in enumerate((None, "2026-02-30", "26-09-30")):
+            with self.subTest(value=value):
+                with self.assertRaises(cl.CriteriaError) as ctx:
+                    activate(self.root, f"bad{index}", "2026-10-26.7", updated_on=value)
+                self.assertEqual((ctx.exception.code, ctx.exception.detail), ("CRITERIA_REVIEW_MISSING", "criteria_updated_on"))
+        self.assertEqual(cl._load_active(self.root)["active_version"], "base")  # 기존 활성 기준 유지
 
     def test_not_ready_stops_before_ai(self):
-        shutil.rmtree(self.root / cl.BASE_DIR_NAME)
-        with self.assertRaises(rs.ExtractError) as ctx:
-            self.run_review()
-        self.assertEqual(ctx.exception.code, "REVIEW_CRITERIA_NOT_READY")
-        generate, calls = fake_ai()
-        with mock.patch.object(rs, "_load_ai", return_value=(generate, FakeSchema)):
-            with self.assertRaises(rs.ExtractError):
-                rs.run_review_request(body(TEXT_KO), root=self.root, opener=self.web, now=NOW)
-        self.assertEqual(calls, [])
+        base = self.root / cl.BASE_DIR_NAME
+        bundle = base / cl.BUNDLE_FILE
+        broken = bundle.read_text(encoding="utf-8").replace("CDC-37", "CDC-99", 1)
+        cases = {"corrupt": lambda: bundle.write_text(broken, encoding="utf-8"),
+                 "not json": lambda: bundle.write_text("{", encoding="utf-8"),
+                 "missing": lambda: shutil.rmtree(base)}
+        for name, damage in cases.items():
+            with self.subTest(name):
+                shutil.rmtree(base, ignore_errors=True)
+                shutil.copytree(cl.DATA_DIR, base)
+                damage()
+                generate, calls = fake_ai()
+                with mock.patch.object(rs, "_load_ai", return_value=(generate, FakeSchema)), no_lookup():
+                    with self.assertRaises(rs.ExtractError) as ctx:
+                        rs.run_review_request(body(TEXT_KO), root=self.root)
+                self.assertEqual(ctx.exception.code, "REVIEW_CRITERIA_NOT_READY")
+                self.assertEqual(calls, [])
+        self.assertEqual(self.web.requests, [])
 
     def test_bundle_fixed_for_the_request(self):
-        """AI 호출 중 기준이 교체돼도 응답의 버전·해시는 모델에 보낸 기준과 같음."""
-        cs.prepare_candidate("c1", root=self.root)
-        cb.build_candidate("c1", "2026-10-26.9", root=self.root, created_at="2026-10-26T09:00:00+09:00")
-        review = {"reviewed_by": "가상 검토자", "reviewed_at": "2026-10-26T09:00:00+09:00", "scope": "테스트",
-                  "translation_reviewed": True, "guidance_reviewed": True}
-        (cb.candidate_directory("c1", self.root) / cs.REVIEW_FILE).write_text(json.dumps(review, ensure_ascii=False),
-                                                                              encoding="utf-8")
+        """AI 호출 중 기준이 교체돼도 응답의 버전·해시·업데이트 날짜는 모델에 보낸 기준과 같음."""
         swapped = {}
 
         def swap(kwargs):
-            swapped["pointer"] = cs.activate_candidate("c1", root=self.root)
+            swapped["pointer"] = activate(self.root, "c1", "2026-10-26.9", updated_on="2026-10-01")
 
         result, calls = self.run_review(hook=swap)
         sent = json.loads(calls[0]["input_text"])["criteria_bundle"]
         self.assertEqual((result["criteria"]["content_hash"], result["criteria"]["bundle_version"]),
                          (sent["content_hash"], sent["bundle_version"]))
-        self.assertEqual(result["criteria"]["active_version"], "base")
-        self.assertNotEqual(cl._load_active(self.root)["active_version"], "base")  # 요청 뒤에는 새 버전이 활성
-        info = rs._criteria_info(self.loaded, {"active": {"content_hash": "other"}, "sources": [], "warnings": []}, "checked")
-        self.assertIn("바뀌었습니다", info["warnings"][0])
+        self.assertEqual((result["criteria"]["active_version"], result["criteria"]["criteria_updated_on"]), ("base", None))
+        self.assertEqual(cl._load_active(self.root)["criteria_updated_on"], "2026-10-01")  # 요청 뒤에는 새 버전이 활성
 
 
 class OutputValidationTest(Base):
@@ -731,10 +768,7 @@ class PromptAndPrivacyTest(Base):
         after = {p for p in self.root.rglob("*") if p.is_file()}
         for path in after - before:
             self.assertNotIn("SEGREDO", path.read_text(encoding="utf-8", errors="replace"))
-        # 생기는 파일은 기준 확인 상태와 공식 페이지 변경 감지 기록뿐(사용자 문구·응답 저장 없음)
-        allowed = {self.root / cl.STATE_DIR_NAME, self.root / cb.WORK_DIR_NAME / cc.DETECTED_DIR_NAME}
-        self.assertTrue(all(path.parent in allowed for path in after - before), after - before)
-        self.assertIn(cs.CHECK_STATE_FILE, {p.name for p in after - before})
+        self.assertEqual(after, before)  # 저장 기준 검수는 파일을 새로 만들지 않음(사용자 문구·응답 저장 없음)
 
     def test_busy(self):
         self.assertTrue(rs._slots.acquire(blocking=False))
@@ -752,7 +786,7 @@ class PromptAndPrivacyTest(Base):
         forbid = mock.Mock(side_effect=AssertionError("클라이언트 생성 금지"))
         with mock.patch.dict(os.environ, clean, clear=True), mock.patch.object(ai_client, "_create_client", forbid):
             with self.assertRaises(errors.AIConfigError):
-                rs.run_review_request(body(TEXT_KO), root=self.root, opener=self.web, now=NOW)
+                rs.run_review_request(body(TEXT_KO), root=self.root)
         forbid.assert_not_called()
 
     def test_schema_strict(self):

@@ -39,12 +39,10 @@ CHECK_LABELS = {
     "baseline_missing": "비교 기준 부족",
     "not_checked": "확인 기록 없음",
     "not_checked_this_request": "이번 요청에서 확인하지 못함",
+    "auto_check_off": "자동 확인 안 함(저장된 기준 사용)",
 }
-CHECK_MODE_LABELS = {
-    "checked": "이번 검수 요청에서 공식 출처 확인을 시도함",
-    "status_only_busy": "이번 검수 요청에서 확인하지 못함(다른 기준 확인이 진행 중)",
-    "status_only_error": "이번 검수 요청에서 확인하지 못함(확인 단계 오류)",
-}
+CHECK_MODE_LABELS = {"stored_only": "저장된 기준 사용 · 최신성 자동 확인 안 함"}
+UPDATED_UNRECORDED = "업데이트 날짜 미기록"  # 화면(green_claim.js)과 같은 문장
 INPUT_MODE_LABELS = {"text": "문구 직접 입력",
                      "file": "홍보물 파일에서 글자 추출·판독 후 사용자가 확인·수정한 문구"}
 NO_ALTERNATIVE = "대체 예시를 제공하지 않았습니다."
@@ -315,6 +313,7 @@ def build_pdf(payload):
     field("사용 기준", f"기준 버전 {criteria['bundle_version']} · "
           + ("기본 기준" if criteria["active_version"] == "base" else f"활성화된 기준 {criteria['active_version'] or '기록 없음'}")
           + " · 검수 당시 저장된 기준(최신 개정 전체를 확인한 것이 아님). 보고서를 만들 때 기준을 다시 읽거나 바꾸지 않았습니다.")
+    field("기준 자료 업데이트 날짜", criteria["criteria_updated_on"] or UPDATED_UNRECORDED)
     field("이번 검수의 공식 출처 확인", CHECK_MODE_LABELS[criteria["check_mode"]])
     for source in criteria["sources"]:
         story.append(Paragraph(writer.rich(f"{source['title']} ({NATURE_LABELS[source['legal_nature']]})", bold=True), label))
@@ -322,12 +321,12 @@ def build_pdf(payload):
             "자료 확보 시각: " + (_time(source["retrieved_at"]) or "기록 없음"),
             "이번 검수의 확인: " + CHECK_LABELS.get(source["check_status"], "상태 기록 없음")
             + (" · 시도 " + _time(source["check_attempted_at"]) if source["check_attempted_at"] else ""),
-            "마지막 성공 확인(조항 비교 완료): " + (_time(source["check_last_success_at"]) or "기록 없음"),
+            "마지막 성공 확인(이전 기록, 조항 비교 완료): " + (_time(source["check_last_success_at"]) or "기록 없음"),
         ]
         if source["check_reason"]:
             lines.append("이유: " + source["check_reason"])
         if source["previous_check_status"]:
-            lines.append("이전 확인 기록(이번 요청 아님): " + CHECK_LABELS.get(source["previous_check_status"], "상태 기록 없음")
+            lines.append("이전 출처 확인 기록(이번 검수 아님): " + CHECK_LABELS.get(source["previous_check_status"], "상태 기록 없음")
                          + (" · " + _time(source["previous_check_attempted_at"]) if source["previous_check_attempted_at"] else ""))
         if source["usage_rights_status"] == "ai_use_permission_unconfirmed":
             lines.append("AI 이용 허가: 확인되지 않음")

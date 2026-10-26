@@ -93,7 +93,7 @@ def page(criteria, source_id, marker, replace=None, extra_menu="", drop=None, en
 def review_record(**overrides):
     record = {"reviewed_by": "테스트 검토자(가상)", "reviewed_at": "2026-10-26T10:00:00+09:00",
               "scope": "테스트용 가상 검토 기록", "translation_reviewed": True, "guidance_reviewed": True,
-              "sources_rechecked": ["SRC-CDC"]}
+              "sources_rechecked": ["SRC-CDC"], "criteria_updated_on": "2026-10-26"}
     record.update(overrides)
     return record
 

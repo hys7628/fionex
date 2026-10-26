@@ -781,6 +781,16 @@ Pillow 역할 [구현]
 - 서버: PROMPT_VERSION만 claim_review_v5. 현재 서버는 입력에 없는 새 수치만 막고 수치 삭제는 통과시키며, 딸린 표현이 남았는지·예시 뜻이 온전한지는 판정하지 않는다. 특정 단어(예: por massa)로 예시를 일괄 삭제하는 규칙은 넣지 않았다(정상 예시도 지워질 수 있어서).
 - 한계: 모의 테스트는 규칙 포함과 기존 검사 유지만 확인한다. 관측된 불완전 예시는 서버가 통과시키는 것으로 고정(한계 테스트).
 
+### 저장 기준 검수와 기준 자료 업데이트 날짜 (2026-10-26 팀 합의, 구현 전 작성 → 같은 날 구현, 모의 검증만)
+- 검수 실행 시 공식 출처(CDC) 변경 자동 확인을 하지 않는다. 검수는 활성 기준을 한 번 읽어 고정한 뒤 바로 진행하고(버전·해시를 결과에 연결), 기준이 없거나 손상되면 기존처럼 REVIEW_CRITERIA_NOT_READY로 AI 호출 없이 중단한다. CONAR 자동 조회도 켜지 않는다. 위 "그린워싱 문구 검수 서버" 처리 순서 2단계(검수 요청마다 확인 시도)와 "기준 자료 변경 확인과 갱신 관리"의 검수 연결 부분은 이 절로 대체한다. 수동 기준 관리 도구(criteria_admin check 등)는 그대로 둔다.
+- 응답 `criteria`: check_mode `stored_only`(새 값), check_overall null, 출처별 check_status `auto_check_off`(이번 검수에서 자동 확인 안 함)·check_reason·check_attempted_at null. 이전 수동 확인 기록은 지우지 않고 previous_check_status·previous_check_attempted_at·check_last_success_at으로만 보여 주며 "이번 검수 아님"으로 구분한다. 과거 조회 실패 이유를 이번 요청의 경고로 넣지 않는다. 미반영 감지 변경(unresolved_changes)은 계속 표시.
+- 기준 자료 업데이트 날짜 `criteria_updated_on`(YYYY-MM-DD 또는 null): 그 기준 버전이 실제로 갱신된 날짜. 새 기준을 적용할 때 후보 review.json에 담당자가 `criteria_updated_on`을 적고(activate 필수), 버전 폴더에 함께 보관된다. 로더가 활성 버전 폴더의 review.json에서 읽으므로 rollback하면 그 버전의 날짜가 쓰인다. 현재 base 기준은 실제 업데이트 날짜 기록이 없어 null → 화면·PDF "업데이트 날짜 미기록". 자료 확보일(retrieved_at)·묶음 생성일(bundle_created_at)·검수·서버 재시작·파일 복사 시각으로 채우지 않는다.
+- 이전 기록 표시 문구(같은 날 보완): 과거 기록에는 예전 자동 조회 결과도 섞여 있으므로 화면·PDF에서 "이전 출처 확인 기록(이번 검수 아님)", "마지막 성공 확인(이전 기록, 조항 비교 완료)"으로 표시한다("수동"이라 쓰지 않음). 기록값·시각·조회 정책은 그대로.
+- 화면·PDF: 사용 기준에 "저장된 기준 사용 · 최신성 자동 확인 안 함"과 업데이트 날짜를 같은 값으로 표시. 기준 버전·해시·출처·비공식 번역 표시·판단 한계는 유지.
+- 보고서 요청 검증(report_service): 새 키 criteria_updated_on(날짜 형식 또는 null), check_mode stored_only이면 출처 check_status auto_check_off·시도 시각·이유 null만 허용.
+- 검수 안내 문구에서 "검수 전에 공식 출처(CDC) 변경 확인을 시도" 문장을 빼고 저장 기준 사용으로 바꾼다. 브라우저 대기 제한(100초)은 그대로.
+- 검증(모의, 외부 통신 차단): 검수 중 criteria_check.check_sources·default_open이 불리면 실패하게 막고 조회 0건·상태 파일 미작성, 출처별 auto_check_off, 이전 수동 실패는 previous_*로만·경고 없음, 미반영 변경 표시, 업데이트 날짜(base null·활성 버전 값·반복 검수 유지·rollback 시 그 버전 값·형식 오류 null·activate 필수), 기준 손상·없음 시 AI 미호출, 보고서 검증·PDF 표시. 실제 브라우저 화면·실제 AI 호출은 미검증.
+
 ### 검수 실행·결과 화면 (2026-10-26 구현 전 작성 → 같은 날 구현, 실제 AI 호출 미검증)
 범위: 기존 `POST /api/green-claim/review`를 화면에 연결. 검수 실행 버튼·요청·처리 상태·오류, 검수 원문 강조와 결과 항목 연결, 요약·설명·수정 방향·대체 예시·근거, 입력 변경 시 결과 무효화, AppShell 작업 상태. 결과 PDF·검수 프롬프트·기준 갱신 정책·인증 갭·필터·점수·승인 기능은 범위 밖.
 

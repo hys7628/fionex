@@ -16,6 +16,7 @@ from datetime import datetime
 from urllib.parse import urlsplit
 
 from features.green_claim import criteria_check as cc
+from features.green_claim import criteria_loader as cl
 from features.green_claim import report_worker
 from features.green_claim import review_service as rs
 from features.green_claim import service
@@ -37,7 +38,9 @@ MAX_WARNINGS = 50
 MAX_CHANGES = 50
 MAX_SERVER_CHECKS = 10
 REPORT_FILENAME = "green_claim_review_report.pdf"
-NOT_CHECKED_THIS_REQUEST = "not_checked_this_request"
+# 검수 때 공식 출처를 자동 확인하지 않음(2026-10-26 팀 합의, review_service와 같은 값)
+CHECK_MODE_STORED_ONLY = rs.CHECK_MODE_STORED_ONLY
+CHECK_STATUS_AUTO_OFF = rs.CHECK_STATUS_AUTO_OFF
 
 # 검수 응답(review_service.run_review_request)과 정확히 같은 키. 검수 응답 계약이 바뀌면 함께 바꿉니다.
 REQUEST_KEYS = {"review", "input_mode", "displayed_at"}
@@ -51,18 +54,17 @@ REF_KEYS = {"source_id", "legal_nature", "title_ko", "provisions", "official_url
             "translation_ko", "translation_official", "requirement_ko", "review_guidance_ko", "scope_limits_ko",
             "usage_rights_status"}
 SUMMARY_KEYS = {"total", "by_action", "item_ids_by_action", "no_items_message", "model_summary_ko"}
-CRITERIA_KEYS = {"bundle_id", "bundle_version", "schema_version", "content_hash", "active_version", "freshness_mode",
-                 "check_mode", "check_overall", "unresolved_changes", "sources", "warnings"}
+CRITERIA_KEYS = {"bundle_id", "bundle_version", "schema_version", "content_hash", "active_version", "criteria_updated_on",
+                 "freshness_mode", "check_mode", "check_overall", "unresolved_changes", "sources", "warnings"}
 SOURCE_KEYS = {"id", "title", "legal_nature", "official_url", "retrieved_at", "usage_rights_status", "check_status",
                "check_reason", "check_attempted_at", "check_last_success_at", "previous_check_status",
                "previous_check_attempted_at"}
 CHANGE_KEYS = {"source_id", "detected_at", "criteria_ids"}
-LIMIT_KEYS = {"max_chars", "max_request_bytes", "ai_timeout_seconds", "ai_max_output_tokens",
-              "criteria_check_request_timeout_seconds", "criteria_check_total_timeout_seconds"}
+LIMIT_KEYS = {"max_chars", "max_request_bytes", "ai_timeout_seconds", "ai_max_output_tokens"}
 
 INPUT_MODES = ("text", "file")
 LEGAL_NATURES = ("law", "advertising_self_regulation")
-CHECK_MODES = ("checked", "status_only_busy", "status_only_error")
+CHECK_MODES = (CHECK_MODE_STORED_ONLY,)
 CHECK_STATUSES = (cc.STATUS_NO_CHANGE, cc.STATUS_CHANGED, cc.STATUS_FAILED, cc.STATUS_DEFERRED,
                   cc.STATUS_BASELINE_MISSING, cc.STATUS_PARTIAL, cc.STATUS_NOT_CHECKED)
 
@@ -214,6 +216,8 @@ def _validate_criteria(criteria):
     _check(isinstance(criteria["content_hash"], str) and _HASH.fullmatch(criteria["content_hash"]))
     _str(criteria["active_version"], MAX_SHORT_CHARS, nullable=True)
     _str(criteria["freshness_mode"], MAX_SHORT_CHARS, nullable=True)
+    updated = criteria["criteria_updated_on"]
+    _check(updated is None or (isinstance(updated, str) and cl._DATE.match(updated) and cl._valid_date(updated)))
     mode = criteria["check_mode"]
     _check(mode in CHECK_MODES)
     _check(criteria["check_overall"] is None or (isinstance(criteria["check_overall"], str)
@@ -238,16 +242,11 @@ def _validate_criteria(criteria):
         _str(source["usage_rights_status"], MAX_SHORT_CHARS)
         _str(source["check_reason"], rs.MAX_FIELD_CHARS, nullable=True)
         _iso(source["check_last_success_at"])
-        if mode == "checked":
-            _check(source["check_status"] is None or source["check_status"] in CHECK_STATUSES)
-            _iso(source["check_attempted_at"])
-            _check(source["previous_check_status"] is None and source["previous_check_attempted_at"] is None)
-        else:
-            # 이번 요청에서 확인하지 못함: 상태 문장만, 시도 시각을 만들지 않음
-            _check(source["check_status"] == NOT_CHECKED_THIS_REQUEST and source["check_attempted_at"] is None
-                   and source["check_reason"] is None)
-            _check(source["previous_check_status"] is None or source["previous_check_status"] in CHECK_STATUSES)
-            _iso(source["previous_check_attempted_at"])
+        # 이번 검수는 자동 확인 안 함: 상태만, 시도 시각·이유를 만들지 않음. 이전 수동 확인 기록은 previous_*로만
+        _check(source["check_status"] == CHECK_STATUS_AUTO_OFF and source["check_attempted_at"] is None
+               and source["check_reason"] is None)
+        _check(source["previous_check_status"] is None or source["previous_check_status"] in CHECK_STATUSES)
+        _iso(source["previous_check_attempted_at"])
         sources[source["id"]] = source
     return sources
 

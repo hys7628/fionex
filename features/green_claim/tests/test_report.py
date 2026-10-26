@@ -2,7 +2,7 @@
 
     python -m unittest features.green_claim.tests.test_report -v
 
-검수 결과는 test_review의 가짜 AI·가짜 공식 페이지로 review_service.run_review_request를 실제로 실행해 만듭니다(계약 일치 확인).
+검수 결과는 test_review의 가짜 AI·저장 기준으로 review_service.run_review_request를 실제로 실행해 만듭니다(계약 일치 확인, 공식 출처 조회 없음).
 가짜 결과로 만든 보고서는 실제 AI 검수 결과가 아닙니다. 문구는 모두 가상 문구입니다.
 생성한 PDF는 pypdf로 다시 열어 쪽 수·텍스트·링크·글꼴을 확인합니다(레이아웃의 눈 확인은 별도).
 """
@@ -27,7 +27,7 @@ from features.green_claim import report_service as rp
 from features.green_claim import report_worker as rw
 from features.green_claim import review_service as rs
 from features.green_claim.criteria_build import KST
-from features.green_claim.tests.test_review import BAD_R1_A, BAD_R1_B, BAD_R2, FAILURE_TEXT, Base, item, result_data
+from features.green_claim.tests.test_review import BAD_R1_A, BAD_R1_B, BAD_R2, FAILURE_TEXT, Base, activate, item, result_data
 
 GENERATED = datetime(2026, 10, 26, 11, 0, 0, tzinfo=KST)
 DISPLAYED = "2026-10-26T10:00:05+09:00"
@@ -94,15 +94,21 @@ class ContractTest(ReportBase):
             "empty": self.review(items=[]),
             "withheld_only": self.review(text="Eco 🌱", items=[item("Eco", action="judgment_withheld", ids=(), language="en", unavailable=None)]),
         }
-        with mock.patch.object(rs, "run_criteria_check",
-                               side_effect=lambda root, now, opener=None: (cc.criteria_status(root), "status_only_busy")):
-            variants["busy"] = self.review()
+        # 이전 수동 확인 기록이 있는 상태(previous_*), 업데이트 날짜가 기록된 활성 버전
+        cc.check_sources(root=self.root, opener=self.web, now="2026-10-26T09:00:00+09:00")  # 검수 밖 수동 확인(가짜 페이지)
+        self.web.requests.clear()
+        variants["previous_manual_check"] = self.review()
+        activate(self.root, "c1", "2026-10-26.8", updated_on="2026-09-30")
+        variants["updated_on"] = self.review()
         for name, review in variants.items():
             with self.subTest(name=name):
                 self.assertEqual(set(review), rp.TOP_KEYS)
                 data = rp.parse_request(payload(review, mode="file", displayed=None))
                 self.assertEqual(data["review"], review)  # 값을 바꾸지 않음
-        self.assertEqual(variants["busy"]["criteria"]["sources"][0]["check_status"], rp.NOT_CHECKED_THIS_REQUEST)
+        self.assertEqual(variants["previous_manual_check"]["criteria"]["sources"][0]["check_status"], rp.CHECK_STATUS_AUTO_OFF)
+        self.assertIsNotNone(variants["previous_manual_check"]["criteria"]["sources"][0]["previous_check_status"])
+        self.assertEqual((variants["mixed"]["criteria"]["criteria_updated_on"], variants["updated_on"]["criteria"]["criteria_updated_on"]),
+                         (None, "2026-09-30"))
 
 
 class ValidationTest(ReportBase):
@@ -164,7 +170,15 @@ class ValidationTest(ReportBase):
             "empty reason": lambda r: first(r).update(reason_ko="  "),
             "content hash": lambda r: r["criteria"].update(content_hash="not-a-hash"),
             "check mode": lambda r: r["criteria"].update(check_mode="skipped"),
-            "not checked with time": lambda r: r["criteria"].update(check_mode="status_only_error"),
+            "old check mode": lambda r: r["criteria"].update(check_mode="checked"),
+            "auto off with attempt time": lambda r: r["criteria"]["sources"][0].update(check_attempted_at="2026-10-26T10:00:00+09:00"),
+            "auto off with reason": lambda r: r["criteria"]["sources"][0].update(check_reason="과거 실패"),
+            "this request failed": lambda r: r["criteria"]["sources"][0].update(check_status="failed"),
+            "updated_on missing": lambda r: r["criteria"].pop("criteria_updated_on"),
+            "updated_on datetime": lambda r: r["criteria"].update(criteria_updated_on="2026-09-30T00:00:00+09:00"),
+            "updated_on invalid date": lambda r: r["criteria"].update(criteria_updated_on="2026-02-30"),
+            "updated_on number": lambda r: r["criteria"].update(criteria_updated_on=20260930),
+            "old check limit": lambda r: r["limits"].update(criteria_check_request_timeout_seconds=10),
             "source url scheme": lambda r: r["criteria"]["sources"][0].update(official_url="ftp://x.example/a"),
             "alternative empty": lambda r: first(r).update(alternative={"original_text": None, "pt_br_text": None, "ko_interpretation": "x"}),
             "pt-BR item with original-language sentence": lambda r: first(r)["alternative"].update(original_text="Outra frase"),
@@ -205,10 +219,14 @@ class PdfContentTest(ReportBase):
                          "[U+1F331]", "<b>bold</b>&<script>alert(1)</script>", "대체예시(참고용·원본을수정한것이아님",
                          "홍보물파일에서글자추출·판독후사용자가확인·수정한문구", "2026-10-2610:00:05(한국시간)·이컴퓨터시계기준",
                          "2026-10-2611:00:00(한국시간)·서버시계기준", "법률", "광고자율규제", "한국어번역(비공식)",
-                         review["criteria"]["content_hash"], "Café", f"1/{len(reader.pages)}"):
+                         review["criteria"]["content_hash"], "Café", f"1/{len(reader.pages)}",
+                         "기준 자료 업데이트 날짜업데이트 날짜 미기록", "저장된 기준 사용 · 최신성 자동 확인 안 함",
+                         "자동 확인 안 함(저장된 기준 사용)"):
             with self.subTest(expected=expected):
                 self.assertIn(squash(expected), flat)
         self.assertNotIn("최신기준", flat)
+        self.assertNotIn(squash("이번 요청에서 확인하지 못함"), flat)
+        self.assertNotIn(squash("확인을 시도함"), flat)
         # 원문 사본: 번호 표시를 넣은 순서 그대로 원문 글자가 빠짐·중복 없이 이어짐(공백은 줄바꿈 차이 때문에 제외)
         expected_original = []
         starts = {}
@@ -237,6 +255,28 @@ class PdfContentTest(ReportBase):
             for font in page["/Resources"]["/Font"].values():
                 fonts.add(str(font.get_object()["/BaseFont"]))
         self.assertTrue(any("NanumGothic" in name for name in fonts) and any("Vera" in name for name in fonts), fonts)
+
+    def test_updated_on_shown_from_review_not_regenerated(self):
+        """PDF의 업데이트 날짜는 검수 응답 값 그대로(보고서 생성 시각·확보일로 바꾸지 않음)."""
+        activate(self.root, "c1", "2026-10-26.8", updated_on="2026-09-30")
+        review = self.review(items=[])
+        _, text = pdf_text(self.build_inprocess(payload(review)))
+        flat = squash(text)
+        self.assertIn(squash("기준 자료 업데이트 날짜2026-09-30"), flat)
+        self.assertNotIn(squash("업데이트 날짜 미기록"), flat)
+
+    def test_previous_check_labels(self):
+        """과거 출처 확인 기록(자동·수동 구분 없음)은 "이전 출처 확인 기록"·"이전 기록"으로만 표시(값·시각은 그대로)."""
+        cc.check_sources(root=self.root, opener=self.web, now="2026-10-26T09:00:00+09:00")  # 검수 밖 확인(가짜 페이지)
+        self.web.requests.clear()
+        review = self.review(items=[])
+        _, text = pdf_text(self.build_inprocess(payload(review)))
+        flat = squash(text)
+        for expected in ("이전 출처 확인 기록(이번 검수 아님)", "마지막 성공 확인(이전 기록, 조항 비교 완료)"):
+            with self.subTest(expected=expected):
+                self.assertIn(squash(expected), flat)
+        self.assertNotIn(squash("이전 수동 확인"), flat)
+        self.assertIn(squash("2026-10-26 09:00:00"), flat)  # 기록된 시각 그대로
 
     def test_no_items_and_criteria_kept(self):
         review = self.review(items=[])

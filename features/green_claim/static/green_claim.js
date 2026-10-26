@@ -528,10 +528,10 @@
   ocrButton.addEventListener("click", function () { runRequest("ocr"); });
 
   /* ---------- 그린워싱 표현 위험 검수 실행·결과 ---------- */
-  // 서버 기준 확인 최대 30초 + 공통 텍스트 AI timeout 60초 + 여유(feature_spec.md "검수 실행·결과 화면")
+  // 공통 텍스트 AI timeout 60초 + 여유(처음 값은 기준 확인 30초 포함. 2026-10-26부터 자동 확인은 없으나 대기 제한은 그대로, feature_spec.md "저장 기준 검수")
   const REVIEW_URL = "/api/green-claim/review";
   const REVIEW_TIMEOUT_MS = 100000;
-  const REVIEW_BUSY_TEXT = " 검수 중입니다. 공식 출처 확인과 AI 검수로 최대 100초 걸릴 수 있습니다. "
+  const REVIEW_BUSY_TEXT = " 검수 중입니다. 저장된 기준으로 AI가 검토하며 최대 100초 걸릴 수 있습니다. "
     + "화면에서 기다림을 멈춰도 이미 보낸 요청의 처리·요금은 취소되지 않을 수 있습니다.";
   const ACTION_LABELS = { revise_recommended: "수정 권고", needs_review: "검토 필요", judgment_withheld: "판단 보류" };
   const ACTION_TONES = { revise_recommended: "danger", needs_review: "warning", judgment_withheld: "info" };
@@ -546,12 +546,10 @@
     baseline_missing: "비교 기준 부족",
     not_checked: "확인 기록 없음",
     not_checked_this_request: "이번 요청에서 확인하지 못함",
+    auto_check_off: "자동 확인 안 함(저장된 기준 사용)",
   };
-  const CHECK_MODE_LABELS = {
-    checked: "이번 요청에서 확인 시도",
-    status_only_busy: "이번 요청 확인 못 함(다른 확인 진행 중)",
-    status_only_error: "이번 요청 확인 못 함(확인 단계 오류)",
-  };
+  const UPDATED_UNRECORDED = "업데이트 날짜 미기록";  // PDF(report_worker.py)와 같은 문장
+  const CHECK_MODE_LABELS = { stored_only: "저장된 기준 사용 · 최신성 자동 확인 안 함" };
 
   const reviewButton = byId("green_claim-review");
   const reviewStatusEl = byId("green_claim-review-status");
@@ -923,7 +921,8 @@
     criteriaEl.replaceChildren();
     field(criteriaEl, "사용 기준", "기준 버전 " + c.bundle_version + " · "
       + (c.active_version === "base" ? "기본 기준" : "활성화된 기준 " + c.active_version)
-      + " · 저장된 기준 사용(최신 개정 전체를 확인한 것이 아님)");
+      + " · " + (CHECK_MODE_LABELS[c.check_mode] || "저장된 기준 사용") + "(최신 개정 전체를 확인한 것이 아님)");
+    field(criteriaEl, "기준 자료 업데이트 날짜", c.criteria_updated_on || UPDATED_UNRECORDED);
     field(criteriaEl, "검수 모델", (data.model || "모델 정보 없음") + " · 서비스 프롬프트 " + data.prompt_version);
     if (c.warnings && c.warnings.length) {
       const warn = el("div", "notice notice-warning");
@@ -952,11 +951,11 @@
         "자료 확보 시각: " + (formatTime(source.retrieved_at) || "기록 없음"),
         "이번 검수의 확인: " + (CHECK_LABELS[source.check_status] || "알 수 없는 상태")
           + (source.check_attempted_at ? " · 시도 " + formatTime(source.check_attempted_at) : ""),
-        "마지막 성공 확인(조항 비교 완료): " + (formatTime(source.check_last_success_at) || "기록 없음"),
+        "마지막 성공 확인(이전 기록, 조항 비교 완료): " + (formatTime(source.check_last_success_at) || "기록 없음"),
       ];
       if (source.check_reason) lines.push("이유: " + source.check_reason);
       if (source.previous_check_status) {
-        lines.push("이전 확인 기록(이번 요청 아님): " + (CHECK_LABELS[source.previous_check_status] || "알 수 없는 상태")
+        lines.push("이전 출처 확인 기록(이번 검수 아님): " + (CHECK_LABELS[source.previous_check_status] || "알 수 없는 상태")
           + (source.previous_check_attempted_at ? " · " + formatTime(source.previous_check_attempted_at) : ""));
       }
       if (source.usage_rights_status === "ai_use_permission_unconfirmed") lines.push("AI 이용 허가: 확인되지 않음");

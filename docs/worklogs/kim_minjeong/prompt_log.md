@@ -764,3 +764,15 @@
 - 수정(features/green_claim/criteria_check.py): RemoteDisconnected(직접·URLError 원인)를 network_error와 구분한 reason_code server_closed와 고정 문장 추가, 실패 결과에 failed_step(robots/page/content)과 상태 파일 last_failed_step 추가. 실패 판정·마지막 성공 시각 보존·기존 기준 사용·제한·TLS 검증·robots 정책은 그대로
 - 그 밖의 변경: tests/test_criteria_update.py(테스트 1개), feature_spec.md(실패 이유 표·진단 결과), data/README.md(실패 시 조치 1줄)
 - 한계: 서버가 연결을 끊는 실제 이유는 확정하지 못함. 코드 수정으로 조회가 성공하게 되지는 않음(안내가 정확해질 뿐)
+
+## DEV-2026_10_26-13 저장 기준 검수와 기준 자료 업데이트 날짜 표시
+- 유형: development_instruction (OpenAI·공식 사이트 호출 없음, 키 조회·사용자 서버 조작 없음)
+- 날짜/시간: 2026-10-26 (Asia/Seoul). 이전 세션이 셸 구문 오류 후 "Prompt is too long"으로 중단되어 이어서 완료
+- 작업자: 김민정 / 기능: green_claim / 브랜치: feature/green_claim (HEAD b569734). 재개 시 미커밋 변경 10개(이전 세션 작업) 보존, 충돌 없음
+- 도구·모델/설정: Claude Code(VS Code 확장), 모델 ID claude-opus-5-5(세션 시스템 정보)
+- 지시 요약: 검수마다 공식 출처 조회 없이 저장된 활성 기준으로 검수, 기준 없음·손상 시 AI 호출 없이 중단, 화면·PDF에 그 기준의 실제 업데이트 날짜(근거 없으면 "업데이트 날짜 미기록", 확보일·생성일·파일 시각 대체 금지), 검수로 날짜 불변·교체/복원 시 그 버전 날짜, "저장된 기준 사용 · 최신성 자동 확인 안 함" 안내, 과거 조회 실패를 이번 요청 실패처럼 표시하지 않기, 버전·해시 연결과 기존 기능 유지
+- 재개 시 확인: 구현(review_service·criteria_loader·criteria_store·report_service·report_worker·green_claim.js·panel.html·feature_spec)은 이전 세션에서 끝나 있었음. tests/test_review.py의 run_review는 셸 오류로 with 문이 한 줄에 붙은 상태였고 기존 조회 테스트(CriteriaConnectionTest)·RouteTest·test_report·test_review_report_flow는 옛 조회 동작을 기대해 실패
+- 이번 세션 변경: tests/test_review.py(조회 차단 no_lookup·activate 도우미, CriteriaConnectionTest를 저장 기준·날짜 테스트로 교체, 파일 미생성 확인), tests/test_report.py(계약 변형·변조 거부 사례·PDF 표시 테스트), tests/test_review_report_flow.py(조회 0건·상태 파일 미생성), data/README.md(review.json에 criteria_updated_on 필수 1줄), feature_spec.md(절 제목 구현 표시·검증 1줄)
+- 날짜 근거: 활성 버전 폴더의 review.json `criteria_updated_on`(activate 때 담당자 작성, 필수). 현재 base에는 기록이 없어 null → "업데이트 날짜 미기록"
+- 한계: 실제 브라우저 화면·실제 AI 검수는 미검증. 실제 기준 버전의 업데이트 날짜는 담당자가 새 기준을 활성화할 때 적어야 생김
+- 후속(같은 날): 사용자가 화면, ChatGPT가 PDF 본문에서 날짜·저장 기준 사용·자동 확인 중단 안내가 같게 표시됨을 확인(validation.md 참고). 과거 기록에 예전 자동 조회 결과도 섞여 있어 "수동" 표시가 맞지 않다는 지적 → 화면(green_claim.js)·PDF(report_worker.py) 표시 문구만 "이전 출처 확인 기록(이번 검수 아님)", "마지막 성공 확인(이전 기록, 조항 비교 완료)"으로 변경. 기록값·시각·조회 정책 변경 없음. tests/test_report.py에 표시 테스트 1개, feature_spec.md에 1줄 추가. 외부 호출·AI 검수·키 조회 없음

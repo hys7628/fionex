@@ -41,7 +41,7 @@ CONAR 원문 발췌·번역은 이용약관 제한으로 저장 보류. 조항 �
   1. `prepare <후보>` — 활성 기준 자료를 criteria_work/candidates/<후보>/로 복사
   2. 후보 폴더의 원문 발췌·번역·지침·출처 목록·sources_meta.json을 사람이 검토해 고친다(번역·해석은 사람이 작성, 자동 번역 없음)
   3. `build <후보> --version <자체 버전>` → `validate <후보>`
-  4. 후보 폴더에 review.json 작성: reviewed_by, reviewed_at, scope, translation_reviewed: true, guidance_reviewed: true, (선택) sources_rechecked: ["SRC-…"]
+  4. 후보 폴더에 review.json 작성: reviewed_by, reviewed_at, scope, translation_reviewed: true, guidance_reviewed: true, criteria_updated_on: "YYYY-MM-DD"(이 기준 자료가 실제로 갱신된 날짜. 화면·PDF "기준 자료 업데이트 날짜". 확보일·생성일·작업일로 대신 쓰지 않음), (선택) sources_rechecked: ["SRC-…"]
   5. `activate <후보>` — 새 버전 폴더를 만들고 포인터만 교체. 이전 기준은 `rollback`으로 되돌린다.
 
 실패 시 조치
