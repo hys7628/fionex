@@ -292,18 +292,74 @@
       return "extracted";
     }
 
-    function inputSignature(fields) {
-      return JSON.stringify(fields.map(function (f) {
-        return [f.key, f.value, !!f.confirmed, !!f.virtual, originOf(f)];
-      }));
+    /* ----- 카탈로그 표시명(원본 제품명과 분리, 명세 §23) ----- */
+    const MAX_DISPLAY_NAME_CHARS = 80; // 서버 generation.MAX_DISPLAY_NAME_CHARS와 같은 값
+    // 한글 음절·자모(호환 자모·확장 A/B·반각 포함). 서버 generation.HANGUL과 같은 범위
+    const HANGUL = /[ᄀ-ᇿ㄰-㆏ꥠ-꥿가-힣ힰ-퟿ﾠ-ￜ]/;
+    const CONTROL = /[\u0000-\u001f\u007f]/;
+    const LATIN_RUN = /[A-Za-zÀ-ɏ0-9][A-Za-zÀ-ɏ0-9 .,'&+\/\-®™]*/g;
+
+    function latinRuns(text) {
+      return (text.match(LATIN_RUN) || []).map(function (s) { return s.trim(); }).filter(function (s) {
+        return /[A-Za-zÀ-ɏ]/.test(s);
+      });
+    }
+
+    function tokens(text) {
+      return text.toLowerCase().split(/[^a-zÀ-ɏ0-9]+/).filter(Boolean);
+    }
+
+    // 원본 제품명에서 카탈로그 표시명 후보를 제안합니다. 명확할 때만 값을 채우고, 애매하면 비워 둡니다.
+    //   - 한글이 없으면 원본 그대로
+    //   - 한글 + 괄호 안 라틴 문자 표기가 하나이고, 괄호 밖 라틴 단어가 모두 그 표기에 포함되면 그 표기
+    //   - 그 밖(한글만, 후보 여러 개, 괄호 밖 단어 불일치)은 제안하지 않음(공식 영문명을 만들지 않음)
+    function suggestDisplayName(productName) {
+      const name = String(productName || "").trim();
+      if (!name) return { value: "", reason: "empty", candidates: [] };
+      if (!HANGUL.test(name)) return { value: name, reason: "latin_only", candidates: [name] };
+      const groups = (name.match(/\(([^()]*)\)/g) || []).map(function (g) { return g.slice(1, -1).trim(); });
+      const latinGroups = groups.filter(function (g) { return g && !HANGUL.test(g) && /[A-Za-zÀ-ɏ]/.test(g); });
+      const outside = name.replace(/\([^()]*\)/g, " ");
+      const candidates = latinRuns(outside).concat(latinGroups).filter(function (c, i, all) {
+        return all.map(function (x) { return x.toLowerCase(); }).indexOf(c.toLowerCase()) === i;
+      });
+      if (latinGroups.length === 1) {
+        const groupTokens = tokens(latinGroups[0]);
+        const outsideTokens = tokens(latinRuns(outside).join(" "));
+        if (outsideTokens.every(function (t) { return groupTokens.indexOf(t) >= 0; })) {
+          return { value: latinGroups[0], reason: "paren_latin", candidates: candidates };
+        }
+      }
+      return { value: "", reason: candidates.length ? "ambiguous" : "none", candidates: candidates };
+    }
+
+    function validateDisplayName(value) {
+      const v = String(value || "").trim();
+      if (!v) return { ok: false, reason: "empty", message: "카탈로그 표시명을 입력하세요." };
+      if (v.length > MAX_DISPLAY_NAME_CHARS) {
+        return { ok: false, reason: "too_long", message: "카탈로그 표시명은 " + MAX_DISPLAY_NAME_CHARS + "자 이하로 입력하세요." };
+      }
+      if (HANGUL.test(v)) return { ok: false, reason: "hangul", message: "카탈로그 표시명에는 한글을 쓸 수 없습니다. 원문의 라틴 문자 표기를 입력하세요." };
+      if (CONTROL.test(v)) return { ok: false, reason: "control", message: "카탈로그 표시명에 쓸 수 없는 문자가 있습니다." };
+      return { ok: true, reason: null, message: "" };
+    }
+
+    function inputSignature(fields, displayName) {
+      const dn = displayName || { value: "", confirmed: false };
+      return JSON.stringify({
+        fields: fields.map(function (f) { return [f.key, f.value, !!f.confirmed, !!f.virtual, originOf(f)]; }),
+        display_name: [String(dn.value), !!dn.confirmed],
+      });
     }
 
     // "확인 내용 적용" 시점의 독립 복사본. 원래 항목 객체와 참조를 공유하지 않습니다.
-    function createSnapshot(fields, source, version) {
+    function createSnapshot(fields, source, version, displayName) {
+      const dn = displayName || { value: "", confirmed: false };
       return {
         source: source,
         version: version,
-        signature: inputSignature(fields),
+        signature: inputSignature(fields, dn),
+        displayName: { value: String(dn.value), confirmed: !!dn.confirmed },
         fields: fields.map(function (f) {
           return { key: f.key, value: String(f.value), confirmed: !!f.confirmed, virtual: !!f.virtual, origin: originOf(f) };
         }),
@@ -341,9 +397,14 @@
         else out.included.push(f.key);
       });
       const requiredOk = REQUIRED_KEYS.every(function (k) { return out.included.indexOf(k) >= 0; });
+      const dn = ctx.snapshot.displayName || { value: "", confirmed: false };
+      const dnCheck = validateDisplayName(dn.value);
       if (!requiredOk) {
         out.reason = "required";
         out.message = "제품명과 제품 설명에 값을 입력하고 \"사용자 확인\"을 체크한 뒤 다시 적용하세요.";
+      } else if (!dnCheck.ok || !dn.confirmed) {
+        out.reason = "display_name";
+        out.message = (dnCheck.ok ? "카탈로그 표시명을 확인(체크)하세요." : dnCheck.message) + " 그 뒤 다시 적용하세요.";
       } else if (out.tooLong.length) {
         out.reason = "too_long";
         out.message = "허용 길이를 넘는 항목이 있습니다: " + out.tooLong.map(function (k) {
@@ -358,13 +419,14 @@
       return out;
     }
 
-    // 서버 엄격 스키마: 8개 key 각각 {key, value, confirmed, virtual, origin}
+    // 서버 엄격 스키마: 8개 key 각각 {key, value, confirmed, virtual, origin} + display_name {value, confirmed}
     function buildGeneratePayload(snapshot) {
       return {
         fields: FIELD_KEYS.map(function (k) {
           const f = snapshotField(snapshot, k);
           return { key: k, value: f.value, confirmed: f.confirmed, virtual: f.virtual, origin: f.origin };
         }),
+        display_name: { value: snapshot.displayName.value.trim(), confirmed: snapshot.displayName.confirmed },
       };
     }
 
@@ -400,6 +462,7 @@
       const d = body.data;
       if (d.status !== "draft_needs_review" || d.language !== "pt-BR" || !isStr(d.prompt_version) || !isStr(d.model)) return null;
       if (!isObj(d.notices) || !isStr(d.notices.unofficial) || !isStr(d.notices.fictitious)) return null;
+      if (!isObj(d.display_name) || d.display_name.confirmed !== true || !validateDisplayName(d.display_name.value).ok) return null;
       if (!validKeys(d.used_keys, FIELD_KEYS)) return null;
       if (!REQUIRED_KEYS.every(function (k) { return d.used_keys.indexOf(k) >= 0; })) return null;
       if (!Array.isArray(d.excluded) || !d.excluded.every(function (e) {
@@ -408,6 +471,7 @@
       const p = d.pages;
       if (!isObj(p) || !isObj(p.cover) || !isObj(p.intro) || p.cover.page !== 1 || p.intro.page !== 2) return null;
       if (!validCopy(p.cover.product_name, ["product_name"]) || !validCopy(p.cover.tagline, d.used_keys)) return null;
+      if (p.cover.product_name.text !== d.display_name.value) return null; // 표지 제품명 = 확인한 표시명
       if (!Array.isArray(p.intro.paragraphs) || p.intro.paragraphs.length < 1 || p.intro.paragraphs.length > 2 ||
           !p.intro.paragraphs.every(function (c) { return validCopy(c, d.used_keys); })) return null;
       if (!validInfoPage(p.details, 3, DETAIL_KEYS, d.used_keys) || !validInfoPage(p.supply, 4, SUPPLY_KEYS, d.used_keys)) return null;
@@ -424,6 +488,9 @@
       GENERATE_INVALID_JSON: "생성 요청 형식이 올바르지 않습니다.",
       GENERATE_REQUEST_TOO_LARGE: "생성 요청 크기가 허용 범위를 넘습니다. 긴 항목을 줄인 뒤 다시 적용하세요.",
       GENERATE_OUTPUT_INVALID: "생성된 문구가 형식·범위 검증을 통과하지 못했습니다. 다시 시도하세요.",
+      GENERATE_OUTPUT_LANGUAGE: "생성된 카탈로그 문구에 한국어가 남아 있어 결과를 표시하지 않았습니다. 다시 시도하세요.",
+      GENERATE_DISPLAY_NAME_REQUIRED: "카탈로그 표시명을 입력하고 확인한 뒤 다시 적용하세요.",
+      GENERATE_DISPLAY_NAME_INVALID: "카탈로그 표시명 형식이 올바르지 않습니다(한글·제어 문자 불가, 80자 이하). 고친 뒤 다시 적용하세요.",
       AI_CONFIG_MISSING: "AI 기능 설정이 준비되지 않았습니다. 관리자에게 문의하세요.",
       AI_AUTH_FAILED: "AI 서비스 인증에 실패했습니다. 관리자에게 문의하세요.",
       AI_PERMISSION_DENIED: "AI 서비스 사용 권한이 없습니다. 관리자에게 문의하세요.",
@@ -437,6 +504,17 @@
       AI_INCOMPLETE: "AI 응답이 완료되지 않았습니다. 다시 시도하세요.",
       AI_OUTPUT_INVALID: "AI 응답을 결과 형식으로 해석하지 못했습니다. 다시 시도하세요.",
     };
+
+    // 한글 잔존 오류 메시지에서 서버가 만든 위치 표기만 꺼냅니다. 알려진 형식이 아닌 조각은 버립니다(문서 내용 미표시).
+    function languageErrorPlaces(message) {
+      if (!isStr(message) || message.indexOf("위치: ") < 0) return [];
+      const labels = EXAMPLE_FIELDS.map(function (d) { return d.label; });
+      return message.slice(message.indexOf("위치: ") + 4).split(", ").filter(function (p) {
+        if (p === "1쪽 소개 문구" || p === "2쪽 소개 문단 1" || p === "2쪽 소개 문단 2") return true;
+        const m = /^([34]쪽) (.+) (항목명|값)$/.exec(p);
+        return !!m && labels.indexOf(m[2]) >= 0;
+      });
+    }
 
     function interpretGenerateResponse(res) {
       if (!res || res.networkError) {
@@ -456,8 +534,12 @@
       if (isObj(body) && body.ok === false) {
         const code = isObj(body.error) && isStr(body.error.code) ? body.error.code : null;
         const known = code && Object.prototype.hasOwnProperty.call(GENERATE_ERROR_MESSAGES, code);
-        return { ok: false, kind: "server_error", code: known ? code : null,
-          message: known ? GENERATE_ERROR_MESSAGES[code] : "생성 요청을 처리하지 못했습니다(HTTP " + res.status + "). 다시 시도하세요." };
+        let message = known ? GENERATE_ERROR_MESSAGES[code] : "생성 요청을 처리하지 못했습니다(HTTP " + res.status + "). 다시 시도하세요.";
+        if (code === "GENERATE_OUTPUT_LANGUAGE") {
+          const places = languageErrorPlaces(body.error.message);
+          if (places.length) message += " 위치: " + places.join(", ");
+        }
+        return { ok: false, kind: "server_error", code: known ? code : null, message: message };
       }
       const data = res.status >= 200 && res.status < 300 ? validateGeneration(body) : null;
       if (!data) {
@@ -484,6 +566,7 @@
       new_number: "입력에 없는 숫자가 있습니다",
       number_not_preserved: "입력의 수치가 그대로 보이지 않습니다",
       claim_term: "근거 확인이 필요한 평가 표현이 있습니다",
+      repeated_text: "표지 소개 문구와 거의 같은 내용이 반복됩니다",
     };
 
     // review_flags → 사람이 찾을 수 있는 위치·항목 이름·설명 목록
@@ -508,6 +591,8 @@
       interpretResponse: interpretResponse, createAnalyzer: createAnalyzer,
       GENERATE_URL: GENERATE_URL, MAX_VALUE_CHARS: MAX_VALUE_CHARS, FIELD_LABEL: FIELD_LABEL, REGENERATE_MESSAGE: REGENERATE_MESSAGE,
       originOf: originOf, inputSignature: inputSignature, createSnapshot: createSnapshot,
+      suggestDisplayName: suggestDisplayName, validateDisplayName: validateDisplayName,
+      MAX_DISPLAY_NAME_CHARS: MAX_DISPLAY_NAME_CHARS,
       evaluateGeneration: evaluateGeneration, buildGeneratePayload: buildGeneratePayload,
       validateGeneration: validateGeneration, interpretGenerateResponse: interpretGenerateResponse,
       createGenerator: createGenerator, isResultStale: isResultStale, describeReviewFlags: describeReviewFlags,
@@ -554,6 +639,10 @@
   const generateError = panel.querySelector("[data-generate-error]");
   const resultOpenBtn = panel.querySelector("[data-result-open]");
   const resultStatus = panel.querySelector("[data-result-status]");
+  const displayNameBox = panel.querySelector("[data-display-name]");
+  const displayNameInput = panel.querySelector("#product_brochure-display-name");
+  const displayNameConfirm = panel.querySelector("#product_brochure-display-name-confirm");
+  const displayNameHint = panel.querySelector("[data-display-name-hint]");
 
   let fields = null;          // 현재 검토 중인 항목(브라우저 메모리)
   let fieldsSource = null;    // "example" | "analysis"
@@ -564,6 +653,12 @@
   let lastFile = null;        // 파일 교체 취소 시 되돌릴 이전 선택
   let busy = false;           // PDF 분석 중
   let generating = false;     // 카탈로그 생성 중
+  // 카탈로그 표시명(원본 제품명과 별도). edited: 사용자가 직접 고쳤으면 제품명 수정 시 제안값으로 덮지 않음
+  let displayName = { value: "", confirmed: false, edited: false, suggestion: null };
+
+  function currentSignature() {
+    return fields ? Review.inputSignature(fields, displayName) : null;
+  }
 
   function working() {
     return busy || generating;
@@ -636,6 +731,8 @@
     loadExampleBtn.disabled = locked;
     applyBtn.disabled = locked;
     groupsRoot.querySelectorAll("fieldset").forEach(function (fs) { fs.disabled = locked; });
+    displayNameInput.disabled = locked;
+    displayNameConfirm.disabled = locked;
     reviewCard.setAttribute("aria-busy", locked ? "true" : "false");
     analyzeStatus.replaceChildren();
     if (busy) {
@@ -654,7 +751,7 @@
   function generationContext() {
     return {
       source: fieldsSource, snapshot: snapshot, version: fieldsVersion,
-      currentSignature: fields ? Review.inputSignature(fields) : null, busy: working(),
+      currentSignature: currentSignature(), busy: working(),
     };
   }
 
@@ -873,8 +970,68 @@
     review.hidden = false;
   }
 
+  /* 카탈로그 표시명 입력: 원본 제품명을 바꾸지 않고 카탈로그 표지에만 쓰는 값 */
+  function renderDisplayName() {
+    displayNameBox.hidden = fieldsSource !== "analysis";
+    displayNameInput.value = displayName.value;
+    displayNameConfirm.checked = displayName.confirmed;
+    const check = Review.validateDisplayName(displayName.value);
+    const s = displayName.suggestion;
+    let hint;
+    if (displayName.value.trim() && !check.ok) hint = check.message;
+    else if (displayName.edited) hint = "직접 입력한 표시명입니다. 원문 표기와 맞는지 확인한 뒤 체크하세요.";
+    else if (s && s.value) hint = "원본 제품명의 라틴 문자 표기(\"" + s.value + "\")를 제안했습니다. 확인하거나 고친 뒤 체크하세요.";
+    else if (s && s.candidates.length) hint = "원본 제품명에서 표시명을 하나로 정할 수 없습니다(후보: " + s.candidates.join(" / ") + "). 원문 표기를 직접 입력하세요.";
+    else hint = "원본 제품명에 라틴 문자 표기가 없습니다. 원문의 표기를 직접 입력하세요(공식 영문명을 임의로 만들지 마세요).";
+    displayNameHint.textContent = hint;
+    displayNameHint.className = displayName.value.trim() && !check.ok ? "field-error" : "field-hint";
+    if (displayName.value.trim() && !check.ok) displayNameInput.setAttribute("aria-invalid", "true");
+    else displayNameInput.removeAttribute("aria-invalid");
+  }
+
+  function productNameValue() {
+    const f = fields && fields.filter(function (x) { return x.key === "product_name"; })[0];
+    return f ? f.value : "";
+  }
+
+  function resetDisplayName() {
+    const s = Review.suggestDisplayName(productNameValue());
+    displayName = { value: s.value, confirmed: false, edited: false, suggestion: s };
+    renderDisplayName();
+  }
+
+  function resuggestDisplayName() {
+    // 사용자가 직접 고치지 않았다면 제품명 수정에 맞춰 제안값을 다시 계산합니다(확인은 해제).
+    if (displayName.edited || fieldsSource !== "analysis") return;
+    const s = Review.suggestDisplayName(productNameValue());
+    if (s.value !== displayName.value) displayName.confirmed = false;
+    displayName.value = s.value;
+    displayName.suggestion = s;
+    renderDisplayName();
+  }
+
+  displayNameInput.addEventListener("input", function () {
+    if (displayNameInput.value === displayName.value) return;
+    displayName.value = displayNameInput.value;
+    displayName.edited = true;
+    displayName.confirmed = false; // 값을 바꾸면 확인 해제
+    renderDisplayName();
+    changed();
+  });
+
+  displayNameConfirm.addEventListener("change", function () {
+    if (displayNameConfirm.checked && !Review.validateDisplayName(displayName.value).ok) {
+      displayNameConfirm.checked = false; // 유효하지 않은 표시명은 확인할 수 없음
+      renderDisplayName();
+      return;
+    }
+    displayName.confirmed = displayNameConfirm.checked;
+    changed();
+  });
+
   function changed() {
-    if (applied && snapshot && Review.inputSignature(fields) !== snapshot.signature) {
+    resuggestDisplayName();
+    if (applied && snapshot && currentSignature() !== snapshot.signature) {
       applyStatus.className = "notice notice-warning";
       applyStatus.replaceChildren(
         el("p", "notice-title", "다시 적용 필요: 적용 이후 수정된 내용이 있습니다"),
@@ -896,6 +1053,7 @@
     fieldsSource = null;
     fieldsVersion++; // 이전 적용·생성 결과를 새 입력으로 재사용하지 않음(생성 결과는 지우지 않고 "다를 수 있음" 표시)
     resetApplied();
+    resetDisplayName();
     groupsRoot.replaceChildren();
     review.hidden = true;
     reviewEmpty.hidden = false;
@@ -909,6 +1067,7 @@
     fieldsSource = source;
     fieldsVersion++;
     resetApplied();
+    resetDisplayName(); // 새 분석·예시마다 표시명 제안을 다시 계산(이전 확인 재사용 없음)
     renderReview(meta);
     syncControls();
     syncWork();
@@ -1018,7 +1177,7 @@
     if (!fields || working()) return;
     // 브라우저 메모리의 검토 상태만 갱신합니다. 서버 전송·저장·카탈로그 생성은 하지 않습니다.
     applied = Review.summarize(fields);
-    snapshot = Review.createSnapshot(fields, fieldsSource, fieldsVersion);
+    snapshot = Review.createSnapshot(fields, fieldsSource, fieldsVersion, displayName);
     const title = fieldsSource === "analysis"
       ? "AI 추출 결과의 검토 상태를 이 화면에 반영했습니다"
       : "개발용 예시의 검토 상태를 이 화면에 반영했습니다";

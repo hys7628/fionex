@@ -28,7 +28,7 @@ def field(key, value, confirmed=True, virtual=False, origin="extracted"):
 
 def request_fields(**overrides):
     base = {
-        "product_name": field("product_name", "regen T2T (teste)"),
+        "product_name": field("product_name", "리젠 T2T (regen T2T)"),  # 원본(한글 혼합) 제품명
         "description": field("description", "폐의류를 재활용하는 폴리에스터 섬유(가상 테스트 " + SECRET_INPUT + ")"),
         "yarn_spec": field("yarn_spec", "75D/36F", virtual=True, origin="user_added"),
         "carbon_reduction": field("carbon_reduction", "", confirmed=False),
@@ -70,9 +70,10 @@ class GenerateBase(Base):
     def set_output(self, payload):
         self.responder = lambda r: httpx2.Response(200, json=response_body(payload))
 
-    def gen(self, fields=None, body=None, **kw):
+    def gen(self, fields=None, body=None, display_name=None, **kw):
         if body is None:
-            body = {"fields": fields if fields is not None else request_fields()}
+            body = {"fields": fields if fields is not None else request_fields(),
+                    "display_name": display_name if display_name is not None else {"value": "regen T2T", "confirmed": True}}
         return self.client.post(URL, json=body, **kw)
 
 
@@ -83,7 +84,8 @@ class GenerateSuccessTests(GenerateBase):
         data = response.get_json()["data"]
         self.assertEqual(data["status"], "draft_needs_review")
         self.assertEqual(data["language"], "pt-BR")
-        self.assertEqual(data["prompt_version"], "brochure_generate_v1")
+        self.assertEqual(data["prompt_version"], "brochure_generate_v2")
+        self.assertEqual(data["display_name"], {"value": "regen T2T", "confirmed": True})
         self.assertEqual(data["model"], "test-model-snap")
         self.assertEqual(data["notices"], {"unofficial": "Material demonstrativo — não é um catálogo oficial.",
                                            "fictitious": "Condições fictícias para demonstração."})
@@ -95,7 +97,7 @@ class GenerateSuccessTests(GenerateBase):
         pages = data["pages"]
         self.assertEqual([pages[p]["page"] for p in ("cover", "intro", "details", "supply")], [1, 2, 3, 4])
         cover = pages["cover"]
-        self.assertEqual(cover["product_name"]["text"], "regen T2T (teste)")  # 입력 표기 보존
+        self.assertEqual(cover["product_name"]["text"], "regen T2T")  # 원본이 아니라 확인한 카탈로그 표시명
         self.assertIs(cover["tagline"]["virtual"], False)
         para = pages["intro"]["paragraphs"][0]
         self.assertIs(para["virtual"], True)  # 가상 입력(moq)을 쓴 소개 문구로 전파
@@ -118,6 +120,10 @@ class GenerateSuccessTests(GenerateBase):
         self.assertEqual(sent["instructions"], generation.load_instructions())
         model_input = json.loads(sent["input"])
         self.assertEqual([f["key"] for f in model_input["fields"]], data["used_keys"])
+        # 모델에는 원본(한글 혼합) 제품명 대신 확인한 표시명만 전달
+        self.assertEqual(model_input["display_name"], "regen T2T")
+        self.assertEqual(model_input["fields"][0], {"key": "product_name", "label_ko": "제품명", "value": "regen T2T"})
+        self.assertNotIn("리젠", sent["input"])
         self.assertEqual(model_input["details_keys"], ["yarn_spec"])
         self.assertEqual(model_input["supply_keys"], ["moq", "sample", "lead_time"])
         flat = json.dumps(model_input, ensure_ascii=False)
@@ -149,6 +155,83 @@ class GenerateSuccessTests(GenerateBase):
         data = self.gen().get_json()["data"]
         self.assertCountEqual(data["pages"]["cover"]["tagline"]["review_flags"], ["new_number", "claim_term"])
         self.assertEqual(data["pages"]["supply"]["items"][0]["review_flags"], ["number_not_preserved"])
+
+
+class DisplayNameAndLanguageTests(GenerateBase):
+    """카탈로그 표시명(원본 제품명과 분리)과 문서 문자열 한글 잔존 검사."""
+
+    def code(self, response):
+        return response.status_code, response.get_json().get("error", {}).get("code")
+
+    def test_display_name_required_and_invalid_without_ai_call(self):
+        cases = [
+            ({"value": "regen T2T", "confirmed": False}, "GENERATE_DISPLAY_NAME_REQUIRED"),
+            ({"value": "   ", "confirmed": True}, "GENERATE_DISPLAY_NAME_REQUIRED"),
+            ({"value": "리젠 T2T", "confirmed": True}, "GENERATE_DISPLAY_NAME_INVALID"),     # 한글 음절
+            ({"value": "regen ㄱ", "confirmed": True}, "GENERATE_DISPLAY_NAME_INVALID"),      # 한글 자모
+            ({"value": "a" * 81, "confirmed": True}, "GENERATE_DISPLAY_NAME_INVALID"),
+            ({"value": "regen\u0007", "confirmed": True}, "GENERATE_DISPLAY_NAME_INVALID"),
+        ]
+        for display, code in cases:
+            with self.subTest(display=display["value"][:12]):
+                self.assertEqual(self.code(self.gen(display_name=display)), (400, code))
+        for body in ({"fields": request_fields()},                                              # 표시명 누락
+                     {"fields": request_fields(), "display_name": {"value": "x", "confirmed": "true"}},  # 느슨한 형
+                     {"fields": request_fields(), "display_name": "regen T2T"}):
+            self.assertEqual(self.code(self.gen(body=body)), (400, "GENERATE_INVALID_INPUT"))
+        self.assertEqual(self.requests, [])  # AI 호출 0회
+
+    def test_display_name_accepts_accents_digits_symbols_and_is_not_hardcoded(self):
+        for name in ("Fio Têxtil Ação 2.0", "EcoYarn® 75D/36F", "Alpha-Beta & Co. (PT)", "Ñandú 100"):
+            with self.subTest(name=name):
+                fields = request_fields(product_name=field("product_name", "다른 제품 " + name))
+                response = self.gen(fields, display_name={"value": name, "confirmed": True})
+                self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
+                data = response.get_json()["data"]
+                self.assertEqual(data["pages"]["cover"]["product_name"]["text"], name)  # regen T2T 강제 적용 없음
+                self.assertEqual(json.loads(self.requests[-1]["input"])["display_name"], name)
+
+    def test_hangul_in_document_strings_fails_safely(self):
+        cases = {
+            "tagline": (ai_output(tagline=copy("Fibra 리젠 de poliéster.", "description")), "1쪽 소개 문구"),
+            "paragraph_jamo": (ai_output(intro_paragraphs=[copy("Texto ㅎ final.", "description")]), "2쪽 소개 문단 1"),
+            "supply_value": (ai_output(supply=[item("moq", "Pedido mínimo", "500 kg"), item("sample", "Amostra", "1 kg 가능"),
+                                               item("lead_time", "Prazo", "30 dias")]), "4쪽 샘플 값"),
+            "detail_label": (ai_output(details=[item("yarn_spec", "원사 규격", "75D/36F")]), "3쪽 원사 규격 항목명"),
+        }
+        for name, (payload, place) in cases.items():
+            with self.subTest(case=name):
+                self.set_output(payload)
+                response = self.gen()
+                self.assertEqual(response.status_code, 502)
+                error = response.get_json()["error"]
+                self.assertEqual(error["code"], "GENERATE_OUTPUT_LANGUAGE")
+                self.assertIn(place, error["message"])         # 위치만 전달
+                for leaked in ("리젠 de", "ㅎ final", "가능", "75D/36F"):
+                    self.assertNotIn(leaked, error["message"])  # 생성 문구 원문 미포함
+                self.assertEqual(len(self.requests), 1)       # 자동 재시도 없음
+                self.requests.clear()
+
+    def test_portuguese_accents_pass_language_check(self):
+        self.set_output(ai_output(
+            tagline=copy("Fibra de poliéster para coleções têxteis.", "description"),
+            supply=[item("moq", "Pedido mínimo", "500 kg"),
+                    item("sample", "Amostra", "1 kg disponível para avaliação mediante solicitação"),
+                    item("lead_time", "Prazo de entrega", "30 dias após confirmação")]))
+        self.assertEqual(self.gen().status_code, 200)
+
+    def test_repetition_flag_only_for_near_duplicate_text(self):
+        same = "Fibra de poliéster produzida a partir de roupas descartadas."
+        self.set_output(ai_output(tagline=copy(same, "description"),
+                                  intro_paragraphs=[copy("O regen T2T é uma fibra de poliéster produzida a partir de roupas descartadas.",
+                                                         "description")]))
+        para = self.gen().get_json()["data"]["pages"]["intro"]["paragraphs"][0]
+        self.assertIn("repeated_text", para["review_flags"])
+        self.set_output(ai_output(tagline=copy("regen T2T: fibra de poliéster.", "product_name", "description"),
+                                  intro_paragraphs=[copy("O regen T2T utiliza roupas descartadas como matéria-prima "
+                                                         "e está disponível para avaliação.", "description")]))
+        para = self.gen().get_json()["data"]["pages"]["intro"]["paragraphs"][0]
+        self.assertNotIn("repeated_text", para["review_flags"])  # 제품명·핵심 용어 반복은 정상
 
 
 class GenerateInputErrorTests(GenerateBase):
@@ -290,6 +373,17 @@ class PromptTests(unittest.TestCase):
                        generation.MAX_DETAIL_VALUE_CHARS, generation.MAX_SUPPLY_VALUE_CHARS):
             self.assertIn(f"{number}자 이하", text)
         self.assertIn(f"1~{generation.MAX_INTRO_PARAGRAPHS}개", text)
+
+    def test_prompt_v2_rules_and_v1_preserved(self):
+        self.assertEqual(generation.PROMPT_VERSION, "brochure_generate_v2")
+        text = generation.load_instructions()
+        for phrase in ("display_name", "한글 음절·자모", "번역·변형", "avaliação", "revisão de amostra",
+                       "무상 제공, 즉시 발송, 재고 보장", "tagline 문장을 그대로 또는 거의 그대로 되풀이하지 않습니다",
+                       "새로운 특징·효능·인증·공정을 만들지 않습니다"):
+            self.assertIn(phrase, text)
+        self.assertNotIn("regen", text.lower())  # 특정 제품명 하드코딩 없음
+        v1 = generation._PROMPT_PATH.with_name("brochure_generate_v1.md")
+        self.assertTrue(v1.exists())  # 실험 기록이 있는 이전 버전 보존
 
 
 if __name__ == "__main__":

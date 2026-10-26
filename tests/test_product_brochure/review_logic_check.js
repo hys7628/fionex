@@ -234,8 +234,10 @@ function analysisFields() {
 function confirmAll(fs, keys) {
   keys.forEach((k) => R.setConfirmed(fs.find((f) => f.key === k), true));
 }
+// 확인된 카탈로그 표시명(가상 테스트 값)
+const DN = { value: "regen T2T", confirmed: true };
 function ctxOf(fs, snap, extra) {
-  return Object.assign({ source: "analysis", snapshot: snap, version: 1, currentSignature: R.inputSignature(fs), busy: false }, extra || {});
+  return Object.assign({ source: "analysis", snapshot: snap, version: 1, currentSignature: R.inputSignature(fs, DN), busy: false }, extra || {});
 }
 function copyOut(text, keys, virtual, flags) {
   return { text: text, source_keys: keys, virtual: !!virtual, origins: {}, review_flags: flags || [] };
@@ -245,7 +247,8 @@ function infoOut(key, value, virtual, flags) {
 }
 function generationBody(over) {
   const data = {
-    status: "draft_needs_review", language: "pt-BR", prompt_version: "brochure_generate_v1", model: "test-model",
+    status: "draft_needs_review", language: "pt-BR", prompt_version: "brochure_generate_v2", model: "test-model",
+    display_name: { value: "regen T2T", confirmed: true },
     notices: { unofficial: "Material demonstrativo — não é um catálogo oficial.", fictitious: "Condições fictícias para demonstração." },
     pages: {
       cover: { page: 1, product_name: copyOut("regen T2T", ["product_name"]), tagline: copyOut(XSS, ["description"]) },
@@ -275,7 +278,7 @@ check("origin 변환: 추출 / 사용자 수정 / 사용자 추가(재수정해�
 check("적용 스냅샷은 독립 복사본", () => {
   const fs = analysisFields();
   confirmAll(fs, ["product_name", "description"]);
-  const snap = R.createSnapshot(fs, "analysis", 1);
+  const snap = R.createSnapshot(fs, "analysis", 1, DN);
   R.setValue(fs[0], "다른 이름");
   assert.equal(snap.fields[0].value, "리젠 T2T");
   assert.ok(snap.fields.every((s, i) => s !== fs[i]));
@@ -285,15 +288,15 @@ check("적용 스냅샷은 독립 복사본", () => {
 check("생성 가능 조건: 예시·미적용·재적용 필요·필수 미확인·길이 초과·진행 중", () => {
   const ex = R.createFields(R.EXAMPLE_FIELDS);
   confirmAll(ex, ["product_name", "description"]);
-  const exSnap = R.createSnapshot(ex, "example", 1);
+  const exSnap = R.createSnapshot(ex, "example", 1, DN);
   assert.equal(R.evaluateGeneration(ctxOf(ex, exSnap, { source: "example" })).reason, "example");
   const fs = analysisFields();
   assert.equal(R.evaluateGeneration(ctxOf(fs, null)).reason, "not_applied");
-  let snap = R.createSnapshot(fs, "analysis", 1);
+  let snap = R.createSnapshot(fs, "analysis", 1, DN);
   assert.equal(R.evaluateGeneration(ctxOf(fs, snap)).reason, "required"); // 필수 미확인
   confirmAll(fs, ["product_name", "description"]);
   assert.equal(R.evaluateGeneration(ctxOf(fs, snap)).reason, "reapply"); // 확인 체크 변경 → 다시 적용 필요
-  snap = R.createSnapshot(fs, "analysis", 1);
+  snap = R.createSnapshot(fs, "analysis", 1, DN);
   assert.equal(R.evaluateGeneration(ctxOf(fs, snap, { version: 2 })).reason, "not_applied"); // 새 분석·파일 교체 후
   assert.equal(R.evaluateGeneration(ctxOf(fs, snap, { busy: true })).reason, "busy");
   const ok = R.evaluateGeneration(ctxOf(fs, snap));
@@ -303,7 +306,7 @@ check("생성 가능 조건: 예시·미적용·재적용 필요·필수 미확�
   assert.ok(ok.excluded.some((e) => e.key === "yarn_spec" && e.reason === "empty"));
   R.setValue(fs.find((f) => f.key === "moq"), "x".repeat(201));
   confirmAll(fs, ["moq"]);
-  const longSnap = R.createSnapshot(fs, "analysis", 1);
+  const longSnap = R.createSnapshot(fs, "analysis", 1, DN);
   const tooLong = R.evaluateGeneration(ctxOf(fs, longSnap));
   assert.equal(tooLong.reason, "too_long");
   assert.deepEqual(tooLong.tooLong, ["moq"]);
@@ -313,8 +316,9 @@ check("생성 가능 조건: 예시·미적용·재적용 필요·필수 미확�
 check("생성 요청 본문: 8개 key·엄격 형식·추가 필드 없음", () => {
   const fs = analysisFields();
   confirmAll(fs, ["product_name", "description"]);
-  const payload = R.buildGeneratePayload(R.createSnapshot(fs, "analysis", 1));
-  assert.deepEqual(Object.keys(payload), ["fields"]);
+  const payload = R.buildGeneratePayload(R.createSnapshot(fs, "analysis", 1, DN));
+  assert.deepEqual(Object.keys(payload), ["fields", "display_name"]);
+  assert.deepEqual(payload.display_name, { value: "regen T2T", confirmed: true });
   assert.deepEqual(payload.fields.map((f) => f.key), R.FIELD_KEYS);
   payload.fields.forEach((f) => {
     assert.deepEqual(Object.keys(f).sort(), ["confirmed", "key", "origin", "value", "virtual"]);
@@ -412,7 +416,7 @@ check("생성 실행기: 중복 클릭 방지, 실패 시 성공 콜백 없음, 
 check("이전 결과 판정과 검토 표시 설명", () => {
   const fs = analysisFields();
   confirmAll(fs, ["product_name", "description"]);
-  const snap = R.createSnapshot(fs, "analysis", 1);
+  const snap = R.createSnapshot(fs, "analysis", 1, DN);
   const result = { data: null, signature: snap.signature, version: 1 };
   assert.equal(R.isResultStale(result, ctxOf(fs, snap)), false);
   R.setValue(fs[1], "바뀐 설명");
@@ -424,6 +428,72 @@ check("이전 결과 판정과 검토 표시 설명", () => {
   const withItemFlag = generationBody();
   withItemFlag.data.pages.supply.items[0].review_flags = ["number_not_preserved"];
   assert.equal(R.describeReviewFlags(withItemFlag.data)[1].where, "4쪽 MOQ"); // 내부 key 대신 항목 이름
+});
+
+/* ---------- 카탈로그 표시명 ---------- */
+check("표시명 제안: 혼합 표기에서 명확한 라틴 표기만, 애매하면 비움, 특정 이름 강제 없음", () => {
+  const s = R.suggestDisplayName("리젠 T2T (regen T2T)");
+  assert.equal(s.value, "regen T2T");
+  assert.equal(s.reason, "paren_latin");
+  assert.equal(R.suggestDisplayName("EcoYarn® 75D").value, "EcoYarn® 75D");          // 라틴 표기만 → 그대로
+  assert.equal(R.suggestDisplayName("Fio Têxtil Ação").value, "Fio Têxtil Ação");     // 악센트 허용
+  assert.equal(R.suggestDisplayName("다른 원사 (Alpha Fiber)").value, "Alpha Fiber");  // regen T2T 강제 없음
+  for (const ambiguous of ["리젠", "리젠 T2T", "리젠 ABC (regen T2T)", "폴리 원사 (A1) (B2)", "리젠 (재활용)"]) {
+    const r = R.suggestDisplayName(ambiguous);
+    assert.equal(r.value, "", ambiguous);                                             // 공식 영문명을 만들지 않음
+  }
+  assert.deepEqual(R.suggestDisplayName("리젠 T2T").candidates, ["T2T"]);
+  assert.equal(R.suggestDisplayName("리젠").reason, "none");
+  assert.equal(R.suggestDisplayName("폴리 원사 (A1) (B2)").reason, "ambiguous");
+});
+
+check("표시명 검사: 빈 값·한글 음절/자모·길이·제어 문자 차단, 악센트·숫자·기호 허용", () => {
+  assert.equal(R.validateDisplayName("  ").reason, "empty");
+  assert.equal(R.validateDisplayName("리젠").reason, "hangul");
+  assert.equal(R.validateDisplayName("regen ㄱ").reason, "hangul");
+  assert.equal(R.validateDisplayName("a".repeat(81)).reason, "too_long");
+  assert.equal(R.validateDisplayName("a".repeat(80)).ok, true);
+  assert.equal(R.validateDisplayName("x\u0007").reason, "control");
+  for (const ok of ["regen T2T", "Fio Têxtil Ação 2.0", "EcoYarn® 75D/36F", "Alpha-Beta & Co. (PT)"]) {
+    assert.equal(R.validateDisplayName(ok).ok, true, ok);
+  }
+});
+
+check("표시명은 스냅샷·서명·생성 가능 판정·이전 결과 경고에 포함", () => {
+  const fs = analysisFields();
+  confirmAll(fs, ["product_name", "description"]);
+  const unconfirmed = R.createSnapshot(fs, "analysis", 1, { value: "regen T2T", confirmed: false });
+  assert.equal(R.evaluateGeneration(ctxOf(fs, unconfirmed, { currentSignature: R.inputSignature(fs, { value: "regen T2T", confirmed: false }) })).reason, "display_name");
+  const hangul = { value: "리젠", confirmed: true };
+  assert.equal(R.evaluateGeneration(ctxOf(fs, R.createSnapshot(fs, "analysis", 1, hangul), { currentSignature: R.inputSignature(fs, hangul) })).reason, "display_name");
+  const snap = R.createSnapshot(fs, "analysis", 1, DN);
+  assert.equal(R.evaluateGeneration(ctxOf(fs, snap)).ok, true);
+  const dn = { value: "regen T2T", confirmed: true };
+  const snap2 = R.createSnapshot(fs, "analysis", 1, dn);
+  dn.value = "changed";                                                       // 원본 객체 변경
+  assert.equal(snap2.displayName.value, "regen T2T");                         // 스냅샷 독립
+  const changed = R.inputSignature(fs, { value: "regen T2T X", confirmed: false });
+  assert.equal(R.evaluateGeneration(ctxOf(fs, snap, { currentSignature: changed })).reason, "reapply"); // 표시명 변경 → 재적용
+  const result = { signature: snap.signature, version: 1 };
+  assert.equal(R.isResultStale(result, { version: 1, currentSignature: changed }), true);              // 이전 결과 경고
+  assert.equal(R.isResultStale(result, ctxOf(fs, snap)), false);
+  assert.equal(R.buildGeneratePayload(R.createSnapshot(fs, "analysis", 1, { value: "  regen T2T  ", confirmed: true })).display_name.value, "regen T2T");
+});
+
+check("생성 응답 표시명 검사와 한글 잔존 오류 위치 안내", () => {
+  const mismatch = generationBody();
+  mismatch.data.pages.cover.product_name.text = "리젠 T2T (regen T2T)";
+  assert.equal(R.validateGeneration(mismatch), null);                         // 표지 제품명 ≠ 표시명
+  const noDn = generationBody();
+  delete noDn.data.display_name;
+  assert.equal(R.validateGeneration(noDn), null);
+  const lang = R.interpretGenerateResponse({ status: 502, json: { ok: false, error: { code: "GENERATE_OUTPUT_LANGUAGE",
+    message: "생성된 카탈로그 문구에 한국어가 남아 있어 결과를 표시하지 않았습니다. 위치: 1쪽 소개 문구, 4쪽 샘플 값, <b>원문</b>" } } });
+  assert.ok(lang.message.includes("위치: 1쪽 소개 문구, 4쪽 샘플 값"));
+  assert.ok(!lang.message.includes("원문"));                                  // 알려진 위치 형식만 표시
+  assert.equal(R.describeReviewFlags({ pages: { cover: { tagline: copyOut("t", ["description"]) },
+    intro: { paragraphs: [copyOut("p", ["description"], false, ["repeated_text"])] },
+    details: { items: [] }, supply: { items: [] } } })[0].text, "표지 소개 문구와 거의 같은 내용이 반복됩니다");
 });
 
 (async () => {

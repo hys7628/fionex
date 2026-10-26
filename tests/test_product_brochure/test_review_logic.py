@@ -25,7 +25,7 @@ const field = (key, o) => Object.assign({ key, value: null, status: "not_found",
   marked_virtual: false, note: null, server_notes: [], confirmed: false }, o || {});
 const body = { ok: true, data: { extraction_status: "unconfirmed", prompt_version: "v", source: { size_bytes: 1, page_count: 1 },
   model: "m", multiple_products: false, review_notes: [], fields: [
-    field("product_name", { value: "regen T2T (teste)", status: "found" }),
+    field("product_name", { value: "리젠 T2T (regen T2T)", status: "found" }),
     field("description", { value: "설명(가상)", status: "unclear" }),
     field("yarn_spec"), field("carbon_reduction"), field("certification"),
     field("moq", { value: "500 kg", status: "found", marked_virtual: true }),
@@ -36,7 +36,9 @@ const get = (k) => fs.find((f) => f.key === k);
 R.setValue(get("description"), "수정한 설명(가상)");
 R.setValue(get("yarn_spec"), "75D/36F");
 ["product_name", "description", "yarn_spec", "moq"].forEach((k) => R.setConfirmed(get(k), true));
-process.stdout.write(JSON.stringify(R.buildGeneratePayload(R.createSnapshot(fs, "analysis", 1))));
+const suggestion = R.suggestDisplayName(get("product_name").value);  // 화면 제안값을 사용자가 확인했다고 가정
+const displayName = { value: suggestion.value, confirmed: true };
+process.stdout.write(JSON.stringify(R.buildGeneratePayload(R.createSnapshot(fs, "analysis", 1, displayName))));
 """
 
 
@@ -58,7 +60,9 @@ class ReviewLogicTests(unittest.TestCase):
                                 encoding="utf-8", timeout=60)
         self.assertEqual(result.returncode, 0, result.stderr)
         payload = json.loads(result.stdout)
-        by_key = generation.parse_request(payload)
+        by_key, display_name = generation.parse_request(payload)
+        self.assertEqual(display_name, "regen T2T")                         # 화면 제안 → 서버 표시명
+        self.assertEqual(by_key["product_name"].value, "리젠 T2T (regen T2T)")  # 원본 제품명 보존
         used, excluded = generation.select_inputs(by_key)
         self.assertEqual(used, ["product_name", "description", "yarn_spec", "moq"])
         self.assertEqual({e["key"]: e["reason"] for e in excluded},

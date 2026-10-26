@@ -3,6 +3,9 @@
 입력은 사용자가 확인·수정 후 적용한 8개 항목입니다. 서버는 저장하지 않으므로 이전 분석 결과와 대조할 수 없고,
 요청에 담긴 confirmed·virtual·origin은 형식만 검증해 보존합니다(서버가 사용자 확인 이력을 인증하지 않음).
 출력은 4페이지 템플릿에 넣을 pt-BR 문구 초안이며, 번역 의미·사실 정확성은 사용자 검토 대상입니다.
+
+표지 제품명은 원본 product_name이 아니라 사용자가 확인한 카탈로그 표시명(display_name)을 그대로 씁니다(명세 §23).
+문서에 들어갈 생성 문자열에 한글이 남으면 실패로 처리합니다. 한글이 없다는 사실이 pt-BR 품질을 보장하지는 않습니다.
 """
 import json
 import re
@@ -16,7 +19,8 @@ from common.ai_client import generate_structured
 from common.errors import AIInputError, AIOutputInvalidError
 from features.product_brochure.service import FIELD_KEYS, FIELD_LABELS, FieldKey
 
-PROMPT_VERSION = "brochure_generate_v1"
+# v1: 첫 버전(실제 실행 기록 SPE-2026_10_25-02, 파일 보존). v2: 표시명·한국어 금지·샘플 표현·표지/소개 역할 구분
+PROMPT_VERSION = "brochure_generate_v2"
 _PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / (PROMPT_VERSION + ".md")
 
 REQUIRED_KEYS = ("product_name", "description")
@@ -32,6 +36,13 @@ MAX_VALUE_CHARS = {
     "yarn_spec": 300, "certification": 300, "carbon_reduction": 300,
     "moq": 200, "sample": 200, "lead_time": 200,
 }
+MAX_DISPLAY_NAME_CHARS = 80
+
+# 한글 음절·자모(호환 자모·확장 A/B·반각 포함). 카탈로그 표시명과 문서 문자열 검사에 사용
+HANGUL = re.compile("[ᄀ-ᇿ㄰-㆏ꥠ-꥿가-힣ힰ-퟿ﾠ-ￜ]")
+_CONTROL = re.compile("[\u0000-\u001f\u007f]")
+_WORD = re.compile(r"[^\W\d_]{4,}")
+REPEAT_RATIO = 0.8  # 표지 소개 단어(4자 이상, 표시명 제외)의 80% 이상이 문단에 다시 나오면 검토 표시
 
 # 출력 상한(프롬프트와 같은 값). 넘으면 실패로 처리합니다(잘라서 성공 처리하지 않음).
 MAX_TAGLINE_CHARS = 140
@@ -67,9 +78,16 @@ class InputField(BaseModel):
     origin: Literal["extracted", "user_modified", "user_added"]
 
 
+class DisplayName(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    value: StrictStr
+    confirmed: StrictBool
+
+
 class GenerateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     fields: List[InputField]
+    display_name: DisplayName
 
 
 # ---------- AI 출력 스키마(Structured Outputs) ----------
@@ -128,9 +146,24 @@ class GenerateRequiredMissingError(AIInputError):
     message = "제품명과 제품 설명을 입력하고 사용자 확인한 뒤 생성할 수 있습니다."
 
 
+class GenerateDisplayNameRequiredError(AIInputError):
+    code = "GENERATE_DISPLAY_NAME_REQUIRED"
+    message = "카탈로그 표시명을 입력하고 확인한 뒤 생성할 수 있습니다."
+
+
+class GenerateDisplayNameInvalidError(AIInputError):
+    code = "GENERATE_DISPLAY_NAME_INVALID"
+    message = "카탈로그 표시명 형식이 올바르지 않습니다."
+
+
 class GenerateOutputInvalidError(AIOutputInvalidError):
     code = "GENERATE_OUTPUT_INVALID"
     message = "생성된 문구가 형식·범위 검증을 통과하지 못했습니다. 다시 시도하세요."
+
+
+class GenerateOutputLanguageError(AIOutputInvalidError):
+    code = "GENERATE_OUTPUT_LANGUAGE"
+    message = "생성된 카탈로그 문구에 한국어가 남아 있어 결과를 표시하지 않았습니다. 다시 시도하세요."
 
 
 @lru_cache(maxsize=1)
@@ -140,7 +173,7 @@ def load_instructions():
 
 def _safe_loc(loc):
     """오류 위치에서 클라이언트가 보낸 임의 문자열(알 수 없는 필드명 등)을 제외합니다."""
-    known = {"fields", "key", "value", "confirmed", "virtual", "origin"}
+    known = {"fields", "key", "value", "confirmed", "virtual", "origin", "display_name"}
     return ".".join(str(p) if isinstance(p, int) or p in known else "?" for p in loc)
 
 
@@ -168,7 +201,21 @@ def parse_request(payload):
     for k in REQUIRED_KEYS:
         if not by_key[k].value.strip() or by_key[k].confirmed is not True:
             raise GenerateRequiredMissingError()
-    return by_key
+    return by_key, check_display_name(req.display_name)
+
+
+def check_display_name(display):
+    """카탈로그 표시명: 비어 있지 않고 확인됨, 80자 이하, 한글·제어 문자 없음. 악센트·숫자·일반 기호는 허용."""
+    value = display.value.strip()
+    if not value or display.confirmed is not True:
+        raise GenerateDisplayNameRequiredError()
+    if len(value) > MAX_DISPLAY_NAME_CHARS:
+        raise GenerateDisplayNameInvalidError(message=f"카탈로그 표시명이 {MAX_DISPLAY_NAME_CHARS}자를 넘습니다.")
+    if HANGUL.search(value):
+        raise GenerateDisplayNameInvalidError(message="카탈로그 표시명에 한글을 쓸 수 없습니다. 원문의 라틴 문자 표기를 입력하세요.")
+    if _CONTROL.search(value):
+        raise GenerateDisplayNameInvalidError(message="카탈로그 표시명에 쓸 수 없는 문자가 있습니다.")
+    return value
 
 
 def select_inputs(by_key):
@@ -185,10 +232,14 @@ def select_inputs(by_key):
     return used, excluded
 
 
-def build_model_input(by_key, used):
-    """모델 입력(데이터). 확인·가상·출처 메타데이터와 제외 항목은 보내지 않습니다."""
+def build_model_input(by_key, used, display_name):
+    """모델 입력(데이터). 확인·가상·출처 메타데이터와 제외 항목은 보내지 않습니다.
+    product_name은 원본(한국어가 섞일 수 있음) 대신 사용자가 확인한 카탈로그 표시명을 보냅니다."""
+    def value(k):
+        return display_name if k == "product_name" else by_key[k].value.strip()
     return json.dumps({
-        "fields": [{"key": k, "label_ko": FIELD_LABELS[k], "value": by_key[k].value.strip()} for k in used],
+        "display_name": display_name,
+        "fields": [{"key": k, "label_ko": FIELD_LABELS[k], "value": value(k)} for k in used],
         "details_keys": [k for k in DETAIL_KEYS if k in used],
         "supply_keys": [k for k in SUPPLY_KEYS if k in used],
     }, ensure_ascii=False)
@@ -255,19 +306,57 @@ def _items(items, expected_keys, by_key, value_limit, empty_message):
     return {"items": out, "empty": not out, "empty_message": None if out else empty_message}
 
 
-def build_pages(copy, by_key, used):
+def check_output_language(copy):
+    """문서에 들어갈 생성 문자열의 한글 잔존 검사. 위치만 모아 실패로 처리합니다(원문을 지우거나 통과시키지 않음).
+    모델명·메타데이터·한국어 UI 안내는 검사 대상이 아닙니다."""
+    places = []
+    if HANGUL.search(copy.tagline.text):
+        places.append("1쪽 소개 문구")
+    for n, p in enumerate(copy.intro_paragraphs, start=1):
+        if HANGUL.search(p.text):
+            places.append(f"2쪽 소개 문단 {n}")
+    for page, items in (("3쪽", copy.details), ("4쪽", copy.supply)):
+        for item in items:
+            for part, text in (("항목명", item.label), ("값", item.value)):
+                if HANGUL.search(text):
+                    places.append(f"{page} {FIELD_LABELS.get(item.key, '항목')} {part}")
+    if places:
+        raise GenerateOutputLanguageError(
+            message="생성된 카탈로그 문구에 한국어가 남아 있어 결과를 표시하지 않았습니다. 위치: " + ", ".join(places[:6]))
+
+
+def _words(text, exclude):
+    return {w for w in _WORD.findall(text.lower()) if w not in exclude}
+
+
+def _flag_repetition(tagline, paragraphs, display_name):
+    """표지 소개와 거의 같은 2쪽 문단에 검토 표시(거부 아님). 표시명 단어는 정상 반복으로 보고 제외합니다."""
+    exclude = {w.lower() for w in _WORD.findall(display_name)}
+    base = _words(tagline["text"], exclude)
+    if len(base) < 3:
+        return
+    for p in paragraphs:
+        if len(base & _words(p["text"], exclude)) / len(base) >= REPEAT_RATIO:
+            p["review_flags"].append("repeated_text")
+
+
+def build_pages(copy, by_key, used, display_name):
     if not 1 <= len(copy.intro_paragraphs) <= MAX_INTRO_PARAGRAPHS:
         raise GenerateOutputInvalidError()
+    check_output_language(copy)
     name = by_key["product_name"]
+    tagline = _copy(copy.tagline, by_key, used, MAX_TAGLINE_CHARS)
+    paragraphs = [_copy(p, by_key, used, MAX_PARAGRAPH_CHARS) for p in copy.intro_paragraphs]
+    _flag_repetition(tagline, paragraphs, display_name)
     return {
         "cover": {
             "page": 1,
-            # 제품명은 AI가 만들지 않고 입력 표기를 그대로 사용
-            "product_name": {"text": name.value.strip(), "source_keys": ["product_name"], "virtual": name.virtual,
+            # 표지 제품명은 AI가 만들지 않고 사용자가 확인한 카탈로그 표시명을 그대로 사용(원본 product_name은 보존)
+            "product_name": {"text": display_name, "source_keys": ["product_name"], "virtual": name.virtual,
                              "origins": {"product_name": name.origin}, "review_flags": []},
-            "tagline": _copy(copy.tagline, by_key, used, MAX_TAGLINE_CHARS),
+            "tagline": tagline,
         },
-        "intro": {"page": 2, "paragraphs": [_copy(p, by_key, used, MAX_PARAGRAPH_CHARS) for p in copy.intro_paragraphs]},
+        "intro": {"page": 2, "paragraphs": paragraphs},
         "details": {"page": 3, **_items(copy.details, [k for k in DETAIL_KEYS if k in used], by_key,
                                          MAX_DETAIL_VALUE_CHARS, EMPTY_DETAILS)},
         "supply": {"page": 4, **_items(copy.supply, [k for k in SUPPLY_KEYS if k in used], by_key,
@@ -277,20 +366,21 @@ def build_pages(copy, by_key, used):
 
 def generate_catalog(payload):
     """검증된 입력 → 공통 generate_structured(재시도 없음) → 서버 검증 → 응답 data. 결과를 저장·로깅하지 않습니다."""
-    by_key = parse_request(payload)
+    by_key, display_name = parse_request(payload)
     used, excluded = select_inputs(by_key)
     result = generate_structured(
         instructions=load_instructions(),
-        input_text=build_model_input(by_key, used),
+        input_text=build_model_input(by_key, used, display_name),
         schema=CatalogCopy,
     )
-    pages = build_pages(result.data, by_key, used)
+    pages = build_pages(result.data, by_key, used, display_name)
     return {
         "status": "draft_needs_review",  # 번역·내용 검토가 필요한 초안
         "language": "pt-BR",
         "prompt_version": PROMPT_VERSION,
         "model": result.model,
         "notices": {"unofficial": NOTICE_UNOFFICIAL, "fictitious": NOTICE_FICTITIOUS},
+        "display_name": {"value": display_name, "confirmed": True},
         "pages": pages,
         "used_keys": used,
         "excluded": excluded,

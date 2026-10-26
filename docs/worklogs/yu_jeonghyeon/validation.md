@@ -334,3 +334,35 @@
 - 상한 길이 문구(소개 140자·문단 600자×2·공급 값 200자)와 빈 상세·공급의 실제 배치·넘침(넘침 검사 코드는 있으나 실행 미확인)
 - 실제 서버·OpenAI 종단 동작, 생성 품질(서비스 프롬프트 실험 미실행)
 
+## 2026-10-25 후속 검증: 카탈로그 생성 v1 실제 실행 (사용자 실행 결과를 전달받음)
+- 실행 주체: 사용자(실제 화면). Claude는 호출·관측하지 않음. 원문·생성 결과 전문은 기록하지 않음
+- 전달받은 범위: 응답 모델 gpt-5.4-mini-2026-03-17, 프롬프트 brochure_generate_v1, 실제 결과 미리보기 표시
+- 발견 문제: 표지 한글 제품명 노출, 샘플 번역("revisão de amostra") 개선 필요, 표지·2쪽 소개 반복 (prompt_log SPE-2026_10_25-02)
+- 확인된 것(사용자 보고 기준): 화면 → 생성 API → 결과 미리보기 경로가 실제로 동작
+- 미검증: 전체 번역 정확성, 다른 항목 문구, 페이지 넘침, 비용·소요 시간
+
+## 2026-10-25 카탈로그 표시명 분리·언어 검사·프롬프트 v2 (모의 테스트)
+- 변경 내용: generation.py, brochure_generate_v2.md, product_brochure.js, panel.html, 테스트 3개
+- 실제 API 호출 없음
+
+### Claude가 직접 실행한 검증
+- `node --check product_brochure.js` → 문법 오류 없음
+- `node tests/test_product_brochure/review_logic_check.js` → 26개 통과(기존 22 + 표시명 4)
+  - 제안: "리젠 T2T (regen T2T)" → "regen T2T", 라틴만·악센트 이름은 그대로, 다른 제품의 괄호 라틴 표기는 그 표기(regen T2T 강제 없음), 한글만·괄호 밖 라틴만·불일치·괄호 후보 2개·괄호 안 한글 → 비움(none/ambiguous)
+  - 검사: 빈 값·한글 음절·자모·81자·제어 문자 거부, 80자·악센트·숫자·®·-·&·/·괄호 허용
+  - 스냅샷·서명·판정: 표시명 미확인·한글 → display_name 사유, 표시명 변경 → reapply, 이전 결과 경고, 스냅샷 독립, 요청 본문 trim
+  - 응답: 표지 제품명 ≠ 표시명·display_name 누락 거부, 한글 잔존 오류는 알려진 위치만 표시, repeated_text 안내 문구
+- `python -m unittest discover -s tests/test_product_brochure` → 1차 31건 실패·2건 오류(요청 계약 변경), 준비 코드 갱신 후 74개 실행, OK
+  - 생성 API: 표시명 누락·미확인·공백·한글 음절/자모·81자·제어 문자·형 오류 → 400(AI 호출 0회), 악센트·숫자·기호 표시명 4종 허용 및 표지·모델 입력에 그대로 사용(regen T2T 강제 없음), 모델 입력 product_name = 표시명·원본 한글 미포함, 응답 display_name·prompt_version v2
+  - 한글 잔존: 1쪽 소개·2쪽 문단(자모)·4쪽 샘플 값·3쪽 항목명 → 502 GENERATE_OUTPUT_LANGUAGE, 메시지에 위치만(생성 문구 원문 미포함), 요청 1회(재시도 없음), pt-BR 악센트 문구는 통과
+  - repeated_text: 거의 같은 문단에만 표시, 제품명·핵심 용어 반복은 미표시
+  - 프롬프트 v2 규칙 문구 포함·특정 제품명 미포함·v1 파일 존재(git diff로 v1 무변경 확인)
+  - 교차: 화면 제안 표시명 → 서버 parse_request 통과, 원본 제품명 보존, used/excluded·origin·virtual 기존과 동일
+  - 기존 가상 표시·수치/단위 review_flags·분석 API·화면·시안 테스트 회귀 없음
+- `python -m unittest discover -s tests/test_common` → 56개 실행, OK
+
+### 미검증
+- v2 프롬프트 실제 실행(번역·샘플 표현·반복 개선 여부) — 프롬프트에 지침을 넣은 것과 실제 개선은 별개
+- 표시명 입력·체크·제안 갱신·재적용 표시의 브라우저 동작(DOM)
+- 한글 검사 통과가 pt-BR 품질을 뜻하지 않음, 페이지 넘침, 비용·소요 시간
+

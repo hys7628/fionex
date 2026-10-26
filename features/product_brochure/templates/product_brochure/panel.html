@@ -78,6 +78,19 @@
         </ul>
       </div>
       <div class="stack" data-review-groups></div>
+      <fieldset class="fieldset product_brochure-group" data-display-name hidden>
+        <legend class="field-label">카탈로그 표시명</legend>
+        <div class="field">
+          <label class="field-label" for="product_brochure-display-name">카탈로그 표지에 쓸 제품명(라틴 문자 표기)</label>
+          <input class="input" id="product_brochure-display-name" type="text" maxlength="200" autocomplete="off"
+                 aria-describedby="product_brochure-display-name-hint product_brochure-display-name-note">
+          <p class="field-hint" id="product_brochure-display-name-hint" data-display-name-hint aria-live="polite"></p>
+          <p class="field-hint" id="product_brochure-display-name-note">
+            위 "제품명" 항목(원본)은 그대로 두고 카탈로그에만 이 표기를 씁니다. 원문에 있는 표기만 쓰고 공식 영문명을 임의로 만들지 마세요.
+          </p>
+        </div>
+        <label class="choice"><input type="checkbox" id="product_brochure-display-name-confirm"> 카탈로그 표시명 확인</label>
+      </fieldset>
       <div class="notice notice-info" data-apply-status role="status" hidden></div>
       <div class="btn-row">
         <button type="button" class="btn btn-primary" data-apply>확인 내용 적용</button>

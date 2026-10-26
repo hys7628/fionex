@@ -290,3 +290,38 @@
 - 변경: static/product_brochure.js, templates/product_brochure/panel.html, templates/product_brochure/catalog_preview.html(결과 dialog 추가), static/product_brochure.css, feature_spec.md(§21 메모·§22), tests/test_product_brochure/test_panel.py, review_logic_check.js, test_review_logic.py
 - 담당자 판단: 브라우저 확인 대기
 - 남은 한계: DOM·시각 미확인, 상한 길이 배치·넘침 미확인, 생성 품질 미검증, 생성 문구 편집·PDF 다운로드 미구현
+
+## SPE-2026_10_25-02 카탈로그 생성 프롬프트 brochure_generate_v1 실제 실행(화면)
+- 유형: service_prompt_experiment
+- 날짜: 2026-10-25 (Asia/Seoul, 실행 시각은 전달받지 못함) / 작업자: 유정현 / 기능: 제품소개서
+- 실행 주체: 사용자(실제 화면에서 생성 → 결과 미리보기). **Claude는 호출·관측하지 않았고 사용자가 전달한 화면 정보를 기록함**
+- 이력: DI-2026_10_25-15·16의 "v1 실험 미실행"은 당시 상태로 보존하며, 이 항목이 v1의 후속 첫 실제 실행
+- 모델/설정: 응답 모델 gpt-5.4-mini-2026-03-17(전달받음). 코드 기준 설정 timeout 60초·재시도 0·store=False·max_output_tokens 4096
+- 프롬프트: features/product_brochure/prompts/brochure_generate_v1.md(실행 당시 버전, 이후 수정하지 않고 v2 생성)
+- 입력: 사용자가 적용한 제품 정보(원문·생성 결과 전문은 기록하지 않음). 원본 제품명은 한글·라틴 혼합 표기
+- 관측(사용자 전달): 실제 결과 미리보기 표시됨
+- 발견 문제(유형)
+  - 표지 제품명에 한글 원본 표기 노출(v1 규칙 "입력 표기 그대로"의 결과)
+  - 샘플 조건이 평가용 샘플 요청 의도와 달리 "revisão de amostra"(수정·개정 의미)로 번역됨
+  - 표지 소개 문구와 2쪽 소개 문단이 거의 반복
+- 변경 이유·제어 방법: DI-2026_10_25-17(표시명 분리·서버 한글 검사·반복 검토 표시·프롬프트 v2)
+- 재실행 결과: v2 실제 실행 미실행
+- 담당자 판단: 수정 필요(이번 작업으로 반영)
+- 남은 한계: 전체 번역 정확성, 다른 항목 문구, 페이지 넘침, 비용·소요 시간 미검증
+
+## DI-2026_10_25-17 카탈로그 표시명 분리·언어 검사·생성 프롬프트 v2
+- 유형: development_instruction / 서비스 프롬프트 v2 작성, **v2 실제 실행(service_prompt_experiment)은 미실행** / 실제 API 호출 없음
+- 날짜/시간: 2026-10-25 12:42 (Asia/Seoul) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure
+- 도구·모델: Claude Code (Opus 5.5)
+- 사전 확인: HEAD f4e5083, 작업 트리 깨끗, 병합 중 아님. stash@{0} 미조작. generation.py·brochure_generate_v1.md·화면 생성 로직을 실제로 다시 읽음
+- 지시 요약: SPE-02 문제 수정. 원본 제품명 보존 + 카탈로그 표시명(display_name) 별도 입력·확인·검증(빈 값·길이·한글), 명확한 라틴 후보만 제안, 서버가 표지에 그대로 사용. 문서 문자열 한글 잔존 서버 검사(위치만 반환), 샘플 표현·표지/소개 역할 프롬프트 개선, 프롬프트 버전 갱신
+- 결정 변경과 이유: §21 "표지 제품명 = 입력 표기 그대로" → 확인한 표시명 사용. 원본 그대로 쓰면 pt-BR 카탈로그에 한국어 원본이 노출됨(SPE-02). 원본은 분석·검토 화면과 요청 product_name에 그대로 보존
+- 설계 이유
+  - 표시명 후보는 "한글 + 괄호 안 라틴 표기 1개 + 괄호 밖 라틴 단어 포함 관계"처럼 명확할 때만 제안. 괄호 속 문구 무조건 선택·한글 삭제·영문명 창작을 피함
+  - 모델 입력의 product_name을 표시명으로 대체해 원본 한글이 생성 문구로 들어갈 경로 축소
+  - 한글 잔존은 거부(502)하되 원문을 지우지 않고 위치만 안내. 반복은 정상 반복과 구분이 어려워 검토 표시만
+  - v1은 실험 기록이 있어 수정하지 않고 v2 새 파일 생성(recording_rules)
+- 할루시네이션·언어 제어: 프롬프트(한국어 금지, 표시명 그대로, 샘플 avaliação 의미, 무상·즉시·재고 보장 금지, 표지/소개 역할, 새 특징 금지) + 서버 한글 검사 + 표시명 서버 고정 + repeated_text 표시 + 사람 검토 초안 상태
+- 실제 실패와 수정: 요청 계약 변경(display_name 필수)으로 기존 테스트 31건 실패·2건 오류 → 테스트 준비 코드(요청 본문·Node 고정 데이터·교차 테스트)를 새 계약에 맞게 갱신. 이후 프롬프트 버전 기대값(v1→v2) 1건 갱신
+- 변경: generation.py, prompts/brochure_generate_v2.md(신규), static/product_brochure.js, templates/product_brochure/panel.html, feature_spec.md(§21 표시·§23), tests/test_product_brochure/test_generate_api.py·review_logic_check.js·test_review_logic.py
+- 남은 한계: v2 실제 번역·반복 개선 미검증, 표시명 입력 DOM 미확인, 페이지 넘침·비용·시간 미검증
