@@ -1,4 +1,4 @@
-"""바이어 목록(리젠 T2T 잠재 바이어) 자료 읽기. 화면(⑥)과 PDF가 같은 결과를 씁니다.
+"""바이어 목록(리젠 T2T 잠재 바이어) 자료 읽기. 화면 바이어 목록 탭이 씁니다(시장 분석 PDF에는 2026-10-27부터 넣지 않음).
 
 - ① 잠재 바이어: data/buyer_textile_companies.json (buyer_data_builder.py가 국세청 CNPJ 공개 자료로 생성)
 - ② 재생·T2T 관심 근거: data/buyer_t2t_evidence.json (업체 공식 웹·보도자료 링크와 확인일, 사람 검토 후 추가)

@@ -7,6 +7,8 @@
   글자마다 글리프가 있는 글꼴을 고르는 구조(latin → ko)는 유지하며 지금은 두 자리 모두 Pretendard입니다.
   글꼴에 없는 문자(이모지·제어문자 등)는 지우지 않고 [U+XXXX]로 대신 표시합니다.
 - PDF는 메모리(BytesIO)에서 만들며 디스크에 쓰지 않습니다. 외부 이미지·글꼴·링크 대상을 가져오지 않고 스크립트·첨부를 넣지 않습니다.
+- 디자인: 공통 PDF 디자인(common/pdf_theme.py) — 머리 'GREEN CLAIM REPORT'·로고(저장소 안 static/assets 이미지), 큰 제목,
+  막대 구역 제목, 검수 결과 요약 숫자 카드, 민트 머리 표, 브랜드 꼬리. 글꼴은 위 GCLatin/GCKo(Pretendard)를 그대로 씁니다.
 """
 import io
 import json
@@ -20,7 +22,8 @@ FONT_NAMES = {"latin": {"regular": "GCLatin", "bold": "GCLatin-Bold"}, "ko": {"r
 
 TITLE = "그린 클레임 문구 검수 보고서"
 SUBTITLE = "브라질 대상 홍보 문구 표현 위험 검토"
-FOOTER = "그린 클레임 문구 검수 보고서 · 표현 위험 스크리닝(적법성·사실·인증 보장 아님)"
+FOOTER = "표현 위험 스크리닝(적법성·사실·인증 보장 아님)"  # 꼬리 왼쪽 'FIONEX | WEAVE A BRIGHTER TOMORROW' 뒤에 붙는 안내
+KICKER = "GREEN CLAIM REPORT"
 
 ACTION_LABELS = {"revise_recommended": "수정 권고", "needs_review": "검토 필요", "judgment_withheld": "판단 보류"}
 ACTION_ORDER = ("revise_recommended", "needs_review", "judgment_withheld")
@@ -165,8 +168,9 @@ def build_pdf(payload):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import mm
-    from reportlab.pdfgen import canvas as rl_canvas
-    from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+
+    from common import pdf_theme as theme
 
     fonts = _Fonts()
     writer = Writer(fonts)
@@ -176,26 +180,33 @@ def build_pdf(payload):
     criteria = review["criteria"]
     sources = {source["id"]: source for source in criteria["sources"]}
 
-    def style(name, size=9.5, bold=False, color="#1F2933", leading=None, space_before=0, space_after=3, **extra):
+    def style(name, size=9.5, bold=False, color="#13233F", leading=None, space_before=0, space_after=3, **extra):
         return ParagraphStyle(name, fontName=FONT_NAMES["latin"]["bold" if bold else "regular"], fontSize=size,
                               leading=leading or size * 1.5, textColor=colors.HexColor(color), alignment=TA_LEFT,
                               spaceBefore=space_before, spaceAfter=space_after, splitLongWords=1,
                               bulletFontName=FONT_NAMES["latin"]["regular"], **extra)
 
     body = style("body")
-    muted = style("muted", size=8.5, color="#4B5563")
-    label = style("label", size=8.5, bold=True, color="#4B5563", space_before=4, space_after=1, keepWithNext=1)
-    title = style("title", size=18, bold=True, leading=24, space_after=2)
-    h1 = style("h1", size=13, bold=True, leading=18, space_before=12, space_after=5, keepWithNext=1)
-    h2 = style("h2", size=10.5, bold=True, leading=15, space_before=8, space_after=3, keepWithNext=1)
+    muted = style("muted", size=8.5, color="#54637A")
+    label = style("label", size=8.5, bold=True, color="#54637A", space_before=4, space_after=1, keepWithNext=1)
+    title = style("title", size=24, bold=True, leading=30, space_after=4)
+    h2 = style("h2", size=10.5, bold=True, leading=15, space_before=8, space_after=3, keepWithNext=1, color="#1D6AD4")
     source_line = style("source", size=9.5, leading=15.5, space_after=0)
-    box = style("box", size=8.5, color="#1F2933", backColor=colors.HexColor("#F1F5F9"), borderPadding=5,
-                space_before=4, space_after=8)
+    box = style("box", size=8.5, color="#13233F", space_after=0)
+    width = A4[0] - 36 * mm
+    reg, bold_font = FONT_NAMES["latin"]["regular"], FONT_NAMES["latin"]["bold"]
 
     story = []
 
     def para(text, st=body, bold=False):
         story.append(Paragraph(writer.rich(text, bold=bold), st))
+
+    def section(text, tag=None):
+        story.append(theme.SectionTitle(text, tag, size=13, font=reg, font_bold=bold_font, space_before=14, space_after=6))
+
+    def note(text, tone="info"):
+        story.append(theme.note_box(Paragraph(writer.rich(text), box), width, tone))
+        story.append(Spacer(1, 6))
 
     def field(name, value, empty=None):
         if value is None or value == "":
@@ -211,19 +222,21 @@ def build_pdf(payload):
 
     # 1. 제목과 검수 범위
     para(TITLE, title, bold=True)
-    para(SUBTITLE, style("subtitle", size=11, color="#4B5563", space_after=8))
-    story.append(Paragraph(writer.rich(
-        "검수 범위: 브라질 대상 홍보 문구의 표현 위험을 저장된 CDC(소비자보호법)·CONAR(광고 자율규제) 기준으로 검토합니다. "
-        "확인하지 않은 것: 수치·환경 성능의 사실성, 인증 보유·유효성, 적법성, 그림·색상·로고 등 디자인. "
-        "이 보고서는 위법 여부 확정·사용 승인·친환경 점수가 아닙니다."), box))
-    story.append(Paragraph(writer.rich(
-        "표시 안내: 원문 속 ▶R1 같은 번호는 보고서가 붙인 표시이며 원문 글자가 아닙니다. "
-        "회색 바탕의 [U+XXXX]는 PDF 글꼴에 없는 원문 글자(이모지·제어문자 등)를 지우지 않고 코드 번호로 대신 표시한 것입니다. "
-        "연속 공백과 줄바꿈은 원문대로 유지했습니다."), box))
+    para(SUBTITLE, style("subtitle", size=10.5, color="#33415A", leading=16, space_after=8))
+    note("검수 범위: 브라질 대상 홍보 문구의 표현 위험을 저장된 CDC(소비자보호법)·CONAR(광고 자율규제) 기준으로 검토합니다. "
+         "확인하지 않은 것: 수치·환경 성능의 사실성, 인증 보유·유효성, 적법성, 그림·색상·로고 등 디자인. "
+         "이 보고서는 위법 여부 확정·사용 승인·친환경 점수가 아닙니다.")
+    note("표시 안내: 원문 속 ▶R1 같은 번호는 보고서가 붙인 표시이며 원문 글자가 아닙니다. "
+         "회색 바탕의 [U+XXXX]는 PDF 글꼴에 없는 원문 글자(이모지·제어문자 등)를 지우지 않고 코드 번호로 대신 표시한 것입니다. "
+         "연속 공백과 줄바꿈은 원문대로 유지했습니다.", "mint")
 
-    # 2. 전체 요약
-    para("1. 전체 요약", h1, bold=True)
+    # 2. 전체 요약: 조치별 큰 숫자 카드 + 표
+    section("1. 검수 결과 요약", "AI 표현 위험 스크리닝")
     summary = review["summary"]
+    story.append(theme.stat_cards([
+        (ACTION_LABELS[action], str(summary["by_action"][action]), colors.HexColor(TONES[action][0]), None) for action in ACTION_ORDER
+    ], width, font=reg, font_bold=bold_font, value_size=26))
+    story.append(Spacer(1, 8))
     field("검수 결과를 받은 시각", _time(payload["displayed_at"]) and
           _time(payload["displayed_at"]) + " · 이 컴퓨터 시계 기준, 서버 확인 아님", empty="기록 없음")
     field("보고서 생성 시각", _time(payload["generated_at"]) + " · 서버 시계 기준(검수 시각과 다름)")
@@ -235,29 +248,23 @@ def build_pdf(payload):
         rows.append([Paragraph(f'<font color="{TONES[action][0]}">' + writer.rich(ACTION_LABELS[action], bold=True) + "</font>", body),
                      Paragraph(writer.rich(f"{summary['by_action'][action]}개"), body),
                      Paragraph(writer.rich(", ".join(ids) if ids else "없음"), body)])
-    table = Table(rows, colWidths=[32 * mm, 20 * mm, None], hAlign="LEFT", repeatRows=1)
-    table.setStyle(TableStyle([
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F1F5F9")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ]))
-    story.append(table)
+    story.append(theme.data_table(rows, [32 * mm, 20 * mm, width - 52 * mm], zebra=False))
     story.append(Spacer(1, 4))
     if summary["no_items_message"]:
-        story.append(Paragraph(writer.rich(summary["no_items_message"] + " 항목이 없어도 안전하거나 적법하다는 뜻이 아니며, "
-                                           "그린워싱이 없다는 판정도 아닙니다.", bold=True), box))
+        story.append(theme.note_box(Paragraph(writer.rich(summary["no_items_message"] + " 항목이 없어도 안전하거나 적법하다는 뜻이 아니며, "
+                                                          "그린워싱이 없다는 판정도 아닙니다.", bold=True), box), width, "warning"))
     field("AI 작성 요약", summary["model_summary_ko"])
     if review["model_limitations"]:
         story.append(Paragraph(writer.rich("AI가 보고한 이번 검토의 한계", bold=True), label))
         bullets(review["model_limitations"])
 
     # 3. 검수한 원문
-    para("2. 검수한 원문 (검수 당시 사본)", h1, bold=True)
+    section("2. 검수한 원문", "검수 당시 사본")
     para("실제 검수에 사용한 문구입니다. 대상 구절은 배경색으로, 여러 항목이 겹치는 부분은 밑줄을 더해 표시했습니다.", muted)
     story.extend(_original_paragraphs(writer, review["text"], items, source_line))
 
     # 4. 항목별 검토
-    para("3. 항목별 검토", h1, bold=True)
+    section("3. 주요 검토 항목", "항목별 검토 의견")
     if not items:
         para("검토 항목이 없습니다. " + (summary["no_items_message"] or ""))
     for item in items:
@@ -285,7 +292,7 @@ def build_pdf(payload):
         field("관련 기준", ", ".join(item["criteria_ids"]) if item["criteria_ids"] else "연결된 기준 없음(판단 보류)")
 
     # 5. 근거와 출처
-    para("4. 근거와 출처", h1, bold=True)
+    section("4. 근거와 출처", "CDC · CONAR 저장 기준")
     para("원문 요구는 기준 원문이 정한 내용, 서비스 검토 해석은 이 서비스의 검토 관점이며 원문과 같은 효력이 없습니다. "
          "한국어 번역은 이해를 돕는 비공식 번역입니다.", muted)
     if not refs:
@@ -340,11 +347,11 @@ def build_pdf(payload):
         para("없음")
 
     # 6. 한계
-    para("5. 검수·판독의 한계", h1, bold=True)
+    section("5. 검수 한계 및 유의사항")
     bullets(FIXED_LIMITS + review["notices"])
 
     # 7. 상세 정보
-    para("6. 상세 정보", h1, bold=True)
+    section("6. 상세 정보")
     bullets([
         f"검수 모델: {review['model'] or '기록 없음'} · 서비스 프롬프트: {review['prompt_version']}",
         f"기준 묶음: {criteria['bundle_id']} (형식 {criteria['schema_version']}) · 버전 {criteria['bundle_version']}",
@@ -353,32 +360,13 @@ def build_pdf(payload):
         f"원문 글자 수: {review['char_count']}자(Unicode 코드 포인트, 공백·줄바꿈 포함) · 위치 단위: {review['position_unit']}",
     ], muted)
 
-    class NumberedCanvas(rl_canvas.Canvas):
-        """쪽 번호 'n / 전체'를 위해 각 쪽을 모았다가 저장할 때 바닥글을 그립니다."""
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self._pages = []
-
-        def showPage(self):
-            self._pages.append(dict(self.__dict__))
-            self._startPage()
-
-        def save(self):
-            total = len(self._pages)
-            for state in self._pages:
-                self.__dict__.update(state)
-                self.setFont(FONT_NAMES["ko"]["regular"], 7.5)
-                self.setFillColor(colors.HexColor("#6B7280"))
-                self.drawString(18 * mm, 10 * mm, FOOTER)
-                self.drawRightString(A4[0] - 18 * mm, 10 * mm, f"{self._pageNumber} / {total}")
-                super().showPage()
-            super().save()
+    generated = _time(payload["generated_at"]) or ""
+    canvas_cls = theme.numbered_canvas(KICKER, generated[:10].replace("-", "."), 18 * mm, FOOTER)  # 머리·꼬리 전용 글꼴 이름
 
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=18 * mm,
-                            bottomMargin=20 * mm, title=TITLE, subject=SUBTITLE, author="", creator="fionex green_claim")
-    doc.build(story, canvasmaker=NumberedCanvas)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=theme.CONTENT_TOP,
+                            bottomMargin=theme.CONTENT_BOTTOM, title=TITLE, subject=SUBTITLE, author="", creator="fionex green_claim")
+    doc.build(story, canvasmaker=canvas_cls)
     return buffer.getvalue()
 
 

@@ -299,6 +299,11 @@
 다운로드는 `fetch` → Blob → `downloadBlob`을 권장한다. `location.href`로 다운로드 주소에 이동하면 브라우저가 페이지 이탈로 보고 종료 경고를 띄울 수 있다.
 
 ## PDF
+- (2026-10-27) 홈 일일 브리핑·시장 분석(+바이어 AI 브리핑)·그린 클레임·홍보 콘티 PDF는 공통 PDF 디자인 `common/pdf_theme.py`를 쓴다(제품소개서 카탈로그 PDF는 제외).
+  쪽 머리: 왼쪽 위 영문 머리말(DAILY BRIEFING·MARKET REPORT·BUYER BRIEFING·GREEN CLAIM REPORT·PROMOTION REPORT) + 오른쪽 FIONEX 로고 + 블루→아쿠아 선.
+  큰 제목(24pt)·소개 문장, 구역 제목은 블루 세로 막대 + '| 꼬리표', 표는 민트 머리·가로 구분선·줄무늬, 핵심 숫자는 카드 줄,
+  쪽 꼬리는 'FIONEX | WEAVE A BRIGHTER TOMORROW'와 '날짜 | n / 전체'. 글꼴은 모두 Pretendard(머리·꼬리는 같은 파일의 전용 이름 FionexChrome).
+  시장 분석 PDF에는 바이어 목록을 넣지 않는다(화면 바이어 목록 탭·바이어별 AI 브리핑 PDF에서 확인).
 PDF 디자인은 화면 디자인과 별도 검증: 한글/포르투갈어·페이지 나눔·이미지 품질. 도구 ReportLab 5.1.0, 글꼴은 화면과 같은 Pretendard(Typography 참고). 화면 토큰 값을 참고할 수 있다.
 
 ## 금지

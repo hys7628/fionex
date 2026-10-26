@@ -416,7 +416,7 @@ class PdfTest(unittest.TestCase):
         reader = PdfReader(io.BytesIO(data))
         self.assertGreaterEqual(len(reader.pages), 3)
         text = "\n".join(p.extract_text() for p in reader.pages)
-        for s in ("브라질 시장/바이어 분석 보고서", "Coreia do Sul", "ação", "검토 미완료", "미실행", "Índia", "<b>& 원사</b>"):
+        for s in ("브라질 시장 분석 보고서", "Coreia do Sul", "ação", "검토 미완료", "미실행", "Índia", "<b>& 원사</b>"):
             self.assertIn(s, text)
         for s in ("KOTRA", "NewsData", "GDELT", "기사 제목", "출처별 연결 상태"):  # 뉴스 영역 없음
             self.assertNotIn(s, text)

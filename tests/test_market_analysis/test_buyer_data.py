@@ -153,8 +153,8 @@ class BuyersLoadTest(unittest.TestCase):
 
         pdf = pdf_report.build_pdf({"stats": make_stats(), "ai": None})
         text = "".join(p.extract_text() for p in PdfReader(io.BytesIO(pdf)).pages)
-        self.assertIn("⑥ 바이어 목록", text)
-        self.assertIn("EMPRESA 07", text)  # 화면 토글 너머(6번째 이후)도 PDF에는 포함
+        self.assertNotIn("⑥ 바이어 목록", text)  # 2026-10-27부터 시장 분석 PDF에 바이어 목록을 넣지 않음
+        self.assertNotIn("EMPRESA 07", text)
 
 
 if __name__ == "__main__":

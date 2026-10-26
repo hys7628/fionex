@@ -67,8 +67,10 @@ def squash(text):
 
 
 def without_footer(flat):
-    """쪽 넘김 위치에 끼어드는 바닥글(안내·쪽 번호)을 빼고 본문만 남깁니다."""
-    return re.sub(re.escape(squash(rw.FOOTER)) + r"\d+/\d+", "", flat)
+    """쪽 넘김 위치에 끼어드는 머리('GREEN CLAIM REPORT')·꼬리(브랜드·안내·쪽 번호·날짜)를 빼고 본문만 남깁니다."""
+    chrome = (re.escape(squash(rw.KICKER)) + r"FIONEX\|WEAVEABRIGHTERTOMORROW·" + re.escape(squash(rw.FOOTER))
+              + r"\d+/\d+[\d.]+\|")
+    return re.sub(chrome, "", flat)
 
 
 class ReportBase(Base):
