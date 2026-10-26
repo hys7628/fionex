@@ -166,9 +166,8 @@
     let text = "";
     let tone = "";
     let navText = "";
-    if (snap.hasUndownloadedResult) {
-      text = "다운로드하지 않은 결과 있음"; tone = "warning"; navText = "다운로드하지 않은 결과 있음";
-    } else if (snap.hasDraft) {
+    // 다운로드하지 않은 결과는 머리글·사이드바에 표시하지 않고 이탈 경고(LeaveGuard)만 유지합니다(2026-10-26 한윤수 요청, 공통 변경).
+    if (snap.hasDraft) {
       text = "작성 중인 입력 있음"; tone = "info"; navText = "작성 중";
     } else if (snap.downloadRequested) {
       text = "다운로드 요청됨 · 저장 여부는 브라우저에서 확인"; tone = "success";
