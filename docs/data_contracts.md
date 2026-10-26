@@ -137,6 +137,29 @@ image.model       # 요청에 사용한 모델명(Images API 응답에 모델명
   SDK가 응답 JSON 전체를 먼저 메모리에 읽으므로 네트워크 수신 단계의 메모리 상한은 아니다.
 - 이미지·base64·프롬프트를 디스크·DB·로그에 저장하지 않는다. 다운로드·PDF 삽입은 기능 담당자 후속 작업.
 - 미구현: 이미지 편집, 참조 이미지, 마스크, 다중 생성, 스트리밍. 어느 탭이 어떤 이미지를 만드는지는 미정.
+  (참조 이미지는 아래 함수로 2026-10-25 추가 — 공통 담당 검토 대기)
+
+### 참조 이미지 + 텍스트 → 이미지 1장 (2026-10-25 정은진 추가, 공통 담당 유정현 검토 대기)
+홍보 스튜디오 담당자가 사용자 확인을 받아 추가했다. 기존 함수는 수정하지 않았다. 모의 테스트(tests/test_common/test_image_reference.py) 통과, 실제 호출 미검증.
+```python
+from common.ai_client import generate_image_from_references
+
+result = generate_image_from_references(
+    prompt="기능 담당자가 구성한 이미지 프롬프트",  # 필수
+    reference_images=[photo_bytes],              # 필수, PNG·JPEG·WEBP bytes 1~5장(장당 10MiB, 합계 50MiB)
+    size="1536x1024",                             # generate_image와 같은 허용값
+    quality="low",
+)
+result.image      # GeneratedImage(PNG bytes, width, height, model)
+result.usage      # ImageUsage(input_tokens, output_tokens, total_tokens, input_image_tokens, input_text_tokens) 또는 None
+```
+- 요청: `images.edit(model=OPENAI_IMAGE_MODEL, image=[참조 이미지들], prompt, n=1, size, quality, output_format="png")`. timeout 180초, 재시도 0.
+  공급자에는 원본 파일명 대신 `reference_<번호>.<확장자>`를 보낸다. `input_fidelity` 등 모델별 지원이 확인되지 않은 파라미터는 보내지 않는다.
+- 근거(2026-10-25 조회): 이미지 생성 가이드 — Sunburst·Flare로 이미지 편집 가능, 여러 입력 이미지 예시, 입력 이미지 50MB 미만.
+  gpt-image-2.5-sunburst 모델 페이지 — `v1/images/edits` 지원, 가격 텍스트 입력 $5 / 이미지 입력 $8 / 이미지 출력 $30(100만 토큰당).
+  참조 이미지가 있으면 입력 토큰이 늘어 비용이 커질 수 있다(가이드). 입력 장수 상한은 문서에 명시되지 않아 프로젝트에서 5장으로 제한.
+- 입력 검사(호출 전 `AI_INVALID_INPUT`): 빈 목록·6장 이상·빈 bytes·서명 불일치(PNG/JPEG/WEBP 외)·장당/합계 용량 초과(413).
+- 반환 검증은 `generate_image`와 같다. 참조 이미지는 요청에만 쓰고 저장·로그하지 않는다. 제품 외형 일치를 보장하지 않으므로 사람이 검토한다.
 
 ### 오류 (common/errors.py)
 기능 라우트 예시:

@@ -30,4 +30,6 @@ pillow==13.0.0
 #   jasonenv 설치·pip check·모의 데이터 렌더링 테스트 확인(2026-10-26).
 # - 그린 클레임 검수 보고서(features/green_claim/report_worker.py): 라틴 문자는 reportlab 포함 Bitstream Vera, 한글은 features/green_claim/fonts의 나눔고딕(OFL).
 #   jasonenv(Python 3.11.17) 설치, pip check 정상(2026-10-26).
+# - 홍보 스튜디오 콘티 PDF(features/promotion_studio/pdf_builder.py): features/promotion_studio/fonts의 Noto Sans KR(OFL).
+#   2026-10-26 fpdf2에서 reportlab으로 전환(팀 도구 통일), jasonenv 테스트·렌더링 확인.
 reportlab==5.1.0

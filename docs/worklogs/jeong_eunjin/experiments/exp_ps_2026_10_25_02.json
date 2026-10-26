@@ -1,0 +1,42 @@
+{
+ "experiment_id": "EXP-PS-2026_10_25-02",
+ "date": "2026-10-25 (Asia/Seoul)",
+ "worker": "정은진",
+ "feature": "promotion_studio",
+ "type": "service_prompt_experiment",
+ "prompt": "features/promotion_studio/prompts/scene_image_v1.md",
+ "settings": {
+  "env_OPENAI_IMAGE_MODEL": "gpt-image-2.5-sunburst",
+  "api": "Images API edits (common.generate_image_from_references)",
+  "size": "1536x1024",
+  "quality": "low",
+  "n": 1,
+  "timeout_seconds": 180,
+  "retries": 0
+ },
+ "input": {
+  "scene": "EXP-PS-2026_10_25-01 장면 2",
+  "visual_pt": "Close em uma amostra de fio de poliéster reciclado com embalagem limpa e identificação do produto regen T2T sobre a mesa, ao lado de swatches de tecido em tons neutros.",
+  "camera_pt": "Close-up detalhado, luz suave e uniforme para destacar a textura do fio.",
+  "aspect_ratio": "16:9",
+  "image_style": "photo",
+  "reference_images": [
+   "exp_ps_2026_10_25_02_reference.png (코드로 그린 가상 제품: 파란 실패·흰 플랜지·라벨 'regen T2T'/'TEST')"
+  ]
+ },
+ "measured": {
+  "elapsed_seconds": 22.2,
+  "usage": {
+   "input_tokens": 1281,
+   "output_tokens": 158
+  },
+  "estimated_cost_usd": 0.0142,
+  "price_basis": "이미지 입력 $8·텍스트 입력 $5·이미지 출력 $30 / 100만 토큰 (모델 페이지 2026-10-25)"
+ },
+ "output": {
+  "model": "gpt-image-2.5-sunburst",
+  "width": 1536,
+  "height": 1024,
+  "file": "exp_ps_2026_10_25_02_output.jpg (원본 PNG 2,139,914 bytes를 JPEG 품질 85로 변환한 사본)"
+ }
+}

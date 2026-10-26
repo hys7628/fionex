@@ -1,0 +1,149 @@
+{
+ "experiment_id": "EXP-PS-2026_10_25-01",
+ "date": "2026-10-25 (Asia/Seoul)",
+ "worker": "정은진",
+ "feature": "promotion_studio",
+ "type": "service_prompt_experiment",
+ "prompt": "features/promotion_studio/prompts/storyboard_generate_v1.md",
+ "settings": {
+  "env_OPENAI_MODEL": "gpt-5.4-mini",
+  "response_model": "gpt-5.4-mini-2026-03-17",
+  "api": "Responses API responses.parse (common.generate_structured)",
+  "max_output_tokens": 6200,
+  "store": false,
+  "timeout_seconds": 60,
+  "retries": 0
+ },
+ "input_note": "가상 입력. 실제 제품 자료 아님. 탄소 배출 감소 주장은 근거 없이 일부러 포함",
+ "input": {
+  "audience": "buyer",
+  "description": "[가상 테스트 설명] 리젠 T2T는 효성티앤씨의 재활용 폴리에스터 원사다. 버려진 섬유 제품을 다시 섬유 원료로 만드는 텍스타일 투 텍스타일(T2T) 방식으로 생산한다. 의류·패션 브랜드가 지속가능한 소재를 찾을 때 사용할 수 있다. 기존 폴리에스터 원사 대비 탄소 배출을 줄인다고 홍보하고 있으나 수치 근거 자료는 아직 첨부하지 않았다.",
+  "purposes": [
+   "product_intro",
+   "eco_value"
+  ],
+  "cta": "",
+  "tone": "professional",
+  "duration": 30,
+  "scene_count": 6,
+  "aspect_ratio": "16:9",
+  "image_style": "photo"
+ },
+ "measured": {
+  "elapsed_seconds": 8.7,
+  "usage": {
+   "input_tokens": 1077,
+   "output_tokens": 1454,
+   "total_tokens": 2531
+  }
+ },
+ "output": {
+  "title_pt": "regen T2T | Fibra reciclada para moda",
+  "title_ko": "regen T2T | 패션을 위한 재활용 섬유",
+  "scenes": [
+   {
+    "duration_seconds": 5,
+    "visual_pt": "Sala de reunião moderna em um escritório de moda. Sobre a mesa, amostras de tecido, catálogo de materiais e um rolo de fibra têxtil. Dois compradores de moda observam os materiais com atenção.",
+    "visual_ko": "패션 회사의 현대적인 회의실. 테이블 위에 원단 샘플, 소재 카탈로그, 섬유 롤이 놓여 있다. 두 명의 패션 바이어가 자료를 주의 깊게 살펴본다.",
+    "camera_pt": "Plano médio, composição horizontal 16:9, foco nas mãos e nas amostras sobre a mesa.",
+    "camera_ko": "중간 샷, 가로 16:9 구도, 테이블 위 손과 샘플에 초점.",
+    "subtitle_pt": "Buscando um material sustentável para a coleção.",
+    "subtitle_ko": "컬렉션에 맞는 지속가능한 소재를 찾고 있습니다.",
+    "narration_pt": "Em busca de um material para a próxima coleção.",
+    "narration_ko": "다음 컬렉션을 위한 소재를 찾고 있습니다.",
+    "number": 1,
+    "start_seconds": 0,
+    "end_seconds": 5
+   },
+   {
+    "duration_seconds": 5,
+    "visual_pt": "Close em uma amostra de fio de poliéster reciclado com embalagem limpa e identificação do produto regen T2T sobre a mesa, ao lado de swatches de tecido em tons neutros.",
+    "visual_ko": "테이블 위에 깔끔한 패키지와 regen T2T 제품 표기가 있는 재활용 폴리에스터 원사 샘플이 보이고, 옆에는 뉴트럴 톤의 원단 스와치가 놓여 있다.",
+    "camera_pt": "Close-up detalhado, luz suave e uniforme para destacar a textura do fio.",
+    "camera_ko": "섬유 질감을 강조하는 부드럽고 균일한 조명의 디테일 클로즈업.",
+    "subtitle_pt": "regen T2T: fio de poliéster reciclado.",
+    "subtitle_ko": "regen T2T: 재활용 폴리에스터 원사.",
+    "narration_pt": "regen T2T é um fio de poliéster reciclado.",
+    "narration_ko": "regen T2T는 재활용 폴리에스터 원사입니다.",
+    "number": 2,
+    "start_seconds": 5,
+    "end_seconds": 10
+   },
+   {
+    "duration_seconds": 5,
+    "visual_pt": "Sequência visual em estilo documental: roupas usadas e outros produtos têxteis são separados e enviados para processamento, com máquinas industriais ao fundo transformando o material em nova matéria-prima têxtil.",
+    "visual_ko": "다큐멘터리 스타일의 장면: 버려진 의류와 기타 섬유 제품이 분류되어 공정으로 보내지고, 배경의 산업 설비가 소재를 새로운 섬유 원료로 바꾸는 모습이다.",
+    "camera_pt": "Movimento lento lateral, mantendo o processo claro e realista.",
+    "camera_ko": "공정이 선명하고 현실적으로 보이도록 천천히 측면 이동.",
+    "subtitle_pt": "Do têxtil ao têxtil.",
+    "subtitle_ko": "섬유에서 섬유로.",
+    "narration_pt": "Produzido no processo têxtil para têxtil.",
+    "narration_ko": "텍스타일 투 텍스타일 공정으로 생산됩니다.",
+    "number": 3,
+    "start_seconds": 10,
+    "end_seconds": 15
+   },
+   {
+    "duration_seconds": 5,
+    "visual_pt": "Equipe de desenvolvimento de produto analisa fichas técnicas e amostras em uma mesa de design. Um moodboard mostra peças de roupa e tecidos para uma marca de moda.",
+    "visual_ko": "제품 개발팀이 디자인 테이블에서 기술 시트와 샘플을 검토하고 있다. 무드보드에는 패션 브랜드용 의류와 원단 이미지가 보인다.",
+    "camera_pt": "Plano médio com profundidade de campo suave, enfatizando a aplicação em desenvolvimento de coleção.",
+    "camera_ko": "컬렉션 개발 적용성을 강조하는 얕은 심도의 중간 샷.",
+    "subtitle_pt": "Para marcas de moda que buscam materiais sustentáveis.",
+    "subtitle_ko": "지속가능한 소재를 찾는 패션 브랜드를 위해.",
+    "narration_pt": "Ideal para marcas de moda que buscam sustentabilidade.",
+    "narration_ko": "지속가능성을 찾는 패션 브랜드에 적합합니다.",
+    "number": 4,
+    "start_seconds": 15,
+    "end_seconds": 20
+   },
+   {
+    "duration_seconds": 5,
+    "visual_pt": "Cena de comparação visual abstrata: à esquerda, um fio de poliéster convencional em fundo cinza; à direita, regen T2T em destaque com seta discreta sugerindo menor emissão de carbono, sem números na tela.",
+    "visual_ko": "추상적인 비교 장면: 왼쪽에는 회색 배경의 일반 폴리에스터 원사, 오른쪽에는 regen T2T가 강조되어 있고, 숫자 없이 탄소 배출 감소를 암시하는 은은한 화살표가 있다.",
+    "camera_pt": "Split screen limpo, visual corporativo, sem gráficos numéricos.",
+    "camera_ko": "숫자 그래프 없이 깔끔한 분할 화면의 기업형 비주얼.",
+    "subtitle_pt": "Menor emissão de carbono, em comparação ao poliéster convencional.",
+    "subtitle_ko": "기존 폴리에스터와 비교해 탄소 배출이 적습니다.",
+    "narration_pt": "Também é promovido como uma opção com menor emissão de carbono.",
+    "narration_ko": "또한 탄소 배출이 더 적은 विकल्प으로 홍보됩니다.",
+    "number": 5,
+    "start_seconds": 20,
+    "end_seconds": 25
+   },
+   {
+    "duration_seconds": 5,
+    "visual_pt": "Fecho com o produto em destaque sobre uma mesa de apresentação, ao lado de amostras têxteis e um fundo elegante de escritório. Um comprador e uma representante da empresa apertam as mãos, com clima profissional.",
+    "visual_ko": "프레젠테이션 테이블 위에 제품이 중심에 놓여 있고, 옆에는 섬유 샘플이 있으며, 세련된 사무실 배경이 보인다. 구매 담당자와 회사 담당자가 전문적인 분위기 속에서 악수한다.",
+    "camera_pt": "Plano final estável e elegante, com foco no produto e no aperto de mãos.",
+    "camera_ko": "제품과 악수 장면에 초점을 둔 안정적이고 세련된 마지막 샷.",
+    "subtitle_pt": "",
+    "subtitle_ko": "",
+    "narration_pt": "",
+    "narration_ko": "",
+    "number": 6,
+    "start_seconds": 25,
+    "end_seconds": 30
+   }
+  ],
+  "review_notes": [
+   "A cena 5 contém a दावा de menor emissão de carbono em comparação ao poliéster convencional; verificar a base de evidência antes do uso.",
+   "A descrição do produto menciona que a redução de carbono está sendo divulgada, mas sem dados de apoio; manter essa afirmação sob revisão.",
+   "Não há CTA fornecido, então a cena final foi deixada sem chamada para ação."
+  ],
+  "notices": [],
+  "timing": {
+   "total_seconds": 30,
+   "expected_seconds": 30,
+   "ok": true
+  },
+  "conditions": {
+   "audience": "바이어용",
+   "duration": 30,
+   "scene_count": 6,
+   "aspect_ratio": "16:9"
+  },
+  "model": "gpt-5.4-mini-2026-03-17",
+  "prompt_version": "storyboard_generate_v1"
+ }
+}
