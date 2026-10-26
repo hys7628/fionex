@@ -628,3 +628,16 @@
 - 검증: validation.md DEV-MA-BUYER-003.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 실제 OpenAI 브리핑 미실행, 브리핑 보관은 서버 메모리 3시간(재시작 시 PDF 받으려면 다시 브리핑 필요), 검색은 현재 받은 기준 자료 범위.
+
+## DEV-MA-BUYER-004 바이어 목록 → 업체 상세 화면(정보·AI 브리핑·PDF)
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis (브랜치 feature/common_setup, 작업 전 미커밋 변경 없음, 최근 커밋 bc71ee5)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: (서브탭 3개 제안에 대해) "시장 통계 | 바이어 목록 | AI 브리핑 이렇게 말고 바이어 목록누르면 상세로 들어가게 할수있나"
+- 판단: 서브탭은 2개 유지, 목록 → 상세(같은 탭 안 화면 전환, Home 업계 소식 상세와 같은 방식). 브리핑을 상세 안으로 옮기고 목록 행의 AI 버튼은 '상세 보기'로 바꿈(유료 호출은 상세에서 사용자가 명시적으로). 업체별 브리핑을 화면 메모리에 보관해 이전·다음 이동 시 재호출 없음. 진행 중 다른 업체로 옮겨도 결과가 엉뚱한 화면에 덮이지 않게 업체별로 처리. 상세 화면에서 브리핑 머리의 업체 정보는 위 업체 카드와 중복이라 시장 맥락 한 줄로 축소(PDF는 업체 표 유지). 상세를 열 때 제목으로 스크롤하면 이동 버튼 줄이 가려져, 초점은 제목·스크롤은 상세 맨 위로 조정.
+- 변경 파일: features/market_analysis/templates/market_analysis/panel.html, static/market_analysis.js·css, feature_spec.md. Python·API 변경 없음.
+- 외부 호출: 0건.
+- 검증: validation.md DEV-MA-BUYER-004.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 브라우저 뒤로 가기로 목록 복귀 안 됨, 실제 OpenAI 브리핑 미실행.

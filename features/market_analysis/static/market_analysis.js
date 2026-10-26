@@ -752,7 +752,7 @@
   };
 
   function buyerRow(c, i) {
-    const name = '<span class="ma-buyer-name">' + esc(c.razao_social) + "</span>" +
+    const name = '<button type="button" class="ma-buyer-link ma-buyer-name" data-ma-detail="' + esc(c.cnpj) + '">' + esc(c.razao_social) + "</button>" +
       (c.nome_fantasia && c.nome_fantasia !== c.razao_social ? '<br><span class="field-hint">' + esc(c.nome_fantasia) + "</span>" : "") +
       '<br><span class="field-hint">CNPJ ' + esc(c.cnpj) + "</span>";
     const ev = c.evidence.length ? c.evidence.map(function (e) {
@@ -763,8 +763,7 @@
     // 등급: 공개 규칙(코드) 결과와 근거 한 줄. 색은 보조이며 글자 A/B/C로 구분합니다.
     const grade = '<span class="ma-grade ma-grade-' + esc(c.grade) + '">' + esc(c.grade) + '</span><span class="visually-hidden">등급</span>' +
       '<br><span class="field-hint">' + esc(c.grade_reason) + "</span>";
-    const brief = '<button type="button" class="btn btn-secondary ma-brief-btn" data-ma-brief="' + esc(c.cnpj) + '"' +
-      ' aria-describedby="market_analysis-briefing-cost"' + (aiReady() ? "" : " disabled") + ">AI 브리핑" +
+    const brief = '<button type="button" class="btn btn-secondary ma-brief-btn" data-ma-detail="' + esc(c.cnpj) + '">상세 보기' +
       '<span class="visually-hidden"> · ' + esc(c.razao_social) + "</span></button>";
     return "<tr><td class=\"num\">" + (i + 1) + "</td><td>" + name + '</td><td class="ma-grade-cell">' + grade + "</td><td>" + esc(c.uf || "") +
       '<br><span class="field-hint">' + esc(c.municipio || "") + "</span></td>" +
@@ -775,7 +774,7 @@
   function buyerTable(rows, offset, caption) {
     return '<div class="table-wrap"><table class="table ma-buyer-table"><caption>' + esc(caption) + "</caption><thead><tr>" +
       '<th scope="col" class="num">#</th><th scope="col">회사명</th><th scope="col">등급 · 근거</th><th scope="col">지역</th><th scope="col">업종</th>' +
-      '<th scope="col">전화 · 회사 도메인</th><th scope="col">재생·T2T 근거</th><th scope="col">브리핑</th></tr></thead><tbody>' +
+      '<th scope="col">전화 · 회사 도메인</th><th scope="col">재생·T2T 근거</th><th scope="col">상세 · AI 브리핑</th></tr></thead><tbody>' +
       rows.map(function (c, i) { return buyerRow(c, offset + i); }).join("") + "</tbody></table></div>";
   }
 
@@ -823,7 +822,7 @@
   }
 
   /* ---------- 바이어 검색 ---------- */
-  const buyerView = { list: [], query: "", grade: "all" };
+  const buyerView = { list: [], rows: [], query: "", grade: "all" };
   const BUYERS_SHOWN_FILTERED = 20;
   let buyerSearchTimer = null;
 
@@ -841,6 +840,7 @@
     const rows = buyerView.list.filter(function (x) {
       return (buyerView.grade === "all" || x.c.grade === buyerView.grade) && words.every(function (w) { return x.hay.indexOf(w) !== -1; });
     }).map(function (x) { return x.c; });
+    buyerView.rows = rows;
     const total = buyerView.list.length;
     countEl.textContent = filtered ? "전체 " + fmtInt.format(total) + "곳 · 우선순위 등급순"
       : "검색 결과 " + fmtInt.format(rows.length) + "곳 / 전체 " + fmtInt.format(total) + "곳";
@@ -871,6 +871,7 @@
 
   // 새로고침을 안내하지 않습니다(다른 탭의 작성 중 입력·결과가 사라짐). 같은 자리에서 다시 시도합니다.
   let buyersBusy = false;
+  let buyersData = null;
 
   async function loadBuyers() {
     if (buyersBusy) return;
@@ -883,6 +884,8 @@
       const res = await fetch("/api/market-analysis/buyers");
       const body = await res.json();
       if (!body.ok) throw new Error();
+      buyersData = body.data;
+      if (detailCnpj) closeDetail(false);
       renderBuyers(body.data);
       ok = true;
     } catch (e) {
@@ -909,8 +912,8 @@
       buyersBox.querySelectorAll("[data-ma-grade-filter]").forEach(function (b) { b.setAttribute("aria-pressed", String(b === chip)); });
       renderBuyerResults();
     }
-    const brief = event.target.closest("[data-ma-brief]");
-    if (brief && !brief.disabled) runBriefing(brief.dataset.maBrief, brief);
+    const detail = event.target.closest("[data-ma-detail]");
+    if (detail) openDetail(detail.dataset.maDetail, detail);
   });
 
   /* ---------- 바이어별 AI 브리핑(유료 1회 호출) ---------- */
@@ -924,9 +927,21 @@
     if (text) setTimeout(function () { briefStatus.textContent = text; }, 50);
   }
 
-  // 작업 중에는 모든 'AI 브리핑' 버튼을 잠가 동시에 여러 번 유료 호출하지 않게 합니다.
+  // 'AI 브리핑 받기'는 상세 화면 하나뿐입니다. 다른 업체 브리핑이 진행 중이면 잠가 동시에 여러 번 유료 호출하지 않게 합니다.
+  const briefRunBtn = panel.querySelector("[data-ma-brief-run]");
+  const briefRunHint = panel.querySelector("[data-ma-brief-run-hint]");
+  const briefCache = {};      // 업체(CNPJ)별 마지막 브리핑(화면 메모리, 저장 안 함)
+  let briefRunning = null;    // 진행 중인 업체 CNPJ
+
   function updateBriefButtons() {
-    buyersBox.querySelectorAll("[data-ma-brief]").forEach(function (b) { b.disabled = briefBusy || !aiReady(); });
+    if (!briefRunBtn) return;
+    if (!briefRunBtn.hasAttribute("aria-busy")) briefRunBtn.textContent = detailCnpj && briefCache[detailCnpj] ? "AI 브리핑 다시 받기" : "AI 브리핑 받기";
+    briefRunBtn.disabled = briefBusy || !aiReady() || !detailCnpj;
+    briefRunHint.textContent = !aiReady() ? "서버에 AI 설정(OpenAI 키·텍스트 모델)이 없어 지금은 받을 수 없습니다."
+      : briefBusy && briefRunning !== detailCnpj ? "다른 업체의 브리핑을 만드는 중입니다. 끝난 뒤 받을 수 있습니다."
+      : detailCnpj && briefCache[detailCnpj] ? "이미 받은 브리핑입니다. 같은 조회 조건이면 다시 받아도 추가 호출이 없습니다."
+      : lastResult ? "시장 통계 조회 결과(" + lastResult.query.code + " · " + lastResult.query.from + "~" + lastResult.query.to + ")가 시장 맥락으로 들어갑니다."
+      : "시장 통계를 먼저 조회하면 시장 맥락이 함께 들어갑니다(지금은 업체 정보만).";
   }
 
   function srcChips(sources) {
@@ -936,7 +951,7 @@
     }).join(" ");
   }
 
-  // 브리핑 화면: 머리(업체·등급·지역·업종·시장 맥락) → 넓은 화면 2열(왼쪽 회사 개요·시장 맥락 / 오른쪽 접근 포인트·예상 질문) →
+  // 브리핑 화면(업체 상세 안): 시장 맥락 한 줄 → 넓은 화면 2열(왼쪽 회사 개요·시장 맥락 / 오른쪽 접근 포인트·예상 질문) →
   // 확인 안내 → 근거 부족·코드 검사로 뺀 문장·출처·사용량. 출처 칩은 문장 끝 작은 ID 링크입니다.
   function briefList(items, used, empty) {
     if (!items.length) return '<p class="field-hint">' + esc(empty) + "</p>";
@@ -951,21 +966,13 @@
   }
 
   function briefingHtml(b) {
-    const c = b.company;
     const used = {};
     const market = b.market.included
       ? b.market.query.code_system_label + " " + b.market.query.code + " · " + b.market.query.from + "~" + b.market.query.to
       : "미포함";
-    let html = '<header class="ma-brief-head">' +
-      '<div class="ma-brief-title-row"><span class="ma-grade ma-grade-' + esc(c.grade) + '" title="우선순위 등급">' + esc(c.grade) +
-      '</span><span class="visually-hidden">등급</span><p class="ma-brief-company">' + esc(c.razao_social) + "</p></div>" +
-      '<p class="ma-brief-sub">' + esc([c.nome_fantasia && c.nome_fantasia !== c.razao_social ? c.nome_fantasia : "", "CNPJ " + c.cnpj].filter(Boolean).join(" · ")) + "</p>" +
-      '<dl class="ma-brief-meta">' +
-      "<div><dt>지역</dt><dd>" + esc((c.municipio || "") + ", " + (c.uf || "")) + "</dd></div>" +
-      "<div><dt>업종</dt><dd>" + esc(c.cnae_label || c.cnae) + "</dd></div>" +
-      "<div><dt>시장 맥락</dt><dd>" + esc(market) + "</dd></div></dl>" +
-      '<p class="field-hint">등급 근거: ' + esc(c.grade_reason) + "</p>" +
-      (b.market.included ? "" : '<p class="field-hint">' + esc(b.market.note) + "</p>") + "</header>";
+    // 업체 정보는 상세 화면 위 업체 카드에 있으므로 여기서는 시장 맥락만 보여 줍니다(PDF에는 업체 표 포함).
+    let html = '<p class="ma-brief-market"><span class="ma-brief-market-label">시장 맥락</span> ' + esc(market) +
+      (b.market.included ? "" : ' <span class="field-hint">· ' + esc(b.market.note) + "</span>") + "</p>";
     const questions = b.questions.length ? '<div class="ma-qa-list">' + b.questions.map(function (q) {
       q.sources.forEach(function (x) { used[x.id] = x; });
       return '<div class="ma-qa"><p class="ma-qa-q"><span class="ma-qa-mark" aria-hidden="true">Q</span><span class="visually-hidden">질문: </span>' + esc(q.question) + "</p>" +
@@ -1062,28 +1069,42 @@
     }
   });
 
+  function briefEmptyHtml() {
+    return '<div class="empty-state"><p class="empty-state-title">아직 이 업체의 브리핑이 없습니다</p>' +
+      "<p>'AI 브리핑 받기'를 누르면 출처 있는 자료로 1쪽 브리핑을 만듭니다(OpenAI 1회, 유료).</p></div>";
+  }
+
+  // 지금 보고 있는 업체의 브리핑 영역을 그립니다(보관본이 있으면 다시 호출하지 않고 표시).
+  function showBriefingFor(cnpj) {
+    currentBriefing = briefCache[cnpj] || null;
+    showBriefPdfMessage(null);
+    if (briefRunning === cnpj) {
+      briefBox.setAttribute("aria-busy", "true");
+      briefBox.innerHTML = '<div class="empty-state"><span class="spinner" aria-hidden="true"></span><p class="empty-state-title">AI 브리핑을 만드는 중입니다</p><p>보통 10~30초 걸립니다.</p></div>';
+    } else {
+      briefBox.setAttribute("aria-busy", "false");
+      briefBox.innerHTML = currentBriefing ? briefingHtml(currentBriefing) : briefEmptyHtml();
+    }
+    updateBriefButtons();
+    updateBriefPdf();
+  }
+
   async function runBriefing(cnpj, button) {
-    if (briefBusy) return;
+    if (briefBusy || !cnpj) return;
     if (!aiReady()) {
       briefBox.innerHTML = '<div class="notice notice-warning" role="status"><p class="notice-title">AI 브리핑 설정 필요</p><p>' +
-        "서버에 AI 설정(OpenAI 키·텍스트 모델)이 없어 지금은 실행할 수 없습니다. 등급과 목록은 그대로 볼 수 있습니다.</p></div>";
-      currentBriefing = null;
-      showBriefPdfMessage(null);
-      updateBriefPdf();
-      AppShell.ui.focusResult(briefTitle, { scroll: "start", from: [buyersBox] });
+        "서버에 AI 설정(OpenAI 키·텍스트 모델)이 없어 지금은 실행할 수 없습니다. 업체 정보와 등급은 그대로 볼 수 있습니다.</p></div>";
+      AppShell.ui.focusResult(briefTitle, { scroll: "start", from: [detailView] });
       return;
     }
+    const company = (findCompany(cnpj) || {}).razao_social || cnpj;
     briefBusy = true;
-    updateBriefButtons();
-    showBriefPdfMessage(null);
-    updateBriefPdf();
+    briefRunning = cnpj;
     AppShell.ui.setButtonBusy(button, "브리핑 중...");
-    const company = button.closest("tr").querySelector(".ma-buyer-name").textContent;
-    briefBox.setAttribute("aria-busy", "true");
-    briefBox.innerHTML = '<div class="empty-state"><span class="spinner" aria-hidden="true"></span><p class="empty-state-title">AI 브리핑을 만드는 중입니다</p>' +
-      "<p>" + esc(company) + " · 보통 10~30초 걸립니다.</p></div>";
+    showBriefingFor(cnpj);
     briefAnnounce(company + " AI 브리핑을 만드는 중입니다.");
     let done = "";
+    let errorHtml = "";
     try {
       const res = await fetch("/api/market-analysis/buyer-briefing", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -1093,29 +1114,129 @@
       try { body = await res.json(); } catch (e) { body = null; }
       if (!body || typeof body.ok !== "boolean") throw new Error("unreadable");
       if (!body.ok) throw body.error;
-      briefBox.innerHTML = briefingHtml(body.data);
-      currentBriefing = body.data;
-      done = body.data.company.razao_social + " AI 브리핑이 준비되었습니다. PDF로 내려받을 수 있습니다.";
+      briefCache[cnpj] = body.data;
+      done = company + " AI 브리핑이 준비되었습니다. PDF로 내려받을 수 있습니다.";
     } catch (err) {
-      currentBriefing = null;
       const server = err && !(err instanceof Error) ? err : null;
       const config = server && server.needs_restart;
       const message = server && server.message ? server.message
         : CONNECTION_ERROR + " 이미 보낸 요청의 처리·요금이 취소되었는지는 보장할 수 없습니다.";
-      briefBox.innerHTML = '<div class="notice ' + (config ? "notice-warning" : "notice-danger") + '" role="' + (config ? "status" : "alert") + '">' +
+      errorHtml = '<div class="notice ' + (config ? "notice-warning" : "notice-danger") + '" role="' + (config ? "status" : "alert") + '">' +
         '<p class="notice-title">' + (config ? "AI 브리핑을 시작하지 않았습니다" : "AI 브리핑을 만들지 못했습니다") + "</p><p>" + esc(message) +
-        (config ? "" : " 목록에서 'AI 브리핑'을 다시 눌러 시도할 수 있습니다.") + "</p>" + (server ? diagHtml(server.diagnostic) : "") + "</div>";
+        (config ? "" : " 'AI 브리핑 받기'를 다시 눌러 시도할 수 있습니다.") + "</p>" + (server ? diagHtml(server.diagnostic) : "") + "</div>";
+      done = company + " AI 브리핑을 만들지 못했습니다.";
     } finally {
       briefBusy = false;
-      briefBox.setAttribute("aria-busy", "false");
+      briefRunning = null;
       AppShell.ui.setButtonBusy(button, null);
-      updateBriefButtons();
-      updateBriefPdf();
     }
-    // 큰 결과가 목록 아래 새로 생기므로 브리핑 제목으로 초점·스크롤(다른 곳으로 옮겼으면 그대로)
-    AppShell.ui.focusResult(briefTitle, { scroll: "start", from: [buyersBox, briefBox] });
+    if (detailCnpj !== cnpj) {  // 그사이 다른 업체로 옮겼으면 결과는 보관만 하고 지금 화면은 그대로 둡니다.
+      updateBriefButtons();
+      briefAnnounce(done);
+      return;
+    }
+    showBriefingFor(cnpj);
+    if (errorHtml) briefBox.innerHTML = errorHtml + (briefCache[cnpj] ? briefingHtml(briefCache[cnpj]) : "");
+    AppShell.ui.focusResult(briefTitle, { scroll: "start", from: [detailView] });
     briefAnnounce(done);
   }
+
+  if (briefRunBtn) briefRunBtn.addEventListener("click", function () { runBriefing(detailCnpj, briefRunBtn); });
+
+  /* ---------- 업체 상세 화면(같은 탭 안, 주소 변경 없음) ---------- */
+  const listView = panel.querySelector("[data-ma-buyer-list-view]");
+  const detailView = panel.querySelector("[data-ma-buyer-detail-view]");
+  const detailBox = panel.querySelector("[data-ma-detail]");
+  const detailPos = panel.querySelector("[data-ma-detail-pos]");
+  let detailCnpj = null;
+  let listScroll = 0;
+
+  function findCompany(cnpj) {
+    const hit = buyerView.list.find(function (x) { return x.c.cnpj === cnpj; });
+    return hit ? hit.c : null;
+  }
+
+  function startedText(c) {
+    const v = c.inicio_atividade || "";
+    if (!/^\d{8}$/.test(v)) return "미상";
+    const now = new Date();
+    let years = now.getFullYear() - Number(v.slice(0, 4));
+    if (now.getMonth() + 1 < Number(v.slice(4, 6)) || (now.getMonth() + 1 === Number(v.slice(4, 6)) && now.getDate() < Number(v.slice(6)))) years -= 1;
+    return v.slice(0, 4) + "-" + v.slice(4, 6) + "-" + v.slice(6) + " · 업력 " + years + "년";
+  }
+
+  function detailHtml(c) {
+    const item = function (label, value, wide) { return '<div' + (wide ? ' class="ma-detail-wide"' : "") + "><dt>" + esc(label) + "</dt><dd>" + value + "</dd></div>"; };
+    const domain = c.domain ? linkHtml("https://" + c.domain, c.domain) : '<span class="field-hint">없음</span>';
+    const evidence = c.evidence.length ? "<ul>" + c.evidence.map(function (e) {
+      return "<li>" + linkHtml(e.url, e.title) + ' <span class="field-hint">확인 ' + esc(e.checked_at) + "</span></li>";
+    }).join("") + "</ul>" : '<span class="field-hint">없음(검토된 공개 근거 없음)</span>';
+    const notes = (buyersData && buyersData.notes ? buyersData.notes : []).map(function (n) { return '<p class="field-hint">' + esc(n) + "</p>"; }).join("");
+    return '<div class="ma-detail-head"><div class="ma-brief-title-row"><span class="ma-grade ma-grade-' + esc(c.grade) + '" title="우선순위 등급">' + esc(c.grade) +
+      '</span><span class="visually-hidden">등급</span><h2 class="card-title ma-detail-title" id="market_analysis-detail-title" tabindex="-1">' + esc(c.razao_social) + "</h2></div>" +
+      '<p class="ma-brief-sub">' + esc([c.nome_fantasia && c.nome_fantasia !== c.razao_social ? c.nome_fantasia : "", "CNPJ " + c.cnpj].filter(Boolean).join(" · ")) + "</p>" +
+      '<p class="ma-detail-reason">등급 근거: ' + esc(c.grade_reason) + "</p></div>" +
+      '<dl class="ma-detail-grid">' +
+      item("지역", esc((c.municipio || "미상") + ", " + (c.uf || ""))) +
+      item("업종", esc(c.cnae_label || c.cnae) + '<br><span class="field-hint">' + esc(c.cnae + " · " + (c.cnae_desc || "")) + "</span>") +
+      item("규모(국세청 코드)", esc(c.porte || "미상")) +
+      item("개업일", esc(startedText(c))) +
+      item("사업장", esc((c.matriz ? "본점" : "지점 자료(본점 아님)") + " · 대상 업종 사업장 " + (c.sites_matched || 1) + "곳")) +
+      item("법인 형태", esc(c.natureza || "미상")) +
+      item("대표 전화", c.phones.length ? c.phones.map(esc).join("<br>") : '<span class="field-hint">등록 없음</span>') +
+      item("회사 도메인", domain) +
+      item("재생·T2T 근거", evidence, true) + "</dl>" + notes;
+  }
+
+  function renderDetailPos() {
+    const rows = buyerView.rows;
+    const i = rows.findIndex(function (c) { return c.cnpj === detailCnpj; });
+    const filtered = rows.length !== buyerView.list.length;
+    detailPos.textContent = i < 0 ? "" : (filtered ? "검색 결과 " : "전체 ") + fmtInt.format(i + 1) + " / " + fmtInt.format(rows.length) + "곳";
+    detailView.querySelector('[data-ma-detail-step="-1"]').disabled = i <= 0;
+    detailView.querySelector('[data-ma-detail-step="1"]').disabled = i < 0 || i >= rows.length - 1;
+  }
+
+  function openDetail(cnpj) {
+    const c = findCompany(cnpj);
+    if (!c) return;
+    if (!detailCnpj) listScroll = window.scrollY;  // 목록에서 처음 들어올 때만 위치 기억(이전·다음 이동 중에는 유지)
+    detailCnpj = cnpj;
+    listView.hidden = true;
+    detailView.hidden = false;
+    detailBox.innerHTML = detailHtml(c);
+    renderDetailPos();
+    showBriefingFor(cnpj);
+    // 초점은 업체명 제목, 화면은 상세 맨 위(목록으로·이전·다음 줄)부터 보이게 맞춥니다.
+    if (AppShell.ui.focusResult(panel.querySelector("#market_analysis-detail-title"), { scroll: false })) detailView.scrollIntoView({ block: "start" });
+  }
+
+  function closeDetail(restore) {
+    const cnpj = detailCnpj;
+    detailCnpj = null;
+    detailView.hidden = true;
+    listView.hidden = false;
+    updateBriefButtons();
+    if (restore === false) return;
+    window.scrollTo(0, listScroll);
+    // 보던 업체 이름으로 초점을 돌려줍니다(목록에 없으면 목록 제목).
+    const back = cnpj && buyersBox.querySelector('.ma-buyer-link[data-ma-detail="' + cnpj + '"]');
+    AppShell.ui.focusResult(back && back.offsetParent ? back : panel.querySelector("#market_analysis-buyers-title"), { scroll: false });
+  }
+
+  detailView.addEventListener("click", function (event) {
+    if (event.target.closest("[data-ma-detail-back]")) closeDetail(true);
+    const step = event.target.closest("[data-ma-detail-step]");
+    if (step && !step.disabled) {
+      const rows = buyerView.rows;
+      const i = rows.findIndex(function (c) { return c.cnpj === detailCnpj; });
+      const next = rows[i + Number(step.dataset.maDetailStep)];
+      if (next) openDetail(next.cnpj);
+    }
+  });
+  detailView.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !event.defaultPrevented) closeDetail(true);
+  });
 
   /* ---------- 하위 탭(시장 통계 / 바이어 목록) ---------- */
   const tabs = Array.from(panel.querySelectorAll("[data-ma-tab]"));
