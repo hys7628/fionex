@@ -1,0 +1,44 @@
+{
+  "experiment_id": "SPE-2026_10_26-02",
+  "type": "service_prompt_experiment",
+  "worker": "김민정",
+  "feature": "green_claim",
+  "executed_by": "사용자(담당자) 직접 실행 1회. Claude는 실행하지 않았고 API를 호출하지 않음",
+  "previous_experiment": "SPE-2026_10_26-01 (claim_review_v1_2026_10_26_observed_failure.json)",
+  "model_reported": "gpt-5.4-mini-2026-03-17",
+  "prompt": {
+    "path": "features/green_claim/prompts/claim_review_v2.md",
+    "version": "claim_review_v2"
+  },
+  "server_change": "같은 날 추가한 서버 대체 예시 검사(근거 필요 표현 어간·언어 기준 중복 제거)가 함께 적용된 상태",
+  "input_text": "Este é um texto fictício para teste.\nNosso tecido é 100% sustentável, totalmente ecológico e não causa nenhum impacto ambiental.\nÉ a opção mais verde do mercado.",
+  "input_note": "SPE-2026_10_26-01과 같은 공개 가능한 가상 테스트 문구",
+  "raw_api_response": null,
+  "raw_api_response_note": "모델 원본 API 응답은 확인·보관되지 않음. 아래는 사용자·ChatGPT가 전달한 관측 결과이며 응답을 복원한 것이 아님",
+  "observed_by_user": {
+    "review_time": "2026-10-26 11:50:30",
+    "items": "수정 권고 1개, 검토 필요 1개",
+    "alternatives": "두 항목의 대체 예시가 서버 검증으로 제거됨. 제거 이유와 한국어 수정 방향은 유지됨",
+    "criteria_check": "CDC 조회 실패 후 저장 기준과 경고 사용"
+  },
+  "checked_by_chatgpt_from_pdf": {
+    "pages": 10,
+    "report_generated_time": "2026-10-26 11:53:07",
+    "contains": "claim_review_v2와 같은 검토 항목, 두 항목의 예시 미제공 이유와 수정 방향",
+    "previous_problem_sentences_present": false
+  },
+  "interpretation_limits": [
+    "사용자 보고상 예시가 서버 검증으로 제거됨 → 모델(v2)이 두 항목 모두 대체 예시를 냈고 서버 어간 검사가 지운 것으로 보임. 모델이 낸 예시 문장의 내용은 원본 응답이 없어 미확인",
+    "따라서 이번 결과의 문제 문장 미노출은 서버 검사 효과이며, v2 프롬프트가 근거 없는 전제를 막았다는 증거가 아님",
+    "프롬프트 단독의 개선 효과로 판단하지 않음",
+    "정상적인 포르투갈어 예시 1개가 표시되는 사례는 미검증",
+    "1회 실행이며 반복 실행·다른 문구에서의 결과는 미확인"
+  ],
+  "not_measured": [
+    "PDF 전체 배치",
+    "링크",
+    "비용",
+    "토큰",
+    "처리 시간"
+  ]
+}

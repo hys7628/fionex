@@ -1,0 +1,414 @@
+{
+ "experiment_id": "SVC-MA-20261026-02",
+ "type": "service_prompt_experiment",
+ "date_kst": "2026-10-26 새벽(정확한 시각 미기록)",
+ "worker": "한윤수",
+ "feature": "market_analysis",
+ "model_response": "gpt-5.4-mini-2026-03-17",
+ "prompt_versions": {
+  "draft": "market_analysis_draft_v2.md",
+  "review": "market_analysis_review_v2.md"
+ },
+ "settings": {
+  "max_output_tokens": 4096,
+  "store": false,
+  "calls_limit": 6,
+  "time_budget_seconds": 480
+ },
+ "input": {
+  "query": "NCM 54023310, 브라질 수입, 2023-10~2026-09(36개월), 공급국 전체 (ComexStat 실제 조회)",
+  "facts": [
+   "조회 조건: 브라질 수입, NCM 8자리 54023310 (Fios texturizados de poliésteres, crus), 2023-10~2026-09(36개월)",
+   "수입액(FOB) USD 925,142,540",
+   "수입량 797,257.8 t",
+   "평균 수입단가(FOB) 1.16 USD/kg",
+   "수입액 전년 동기(2022-10~2025-09) 대비 +6.8%",
+   "수입량 전년 동기(2022-10~2025-09) 대비 +9.7%",
+   "평균 수입단가 전년 동기(2022-10~2025-09) 대비 -2.6%",
+   "공급국 1위 중국: 수입액 USD 770,238,785, 비중 83.3%",
+   "공급국 2위 인도: 수입액 USD 141,044,956, 비중 15.2%",
+   "공급국 3위 대만: 수입액 USD 3,630,185, 비중 0.4%",
+   "공급국 4위 홍콩: 수입액 USD 3,320,023, 비중 0.4%",
+   "공급국 5위 이집트: 수입액 USD 1,665,835, 비중 0.2%",
+   "한국: 16위, 비중 0.0%, 수입액 USD 39,600",
+   "월 수입액 최고 2026-05 USD 43,173,786, 최저 2023-10 USD 14,681,241"
+  ],
+  "evidence_note": "검증용 시험 근거 1건(N3): MDIC gov.br 공익성 평가 페이지 원문 문장 그대로 발췌(번역·요약 없음, CC BY-ND 3.0). 서비스 수집 경로가 아니라 검증 스크립트에서 추가. KOTRA 2건은 AI 입력 제외. GDELT는 같은 날 429·빈 결과로 미사용",
+  "evidence": [
+   {
+    "id": "N3",
+    "source": "official",
+    "source_name": "브라질 산업통상서비스부(MDIC) · gov.br",
+    "title": "Fios de poliéster — Avaliação de interesse público (medida antidumping, China)",
+    "url": "https://www.gov.br/mdic/pt-br/assuntos/comercio-exterior/defesa-comercial-e-interesse-publico/investigacoes/avaliacoes-de-interesse-publico/fios-de-poliester",
+    "seen_at": null,
+    "published": "2026-08-18",
+    "language": "Portuguese",
+    "access": "full_text"
+   }
+  ]
+ },
+ "output": {
+  "status": "complete",
+  "complete": true,
+  "rows": [
+   {
+    "section": "핵심 요약",
+    "content": "브라질의 NCM 54023310 수입은 2023-10~2026-09 기준 FOB USD 925,142,540, 물량 797,257.8 t이다.",
+    "implication": "전체 DTY 시장은 규모가 크고 지속적으로 수입되고 있어 공급 대응 여지는 크다.",
+    "status": "사실",
+    "model_status": "사실",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/",
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09"
+     }
+    ],
+    "flags": []
+   },
+   {
+    "section": "핵심 요약",
+    "content": "전년 동기 대비 수입액은 +6.8%, 수입량은 +9.7% 증가했고 평균 수입단가는 -2.6% 하락했다.",
+    "implication": "수요 확대와 단가 하락이 함께 나타나 가격 경쟁이 중요한 시장일 수 있다.",
+    "status": "사실",
+    "model_status": "사실",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/",
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09"
+     }
+    ],
+    "flags": []
+   },
+   {
+    "section": "핵심 요약",
+    "content": "공급국 1위는 중국(83.3%), 2위는 인도(15.2%)로 양국 합계 비중이 매우 높다.",
+    "implication": "브라질 DTY 수입은 소수 공급국 집중도가 높아 대체 공급 제안은 진입 장벽이 있을 수 있다.",
+    "status": "사실",
+    "model_status": "사실",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/",
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09"
+     }
+    ],
+    "flags": []
+   },
+   {
+    "section": "핵심 요약",
+    "content": "한국은 16위로 비중이 0.0%, 수입액은 USD 39,600에 그쳤다.",
+    "implication": "한국산은 아직 존재감이 작아 신규 거래 확대가 가능해도 초기 레퍼런스 확보가 중요하다.",
+    "status": "사실",
+    "model_status": "사실",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/",
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09"
+     }
+    ],
+    "flags": []
+   },
+   {
+    "section": "변화 배경",
+    "content": "월 수입액은 2023-10 USD 14,681,241에서 2026-05 USD 43,173,786까지 변동했다.",
+    "implication": "월별 변동성이 있어 물량·가격 협상은 월간 흐름을 함께 봐야 한다.",
+    "status": "사실",
+    "model_status": "사실",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/",
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09"
+     }
+    ],
+    "flags": []
+   },
+   {
+    "section": "변화 배경",
+    "content": "N3는 중국산 폴리에스터 필라멘트사에 대한 브라질의 반덤핑 조치 관련 공적이익 평가가 진행 중이라고 밝혔다.",
+    "implication": "중국산 물량에는 통상·규제 변수 가능성이 있어 조달 다변화 검토가 필요할 수 있다.",
+    "status": "사실",
+    "model_status": "사실",
+    "source_ids": [
+     "N3"
+    ],
+    "sources": [
+     {
+      "id": "N3",
+      "name": "브라질 산업통상서비스부(MDIC) · gov.br",
+      "url": "https://www.gov.br/mdic/pt-br/assuntos/comercio-exterior/defesa-comercial-e-interesse-publico/investigacoes/avaliacoes-de-interesse-publico/fios-de-poliester",
+      "date": "게시일 2026-08-18",
+      "title": "Fios de poliéster — Avaliação de interesse público (medida antidumping, China)",
+      "access": "full_text"
+     }
+    ],
+    "flags": []
+   },
+   {
+    "section": "변화 배경",
+    "content": "다만 N3는 5402.33.10을 포함한 넓은 하위품목과 중국산을 대상으로 한 공지로, 54023310 전 품목의 영향 범위를 이 기사만으로 확정할 수는 없다.",
+    "implication": "정확한 영향 평가는 세부 HS와 실제 적용 범위를 추가 확인해야 한다.",
+    "status": "미확인",
+    "model_status": "미확인",
+    "source_ids": [
+     "N3"
+    ],
+    "sources": [
+     {
+      "id": "N3",
+      "name": "브라질 산업통상서비스부(MDIC) · gov.br",
+      "url": "https://www.gov.br/mdic/pt-br/assuntos/comercio-exterior/defesa-comercial-e-interesse-publico/investigacoes/avaliacoes-de-interesse-publico/fios-de-poliester",
+      "date": "게시일 2026-08-18",
+      "title": "Fios de poliéster — Avaliação de interesse público (medida antidumping, China)",
+      "access": "full_text"
+     }
+    ],
+    "flags": []
+   },
+   {
+    "section": "영업 기회",
+    "content": "중국·인도 중심 구조에서 한국은 매우 작은 점유율이어서, 특정 품질·납기·서비스 차별화 시 틈새 진입 기회가 있을 수 있다.",
+    "implication": "우선 소량 테스트 오더나 특정 고객군 중심의 파일럿 제안이 현실적이다.",
+    "status": "추정",
+    "model_status": "추정",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/",
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09"
+     }
+    ],
+    "flags": []
+   },
+   {
+    "section": "영업 기회",
+    "content": "평균 수입단가가 전년 대비 하락해 가격 민감도가 높은 고객과의 협상이 중요해 보인다.",
+    "implication": "제안은 단가뿐 아니라 안정 공급, 리드타임, 클레임 대응을 함께 강조하는 편이 유리하다.",
+    "status": "추정",
+    "model_status": "추정",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/",
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09"
+     }
+    ],
+    "flags": []
+   },
+   {
+    "section": "위험",
+    "content": "중국 비중이 83.3%로 높아 기존 공급망의 가격·물량 경쟁이 강할 수 있다.",
+    "implication": "한국 공급사는 단순 저가 경쟁만으로는 진입이 어려울 수 있다.",
+    "status": "사실",
+    "model_status": "사실",
+    "source_ids": [
+     "S1"
+    ],
+    "sources": [
+     {
+      "id": "S1",
+      "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
+      "url": "https://comexstat.mdic.gov.br/",
+      "date": "자료 갱신 2026-10-06 · 최신 월 2026-09"
+     }
+    ],
+    "flags": []
+   },
+   {
+    "section": "위험",
+    "content": "N3의 반덤핑 관련 공지로 중국산 관련 규제 리스크가 거론된다.",
+    "implication": "중국계 고객 또는 대체 수요는 생길 수 있지만, 실제 수혜 여부는 규제 진행과 적용 범위를 확인해야 한다.",
+    "status": "추정",
+    "model_status": "추정",
+    "source_ids": [
+     "N3"
+    ],
+    "sources": [
+     {
+      "id": "N3",
+      "name": "브라질 산업통상서비스부(MDIC) · gov.br",
+      "url": "https://www.gov.br/mdic/pt-br/assuntos/comercio-exterior/defesa-comercial-e-interesse-publico/investigacoes/avaliacoes-de-interesse-publico/fios-de-poliester",
+      "date": "게시일 2026-08-18",
+      "title": "Fios de poliéster — Avaliação de interesse público (medida antidumping, China)",
+      "access": "full_text"
+     }
+    ],
+    "flags": []
+   }
+  ],
+  "gaps": [
+   "재생 원사(T2T) 또는 친환경 원사 관련 기사 근거가 없어, 전체 DTY 통계와 분리한 T2T 시사점을 제시할 수 없다.",
+   "N3 외에 일반 뉴스 근거가 없어 비가격 경쟁 요인, 고객 수요 변화, 특정 업체 동향은 확인되지 않았다."
+  ],
+  "remaining_findings": [],
+  "rounds": [
+   {
+    "number": 1,
+    "title": "자료 적합성",
+    "checked": [
+     "S1의 전체 기간 수치와 전년동기 대비 수치가 current_rows 1~5행에 일치하는지 확인",
+     "S1의 공급국 순위/비중/한국 순위를 current_rows 3~4행에 대조",
+     "N3의 제목·요약에서 확인되는 범위가 중국산 폴리에스터 필라멘트사 및 5402.33.10 포함 하위품목 공지인지 확인",
+     "코드 지적 사항(근거 없는 수치, 평균 수입단가의 견적·판매가 해석 위험)을 점검"
+    ],
+    "changes": [
+     "핵심 요약 1행의 ‘9.25억, 79.7만톤’ 표현을 S1 수치에 맞춰 ‘USD 925,142,540, 797,257.8 t’로 정정",
+     "영업 기회 2행에서 평균 수입단가를 견적·판매가로 해석하는 표현을 제거하고, 단가 하락에 따른 가격 민감도 관찰 수준으로 완화",
+     "N3 관련 문구는 5402.33.10 포함 공지 수준까지만 유지하고, 54023310 전 품목 영향 확정 표현은 미확인으로 유지"
+    ],
+    "evidence": [
+     "S1: 2023-10~2026-09 브라질 NCM 54023310 수입액 USD 925,142,540, 물량 797,257.8 t, YoY +6.8%/+9.7%/-2.6%, 중국 83.3%, 인도 15.2%, 한국 16위 0.0% USD 39,600",
+     "N3: gov.br MDIC 공지로 중국산 폴리에스터 필라멘트사 관련 반덤핑 공적이익 평가이며 5402.33.10 포함 하위품목을 언급"
+    ],
+    "unresolved": [
+     "N3는 5402.33.10을 포함하지만 54023310 전체 품목에 미치는 영향 범위는 단정 불가",
+     "브라질 내 일반 뉴스 근거가 없어 시장 수요 배경을 기사로 보강하지 못함"
+    ],
+    "model_completed": true,
+    "code_findings_before": [
+     "근거에 없는 수치: 9.25, 79.7",
+     "평균 수입단가를 견적·판매가로 제시했을 수 있음"
+    ],
+    "code_findings_after": [],
+    "rows_changed": true,
+    "status": "done"
+   },
+   {
+    "number": 2,
+    "title": "수치 정확성",
+    "checked": [
+     "S1의 수치 6개(수입액, 수입량, 평균단가, 전년동기 대비 증감률 3개)와 공급국 상위 5개, 한국 순위/금액, 월 최고·최저값을 재대조함",
+     "N3의 제목/요약에서 확인되는 범위(5402.33.10 포함, 중국산, 반덤핑 공적이익 평가)만 반영하고, 그 이상 해석한 문구가 없는지 점검함",
+     "핵심 요약 4행, 변화 배경 3행, 영업 기회 2행, 위험 2행이 개수 제한을 준수하는지 확인함",
+     "평균 수입단가를 견적·판매가로, 전체 DTY 통계를 T2T 수요로 오해하는 표현이 없는지 확인함"
+    ],
+    "changes": [],
+    "evidence": [
+     "S1: 브라질 수입 NCM 54023310의 2023-10~2026-09 36개월 통계, 수입액 USD 925,142,540, 수입량 797,257.8 t, 평균단가 1.16 USD/kg, 전년동기 대비 +6.8%/+9.7%/-2.6%, 중국 83.3%·인도 15.2% 등 공급국 순위, 한국 16위 USD 39,600, 월 최고/최저값",
+     "N3: gov.br MDIC 공지로 5402.33.10 포함 하위품목과 중국산 폴리에스터 필라멘트사에 대한 반덤핑 공적이익 평가가 진행 중임을 확인"
+    ],
+    "unresolved": [],
+    "model_completed": true,
+    "code_findings_before": [],
+    "code_findings_after": [],
+    "rows_changed": false,
+    "status": "done"
+   },
+   {
+    "number": 3,
+    "title": "원문·공식 출처 검증",
+    "checked": [
+     "S1의 기간·수치·공급국 순위와 비중을 전부 대조함",
+     "N3의 제목·요약에서 확인 가능한 범위만 검증함(중국산 폴리에스터 필라멘트사, 5402.33.10 포함 언급, 공적이익 평가 진행, 게시일 2026-08-18)",
+     "N3로 54023310 전체 품목의 규제 영향까지 단정하지 않았는지 확인함",
+     "핵심 요약/변화 배경/영업 기회/위험의 개수 제한(요약 4, 기회 2, 위험 2)과 상태 표기를 점검함"
+    ],
+    "changes": [],
+    "evidence": [
+     "S1: 브라질 수입 54023310, 2023-10~2026-09 수입액 USD 925,142,540, 수입량 797,257.8 t, 단가 1.16 USD/kg, 전년동기 대비 증감, 중국·인도·대만·홍콩·이집트·한국 순위와 비중, 월 최고/최저 수입액",
+     "N3: gov.br 공식 공지 제목과 요약에서 중국산 폴리에스터 필라멘트사, 5402.33.10 포함 품목, 공적이익 평가 시작일·절차 일정, 중국산 대상이라는 점 확인"
+    ],
+    "unresolved": [],
+    "model_completed": true,
+    "code_findings_before": [],
+    "code_findings_after": [],
+    "rows_changed": false,
+    "status": "done"
+   },
+   {
+    "number": 4,
+    "title": "사실·추정과 해석 검토",
+    "checked": [
+     "핵심 요약 4행이 모두 S1의 수치와 정확히 대응하는지 확인",
+     "변화 배경 2행의 월 수치와 N3의 공적이익 평가 서술이 출처 내용과 맞는지 확인",
+     "영업 기회 2행의 해석이 S1 범위를 넘어 단정하거나 과도한 인과로 읽히지 않는지 점검",
+     "위험 2행의 규제 리스크 표현이 N3의 확인 가능한 범위와 일치하는지 점검",
+     "개수 제한(핵심 요약 4행, 영업 기회 2행, 위험 2행)과 중복 여부를 최종 확인"
+    ],
+    "changes": [
+     "'브라질 DTY 수입은 소수 공급국 집중도가 높아 대체 공급 제안은 진입 장벽이 있을 수 있다'는 표현을 더 완곡하게 유지해 단정적 해석을 피함",
+     "N3 관련 위험 문장은 '거론된다' 수준으로 유지해, 54023310 전체에 대한 직접 영향으로 확정하지 않도록 정리함"
+    ],
+    "evidence": [
+     "S1: 조회 조건, 2023-10~2026-09 수입액 USD 925,142,540, 물량 797,257.8 t, 평균단가 1.16 USD/kg, 전년동기 대비 증감률, 중국/인도/대만/홍콩/이집트 및 한국 순위와 비중, 월별 최고·최저 수치",
+     "N3: 브라질 MDIC의 2026-08-18 공지로, 5402.33.10/20/90을 포함한 폴리에스터 실(중국산)에 대한 공적이익 평가 일정이 제시됨"
+    ],
+    "unresolved": [
+     "N3는 5402.33.10을 포함한 넓은 하위품목과 중국산을 대상으로 한 공지이므로, 54023310 단일 품목에 대한 실제 영향 범위는 추가 확인이 필요함"
+    ],
+    "model_completed": true,
+    "code_findings_before": [],
+    "code_findings_after": [],
+    "rows_changed": false,
+    "status": "done"
+   },
+   {
+    "number": 5,
+    "title": "표현·표·출처 연결 최종 검토",
+    "checked": [
+     "S1의 수치(수입액, 수입량, 평균 수입단가, 전년 동기 대비 증감률, 상위 공급국 비중, 한국 순위·금액, 월 최고·최저치)를 전 행과 대조",
+     "N3의 문서가 중국산 폴리에스터 필라멘트사(5402.33.10 등) 반덤핑 관련 공적이익 평가 공지임을 확인",
+     "N3가 5402.33.10을 포함한 넓은 하위품목과 중국산을 대상으로 하므로 54023310 전 품목 영향으로 단정할 수 없음을 재확인",
+     "핵심 요약 4행, 변화 배경 3행, 영업 기회 2행, 위험 2행으로 개수 제한 충족 여부 확인",
+     "사실/추정/미확인 상태가 문장 의미와 일치하는지 최종 점검"
+    ],
+    "changes": [],
+    "evidence": [
+     "S1: 2023-10~2026-09 브라질 수입 NCM 54023310의 FOB 수입액 USD 925,142,540, 수입량 797,257.8 t, 평균단가 1.16 USD/kg, 전년동기 대비 +6.8%/+9.7%/-2.6%, 중국 83.3%, 인도 15.2%, 한국 16위 0.0%·USD 39,600, 월 최고 2026-05 USD 43,173,786 / 최저 2023-10 USD 14,681,241",
+     "N3: gov.br MDIC 공지로 중국산 폴리에스터 필라멘트사에 대한 반덤핑 관련 공적이익 평가 진행, 5402.33.10 포함",
+     "N3: 특정 조치 범위와 54023310 전체 영향은 기사만으로 확정 불가"
+    ],
+    "unresolved": [],
+    "model_completed": true,
+    "code_findings_before": [],
+    "code_findings_after": [],
+    "rows_changed": false,
+    "status": "done"
+   }
+  ],
+  "evidence_count": 1,
+  "excluded_count": 2,
+  "usage": {
+   "calls": 6,
+   "input_tokens": 17354,
+   "output_tokens": 7777,
+   "model": "gpt-5.4-mini-2026-03-17",
+   "seconds": 45.6,
+   "estimated_cost_usd": 0.048,
+   "cost_basis": "gpt-5.4-mini 공식 단가($0.75/$4.50 per 1M, 2026-10-25 조회) 기준 추정"
+  }
+ },
+ "note": "실제 응답 전문. 비밀값 없음. 추정 비용은 공식 단가 기준이며 청구액 미확인."
+}

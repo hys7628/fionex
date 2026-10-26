@@ -1,46 +1,237 @@
-{# 홈 작업 영역. 제목·설명은 base.html 공통 머리글이 표시합니다.
-   실제 시간·소식·보고서는 기능 개발 단계에서 담당자가 구현합니다. 꾸민 데이터를 넣지 않습니다. #}
-<div class="grid">
-  <article class="card">
-    <div class="card-header">
-      <div>
-        <h2 class="card-title">바이어 현지 시간</h2>
-        <p class="card-description">브라질 바이어 기준 도시의 현재 시간을 표시합니다.</p>
+{# 홈 작업 영역. 꾸민 데이터를 넣지 않습니다.
+   base.html 공통 머리글(홈 제목·설명)은 Home에서만 home.css로 화면에서 숨깁니다(h1은 화면낭독기·탭 전환 초점용으로 남김).
+   배치: 일일 브리핑 바 → 1행 지금 상태(바이어 시간 1fr · 환율 2fr) → 2행(업계 소식 2fr · 전시회 1fr)
+   → 출처 및 유의사항(접기). 1100px 미만은 같은 순서로 세로로 쌓입니다. #}
+<div class="home-layout">
+  {# 일일 브리핑 PDF: /api/home/report/daily.pdf?city=기준 도시. 서버가 그 시점의 홈 데이터를 모아 메모리에서 만들고
+     fetch → Blob → AppShell.work.downloadBlob으로 내려받습니다. 서버에 저장하지 않습니다(안내는 출처 및 유의사항). #}
+  <section class="home-toolbar" aria-labelledby="home-report-title" id="home-report">
+    <div class="home-toolbar-row" id="home-report-body" aria-busy="false">
+      <div class="home-toolbar-text">
+        <h2 class="home-toolbar-title" id="home-report-title">일일 브리핑</h2>
+        <p class="home-toolbar-hint" id="home-report-hint">바이어 시간·환율·뉴스·전시회를 PDF로 정리<span class="visually-hidden"> · 기준 도시 <span id="home-report-city">상파울루</span></span></p>
+      </div>
+      <div class="home-toolbar-actions">
+        <p class="home-news-loading" id="home-report-loading" hidden><span class="spinner" aria-hidden="true"></span>PDF를 만드는 중</p>
+        <p class="home-toolbar-status" id="home-report-status" role="status" hidden></p>
+        <button type="button" class="btn btn-primary" id="home-report-button" aria-describedby="home-report-hint">일일 브리핑 PDF</button>
       </div>
     </div>
-    <div class="empty-state">
-      <p class="empty-state-title">표시할 시간이 없습니다</p>
-      <p>기준 도시가 정해지면 이곳에 표시됩니다.</p>
-    </div>
-  </article>
+    <div class="stack" id="home-report-notices"></div>
+  </section>
 
-  <article class="card">
-    <div class="card-header">
-      <div>
-        <h2 class="card-title">업계 소식</h2>
-        <p class="card-description">원단·원사·섬유 관련 최신 소식을 모아 봅니다.</p>
+  <div class="home-status-grid">
+    {# 바이어 시간: 시각·상태 계산은 home.js(Intl.DateTimeFormat), 공휴일은 /api/home/holidays.
+       도시 선택은 보기 설정이라 작성 중 감지에서 제외합니다(data-work-ignore). #}
+    {# 1행은 빠르게 훑는 상태 요약: 부제 없이 제목 → 핵심 데이터. 기준 도시 선택은 제목 줄 오른쪽(라벨은 화면낭독용). #}
+    <article class="card home-summary-card" aria-labelledby="home-buyer-title" id="home-buyer-time">
+      <div class="card-header home-summary-head">
+        <h2 class="card-title" id="home-buyer-title">바이어 시간</h2>
+        <div class="home-city-field" data-work-ignore>
+          <label class="visually-hidden" for="home-city">기준 도시</label>
+          <select class="select" id="home-city" aria-describedby="home-hours-hint">
+            <option value="America/Sao_Paulo" selected>상파울루</option>
+            <option value="America/Fortaleza">포르탈레자</option>
+            <option value="America/Manaus">마나우스</option>
+            <option value="America/Rio_Branco">히우브랑쿠</option>
+          </select>
+        </div>
       </div>
-    </div>
-    <div class="empty-state">
-      <p class="empty-state-title">불러온 소식이 없습니다</p>
-      <p>소식 수집 기능이 개발되면 출처와 함께 표시됩니다.</p>
-    </div>
-  </article>
+      <div class="home-card-body">
+        {# 현지 시각이 핵심. 연락 가능 상태는 시각의 색(초록·주황·빨강) + 옆의 작은 글자(연락 가능/연락 어려움 · 날짜)로 보이고,
+           세부 이유(업무시간·업무시간 외·주말·공휴일)는 화면낭독용 숨은 글로 읽힙니다. 판정 로직은 그대로입니다. #}
+        <div class="home-clock" id="home-clock">
+          <p class="visually-hidden"><span id="home-brazil-city">상파울루</span> 현지 시각</p>
+          <p class="home-clock-time" id="home-brazil-time">-</p>
+          <p class="home-clock-meta" aria-live="polite"><span id="home-status">확인 중</span><span class="visually-hidden" id="home-status-detail"></span>
+            <span class="home-clock-date" aria-hidden="true">·</span> <span class="home-clock-date" id="home-brazil-date"></span></p>
+        </div>
 
-  <article class="card">
-    <div class="card-header">
-      <div>
-        <h2 class="card-title">보고서</h2>
-        <p class="card-description">보고서를 PDF로 내려받습니다.</p>
+        {# Home은 요약이라 다음 공휴일만 보입니다.
+           서울 시각·다음 연락 가능(KST)은 계산을 그대로 두고 화면에서만 숨깁니다(home-buyer-extra, 일일 브리핑 PDF에는 표시). #}
+        <dl class="home-time-list">
+          <div class="home-time-pair home-buyer-extra">
+            <dt>서울</dt>
+            <dd><span class="home-time-value" id="home-seoul-time">-</span></dd>
+          </div>
+          <div class="home-time-pair home-buyer-extra" id="home-next-row" hidden>
+            <dt>다음 연락 가능</dt>
+            <dd><span class="home-time-value" id="home-next-start">-</span>
+              <span class="home-time-sub home-time-sub-line" id="home-next-local"></span></dd>
+          </div>
+          <div class="home-time-pair">
+            <dt>다음 공휴일</dt>
+            <dd><span id="home-holiday">확인 중</span>
+              <span class="field-hint home-time-sub-line" id="home-holiday-source" role="status">공휴일 정보 확인 중</span></dd>
+          </div>
+        </dl>
+
       </div>
+    </article>
+
+    {# 환율: /api/home/fx. 공식 고시값과 실제 고시일만 표시합니다. 값이 없으면 숫자 자리를 비우고 "확인 불가".
+       BRL/KRW는 USD/KRW ÷ USD/BRL로 계산한 값이며 두 값이 모두 있을 때만 표시합니다. 전망·해석 없음. #}
+    <article class="card home-summary-card" aria-labelledby="home-fx-title" id="home-fx">
+      <div class="card-header home-summary-head">
+        <h2 class="card-title" id="home-fx-title">환율</h2>
+      </div>
+      <div class="home-card-body" id="home-fx-body" aria-busy="true">
+        <p class="home-news-loading" id="home-fx-loading"><span class="spinner" aria-hidden="true"></span>환율을 불러오는 중</p>
+        <ul class="home-fx-tiles" id="home-fx-list" aria-label="환율 목록" tabindex="-1" hidden></ul>
+        <div class="stack" id="home-fx-notices"></div>
+      </div>
+    </article>
+  </div>
+
+  <div class="home-content-grid">
+    {# 업계 소식: /api/home/news. 매체 필터는 이미 받은 목록을 화면에서만 거릅니다(추가 요청 없음).
+       수집 경로(KOTRA·Google News·ABIT)별 상태·건수와 재시도는 home.js가 그립니다.
+       Google News·ABIT 포르투갈어 제목의 AI 한 줄 요약은 목록을 먼저 보여 준 뒤 /api/home/news/summaries로 채웁니다.
+       외부 제목·매체명·요약은 textContent로만 넣습니다. 본문은 표시하지 않습니다. #}
+    <article class="card" aria-labelledby="home-news-title" id="home-news">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title" id="home-news-title">업계 소식</h2>
+          <p class="card-description">브라질 섬유·의류 관련 최신 소식입니다.</p>
+        </div>
+      </div>
+      <div class="home-card-body" id="home-news-body" aria-busy="true">
+        <div class="home-news-filter" id="home-news-filter" role="group" aria-label="매체별 보기" hidden></div>
+        <div class="home-news-filter" id="home-news-topics" role="group" aria-label="주제별 보기" hidden></div>
+        <details class="home-news-status">
+          <summary>수집 현황</summary>
+          <ul class="home-news-sources" id="home-news-sources" aria-label="수집 경로별 상태"></ul>
+        </details>
+        <div class="stack" id="home-news-notices"></div>
+        <p class="home-news-loading" id="home-news-loading"><span class="spinner" aria-hidden="true"></span>뉴스를 불러오는 중</p>
+        <p class="home-news-loading" id="home-news-summary-loading" hidden><span class="spinner" aria-hidden="true"></span>AI 요약을 만드는 중 · 원문 제목은 먼저 표시됩니다</p>
+        <p class="field-hint" id="home-news-summary-status" role="status" hidden></p>
+        <ul class="home-news-list" id="home-news-list" aria-label="뉴스 목록" tabindex="-1" hidden></ul>
+        <p class="field-hint" id="home-news-filter-empty" hidden>선택한 조건에 해당하는 뉴스가 없습니다.</p>
+        <div class="btn-row" id="home-news-more-row" hidden>
+          <button type="button" class="btn btn-secondary" id="home-news-more" aria-controls="home-news-detail">업계 소식 더 보기</button>
+        </div>
+        <div class="empty-state" id="home-news-empty" hidden>
+          <p class="empty-state-title">불러온 소식이 없습니다</p>
+          <p id="home-news-empty-text"></p>
+        </div>
+        <p class="home-card-foot">출처: KOTRA 해외시장뉴스 · Google News · ABIT. AI 요약은 제목만 보고 만든 한 줄이므로 원문을 확인하세요.</p>
+      </div>
+    </article>
+
+    {# 다가오는 전시회: /api/home/fairs(기능 전용 정적 자료). 출처 링크 있는 행사만.
+       기본 화면은 D-day·행사명·기간·도시, 장소·분야·확인일·메모·출처는 행사별 접기 영역에 둡니다.
+       외부 문자열은 textContent로만 넣습니다. 자동 수집·AI 생성 없음. #}
+    <article class="card" aria-labelledby="home-fairs-title" id="home-fairs">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title" id="home-fairs-title">다가오는 전시회</h2>
+          <p class="card-description">브라질·중남미 섬유 전시회 일정입니다.</p>
+        </div>
+      </div>
+      <div class="home-card-body" id="home-fairs-body" aria-busy="true">
+        <div class="home-news-filter" id="home-fairs-filter" role="group" aria-label="지역별 보기" hidden></div>
+        <p class="home-news-loading" id="home-fairs-loading"><span class="spinner" aria-hidden="true"></span>전시회 일정을 불러오는 중</p>
+        <ul class="home-fair-list" id="home-fairs-list" aria-label="전시회 목록" tabindex="-1" hidden></ul>
+        <p class="field-hint" id="home-fairs-filter-empty" hidden>선택한 지역의 예정 전시회가 없습니다.</p>
+        <div class="empty-state" id="home-fairs-empty" hidden>
+          <p class="empty-state-title">확인된 예정 전시회가 없습니다</p>
+          <p>출처를 확인한 일정이 추가되면 이곳에 표시됩니다.</p>
+        </div>
+        <div class="stack" id="home-fairs-notices"></div>
+        <p class="home-card-foot" id="home-fairs-foot">방문 전 출처에서 다시 확인하세요.</p>
+      </div>
+    </article>
+  </div>
+
+  {# 카드에 있던 긴 안내·출처 문장을 모읍니다. 내용은 줄이지 않고 위치만 옮겼습니다. #}
+  <details class="card home-notes" id="home-notes">
+    <summary class="home-notes-summary"><h2 class="card-title">출처 및 유의사항</h2></summary>
+    <div class="home-notes-body">
+      <section aria-labelledby="home-notes-buyer">
+        <h3 class="home-notes-title" id="home-notes-buyer">바이어 시간</h3>
+        <ul>
+          <li id="home-hours-hint">기준: 현지 09:00~18:00 (가정, 확정되지 않은 업무시간) · 점심시간 미반영 · 브라질 국가 공휴일만 반영(주·시 공휴일 제외)</li>
+          <li>공휴일: 브라질 국가 공휴일 자료 기준. 조회에 실패하면 대체 자료를 쓰거나 공휴일 없이 주말·업무시간만 판단합니다(카드에 안내).</li>
+          <li>서울 시각과 다음 연락 가능 시각(KST)은 일일 브리핑 PDF에 표시합니다.</li>
+          <li>상태와 다음 연락 가능 시각은 위 가정값으로 계산한 안내이며 실제 바이어 일정과 다를 수 있습니다.</li>
+          <li>다음 공휴일은 기준 도시 현지 날짜 기준 D-day이며, 공휴일 이름은 BrasilAPI 원문(포르투갈어) 그대로입니다.</li>
+        </ul>
+      </section>
+      <section aria-labelledby="home-notes-fx">
+        <h3 class="home-notes-title" id="home-notes-fx">환율</h3>
+        <ul>
+          <li>USD/KRW: 한국수출입은행 매매기준율 · USD/BRL: 브라질 중앙은행(BCB) PTAX 매도. Home 타일에는 출처를 짧게(한국수출입은행 · BCB PTAX), 고시일을 월/일로 표시합니다.</li>
+          <li>주말·공휴일에는 최근 고시일 값을 표시하며, 각 값의 고시일을 기준으로 합니다. 전일 대비는 직전 고시일 대비입니다.</li>
+          <li>BRL/KRW는 공식 고시 환율이 아니라 USD 경유 계산값(USD/KRW ÷ USD/BRL)입니다. 전망·해석은 제공하지 않습니다.</li>
+        </ul>
+      </section>
+      <section aria-labelledby="home-notes-news">
+        <h3 class="home-notes-title" id="home-notes-news">업계 소식</h3>
+        <ul>
+          <li>수집 경로별 최신 20건 · 1시간마다 갱신. Home에는 4건을 보여 주며 '업계 소식 더 보기'로 여는 상세 화면에서 전체 목록을 검색·필터할 수 있습니다. 받은 뉴스에서 찾지 못하면 버튼을 눌렀을 때만 Google News를 검색하며, 그 결과에도 같은 섬유 관련성 필터·.pt 매체 제외·주제 태그를 적용하고 새 AI 요약은 만들지 않습니다. 검색어·결과는 저장하지 않습니다.</li>
+          <li>"AI 요약"은 Google News·ABIT 포르투갈어 제목만 보고 만든 한국어 한 줄로, 기사 본문을 보지 않았으므로 원문 확인이 필요합니다. KOTRA 뉴스는 요약하지 않습니다.</li>
+          <li>Google News·ABIT 링크는 Google News를 거쳐 원문으로 이동합니다.</li>
+          <li>주제 태그는 제목의 키워드로 코드가 분류한 것(AI 아님, 최대 2개, 해당 없으면 기타)이며 기사 내용과 다를 수 있습니다.</li>
+          <li>KOTRA 자료 출처: KOTRA 해외시장뉴스.</li>
+        </ul>
+      </section>
+      <section aria-labelledby="home-notes-fairs">
+        <h3 class="home-notes-title" id="home-notes-fairs">전시회</h3>
+        <ul>
+          <li id="home-fairs-hint">담당자가 출처를 확인해 넣은 자료입니다(자동 수집 아님). 일정은 바뀔 수 있으니 방문 전 출처에서 다시 확인하세요. D-day는 서울 날짜 기준입니다.</li>
+          <li>브라질과 중남미(페루·콜롬비아 등) 행사를 함께 보여 줍니다. '전체'에서는 브라질 행사를 가능하면 2건 이상 포함합니다. 날짜가 확정되지 않은 행사는 넣지 않습니다.</li>
+          <li>'확인 필요'는 공식 출처에서 일정이 다르게 표기되거나 전시회 목록 사이트 기준이라 공식 확인 전인 행사입니다. 행사별 상세 정보에서 장소·분야·확인일·출처를 볼 수 있습니다.</li>
+        </ul>
+      </section>
+      <section aria-labelledby="home-notes-report">
+        <h3 class="home-notes-title" id="home-notes-report">일일 브리핑 PDF</h3>
+        <ul>
+          <li>바이어 시간·환율·최신 뉴스·다가오는 전시회를 A4 PDF 한 부로 묶습니다. 누른 시점의 데이터로 만들며, 바이어 시간은 카드에서 고른 기준 도시 기준입니다.</li>
+          <li>PDF는 서버에 저장하지 않습니다.</li>
+        </ul>
+      </section>
     </div>
-    <div class="empty-state">
-      <p class="empty-state-title">준비된 보고서가 없습니다</p>
-      <p>보고서 방식이 정해지면 이곳에서 내려받을 수 있습니다.</p>
-    </div>
-    <div class="btn-row">
-      <button type="button" class="btn btn-primary" disabled aria-describedby="home-report-pending">보고서 PDF 다운로드</button>
-      <span class="field-hint" id="home-report-pending">준비 중: 아직 사용할 수 없습니다.</span>
-    </div>
-  </article>
+  </details>
 </div>
+
+{# 업계 소식 상세: Home 탭 안의 두 번째 화면(새 메뉴·주소 없음). '업계 소식 더 보기'로 열고 '← 홈으로'로 돌아갑니다.
+   받은 뉴스에서 먼저 검색하고, 없을 때만 버튼으로 Google News(/api/home/news/search)를 찾습니다.
+   검색 입력은 보기 설정이라 작성 중 감지에서 제외합니다(data-work-ignore). 외부 문자열은 textContent로만 넣습니다. #}
+<section class="home-news-detail" id="home-news-detail" aria-labelledby="home-news-detail-title" hidden>
+  <div class="home-detail-bar">
+    <button type="button" class="btn btn-ghost" id="home-news-back">← 홈으로</button>
+  </div>
+  <article class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title" id="home-news-detail-title" tabindex="-1">업계 소식</h2>
+        <p class="card-description">수집된 브라질 섬유·의류 소식을 검색하고 매체·주제로 걸러 봅니다.</p>
+      </div>
+    </div>
+    <div class="home-card-body">
+      <form class="home-news-search" id="home-news-search" role="search" data-work-ignore>
+        <label class="field-label" for="home-news-query">뉴스 검색</label>
+        <div class="home-news-search-row">
+          <input class="input" id="home-news-query" type="search" maxlength="80" autocomplete="off"
+                 placeholder="섬유, 폴리에스터, 재활용 원사, 수출 규제 등" aria-describedby="home-news-query-hint">
+          <button type="submit" class="btn btn-primary">검색</button>
+        </div>
+        <p class="field-hint" id="home-news-query-hint">제목·매체·주제에서 찾습니다(AI 요약 제외).</p>
+      </form>
+      <div class="home-news-filter" id="home-detail-filter" role="group" aria-label="매체별 보기"></div>
+      <div class="home-news-filter" id="home-detail-topics" role="group" aria-label="주제별 보기"></div>
+      <p class="home-detail-count" id="home-detail-count" role="status"></p>
+      <ul class="home-news-list" id="home-detail-list" aria-label="업계 소식 목록" tabindex="-1"></ul>
+      <p class="field-hint" id="home-detail-empty" hidden></p>
+      <div class="home-detail-external" id="home-detail-external" aria-busy="false" hidden>
+        <p id="home-detail-external-text"></p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary" id="home-detail-external-button">Google News에서 검색</button>
+        </div>
+        <p class="field-hint" id="home-detail-external-status" role="status" hidden></p>
+        <ul class="home-news-list" id="home-detail-search-list" aria-label="Google News 검색 결과" hidden></ul>
+      </div>
+    </div>
+  </article>
+</section>
