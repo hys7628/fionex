@@ -13,14 +13,17 @@
 - 사업장 주 업종(CNAE 주)이 TARGET_CNAES 중 하나, 영업 상태 활성(02)
 - 법인만: 법인 형태 '개인사업자(2135)' 제외. MEI는 규모 코드가 '소기업(01)'이라 아래 규모 조건에서 빠집니다(Simples 파일 불필요)
 - 기업 규모 코드 '그 외(05)'만(소기업 01·소규모 03·미상 00 제외)
+- 외국(EX) 소재 법인, 회사명에 파산·회생 절차 표기가 있는 회사 제외(2026-10-26 담당자 지시)
 - 기업 1곳당 1행: 조건에 맞는 사업장 중 본사(matriz)를 우선 대표로, 없으면 가장 먼저 읽힌 지점
-수입 실적은 공개 자료에 없으므로 담지 않습니다. 연락처는 국세청 등록 값 그대로입니다(최신·정확성 미확인).
+수입 실적은 공개 자료에 없으므로 담지 않습니다. 전화는 국세청 등록 값 그대로입니다(최신·정확성 미확인).
+이메일 전체 주소는 저장하지 않고 회사 도메인만 남깁니다(2026-10-26 담당자 지시: 법인 대표 연락처와 회사 도메인만 표시).
 """
 import csv
 import io
 import json
 import re
 import sys
+import unicodedata
 import zipfile
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -45,6 +48,13 @@ E_DDD1, E_TEL1, E_DDD2, E_TEL2, E_EMAIL = 21, 22, 23, 24, 27
 # 속도: 원본은 수천만 줄이라 대상 업종 코드가 든 줄만 정규식으로 먼저 고른 뒤 그 줄만 CSV로 해석합니다.
 _CNAE_FIELD = re.compile(rb';"(?:' + b"|".join(c.encode() for c in TARGET_CNAES) + rb')";')
 _BLOCK = 64 * 1024 * 1024
+FOREIGN_UF = "EX"  # 외국(Exterior) 소재 법인. 브라질 투자·지분 보유용 등록
+# 파산·회생 절차 중인 회사(국세청 회사명에 붙는 표기)
+_INSOLVENCY = re.compile(r"\b(?:falid[oa]|falencia|recuperacao judicial)\b")
+# 회사 도메인 판단에서 빼는 업종·법인 형태 일반어(이 말만 겹치면 회사 도메인으로 보지 않음)
+_GENERIC_WORDS = {"textil", "texteis", "tecidos", "tecelagem", "malhas", "malharia", "fiacao", "fios", "linhas", "industria",
+                  "industrial", "comercio", "comercial", "ltda", "brasil", "brazil", "companhia", "empresa", "participacoes",
+                  "recuperacao", "judicial", "group", "grupo", "confeccoes", "estamparia", "tinturaria", "beneficiamento"}
 
 
 def _csv_rows(path):
@@ -88,6 +98,27 @@ def _phone(ddd, number):
 
 def _clean(text):
     return " ".join(str(text or "").split()) or None
+
+
+def _fold(text):
+    """악센트·기호를 없앤 소문자 단어열."""
+    text = unicodedata.normalize("NFKD", str(text or "")).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", " ", text).strip()
+
+
+def company_domain(email, *names):
+    """등록 이메일에서 회사 도메인만 남깁니다(이메일 전체 주소는 저장하지 않음).
+    도메인 첫 부분이 회사명·상호와 겹칠 때만 회사 도메인으로 봅니다. 개인 메일(gmail 등)·회계사무소 주소는 None."""
+    email = (email or "").strip().lower()
+    if email.count("@") != 1:
+        return None
+    domain = email.split("@")[1]
+    label = re.sub(r"[^a-z0-9]", "", domain.split(".")[0])
+    text = " ".join(_fold(n) for n in names if n)
+    words = [w for w in text.split() if len(w) >= 4 and w not in _GENERIC_WORDS]
+    if len(label) >= 4 and (label in text.replace(" ", "") or any(w in label for w in words)):
+        return domain
+    return None
 
 
 def _establishments_in(path):
@@ -154,7 +185,7 @@ def build(folder, reference_month, files=range(10), workers=1):
     companies = collect_companies(folder, set(est), files, workers)
     counts = {"establishments_matched": sum(len(v) for v in est.values()), "companies_matched": len(est)}
     rows = []
-    excluded = {"no_company_row": 0, "individual": 0, "porte": 0}
+    excluded = {"no_company_row": 0, "individual": 0, "porte": 0, "foreign": 0, "insolvency": 0}
     for basico, sites in est.items():
         c = companies.get(basico)
         if c is None:
@@ -166,23 +197,33 @@ def build(folder, reference_month, files=range(10), workers=1):
         if c["porte"] != PORTE_DEMAIS:
             excluded["porte"] += 1
             continue
+        sites = [s for s in sites if s["uf"] != FOREIGN_UF]
+        if not sites:
+            excluded["foreign"] += 1
+            continue
+        if _INSOLVENCY.search(_fold(c["razao_social"])):
+            excluded["insolvency"] += 1
+            continue
         rep = next((s for s in sites if s["matriz"]), sites[0])
         rows.append({
             "cnpj": rep["cnpj"], "razao_social": c["razao_social"], "nome_fantasia": rep["nome_fantasia"],
             "cnae": rep["cnae"], "cnae_desc": cnaes.get(rep["cnae"]), "uf": rep["uf"],
-            "municipio": _clean(municipios.get(rep["municipio_code"])), "phones": rep["phones"], "email": rep["email"],
+            "municipio": _clean(municipios.get(rep["municipio_code"])), "phones": rep["phones"],
+            "domain": company_domain(rep["email"], c["razao_social"], rep["nome_fantasia"]),
             "porte": PORTE_TEXT.get(c["porte"], c["porte"]), "natureza": _clean(naturezas.get(c["natureza"])),
             "matriz": rep["matriz"], "sites_matched": len(sites), "inicio_atividade": rep["inicio"],
         })
     rows.sort(key=lambda r: (r["uf"] or "", r["razao_social"] or ""))
     return {
         "source": {"name": "Receita Federal do Brasil — Dados abertos do CNPJ", "url": SOURCE_URL,
-                   "reference_month": reference_month, "note": "수입 실적은 공개 자료에 없음. 연락처는 국세청 등록 값(최신·정확성 미확인)."},
+                   "reference_month": reference_month, "note": "수입 실적은 공개 자료에 없음. 연락처는 국세청 등록 값(최신·정확성 미확인). "
+                           "이메일은 저장하지 않고 회사명과 겹치는 회사 도메인만 남김."},
         "generated_at": datetime.now(KST).isoformat(timespec="seconds"),
         "filters": {"cnaes": [{"code": c, "desc": cnaes.get(c)} for c in TARGET_CNAES], "situacao": "ATIVA(02)",
                     "excluded_natureza": "%s %s" % (INDIVIDUAL_NATUREZA, naturezas.get(INDIVIDUAL_NATUREZA)),
                     "mei": "규모 '소기업(01)'이라 규모 조건으로 제외",
-                    "porte": PORTE_TEXT[PORTE_DEMAIS]},
+                    "porte": PORTE_TEXT[PORTE_DEMAIS],
+                    "foreign": "외국(EX) 소재 법인 제외", "insolvency": "회사명에 파산(FALIDO·FALÊNCIA)·회생 절차(RECUPERAÇÃO JUDICIAL) 표기가 있으면 제외"},
         "counts": {**counts, "excluded": excluded, "companies": len(rows)},
         "companies": rows,
     }

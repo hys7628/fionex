@@ -11,7 +11,8 @@ DATA_DIR = Path(__file__).resolve().parent / "data"
 COMPANIES_FILE = DATA_DIR / "buyer_textile_companies.json"
 EVIDENCE_FILE = DATA_DIR / "buyer_t2t_evidence.json"
 IMPORT_NOTE = "수입 여부는 공식 자료로 확인 불가: 브라질 정부는 수입 업체 목록을 공개하지 않습니다(MDIC FAQ, Decreto 11.544/2023 제13조)."
-CONTACT_NOTE = "연락처는 국세청에 등록된 법인 대표 연락처입니다(최신·정확성 미확인). 개인 연락처는 담지 않습니다."
+CONTACT_NOTE = ("전화는 국세청에 등록된 법인 대표 번호입니다(최신·정확성 미확인). 이메일은 표시하지 않고, "
+                "회사명과 겹치는 회사 도메인만 표시합니다(개인 메일·회계사무소 주소 제외).")
 _cache = {}
 
 

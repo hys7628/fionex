@@ -46,12 +46,18 @@ class BuyerDataBuilderTest(unittest.TestCase):
             est("44444444", "0001", True, "1323500"),                 # 개인사업자
             est("55555555", "0001", True, "1323500"),                 # MEI(규모 소기업)
             est("66666666", "0001", True, "1323500"),                 # 소규모
+            est("88888888", "0001", True, "1323500", uf="EX"),        # 외국 법인
+            est("99999999", "0001", True, "1323500"),                 # 회생 절차
+            est("12121212", "0001", True, "1323500"),                 # 파산
         ])
         write_zip(d, "Empresas0", [
             ["11111111", "TEXTIL A LTDA", "2062", "49", "1000000,00", "05", ""],
             ["44444444", "FULANO DE TAL", "2135", "50", "1000,00", "05", ""],
             ["55555555", "MEI TEXTIL", "2062", "49", "1000,00", "01", ""],
             ["66666666", "PEQUENA TEXTIL", "2062", "49", "1000,00", "03", ""],
+            ["88888888", "TEIJIN LIMITED", "2216", "49", "1,00", "05", ""],
+            ["99999999", "TECIDOS B S.A. EM RECUPERAÇÃO JUDICIAL", "2054", "10", "1,00", "05", ""],
+            ["12121212", "MALHAS C S/A - FALIDO", "2054", "10", "1,00", "05", ""],
         ])
 
     def test_filters_and_representative(self):
@@ -61,9 +67,11 @@ class BuyerDataBuilderTest(unittest.TestCase):
         r = rows[0]
         self.assertEqual((r["cnpj"], r["matriz"], r["sites_matched"]), ("11111111000111", True, 2))  # 본사 우선, 지점 수 기록
         self.assertEqual((r["uf"], r["municipio"], r["cnae_desc"], r["porte"]), ("SP", "SAO PAULO", "Tecelagem de fios de fibras artificiais e sintéticas", "그 외(중·대형)"))
-        self.assertEqual((r["phones"], r["email"], r["natureza"]), (["(11) 33334444"], "contato@empresa.com.br", "Sociedade Empresária Limitada"))
-        self.assertEqual(data["counts"]["excluded"], {"no_company_row": 0, "individual": 1, "porte": 2})
-        self.assertEqual(data["counts"]["companies_matched"], 4)  # 업종·활성 조건까지 통과한 기업(폐업·비대상 업종 제외)
+        self.assertEqual((r["phones"], r["natureza"]), (["(11) 33334444"], "Sociedade Empresária Limitada"))
+        self.assertNotIn("email", r)  # 이메일 전체 주소는 저장하지 않음
+        self.assertIsNone(r["domain"])  # empresa.com.br는 회사명(TEXTIL A)과 겹치지 않음
+        self.assertEqual(data["counts"]["excluded"], {"no_company_row": 0, "individual": 1, "porte": 2, "foreign": 1, "insolvency": 2})
+        self.assertEqual(data["counts"]["companies_matched"], 7)  # 업종·활성 조건까지 통과한 기업(폐업·비대상 업종 제외)
         self.assertEqual(data["source"]["reference_month"], "2026-10")
         self.assertIn("수입 실적은 공개 자료에 없음", data["source"]["note"])
 
@@ -78,6 +86,18 @@ class BuyerDataBuilderTest(unittest.TestCase):
         two = bdb.build(d, "2026-10", files=[0, 1], workers=2)
         self.assertEqual([r["razao_social"] for r in one["companies"]], ["TEXTIL A LTDA"])
         self.assertEqual(one["companies"], two["companies"])
+
+    def test_company_domain_only(self):
+        cd = bdb.company_domain
+        self.assertEqual(cd("vendas@coteminas.com.br", "COTEMINAS S.A."), "coteminas.com.br")
+        self.assertEqual(cd("Joao@LUNELLI.com.br", "LUNELLI TEXTIL LTDA", None), "lunelli.com.br")
+        self.assertEqual(cd("x@santanatextiles.com", "SANTANA TEXTEIS S/A"), "santanatextiles.com")
+        self.assertEqual(cd("a@dohler.com.br", "DÖHLER S.A."), "dohler.com.br")  # 악센트 무시
+        self.assertIsNone(cd("fulano@gmail.com", "TEXTIL A LTDA"))  # 개인 메일
+        self.assertIsNone(cd("fiscal@fatorcontabilidade.com.br", "TEXTIL A LTDA"))  # 회계사무소
+        self.assertIsNone(cd("a@colecaotextil.com.br", "MALHAS TEXTIL B LTDA"))  # 일반어(textil)만 겹침
+        self.assertIsNone(cd(None, "X"))
+        self.assertIsNone(cd("broken", "X"))
 
     def test_target_cnaes_exclude_fiber_makers_and_natural_spinning(self):
         for code in ("2040100", "1311100", "1312000"):
@@ -104,7 +124,7 @@ class BuyersLoadTest(unittest.TestCase):
 
     def company(self, cnpj, name):
         return {"cnpj": cnpj, "razao_social": name, "nome_fantasia": None, "cnae": "1323500", "cnae_desc": "Tecelagem",
-                "uf": "SP", "municipio": "SAO PAULO", "phones": ["(11) 33334444"], "email": "a@b.com", "porte": "그 외(중·대형)",
+                "uf": "SP", "municipio": "SAO PAULO", "phones": ["(11) 33334444"], "domain": None, "porte": "그 외(중·대형)",
                 "natureza": "LTDA", "matriz": True, "sites_matched": 1, "inicio_atividade": "19900101"}
 
     def test_missing_file_not_ready(self):

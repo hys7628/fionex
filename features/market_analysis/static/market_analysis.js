@@ -681,7 +681,7 @@
     const ev = c.evidence.length ? c.evidence.map(function (e) {
       return linkHtml(e.url, e.title) + '<br><span class="field-hint">확인 ' + esc(e.checked_at) + "</span>";
     }).join("<br>") : "—";
-    const contact = c.phones.map(esc).concat(c.email ? [esc(c.email)] : []).join("<br>") || "등록 없음";
+    const contact = c.phones.map(esc).concat(c.domain ? ["도메인 " + esc(c.domain)] : []).join("<br>") || "등록 없음";
     return "<tr><td>" + (i + 1) + "</td><td>" + name + "<br><span class=\"field-hint\">CNPJ " + esc(c.cnpj) + "</span></td><td>" +
       esc((c.uf || "") + " · " + (c.municipio || "")) + "</td><td>" + esc(c.cnae + " " + (c.cnae_desc || "")) + "</td><td>" +
       contact + "</td><td>" + ev + "</td></tr>";
@@ -690,7 +690,7 @@
   function buyerTable(rows, offset, caption) {
     return '<div class="table-wrap"><table class="table"><caption>' + esc(caption) + "</caption><thead><tr>" +
       '<th scope="col">#</th><th scope="col">회사명</th><th scope="col">지역(주·시)</th><th scope="col">업종(CNAE)</th>' +
-      '<th scope="col">법인 대표 연락처</th><th scope="col">재생·T2T 근거</th></tr></thead><tbody>' +
+      '<th scope="col">법인 대표 전화 · 회사 도메인</th><th scope="col">재생·T2T 근거</th></tr></thead><tbody>' +
       rows.map(function (c, i) { return buyerRow(c, offset + i); }).join("") + "</tbody></table></div>";
   }
 

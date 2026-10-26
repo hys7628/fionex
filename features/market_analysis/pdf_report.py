@@ -334,11 +334,11 @@ def _buyer_section(d, W, st):
     lst = d["companies"]
     out.append(_p("전체 %d곳 · 재생·T2T 근거 %d곳 · 조건: 주 업종 대상 CNAE, 활성, 법인, 규모 '%s'. 근거 업체를 먼저 표시." % (
         len(lst), d["counts"]["with_evidence"], d["filters"]["porte"]), st["small"]))
-    rows = [["#", "회사명 · CNPJ", "지역(주·시)", "업종(CNAE)", "법인 대표 연락처", "재생·T2T 근거"]]
+    rows = [["#", "회사명 · CNPJ", "지역(주·시)", "업종(CNAE)", "법인 대표 전화 · 회사 도메인","재생·T2T 근거"]]
     for i, c in enumerate(lst, 1):
         name = [_p(c["razao_social"], st["cell"])] + ([_p(c["nome_fantasia"], st["small"])] if c.get("nome_fantasia") else []) + \
             [_p("CNPJ " + c["cnpj"], st["small"])]
-        contact = " / ".join(c["phones"] + ([c["email"]] if c.get("email") else [])) or "등록 없음"
+        contact = " / ".join(c["phones"] + (["도메인 " + c["domain"]] if c.get("domain") else [])) or "등록 없음"
         ev = [p for e in c["evidence"] for p in (_link(e.get("url"), st["cell"], e.get("title")), _p("확인 " + str(e.get("checked_at")), st["small"]))]
         rows.append([str(i), name, "%s · %s" % (c.get("uf") or "", c.get("municipio") or ""),
                      "%s %s" % (c["cnae"], c.get("cnae_desc") or ""), contact, ev or "—"])
