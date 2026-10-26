@@ -401,3 +401,32 @@
 - 편집·복원 후 미리보기 갱신과 페이지 넘침 경고의 실제 표시
 - 4쪽 새 제목·문구의 배치, pt-BR 문구 검수
 
+
+## 2026-10-26 카탈로그 PDF 렌더러(ReportLab) — 모의 데이터 검증
+- 변경 내용: pdf_catalog.py, fonts/, requirements.txt, feature_spec.md §25, test_pdf_catalog.py·pdf_fixtures.py·make_pdf_samples.py
+- 실제 API 호출·서비스 프롬프트 실험·라우트/화면 연결 없음
+
+### Claude가 직접 실행한 검증
+- 설치: `pip install --dry-run` → reportlab 5.1.0·pillow 13.0.0·charset-normalizer 3.5.2만 설치 예정 확인 → 설치 → pip freeze 전후 차이 3줄 → `pip check` "No broken requirements found."
+- 글꼴 복사본 git blob 해시가 팀 브랜치 원본과 동일함을 확인
+- `python -m unittest discover -s tests/test_product_brochure` → 1차 26개 중 2개 실패(소스 검사 테스트 오탐, 4쪽 넘침 예시가 실제로 넘치지 않음) → 수정 후 전체 103개 OK
+  - 4쪽·A4 세로·%PDF, 모든 쪽 비공식 안내·쪽 번호·AI 이미지 안내 텍스트 추출, 쪽별 제목, 항목명 서버 상수
+  - 이미지 4곳 배치(폭 1024/1448/1448/1024), 이미지 객체 2개만, 글꼴은 내장 글꼴만(Helvetica 없음), 3 MB 미만
+  - 편집값 반영(표시명·소개·문단·공급 값), & < > " ' 와 악센트가 글자 그대로 추출, 마크업 형태 입력 미해석·이미지 추가 없음, 시안 문구 미혼입, 한글 없음
+  - 빈 상세·공급 → 서버 빈 상태 문구, 가상 안내 수(표지 2·2쪽 1·3쪽 3·4쪽 3), 기본 데이터에서 가상 표시 항목만 안내
+  - 상한 근처 긴 문구 통과(long_max, 문단 2×600자), 24자 이하 넓은 단어 값의 글자 크기 전환
+  - 넘침: 3쪽 상세(300자×3+가상), 1쪽 긴 한 단어 표시명 → 422·쪽 번호, 오류 문구에 사용자 문자열 없음. 4쪽은 최소 높이 상향 모의로 검사 동작 확인
+  - 입력 검사: 상한±1, 공백만, 한글 음절·자모, 탭, 표시명 줄바꿈, 다른 쪽 key, 중복, 미허용 key, 라벨·html·image_url·font_path·color·notice 필드, 문자열 virtual, 문단 0/3개, language≠pt-BR, 배열 입력
+  - 자산: 이미지 없음·잘린 PNG·다른 크기, 글꼴 없음·손상 → 자산 오류. 자산 문제 상태에서도 앱 첫 화면 200
+  - 이모지 → 글리프 없음 오류
+  - 생성 함수·소켓 연결을 금지 모의로 바꾼 상태에서 성공·실패 렌더링 모두 호출 없음, 로그 없음(assertNoLogs), 소스에 AI·네트워크·logging·tempfile·내장 open·pdf_utils 사용 없음(AST), routes.py 미연결
+- `python -m unittest discover -s tests/test_common` → 56개 OK
+- `node --check product_brochure.js` → 오류 없음(JS 변경 없음)
+- 개발 검증 PDF 생성(`make_pdf_samples.py`, 저장소 밖 폴더, 덮어쓰기 금지): 정상 6건 각 약 877 KB, 0.17~0.43초(첫 건은 글꼴·이미지 준비 포함). 넘침 2건은 의도대로 실패. 시간은 측정값이며 강제 타임아웃이 아님
+- pypdf 텍스트·메타데이터 추출로 edited 예시의 쪽별 문구 순서 확인
+
+### 미실행·미검증
+- **쪽별 시각 확인 미실행**: Read 도구는 pdftoppm 없음으로 실패, Edge headless 스크린샷은 빈 화면. 새 시각화 패키지는 설치하지 않음. 텍스트 추출·페이지 수 검사는 시각 검증이 아님
+  - 사람이 열어 볼 파일: C:\Users\user\AppData\Local\Temp\claude\C--Users-user-Desktop-fionex\36d7c2bf-67d2-469c-9a14-643e83056de0\scratchpad\pdf_samples_v3\catalog_*.pdf
+- 겹침 여부는 측정 기반 배치 계산으로만 확인(실제 그림 비교 아님), 다른 뷰어·인쇄 결과, 실제 생성 결과 데이터, 동시 요청 시 메모리·시간
+- 삭제 시도 기록: `rm -f $S/*.pdf`는 사용자 승인 거부로 실행되지 않음. 이후 ls로 pdf_samples의 6개 파일(크기·시각 동일) 보존 확인

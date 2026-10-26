@@ -12,3 +12,8 @@ httpx2==2.16.0
 # pdf_utils가 pypdf 내부 메서드(PdfReader._handle_encryption)를 덮어쓰므로 버전을 바꾸면 tests/test_common/test_pdf.py로 재확인한다.
 pypdf==6.21.2
 # PDF 출력 도구는 기능 개발 단계에서 선정·검증 후 추가한다.
+# PDF 출력(제품소개서 카탈로그, features/product_brochure/pdf_catalog.py). 팀 합의 도구 ReportLab 5.1.0(BSD).
+# 필수 의존성 pillow>=9.0.0·charset-normalizer. pillow는 다른 기능 브랜치(green_claim)와 같은 13.0.0으로 고정.
+# jasonenv 설치·pip check·모의 데이터 렌더링 테스트 확인(2026-10-26). 병합 시 다른 브랜치의 같은 줄과 충돌 해결.
+reportlab==5.1.0
+pillow==13.0.0

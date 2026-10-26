@@ -369,3 +369,27 @@
   - Node 점검 1건: 고정 데이터의 원래 소개 문구가 이미 HTML 형태 문자열이라 같은 값 입력이 "수정 아님"으로 계산됨(로직은 정상) → 테스트 값을 원본과 다르게 수정
 - 변경: static/product_brochure.js, static/product_brochure.css, templates/product_brochure/catalog_preview.html, feature_spec.md(§23 후속 메모·§24), tests/test_product_brochure/test_panel.py·review_logic_check.js
 - 남은 한계: 편집 UI DOM·시각 미확인, 편집 후 넘침 실제 표시 미확인, pt-BR 문구 검수 전
+
+## DI-2026_10_26-03 카탈로그 PDF 렌더러(ReportLab) 구현·모의 데이터 검증
+- 유형: development_instruction / **서비스 프롬프트 실험 없음, 실제 API 호출 없음**
+- 날짜/시간: 2026-10-26 01:32 (Asia/Seoul, 기록 시각) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure
+- 도구·모델: Claude Code (Opus 5.5)
+- 선행: 같은 날 PDF 다운로드 사전 점검(파일 수정 금지 지시로 당시 기록하지 않음). ReportLab 추천, 팀 결정 확인
+- 사전 확인: HEAD 63b1ac0, 작업 트리 깨끗, 병합 중 아님, stash@{0} 미조작. generation.current 구조·편집 검증·4쪽 템플릿·CSS·이미지·고정 안내를 다시 읽음
+- 지시 요약: reportlab==5.1.0 설치, 기능 폴더에 글꼴 임시 배치, pdf_catalog.py 렌더러(구조화 입력만, 서버 상수 안내, 넘침·자산 오류, 4쪽 확인), 가상 데이터 검증 PDF, 라우트·화면 연결 금지
+- 설치: jasonenv(C:\Users\user\miniforge3\envs\jasonenv\python.exe, 3.11.17)에 reportlab 5.1.0·pillow 13.0.0(green_claim 브랜치와 같은 버전)·charset-normalizer 3.5.2 추가. dry-run으로 위 3개만 설치됨을 먼저 확인, 그 밖의 패키지 변경 없음(pip freeze 전후 비교), pip check 이상 없음
+- 설계 이유
+  - 입력은 화면 편집본 pages 구조에서 문구·key·virtual만. 항목명·안내는 서버 상수 → 임의 HTML·문구 주입 방지
+  - 브라우저와 다른 렌더러라 화면 CSS px 값을 상수로 옮기고 측정 기반 넘침 검사(자르지 않음)
+  - 글꼴은 ReportLab 전역 등록부 충돌을 피하려 다른 기능과 다른 이름(PBCatalogSans)으로 등록, 렌더링 시점 등록(앱 시작 무관)
+  - 이미지는 PNG 그대로면 PDF 약 8.9 MB·2초 → 메모리 JPEG(품질 88)로 약 0.88 MB·0.2초
+- 실제 실패와 수정
+  - 첫 생성 PDF 8.9 MB → JPEG 포함으로 변경
+  - "문단 2×600자" 넘침 예시가 실제로는 들어감(축소 배치) → 경계 통과 예시로 바꾸고 3쪽 상세 넘침 예시 추가
+  - 4쪽은 상한 이내 값으로 넘침이 나지 않음(마무리 영역 약 440px 남음) → 최소 높이를 올린 모의로 검사 동작만 확인
+  - 소스 검사 테스트가 문서 문자열 단어·PIL Image.open을 잡음 → AST 기반으로 수정
+  - 기본 Helvetica 참조가 남음 → 초기 글꼴을 내장 글꼴로 지정
+  - 검증 PDF 폴더를 비우려던 rm 명령이 안전 경고로 거부됨(실행 안 됨, 파일 6개 그대로 확인). 이후 삭제 없이 새 폴더·덮어쓰기 금지(xb)로 생성
+  - Edge headless 스크린샷으로 쪽 렌더링 시도 → 빈 화면(PDF 뷰어 미렌더) → 시각 검증 미실행으로 남김
+- 변경: features/product_brochure/pdf_catalog.py(신규), fonts/(신규 3파일), feature_spec.md §25, requirements.txt(reportlab·pillow), tests/test_product_brochure/test_pdf_catalog.py·pdf_fixtures.py·make_pdf_samples.py(신규)
+- 남은 한계: 쪽별 육안 확인 전, 화면 미리보기 라벨(AI)과 PDF 라벨(상수) 불일치 [미정], 다운로드 API·동시 실행 제한 미구현
