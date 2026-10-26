@@ -294,6 +294,12 @@ def get_news(refresh=None):
     return {"items": items, "media": media, "summary": {"pending": news_summary.pending_count(items)}}
 
 
+def translate_titles(items):
+    """일일 브리핑 PDF용: 넘겨받은 기사 중 아직 한국어 한 줄이 없는 Google·ABIT 포르투갈어 제목만 옮깁니다(화면 AI 요약과 같은 기능·캐시).
+    반환 news_summary.summarize와 같음 {"status", "message"?, "summaries": {id: 한국어}}. KOTRA(한국어 제목)는 대상이 아닙니다."""
+    return news_summary.summarize(items)
+
+
 def summarize_news():
     """현재 서버에 수집된 뉴스(새로 가져오지 않음) 중 요약이 없는 Google·ABIT 포르투갈어 제목을 요약합니다."""
     lists = {m: _news_cache[m]["items"] for m in NEWS_MEDIA if m in _news_cache}

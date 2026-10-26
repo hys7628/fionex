@@ -164,15 +164,15 @@ def numbered_canvas(kicker, date_text, margin, note=None, font=CHROME, font_bold
 
 # ---------- 본문 조각 ----------
 def styles(font=FONT, font_bold=FONT_BOLD):
-    base = ParagraphStyle("t_body", fontName=font, fontSize=9.2, leading=13.8, textColor=NAVY, wordWrap="CJK")
+    base = ParagraphStyle("t_body", fontName=font, fontSize=9.8, leading=15.2, textColor=NAVY, wordWrap="CJK")
     return {
         "title": ParagraphStyle("t_title", parent=base, fontName=font_bold, fontSize=24, leading=30, spaceAfter=4),
         "lead": ParagraphStyle("t_lead", parent=base, fontSize=10.5, leading=16, textColor=colors.HexColor("#33415a"), spaceAfter=8),
         "body": base,
-        "small": ParagraphStyle("t_small", parent=base, fontSize=7.8, leading=11.2, textColor=MUTED),
-        "cell": ParagraphStyle("t_cell", parent=base, fontSize=8.4, leading=12),
-        "cell_head": ParagraphStyle("t_cell_head", parent=base, fontName=font_bold, fontSize=8.2, leading=11.5, textColor=NAVY),
-        "label": ParagraphStyle("t_label", parent=base, fontName=font_bold, fontSize=8.4, leading=12, textColor=MUTED),
+        "small": ParagraphStyle("t_small", parent=base, fontSize=8.2, leading=12.2, textColor=MUTED),
+        "cell": ParagraphStyle("t_cell", parent=base, fontSize=9, leading=13.2),
+        "cell_head": ParagraphStyle("t_cell_head", parent=base, fontName=font_bold, fontSize=8.6, leading=12.4, textColor=NAVY),
+        "label": ParagraphStyle("t_label", parent=base, fontName=font_bold, fontSize=8.8, leading=13, textColor=MUTED),
     }
 
 
@@ -214,8 +214,8 @@ def data_table(rows, widths, head_rows=1, num_cols=(), zebra=True, highlight=(),
         ("VALIGN", (0, 0), (-1, -1), valign),
         ("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE),
         ("LINEABOVE", (0, 0), (-1, 0), 0.8, MINT),
-        ("TOPPADDING", (0, 0), (-1, -1), 4.5), ("BOTTOMPADDING", (0, 0), (-1, -1), 4.5),
-        ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 5.5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
     ]
     if head_rows:
         st += [("BACKGROUND", (0, 0), (-1, head_rows - 1), MINT_SOFT), ("LINEBELOW", (0, head_rows - 1), (-1, head_rows - 1), 0.6, MINT)]
@@ -236,8 +236,8 @@ def kv_table(rows, label_w, total_w):
         ("BACKGROUND", (0, 0), (0, -1), MINT_SOFT),
         ("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE),
         ("LINEABOVE", (0, 0), (-1, 0), 0.8, MINT),
-        ("TOPPADDING", (0, 0), (-1, -1), 4.5), ("BOTTOMPADDING", (0, 0), (-1, -1), 4.5),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 5.5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 7), ("RIGHTPADDING", (0, 0), (-1, -1), 7),
     ]))
     return t
 
@@ -271,7 +271,7 @@ def note_box(paragraph, total_w, tone="info"):
     t = Table([[paragraph]], colWidths=[total_w])
     t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), bg), ("LINEBEFORE", (0, 0), (0, -1), 2.4, bar),
-        ("TOPPADDING", (0, 0), (-1, -1), 6), ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
     ]))
     return t

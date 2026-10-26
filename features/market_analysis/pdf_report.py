@@ -54,15 +54,15 @@ def _styles():
     return {
         "title": t["title"],
         "lead": t["lead"],
-        "body": ParagraphStyle("body", fontSize=9, leading=13, **base),
-        "small": ParagraphStyle("small", fontSize=7.5, leading=10.5, textColor=C_MUTED,
+        "body": ParagraphStyle("body", fontSize=9.8, leading=15, **base),
+        "small": ParagraphStyle("small", fontSize=8.2, leading=12, textColor=C_MUTED,
                                 **{k: v for k, v in base.items() if k != "textColor"}),
-        "cell": ParagraphStyle("cell", fontSize=7.8, leading=10.5, **base),
-        "cell_num": ParagraphStyle("cell_num", fontSize=7.8, leading=10.5, alignment=2,
+        "cell": ParagraphStyle("cell", fontSize=8.6, leading=12.4, **base),
+        "cell_num": ParagraphStyle("cell_num", fontSize=8.6, leading=12.4, alignment=2,
                                    **{k: v for k, v in base.items() if k != "alignment"}),
-        "cell_head": ParagraphStyle("cell_head", fontSize=7.8, leading=10.5, fontName=FONT_BOLD, textColor=C_TEXT,
+        "cell_head": ParagraphStyle("cell_head", fontSize=8.4, leading=12, fontName=FONT_BOLD, textColor=C_TEXT,
                                     **{k: v for k, v in base.items() if k not in ("fontName", "textColor")}),
-        "notice": ParagraphStyle("notice", fontSize=8.3, leading=12, textColor=C_WARN, backColor=C_WARN_SOFT,
+        "notice": ParagraphStyle("notice", fontSize=9, leading=13.6, textColor=C_WARN, backColor=C_WARN_SOFT,
                                  borderPadding=(5, 7, 5, 7), spaceBefore=6, spaceAfter=8,
                                  **{k: v for k, v in base.items() if k != "textColor"}),
     }
@@ -139,7 +139,7 @@ def _table(rows, widths, st, head_rows=1, num_cols=(), zebra=False, highlight=No
 
 
 # ---------- 그래프 ----------
-def _chart(monthly, metric, width, height=58 * mm):
+def _chart(monthly, metric, width, height=62 * mm):
     """월별 단일 계열 그래프. fob·kg는 막대, unit_price는 선. 기록 없는 달은 비움."""
     def val(m):
         if not m.get("has_record"):
@@ -158,7 +158,7 @@ def _chart(monthly, metric, width, height=58 * mm):
     for i in range(5):
         y = bottom + ph * i / 4
         d.add(Line(left, y, left + pw, y, strokeColor=C_BORDER, strokeWidth=0.4, strokeDashArray=[2, 2]))
-        d.add(String(left - 3, y - 2.5, _axis(nice * i / 4, metric), fontName=FONT, fontSize=6, fillColor=C_MUTED, textAnchor="end"))
+        d.add(String(left - 3, y - 2.5, _axis(nice * i / 4, metric), fontName=FONT, fontSize=7, fillColor=C_MUTED, textAnchor="end"))
     n = max(1, len(monthly))
     step = pw / n
     every = max(1, -(-n // 8))
@@ -166,7 +166,7 @@ def _chart(monthly, metric, width, height=58 * mm):
     for i, m in enumerate(monthly):
         cx = left + step * i + step / 2
         if i % every == 0:
-            d.add(String(cx, bottom - 10, m["month"][2:].replace("-", "."), fontName=FONT, fontSize=6, fillColor=C_MUTED, textAnchor="middle"))
+            d.add(String(cx, bottom - 10, m["month"][2:].replace("-", "."), fontName=FONT, fontSize=7, fillColor=C_MUTED, textAnchor="middle"))
         v = values[i]
         if v is None:
             if seg:

@@ -180,19 +180,19 @@ def build_pdf(payload):
     criteria = review["criteria"]
     sources = {source["id"]: source for source in criteria["sources"]}
 
-    def style(name, size=9.5, bold=False, color="#13233F", leading=None, space_before=0, space_after=3, **extra):
+    def style(name, size=10, bold=False, color="#13233F", leading=None, space_before=0, space_after=3, **extra):
         return ParagraphStyle(name, fontName=FONT_NAMES["latin"]["bold" if bold else "regular"], fontSize=size,
-                              leading=leading or size * 1.5, textColor=colors.HexColor(color), alignment=TA_LEFT,
+                              leading=leading or size * 1.6, textColor=colors.HexColor(color), alignment=TA_LEFT,
                               spaceBefore=space_before, spaceAfter=space_after, splitLongWords=1,
                               bulletFontName=FONT_NAMES["latin"]["regular"], **extra)
 
     body = style("body")
-    muted = style("muted", size=8.5, color="#54637A")
-    label = style("label", size=8.5, bold=True, color="#54637A", space_before=4, space_after=1, keepWithNext=1)
+    muted = style("muted", size=8.8, color="#54637A")
+    label = style("label", size=8.8, bold=True, color="#1D6AD4", space_before=7, space_after=1.5, keepWithNext=1)
     title = style("title", size=24, bold=True, leading=30, space_after=4)
     h2 = style("h2", size=10.5, bold=True, leading=15, space_before=8, space_after=3, keepWithNext=1, color="#1D6AD4")
     source_line = style("source", size=9.5, leading=15.5, space_after=0)
-    box = style("box", size=8.5, color="#13233F", space_after=0)
+    box = style("box", size=9.2, color="#13233F", space_after=0)
     width = A4[0] - 36 * mm
     reg, bold_font = FONT_NAMES["latin"]["regular"], FONT_NAMES["latin"]["bold"]
 
@@ -269,8 +269,8 @@ def build_pdf(payload):
         para("검토 항목이 없습니다. " + (summary["no_items_message"] or ""))
     for item in items:
         tone, soft = TONES[item["action"]]
-        head = style("item_" + item["id"], size=10.5, bold=True, color=tone, backColor=colors.HexColor(soft),
-                     borderPadding=4, space_before=10, space_after=4, keepWithNext=1)
+        head = style("item_" + item["id"], size=11.5, bold=True, color=tone, backColor=colors.HexColor(soft),
+                     borderPadding=(6, 8, 6, 8), space_before=16, space_after=8, keepWithNext=1)
         story.append(Paragraph(writer.rich(f"{item['id']} · {ACTION_LABELS[item['action']]}", bold=True), head))
         field(f"대상 구절 ({LANGUAGE_LABELS[item['quote_language']]}, 원문 위치 {item['start'] + 1}~{item['end']}번째 글자)", item["quote"])
         field("한국어 해석", item["interpretation_ko"])
