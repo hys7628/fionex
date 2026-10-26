@@ -5,23 +5,33 @@
  * 대비 수치는 WCAG 공식으로 계산한 값입니다(docs/design_system.md).
  */
 :root {
-  /* 색상: 배경 (아주 옅은 블루그레이 + 모서리에만 옅은 아쿠아·블루 빛) */
-  --color-bg: #f3f6fa;
+  /* 색상: 배경 (옅은 블루그레이 + 아쿠아·블루·민트 빛 번짐). 2026-10-26 글래스 카드가 비쳐 보이도록 빛을 진하게 조정 */
+  --color-bg: #f1f5fa;
   --color-bg-gradient:
-    radial-gradient(1100px 520px at 100% 0%, rgba(34, 184, 207, 0.07), transparent 65%),
-    radial-gradient(900px 480px at 0% 100%, rgba(29, 106, 212, 0.05), transparent 65%);
+    radial-gradient(900px 640px at 100% 0%, rgba(34, 184, 207, 0.30), transparent 62%),
+    radial-gradient(820px 600px at 0% 100%, rgba(29, 106, 212, 0.24), transparent 62%),
+    radial-gradient(760px 540px at 50% 45%, rgba(35, 179, 155, 0.18), transparent 66%),
+    radial-gradient(600px 420px at 15% 10%, rgba(29, 106, 212, 0.10), transparent 70%);
   --color-surface: #ffffff;
   --color-surface-muted: #f6f8fb;
   --color-surface-hover: #f0f5fb;
   --color-row-hover: #f6f9fe;
   --color-overlay: rgba(19, 35, 63, 0.35);
-  /* 글래스(반투명 유리) — 떠 있는 창(모달) 전용. 일반 카드에는 쓰지 않습니다. blur 미지원·투명도 줄이기 설정이면 불투명 면으로 대체 */
+  /* 글래스(반투명 유리) — 떠 있는 창(모달). blur 미지원·투명도 줄이기 설정이면 불투명 면으로 대체 */
   --color-glass-backdrop: rgba(19, 35, 63, 0.28);
   --color-glass-surface: rgba(255, 255, 255, 0.78);
   --color-glass-inner: rgba(255, 255, 255, 0.62);
   --color-glass-border: rgba(255, 255, 255, 0.7);
   --glass-blur: blur(18px) saturate(140%);
   --glass-backdrop-blur: blur(6px);
+  /* 글래스 카드·머리글·사이드바(2026-10-26 전체 적용). 배경이 밝은 색이라 흰 면 58% 위 보조 글자도 4.5:1 이상 유지 */
+  --color-glass-card: rgba(255, 255, 255, 0.58);
+  --color-glass-card-strong: rgba(255, 255, 255, 0.82);  /* 떠 있는 막대(고정 버튼 줄 등) */
+  --color-glass-card-inner: rgba(255, 255, 255, 0.6);    /* 카드 안 구획(옅은 면 대신, 테두리·작은 그림자와 함께) */
+  --color-glass-card-border: rgba(255, 255, 255, 0.85);
+  --color-glass-edge: rgba(19, 35, 63, 0.07);           /* 카드 안 유리 구획의 아주 옅은 바깥선 */
+  --glass-card-blur: blur(16px) saturate(150%);
+  --shadow-glass: 0 1px 1px rgba(255, 255, 255, 0.6) inset, 0 8px 32px rgba(31, 64, 120, 0.10);
 
   /* 색상: 글자 (흰 배경 기준 대비 4.5:1 이상) */
   --color-text: #13233f;          /* 딥 네이비, 제목·숫자·본문 15.7:1 */

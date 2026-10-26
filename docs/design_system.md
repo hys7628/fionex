@@ -1,6 +1,6 @@
 # 공통 UI 기준
 
-2026-10-24 공통 UI 적용, 2026-10-26 블루·아쿠아·민트 대시보드 톤으로 정리(홍은주, feature/common_setup). 참고 이미지: resources/design/dashboard_reference.png
+2026-10-24 공통 UI 적용, 2026-10-26 블루·아쿠아·민트 대시보드 톤으로 정리, 같은 날 카드·머리글·사이드바 글래스 질감 적용(홍은주, feature/common_setup). 참고 이미지: resources/design/dashboard_reference.png
 이미지에서는 색감(흰 카드·옅은 블루그레이 배경·블루·아쿠아·민트 포인트·네이비 숫자), 카드 질감(얇은 테두리·은은한 그림자), 버튼, 상태 표현, 인터랙션 분위기만 참고했다. 배치는 복제하지 않는다.
 이미지 속 이름·로고·슬로건·메뉴·수치·차트는 사용하지 않는다. 이미지를 배경으로 붙이지 않고 HTML/CSS로 구성한다.
 서비스명은 `fionex`(2026-10-24 확정, common/config.py의 SERVICE_NAME). 화면과 브라우저 제목은 이 값을 사용한다.
@@ -53,13 +53,15 @@
 
 ## 팔레트와 분위기
 밝고 깨끗한 B2B SaaS 대시보드. 흰 면 + 아주 옅은 블루그레이 배경, 블루(주요 동작)·아쿠아(보조 빛)·민트(친환경 강조) 포인트, 제목·숫자는 딥 네이비.
-피한다: 진한 회색 배경, 강한 royal blue, 네온, 과한 그라데이션·glassmorphism, 카드마다 다른 모서리·그림자, 두꺼운 테두리, 모바일 앱처럼 둥근 UI.
+2026-10-26부터 카드·머리글·사이드바는 반투명 유리(글래스) 질감을 쓴다(아래 '글래스 질감').
+피한다: 진한 회색 배경, 강한 royal blue, 네온, 과한 그라데이션, 진하게 흐린 유리·어두운 유리, 카드마다 다른 모서리·그림자, 두꺼운 테두리, 모바일 앱처럼 둥근 UI.
 
 | 역할 | 값 | 변수 |
 |---|---|---|
-| 페이지 배경 | #f3f6fa + 모서리 radial 빛(아쿠아 7%·블루 5%) | `--color-bg`, `--color-bg-gradient` |
+| 페이지 배경 | #f1f5fa + radial 빛 번짐(아쿠아 30%·블루 24%·민트 18%·블루 10%, 글래스가 비쳐 보이게) | `--color-bg`, `--color-bg-gradient` |
 | 면 | #ffffff / 옅은 면 #f6f8fb / hover #f0f5fb / 표 행 hover #f6f9fe | `--color-surface`, `--color-surface-muted`, `--color-surface-hover`, `--color-row-hover` |
 | 띄운 면(elevated) | 흰 면 + 그림자 단계로 표현(별도 색 없음) | `--color-surface` + `--shadow-md`/`--shadow-lg` |
+| 글래스 카드 | 흰 58%(카드·머리글) / 82%(사이드바·고정 막대) / 60%(카드 안 구획), 테두리 흰 85%, 구획 바깥선 네이비 7%, blur 16px·saturate 150%, 그림자 안쪽 흰 선 + 블루 그림자 | `--color-glass-card`, `-strong`, `-inner`, `-border`, `--color-glass-edge`, `--glass-card-blur`, `--shadow-glass` |
 | 머리글 | 블루→아쿠아→민트 아주 옅은 그라데이션 | `--color-hero-gradient` |
 | 블루 | #1d6ad4 (흰 글자 5.2:1), 누름 #1663c4, soft #eaf2fd, 글자 #1559b8 (6.7:1) | `--color-primary`, `-hover`, `-soft`, `-text` |
 | 주 버튼 | #1d6ad4 → #1677c4 (끝 색도 흰 글자 4.7:1) | `--color-primary-gradient` |
@@ -125,9 +127,9 @@
 | 접근성 | `.visually-hidden` |
 
 ### 컴포넌트 규칙 (2026-10-26)
-- **카드**: 흰 면, 1px `--color-border-subtle`, `--radius-lg` 16px, `--shadow-md`, 안쪽 여백 24px(960px 미만 20px), 머리→본문 16px, 제목→설명 4px. 모든 카드에 움직임을 넣지 않는다. 누를 수 있는 카드만 `.card-interactive`로 hover 시 2px 상승·`--shadow-hover`·테두리 블루 tint.
-- **머리글** `.page-header`: hero 그라데이션 + 옅은 테두리 + `--shadow-sm`, 여백 24px 32px(작은 화면 20px).
-- **사이드바**: 흰 면 + 오른쪽 1px 옅은 선(그림자 없음). 메뉴 radius 10px, 기본 보조 글자색, hover `--color-surface-hover` + 아이콘 블루, 선택 `--color-primary-soft` 배경 + `--color-primary-text` 글자·아이콘 semibold. 폭 248px 유지.
+- **카드**: 글래스 면(`--color-glass-card` + `--glass-card-blur`), 1px `--color-glass-card-border`, `--radius-lg` 16px, `--shadow-glass`, 안쪽 여백 24px(960px 미만 20px), 머리→본문 16px, 제목→설명 4px. 모든 카드에 움직임을 넣지 않는다. 누를 수 있는 카드만 `.card-interactive`로 hover 시 2px 상승·`--shadow-hover`·테두리 블루 tint.
+- **머리글** `.page-header`: 카드와 같은 글래스 면·테두리·`--shadow-glass`, 여백 24px 32px(작은 화면 20px).
+- **사이드바**: 진한 글래스 면(`--color-glass-card-strong` + blur) + 오른쪽 1px 흰 유리 선(그림자 없음). 메뉴 radius 10px, 기본 보조 글자색, hover `--color-surface-hover` + 아이콘 블루, 선택 `--color-primary-soft` 배경 + `--color-primary-text` 글자·아이콘 semibold. 폭 248px 유지.
 - **버튼**: 높이 42px, radius 10px, 글자 sm bold.
   - primary: 블루 그라데이션 + 흰 글자 + `--shadow-primary`. hover는 색을 바꾸지 않고(대비 유지) 그림자 증가 + 1px 상승, 누름은 `--color-primary-hover`.
   - secondary: 흰 면 + `--color-border-strong` 테두리 + 블루 글자. hover 블루 테두리·soft 배경.
@@ -138,7 +140,8 @@
 - **표**: 틀 1px 옅은 선 + radius 10px, 머리 `--color-surface-muted`·xs 보조 글자, 행 구분 1px `--color-border-subtle`, 행 hover `--color-row-hover`, 숫자 칸 `.num` 오른쪽·tabular-nums·medium. 열 너비는 기능이 정한다. `.table-wrap`은 `position: relative`라 칸 안 `.visually-hidden`이 스크롤 상자 밖으로 나가 페이지 가로 스크롤을 만들지 않는다(2026-10-26).
 - **빈 상태**: 점선 `--color-border-strong` + 옅은 면, radius 10px, 최소 높이 160px.
 - **로딩**: `.spinner`(블루·아쿠아 테두리 회전) + 텍스트, 버튼 `disabled`, 영역 `aria-busy`. 누른 버튼은 아래 '작업 중 버튼'.
-- **떠 있는 창(글래스)** (2026-10-26): 글래스(반투명 유리)는 모달 `<dialog>` 같은 떠 있는 창에만 쓴다(일반 카드 금지). 토큰 `--color-glass-backdrop/-surface/-inner/-border`, `--glass-blur`(패널), `--glass-backdrop-blur`(뒤 배경). 패널은 `overflow: clip`(hidden이면 초점 이동 스크롤이 패널을 밀어 머리가 가려짐), 본문만 세로 스크롤. `backdrop-filter` 미지원·`prefers-reduced-transparency: reduce`이면 흰 불투명 면·`--color-overlay` 배경으로 대체. 글자는 흰 면 위에 두어 대비를 유지한다. 열 때 `showModal()`(초점 가둠·Esc·닫으면 연 버튼으로 초점 복귀), 등장 애니메이션은 reduced-motion에서 0s. 창 안 내용이 둘 이상이면 머리 바로 아래 `.ma-subtab` 모양 하위 탭으로 나누고(본문만 스크롤), 탭을 바꿔도 탭 위치가 흔들리지 않게 창 높이를 고정한다. 첫 사용: 시장/바이어 분석 AI 브리핑 창.
+- **글래스 질감** (2026-10-26 전체 적용, 홍은주 지시): 카드·머리글·사이드바는 common.css에서 글래스 면을 쓴다. 기능 CSS의 카드 안 구획(묶음 상자·선택 타일 등)은 `--color-glass-card-inner` + `--color-glass-edge` 바깥선 + `--shadow-sm`, 화면에 붙는 막대(고정 버튼 줄·단계 표시줄)는 `--color-glass-card-strong` + blur. 글자는 반투명 흰 면 위에 두고 진한 유리는 쓰지 않는다. `backdrop-filter` 미지원·`prefers-reduced-transparency: reduce`이면 common.css가 카드·머리글·사이드바를 불투명 흰 면으로 바꾼다(기능 CSS는 @media를 쓰지 않는 탭이 있어 구획은 반투명 그대로, 배경이 밝아 대비 유지). 첫 적용: 제품소개서 단계 화면.
+- **떠 있는 창(글래스)** (2026-10-26): 모달 `<dialog>` 같은 떠 있는 창은 아래 창 전용 글래스 토큰을 쓴다. 토큰 `--color-glass-backdrop/-surface/-inner/-border`, `--glass-blur`(패널), `--glass-backdrop-blur`(뒤 배경). 패널은 `overflow: clip`(hidden이면 초점 이동 스크롤이 패널을 밀어 머리가 가려짐), 본문만 세로 스크롤. `backdrop-filter` 미지원·`prefers-reduced-transparency: reduce`이면 흰 불투명 면·`--color-overlay` 배경으로 대체. 글자는 흰 면 위에 두어 대비를 유지한다. 열 때 `showModal()`(초점 가둠·Esc·닫으면 연 버튼으로 초점 복귀), 등장 애니메이션은 reduced-motion에서 0s. 창 안 내용이 둘 이상이면 머리 바로 아래 `.ma-subtab` 모양 하위 탭으로 나누고(본문만 스크롤), 탭을 바꿔도 탭 위치가 흔들리지 않게 창 높이를 고정한다. 첫 사용: 시장/바이어 분석 AI 브리핑 창.
 
 ### 움직임
 - 대상: 버튼·카드·메뉴·필터 hover, 입력 초점, 상태 변화. 속성은 opacity·transform·background-color·border-color·box-shadow만, 150~220ms.

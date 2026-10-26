@@ -162,8 +162,10 @@ a {
   height: 100vh;
   padding: var(--space-6) var(--space-4);
   overflow-y: auto;
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border-subtle);
+  background: var(--color-glass-card-strong);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+  backdrop-filter: var(--glass-card-blur);
+  border-right: 1px solid var(--color-glass-card-border);
 }
 
 .sidebar-head {
@@ -302,10 +304,12 @@ a {
   justify-content: space-between;
   gap: var(--space-4);
   padding: var(--space-6) var(--space-8);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-glass-card-border);
   border-radius: var(--radius-lg);
-  background: var(--color-hero-gradient);
-  box-shadow: var(--shadow-sm);
+  background: var(--color-glass-card);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+  backdrop-filter: var(--glass-card-blur);
+  box-shadow: var(--shadow-glass);
 }
 
 .page-header-text {
@@ -492,10 +496,12 @@ a {
   gap: var(--space-4);
   min-width: 0;
   padding: var(--space-6);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-glass-card-border);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-md);
+  background: var(--color-glass-card);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+  backdrop-filter: var(--glass-card-blur);
+  box-shadow: var(--shadow-glass);
 }
 
 /* 누를 수 있는 카드만: 살짝 떠오름(모든 카드에 적용하지 않음) */
@@ -961,6 +967,20 @@ a.card:hover {
 }
 
 /* ---------- 움직임 줄이기 ---------- */
+/* 글래스 대체: blur 미지원이거나 '투명도 줄이기' 설정이면 카드·머리글을 불투명 흰 면으로 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card, .page-header, .sidebar { background: var(--color-surface); border-color: var(--color-border-subtle); }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .card, .page-header, .sidebar {
+    border-color: var(--color-border-subtle);
+    background: var(--color-surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

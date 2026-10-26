@@ -614,6 +614,7 @@
 }
 
 /* ===== 단계 화면(1. 자료 조사 → 2. 분석 결과 확인·수정 → 3. 카탈로그 미리보기·AI 표지 배경) =====
+ * 2026-10-26 글래스(반투명 유리) 질감: 표시줄·버튼 줄은 blur 유리, 카드 안 구획은 옅은 유리 면(--color-glass-card-*).
  * 패널은 hidden으로만 숨겨 내용이 유지됩니다. 이 탭 CSS 규칙상 @media를 쓰지 않으므로
  * 좁은 화면 대응은 flex-wrap·auto-fit·가로 스크롤(단계 표시줄)로만 합니다. 색·간격은 토큰만 사용.
  */
@@ -627,10 +628,12 @@
   gap: var(--space-2);
   margin-bottom: var(--space-6);
   padding: var(--space-2);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-glass-card-border);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
+  background: var(--color-glass-card);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+  backdrop-filter: var(--glass-card-blur);
+  box-shadow: var(--shadow-glass);
   overflow-x: auto;
   scrollbar-width: thin;
 }
@@ -651,12 +654,13 @@
   transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
-.feature-product_brochure .pb-step:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.feature-product_brochure .pb-step:hover { background: var(--color-glass-card-inner); color: var(--color-text); }
 .feature-product_brochure .pb-step:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 .feature-product_brochure .pb-step[aria-selected="true"] {
-  border-color: var(--color-primary-soft);
-  background: var(--color-primary-soft);
+  border-color: var(--color-glass-card-border);
+  background: var(--color-glass-card-strong);
+  box-shadow: var(--shadow-sm);
   color: var(--color-text);
 }
 
@@ -744,7 +748,7 @@
   padding: var(--space-6);
   border: 1px dashed var(--color-border-strong);
   border-radius: var(--radius-md);
-  background: var(--color-surface-muted);
+  background: var(--color-glass-card-inner);
   transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }
 
@@ -771,8 +775,8 @@
 
 .feature-product_brochure .pb-upload .product_brochure-file-info {
   flex: 1 1 100%;
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-surface);
+  border: 1px solid var(--color-glass-card-border);
+  background: var(--color-glass-card-strong);
 }
 
 /* 1단계 오른쪽: 진행 순서 */
@@ -821,9 +825,10 @@
   max-width: 100%;
   margin: 0;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-glass-card-border);
   border-radius: var(--radius-pill);
-  background: var(--color-surface-muted);
+  background: var(--color-glass-card-strong);
+  box-shadow: var(--shadow-sm);
   color: var(--color-primary-text);
   font-size: var(--font-size-sm);
 }
@@ -867,9 +872,10 @@
 .feature-product_brochure .pb-pane .product_brochure-group {
   gap: var(--space-4);
   padding: var(--space-5);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-glass-edge);
   border-radius: var(--radius-md);
-  background: var(--color-surface-muted);
+  background: var(--color-glass-card-inner);
+  box-shadow: var(--shadow-sm);
 }
 
 .feature-product_brochure .pb-pane .product_brochure-group > legend {
@@ -877,7 +883,7 @@
   width: 100%;
   margin: 0;
   padding: 0 0 var(--space-3);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-subtle);
   color: var(--color-text);
   font-size: var(--font-size-md);
 }
@@ -895,9 +901,11 @@
   justify-content: space-between;
   gap: var(--space-3) var(--space-4);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-glass-card-border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: var(--color-glass-card-strong);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+  backdrop-filter: var(--glass-card-blur);
   box-shadow: var(--shadow-lg);
 }
 
@@ -912,8 +920,9 @@
   gap: var(--space-3);
   margin: 0 0 var(--space-4);
   padding: var(--space-4);
+  border: 1px solid var(--color-glass-edge);
   border-radius: var(--radius-md);
-  background: var(--color-surface-muted);
+  background: var(--color-glass-card-inner);
   list-style: none;
 }
 
@@ -924,9 +933,9 @@
   gap: var(--space-1);
   aspect-ratio: 210 / 297;
   padding: var(--space-2);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-glass-card-border);
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  background: var(--color-glass-card-strong);
   box-shadow: var(--shadow-sm);
   font-size: var(--font-size-xs);
   line-height: 1.3;
@@ -970,9 +979,10 @@
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-glass-edge);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: var(--color-glass-card-inner);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
 }
