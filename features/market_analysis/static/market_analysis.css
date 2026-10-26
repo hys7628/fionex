@@ -885,3 +885,61 @@
 }
 
 .feature-market_analysis .ma-buyer-reset { flex: none; }
+
+/* 공급국 비교: 나라 고르기 창 접기/펼치기(요약 줄에 고른 나라 표시) */
+.feature-market_analysis .ma-country-picker {
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-inner);
+}
+
+.feature-market_analysis .ma-country-picker > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  list-style: none;
+}
+
+.feature-market_analysis .ma-country-picker > summary::-webkit-details-marker { display: none; }
+
+.feature-market_analysis .ma-country-picker > summary::before {
+  content: "▸";
+  color: var(--color-primary);
+  transition: transform var(--transition-fast);
+}
+
+.feature-market_analysis .ma-country-picker[open] > summary::before { transform: rotate(90deg); }
+
+.feature-market_analysis .ma-country-picker-title {
+  color: var(--color-primary-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.feature-market_analysis .ma-country-picker-chosen {
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.feature-market_analysis .ma-country-picker > summary::after {
+  content: "펼치기";
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.feature-market_analysis .ma-country-picker[open] > summary::after { content: "접기"; }
+.feature-market_analysis .ma-country-picker[open] > summary { border-bottom: 1px solid var(--color-border-subtle); }
+
+.feature-market_analysis .ma-country-picker-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}

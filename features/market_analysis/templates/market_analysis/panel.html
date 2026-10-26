@@ -63,14 +63,23 @@
     <fieldset class="fieldset">
       <legend class="field-label">공급국 비교 <span class="field-hint">(선택)</span></legend>
       <p class="field-hint" id="market_analysis-countries-hint">선택하지 않으면 전체 국가 기준입니다. 선택한 국가는 아래 비교표에 따로 표시하며, 비중은 항상 브라질 전체 수입액 기준입니다.</p>
-      <div data-work-ignore>
-        <label class="visually-hidden" for="market_analysis-country-search">공급국 검색</label>
-        <input class="input" id="market_analysis-country-search" type="search" placeholder="국가 검색 (예: 중국, China)" autocomplete="off">
-      </div>
-      <div class="ma-country-list" role="group" aria-describedby="market_analysis-countries-hint market_analysis-countries-error" data-ma-country-list>
-        <p class="field-hint">공급국 목록을 불러오는 중입니다.</p>
-      </div>
-      <p class="field-hint" data-ma-country-count aria-live="polite">선택한 공급국 없음</p>
+      {# 나라 고르기 창은 접어 두고 필요할 때 펼침(2026-10-27). 닫혀 있어도 선택한 나라는 요약 줄에 보이고 조회에 그대로 쓰임 #}
+      <details class="ma-country-picker" data-ma-country-picker>
+        <summary>
+          <span class="ma-country-picker-title">나라 고르기</span>
+          <span class="ma-country-picker-chosen" data-ma-country-chosen>선택한 공급국 없음 · 전체 국가 기준</span>
+        </summary>
+        <div class="ma-country-picker-body">
+          <div data-work-ignore>
+            <label class="visually-hidden" for="market_analysis-country-search">공급국 검색</label>
+            <input class="input" id="market_analysis-country-search" type="search" placeholder="국가 검색 (예: 중국, China)" autocomplete="off">
+          </div>
+          <div class="ma-country-list" role="group" aria-describedby="market_analysis-countries-hint market_analysis-countries-error" data-ma-country-list>
+            <p class="field-hint">공급국 목록을 불러오는 중입니다.</p>
+          </div>
+          <p class="field-hint" data-ma-country-count aria-live="polite">선택한 공급국 없음</p>
+        </div>
+      </details>
       <p class="field-error" id="market_analysis-countries-error" data-error-for="countries" hidden></p>
     </fieldset>
 

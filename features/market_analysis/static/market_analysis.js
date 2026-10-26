@@ -22,6 +22,8 @@
   const periodHint = panel.querySelector("[data-ma-period-hint]");
   const countryList = panel.querySelector("[data-ma-country-list]");
   const countryCount = panel.querySelector("[data-ma-country-count]");
+  const countryPicker = panel.querySelector("[data-ma-country-picker]");
+  const countryChosen = panel.querySelector("[data-ma-country-chosen]");
   const countrySearch = panel.querySelector("#market_analysis-country-search");
   const inputs = {
     code_system: form.elements.code_system,
@@ -123,6 +125,7 @@
     Object.keys(fields).forEach(function (name) {
       const p = panel.querySelector('[data-error-for="' + name + '"]');
       if (p) { p.textContent = fields[name]; p.hidden = false; }
+      if (name === "countries") countryPicker.open = true;  // 공급국 오류는 접힌 창을 펼쳐 보여 줌
       const el = inputs[name];
       if (el) { el.setAttribute("aria-invalid", "true"); if (!first) first = el; }
     });
@@ -178,6 +181,11 @@
   function updateCountryCount() {
     const checked = countryList.querySelectorAll('input[name="countries"]:checked');
     countryCount.textContent = checked.length ? "선택한 공급국 " + checked.length + "개" : "선택한 공급국 없음";
+    // 접힌 창의 요약 줄: 고른 나라 이름(최대 3개 + 나머지 수). 닫혀 있어도 무엇을 골랐는지 보입니다.
+    const names = Array.from(checked).map(function (el) { return el.closest("label").textContent.trim(); });
+    countryChosen.textContent = names.length
+      ? names.slice(0, 3).join(", ") + (names.length > 3 ? " 외 " + (names.length - 3) + "개국" : "") + " (" + names.length + "개)"
+      : "선택한 공급국 없음 · 전체 국가 기준";
   }
 
   countryList.addEventListener("change", updateCountryCount);
