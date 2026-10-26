@@ -132,15 +132,15 @@
 }
 
 .feature-green_claim .green-claim-review-source {
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-5);
   max-height: 480px;
   overflow: auto;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  line-height: var(--line-height-base);
-  background: var(--color-surface-muted);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  line-height: 2;  /* 위첨자 번호 단추가 윗줄과 겹치지 않게 */
+  background: var(--color-surface);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
   color: var(--color-text);
 }
 
@@ -179,36 +179,104 @@
   cursor: pointer;
 }
 
-/* 결과 머리: 유효 결과 / 이전 문구의 결과 */
+/* 결과 머리: 유효 결과 / 이전 문구의 결과(한 줄 칩) */
 .feature-green_claim .green-claim-result-label {
+  align-self: flex-start;
   margin: 0;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-text);
+  color: var(--color-text-muted);
 }
 .feature-green_claim .green-claim-result-label[data-state="stale"] {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-soft);
   color: var(--color-warning);
 }
 
+/* 결과 안 구역(전체 요약 / 검토 항목 / 사용 기준): 구역 사이 여백과 얇은 구분선 */
+.feature-green_claim .green-claim-review-result > section + section {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.feature-green_claim .green-claim-review-result .green-claim-subtitle {
+  margin-bottom: var(--space-3);
+}
+
+.feature-green_claim #green_claim-review-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 .feature-green_claim .green-claim-summary-counts {
-  margin: 0 0 var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
 
+/* 조치별 개수: 세 칸 타일(배지 + 개수 + 이동 번호). 좁으면 자동으로 줄바꿈 */
 .feature-green_claim .green-claim-summary-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-3);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.feature-green_claim .green-claim-summary-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-strong);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.feature-green_claim .green-claim-summary-list > li > .badge {
+  flex: 0 0 100%;
+  width: max-content;
 }
 
 .feature-green_claim .green-claim-jump,
 .feature-green_claim .green-claim-item-back {
   min-height: auto;
-  padding: var(--space-1) var(--space-2);
+  padding: 2px var(--space-2);
+  font-size: var(--font-size-xs);
+}
+
+.feature-green_claim .green-claim-jump {
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+
+/* AI 요약·한계·판단 한계: 옅은 면 상자로 묶어 본문과 구분 */
+/* 한계·확인하지 않은 범위 목록은 한 단계 작은 글자로(본문보다 덜 눈에 띄게, 내용은 그대로) */
+.feature-green_claim #green_claim-review-summary .green-claim-notice-list {
   font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.feature-green_claim #green_claim-review-summary > .green-claim-field {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-inner);
 }
 
 /* 검토 항목 카드 */
@@ -225,25 +293,55 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-glass-edge);
   border-left: 4px solid var(--color-info);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
+  background: var(--color-glass-card-strong);
+  box-shadow: var(--shadow-sm);
+  scroll-margin-top: var(--space-6);
 }
 .feature-green_claim .green-claim-item[data-tone="danger"] { border-left-color: var(--color-danger); }
 .feature-green_claim .green-claim-item[data-tone="warning"] { border-left-color: var(--color-warning); }
+.feature-green_claim .green-claim-item:focus { outline: none; box-shadow: var(--focus-ring); }
 
 .feature-green_claim .green-claim-item-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.feature-green_claim .green-claim-item-head .green-claim-item-back {
+  margin-left: auto;
 }
 
 .feature-green_claim .green-claim-item-id {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 26px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text);
+}
+
+/* 항목 안 필드: 넓은 카드에서는 왼쪽 이름 · 오른쪽 내용 두 칸(좁으면 위아래) */
+.feature-green_claim .green-claim-item > .green-claim-field {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+}
+
+.feature-green_claim .green-claim-item > .green-claim-field > :not(.green-claim-field-label) {
+  grid-column: 2;
 }
 
 .feature-green_claim .green-claim-field {
@@ -255,13 +353,14 @@
 .feature-green_claim .green-claim-field-label {
   margin: 0;
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-muted);
 }
 
 .feature-green_claim .green-claim-field-text {
   margin: 0;
   color: var(--color-text);
+  line-height: 1.65;
   overflow-wrap: anywhere;
 }
 
@@ -269,20 +368,33 @@
   white-space: pre-wrap;
 }
 
+/* 대상 구절: 원문 그대로 인용(굵게, 조치 색 왼쪽 선) */
 .feature-green_claim .green-claim-quote .green-claim-field-text {
   padding: var(--space-2) var(--space-3);
-  background: var(--color-surface-muted);
+  border-left: 3px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  font-weight: var(--font-weight-semibold);
   white-space: pre-wrap;
 }
+.feature-green_claim .green-claim-item[data-tone="danger"] .green-claim-quote .green-claim-field-text { border-left-color: var(--color-danger); }
+.feature-green_claim .green-claim-item[data-tone="warning"] .green-claim-quote .green-claim-field-text { border-left-color: var(--color-warning); }
 
+/* 대체 예시: 민트 옅은 면(적용 승인 아님 안내는 라벨에 그대로) */
 .feature-green_claim .green-claim-alternative {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px dashed var(--color-border-strong);
-  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--color-success-border);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+}
+
+/* 대체 예시가 없을 때(안내 문장만): 민트 대신 중립 면으로 예시가 있는 것처럼 보이지 않게 */
+.feature-green_claim .green-claim-alternative:not(:has(.green-claim-field)) {
+  border-color: var(--color-border);
+  background: var(--color-surface-muted);
 }
 
 /* 근거 기준: 긴 원문·번역은 펼쳐보기 */
@@ -739,11 +851,18 @@
     align-items: start;
   }
 
-  .feature-green_claim .green-claim-review-source {
-    max-height: max(280px, calc(100vh - 520px));
+  /* 왼쪽 원문 카드는 페이지를 내려도 화면 위에 붙어 따라옴(결과를 읽으며 강조 구절을 계속 볼 수 있게).
+     원문이 길면 카드 안에서만 스크롤 */
+  .feature-green_claim .green-claim-source-card {
+    position: sticky;
+    top: var(--space-6);
   }
 
-  /* 결과 카드 머리: 제목과 PDF 버튼을 한 줄에 두어 결과 영역 높이를 확보 */
+  .feature-green_claim .green-claim-review-source {
+    max-height: calc(100vh - 220px);
+  }
+
+  /* 결과 카드 머리: 제목과 PDF 버튼을 한 줄에 */
   .feature-green_claim .green-claim-result-card > .card-header {
     flex-wrap: nowrap;
   }
@@ -753,11 +872,7 @@
     text-align: right;
   }
 
-  .feature-green_claim .green-claim-result-scroll {
-    max-height: max(280px, calc(100vh - 560px));
-    overflow: auto;
-    padding-right: var(--space-2);
-  }
+  /* 결과는 카드 안 좁은 스크롤 상자 대신 페이지 스크롤로 끝까지 펼쳐 읽음 */
 }
 
 /* 좁은 화면: 단계 막대는 가로 스크롤, 단계 안쪽 여백 축소, 문구 제목과 글자 수 칩은 위아래로(제목이 꺾이지 않게) */
@@ -771,6 +886,19 @@
     grid-column: 1 / -1;
     grid-row: auto;
     justify-self: start;
+  }
+
+  /* 검토 항목 필드: 좁으면 이름 위·내용 아래 한 칸 */
+  .feature-green_claim .green-claim-item > .green-claim-field {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .feature-green_claim .green-claim-item > .green-claim-field > :not(.green-claim-field-label) {
+    grid-column: 1;
+  }
+
+  .feature-green_claim .green-claim-item {
+    padding: var(--space-4);
   }
 }
 
