@@ -186,6 +186,32 @@ class SnapshotFallbackTest(unittest.TestCase):
             self.assertTrue(bsrc["S1"]["date"].startswith("MDIC 공개 원본 자료(기준: 2026-10-27)"))
             self.assertTrue(any("원본 CSV" in n for n in bpack["context"]["notes"]))
 
+    def test_outage_remembered_skips_comexstat(self):
+        """점검을 한 번 확인하면 10분 동안은 ComexStat을 부르지 않고 바로 스냅샷(재시도 대기 없음). '다시 불러오기'만 다시 시도."""
+        now = [1000.0]
+        with mock.patch.object(service, "_monotonic", lambda: now[0]):
+            service.meta()  # 조회 조건 화면: 여기서 점검 확인
+            calls = (comex.get_latest_month.call_count, comex.query_imports.call_count)
+            self.assertEqual(calls, (1, 0))
+            self.assertTrue(service.source_down())
+            r = service.analyze(self.payload())
+            self.assertEqual(r["sources"][0]["cache_status"], "snapshot")
+            self.assertEqual((comex.get_latest_month.call_count, comex.query_imports.call_count), (1, 0))  # 호출 없음
+            service.analyze(self.payload(refresh=True))  # 사용자가 다시 불러오기: 통계는 다시 시도
+            self.assertEqual(comex.query_imports.call_count, 1)
+            now[0] += service.SOURCE_DOWN_SECONDS + 1  # 10분 뒤: 다시 확인
+            service.analyze(self.payload())
+            self.assertEqual(comex.get_latest_month.call_count, 2)
+
+    def test_recovery_clears_outage(self):
+        now = [1000.0]
+        with mock.patch.object(service, "_monotonic", lambda: now[0]):
+            service.meta()
+            self.assertTrue(service.source_down())
+            with mock.patch.object(comex, "get_latest_month", return_value=(2026, 2, "2026-03-05")):
+                service.get_latest(refresh=True)
+            self.assertFalse(service.source_down())
+
     def test_pdf_shows_snapshot_label(self):
         r = service.analyze(self.payload())
         pdf = pdf_report.build_pdf({"stats": r, "ai": None})

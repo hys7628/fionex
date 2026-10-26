@@ -96,11 +96,12 @@ _sleep = time.sleep
 _monotonic = time.monotonic
 
 
-def _request(method, path, body=None):
+def _request(method, path, body=None, retry=True):
+    """retry=False면 실패해도 다시 시도하지 않습니다(점검 확인처럼 실패 시 저장 자료로 대신할 수 있는 호출)."""
     url = BASE_URL + path
     with _lock:
         last_error = None
-        for attempt in range(len(RETRY_WAIT_SECONDS) + 1):
+        for attempt in range(len(RETRY_WAIT_SECONDS) + 1 if retry else 1):
             if attempt:
                 _sleep(RETRY_WAIT_SECONDS[attempt - 1])
             wait = _last_call[0] + MIN_INTERVAL_SECONDS - _monotonic()
@@ -135,8 +136,9 @@ def _request(method, path, body=None):
 
 
 def get_latest_month():
-    """통계 최신 제공 월. (연, 월, 갱신일 문자열 'YYYY-MM-DD')."""
-    data = _request("GET", "/general/dates/updated")
+    """통계 최신 제공 월. (연, 월, 갱신일 문자열 'YYYY-MM-DD').
+    한 번만 시도합니다(재시도 대기 없음): 실패하면 서비스가 이전 값·스냅샷으로 대신하고, 점검 중임을 빨리 알 수 있게."""
+    data = _request("GET", "/general/dates/updated", retry=False)
     try:
         return int(data["year"]), int(data["monthNumber"]), str(data["updated"])
     except (KeyError, TypeError, ValueError):

@@ -261,7 +261,8 @@ class AnalyzeTest(unittest.TestCase):
     def test_latest_unavailable_skips_upper_bound(self):
         self.latest.side_effect = ComexStatError("MA_SOURCE_UNAVAILABLE", "x", 502, True)
         with mock.patch.object(comex, "query_imports", return_value=[row("2026-01", "China", 10, 5)]):
-            r = service.analyze(self.payload(to="2026-12", **{"from": "2026-01"}))
+            # 최신 월 확인 실패로 ComexStat 점검을 기억하므로, 통계는 '다시 불러오기'(refresh)일 때만 다시 시도
+            r = service.analyze(self.payload(to="2026-12", refresh=True, **{"from": "2026-01"}))
         self.assertIn("최신 제공 월을 확인하지 못해", r["notes"][0])
 
 
@@ -301,18 +302,26 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(calls[0][2]["filters"][0]["filter"], "subHeading")
 
     def test_retry_429_then_success(self):
-        patch, calls = self.transport([(429, {}), (200, {"data": {"year": "2026", "monthNumber": "09", "updated": "2026-10-06"}})])
+        patch, calls = self.transport([(429, {}), (200, {"data": {"list": []}})])
         with patch:
-            self.assertEqual(comex.get_latest_month(), (2026, 9, "2026-10-06"))
+            self.assertEqual(comex.query_imports("ncm", "54023310", 2025, 2025), [])
         self.assertEqual(len(calls), 2)
         self.assertIn(15.0, self.sleeps)
 
     def test_max_two_retries(self):
         patch, calls = self.transport([(429, {}), (503, {}), (429, {})])
         with patch, self.assertRaises(ComexStatError) as ctx:
-            comex.get_latest_month()
+            comex.query_imports("ncm", "54023310", 2025, 2025)
         self.assertEqual(len(calls), 3)
         self.assertEqual(ctx.exception.code, "MA_SOURCE_RATE_LIMITED")
+
+    def test_latest_month_single_attempt(self):
+        """최신 월 확인은 재시도 대기 없이 한 번만(점검 중이면 바로 저장 자료로 대신)."""
+        patch, calls = self.transport([(503, {})])
+        with patch, self.assertRaises(ComexStatError) as ctx:
+            comex.get_latest_month()
+        self.assertEqual((len(calls), ctx.exception.code), (1, "MA_SOURCE_UNAVAILABLE"))
+        self.assertNotIn(15.0, self.sleeps)
 
     def test_client_error_not_retried(self):
         patch, calls = self.transport([(400, {})])

@@ -179,6 +179,38 @@ def snapshot_code_name(code_system, code):
     return ((snap.get("code_names") or {}).get(code_system) or {}).get(code)
 
 
+# ---------- ComexStat 점검·장애 기억 ----------
+# 연결 실패·5xx·호출 한도는 한 번 실패에 재시도까지 약 1분이 걸립니다. 실패를 확인하면 10분 동안은 ComexStat을 건너뛰고
+# 바로 저장 자료(메모리 캐시·스냅샷)를 씁니다. 사용자가 '다시 불러오기'(refresh)를 누르면 이 기간에도 다시 시도합니다.
+SOURCE_DOWN_SECONDS = 10 * 60
+_DOWN_CODES = ("MA_SOURCE_UNAVAILABLE", "MA_SOURCE_RATE_LIMITED")
+_source_down = {"until": 0.0, "error": None}
+
+
+def _comex(call, *args, refresh=False):
+    """ComexStat 호출. 최근 점검·장애를 확인했으면(refresh가 아니면) 호출하지 않고 그때 오류를 바로 냅니다."""
+    with _cache_lock:
+        down = _source_down["error"] if _monotonic() < _source_down["until"] else None
+    if down is not None and not refresh:
+        raise down
+    try:
+        result = call(*args)
+    except ComexStatError as err:
+        if err.code in _DOWN_CODES:
+            with _cache_lock:
+                _source_down.update(until=_monotonic() + SOURCE_DOWN_SECONDS, error=err)
+        raise
+    with _cache_lock:
+        _source_down.update(until=0.0, error=None)
+    return result
+
+
+def source_down():
+    """최근 ComexStat 점검·장애를 확인해 건너뛰는 중인지."""
+    with _cache_lock:
+        return _monotonic() < _source_down["until"]
+
+
 def _usable(entry, refresh):
     """캐시를 그대로 쓸지: 6시간 안이고, 다시 불러오기여도 받은 지 10분 안이면 재사용."""
     age = _monotonic() - entry["at"]
@@ -192,7 +224,7 @@ def get_latest(refresh=False):
     if cached and _usable(cached, refresh):
         return cached, False
     try:
-        value = comex.get_latest_month()
+        value = _comex(comex.get_latest_month, refresh=refresh)
     except ComexStatError:
         if cached:
             return cached, True
@@ -220,7 +252,7 @@ def _get_rows(code_system, code, year_from, year_to, refresh):
     if covers and _usable(cached, refresh):
         return cached["rows"], "cached", cached["fetched_at"]
     try:
-        rows = comex.query_imports(code_system, code, year_from, year_to)
+        rows = _comex(comex.query_imports, code_system, code, year_from, year_to, refresh=refresh)
     except ComexStatError:
         if covers:
             return cached["rows"], "stale", cached["fetched_at"]
@@ -243,6 +275,7 @@ def clear_cache():
         _latest_cache.clear()
         _rows_cache.clear()
         _snapshot_state.update(mtime=None, data=None)  # 스냅샷 파일을 다시 읽게 함
+        _source_down.update(until=0.0, error=None)
     with _ai_cache_lock:
         _ai_cache.clear()
 
@@ -580,7 +613,7 @@ def analyze(payload):
                 CODE_LABEL[req.code_system], req.code)})
     elif not rows:
         # 결과 없음과 존재하지 않는 코드를 구분합니다(현행 코드표 기준).
-        found = comex.lookup_code(req.code_system, req.code)
+        found = _comex(comex.lookup_code, req.code_system, req.code, refresh=req.refresh)
         if found is None:
             raise InputError({"code": "ComexStat 현행 코드표에서 %s 코드 %s를 찾지 못했습니다. 코드를 확인해 주세요." % (
                 CODE_LABEL[req.code_system], req.code)})
