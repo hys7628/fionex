@@ -7,9 +7,11 @@
   전체 DTY 통계를 T2T 수요로 해석. 문제가 있는 항목은 화면에 넣지 않고 '코드 검사로 뺀 문장'에 이유와 함께 남깁니다.
 - 출처명·URL·기준일은 모델이 아니라 코드가 출처 ID로 붙입니다.
 - 같은 업체·같은 조회 묶음의 결과는 서버 메모리에 BRIEFING_TTL_SECONDS 동안 두고 다시 호출하지 않습니다(디스크 저장 없음).
+- 결과마다 briefing_id를 붙입니다. PDF는 화면이 보낸 내용이 아니라 이 ID로 서버가 보관한 결과를 찾아 만듭니다(재호출 없음).
 """
 import json
 import re
+import secrets
 import threading
 import time
 from pathlib import Path
@@ -192,6 +194,7 @@ def finalize(data, pack, sources):
 
 # ---------- 실행·메모리 보관 ----------
 _results = {}
+_by_id = {}
 _running = set()
 _lock = threading.Lock()
 
@@ -199,6 +202,7 @@ _lock = threading.Lock()
 def clear_cache():
     with _lock:
         _results.clear()
+        _by_id.clear()
         _running.clear()
 
 
@@ -207,6 +211,16 @@ def _cached(key, now):
     if hit and now - hit[0] <= BRIEFING_TTL_SECONDS:
         return hit[1]
     _results.pop(key, None)
+    return None
+
+
+def get(briefing_id, clock=time.monotonic):
+    """보관 중인 브리핑 결과(run이 돌려준 dict) 또는 None(만료·서버 재시작·없는 ID)."""
+    with _lock:
+        hit = _by_id.get(str(briefing_id or ""))
+        if hit and clock() - hit[0] <= BRIEFING_TTL_SECONDS:
+            return hit[1]
+        _by_id.pop(str(briefing_id or ""), None)
     return None
 
 
@@ -251,6 +265,7 @@ def run(cnpj, bundle_id=None, bundle=None, bundle_note=None, generate=None, cloc
             usage["cost_basis"] = "OpenAI 공식 단가 기준 추정"
         q = stats["query"] if stats else None
         result = {
+            "briefing_id": secrets.token_urlsafe(12),
             "company": {k: company.get(k) for k in ("cnpj", "razao_social", "nome_fantasia", "uf", "municipio", "cnae", "cnae_label",
                                                      "grade", "grade_reason")},
             "market": {"included": bool(stats),
@@ -267,8 +282,11 @@ def run(cnpj, bundle_id=None, bundle=None, bundle_note=None, generate=None, cloc
         }
         with _lock:
             if len(_results) >= MAX_CACHED:
-                _results.pop(min(_results, key=lambda k: _results[k][0]))
-            _results[key] = (clock(), result)
+                old = min(_results, key=lambda k: _results[k][0])
+                _by_id.pop(_results.pop(old)[1]["briefing_id"], None)
+            stamp = clock()
+            _results[key] = (stamp, result)
+            _by_id[result["briefing_id"]] = (stamp, result)
         return {**result, "reused": False}
     finally:
         with _lock:

@@ -78,7 +78,7 @@ python -m unittest discover -s tests/test_common -v
 ## 기술 기준
 이 구조는 대화에서 제안한 Flask + HTML/CSS/JavaScript 기준입니다.
 로컬 기준 Conda jasonenv / Python 3.11. AI는 서버에서 OpenAI API 호출.
-requirements.txt: Flask 3.1.2, openai 3.37.0, pydantic 2.14.1, httpx2 2.16.0, python-dotenv 1.1.1(.env 로딩), reportlab 5.1.0(Home·시장 분석·그린 클레임 PDF 출력), pypdf 6.21.2(PDF 입력 검사)(jasonenv 설치 확인). 프런트 프레임워크는 쓰지 않습니다.
+requirements.txt: Flask 3.1.2, openai 3.37.0, pydantic 2.14.1, httpx2 2.16.0, python-dotenv 1.1.1(.env 로딩), reportlab 5.1.0(Home·시장/바이어 분석(통계·바이어 브리핑)·그린 클레임 PDF 출력), pypdf 6.21.2(PDF 입력 검사)(jasonenv 설치 확인). 프런트 프레임워크는 쓰지 않습니다.
 OpenAI 모델은 초기 후보(gpt-5.4-mini, gpt-image-2.5-sunburst)이며 최종 선정 전입니다. 실제 호출·반환 형식은 사용자 실행 결과로 확인했고, 품질·비용·소요 시간은 미검증입니다.
 PDF 출력은 ReportLab, 글꼴은 웹 화면·모든 PDF 공통 Pretendard(static/fonts/pretendard/, SIL OFL 1.1)입니다. 배포 플랫폼은 아직 선정하지 않았습니다. 공통 AI 함수 사용법은 docs/data_contracts.md를 확인하세요.
 

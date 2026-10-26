@@ -213,11 +213,17 @@ def _nice(v):
     return (1 if n <= 1 else 2 if n <= 2 else 2.5 if n <= 2.5 else 5 if n <= 5 else 10) * p
 
 
+def _short(v, unit):
+    """눈금 값을 반올림 때문에 서로 같은 글자가 되지 않게 필요한 만큼만 소수를 남깁니다(예: 1,500 → 1.5K, 2,000 → 2K)."""
+    s = "%.1f" % v
+    return (s[:-2] if s.endswith(".0") else s) + unit
+
+
 def _axis(v, metric):
     if metric == "fob":
-        return ("%.1fM" % (v / 1e6)) if v >= 1e6 else ("%.0fK" % (v / 1e3) if v >= 1e3 else "%.0f" % v)
+        return _short(v / 1e6, "M") if v >= 1e6 else (_short(v / 1e3, "K") if v >= 1e3 else "%.0f" % v)
     if metric == "kg":
-        return "{:,.0f}".format(v)
+        return "{:,.0f}".format(v) if v >= 10 or float(v).is_integer() else ("%.2f" % v).rstrip("0").rstrip(".")
     return "%.2f" % v
 
 
@@ -234,11 +240,11 @@ def build_pdf(payload):
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=16 * mm, bottomMargin=16 * mm,
-                            title="브라질 시장 분석 %s %s" % (q["code"], q["to"]), author="fionex")
+                            title="브라질 시장/바이어 분석 %s %s" % (q["code"], q["to"]), author="fionex")
     W = doc.width
     story = []
 
-    story.append(_p("브라질 시장 분석 보고서", st["title"]))
+    story.append(_p("브라질 시장/바이어 분석 보고서", st["title"]))
     story.append(_p("fionex · 생성 %s · 통계 출처 ComexStat(MDIC)" % created, st["small"]))
     story.append(Spacer(1, 6))
 
@@ -317,7 +323,7 @@ def build_pdf(payload):
         canvas.saveState()
         canvas.setFont(FONT, 7)
         canvas.setFillColor(C_MUTED)
-        canvas.drawString(16 * mm, 9 * mm, "fionex 시장 분석 · %s %s · %s~%s" % (q["code_system_label"], q["code"], q["from"], q["to"]))
+        canvas.drawString(16 * mm, 9 * mm, "fionex 시장/바이어 분석 · %s %s · %s~%s" % (q["code_system_label"], q["code"], q["from"], q["to"]))
         canvas.drawRightString(A4[0] - 16 * mm, 9 * mm, "%d쪽" % d.page)
         canvas.restoreState()
 
@@ -413,3 +419,85 @@ def _ai_section(ai, W, st):
         out.append(_p("출처로 확인되지 않아 표에서 뺀 항목 %d건: %s" % (
             len(removed), "; ".join("%s · %s" % (r.get("section", ""), r.get("content", "")) for r in removed)), st["small"]))
     return out
+
+
+# ---------- 바이어별 AI 브리핑 PDF ----------
+BRIEF_SECTIONS = (("overview", "회사 개요"), ("market_context", "시장 맥락"), ("approach_points", "접근 포인트"))
+
+
+def _bullet(text, sources, style, mark="• "):
+    ids = " ".join("[%s]" % s["id"] for s in sources)
+    return Paragraph(escape(mark + text) + ((' <font color="#55657d" size="7">%s</font>' % escape(ids)) if ids else ""), style)
+
+
+def build_briefing_pdf(b):
+    """buyer_briefing.run 결과(서버 보관본) → PDF bytes. AI를 다시 부르지 않고 화면과 같은 내용만 그립니다."""
+    _register_fonts()
+    st = _styles()
+    q_style = ParagraphStyle("q", parent=st["body"], fontName=FONT_BOLD, spaceBefore=5)
+    a_style = ParagraphStyle("a", parent=st["body"], leftIndent=10, textColor=C_MUTED)
+    c, m = b["company"], b["market"]
+    created = datetime.now(KST).strftime("%Y-%m-%d %H:%M KST")
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm, topMargin=16 * mm, bottomMargin=16 * mm,
+                            title="바이어 AI 브리핑 %s" % c["razao_social"], author="fionex")
+    W = doc.width
+    story = [_p("바이어 AI 브리핑", st["title"]),
+             _p("fionex 시장/바이어 분석 · PDF 생성 %s · 브리핑 생성 %s" % (created, b.get("generated_at") or "?"), st["small"]),
+             Spacer(1, 6)]
+    market = ("%s %s · %s~%s" % (m["query"]["code_system_label"], m["query"]["code"], m["query"]["from"], m["query"]["to"])
+              if m.get("included") else (m.get("note") or "시장 통계 미포함"))
+    fantasia = c.get("nome_fantasia")
+    story.append(_table([
+        ["항목", "내용"],
+        ["회사명", c["razao_social"] + ((" · " + fantasia) if fantasia and fantasia != c["razao_social"] else "")],
+        ["CNPJ", c["cnpj"]],
+        ["지역", "%s, %s" % (c.get("municipio") or "", c.get("uf") or "")],
+        ["업종", "%s (%s)" % (c.get("cnae_label") or "", c.get("cnae") or "")],
+        ["우선순위 등급", "%s · %s" % (c.get("grade") or "—", c.get("grade_reason") or "")],
+        ["시장 맥락", market],
+    ], [32 * mm, W - 32 * mm], st))
+    for n in b.get("notes") or []:
+        story.append(_p(n, st["notice"]))
+    used = {}
+    for key, label in BRIEF_SECTIONS:
+        story.append(_p(label, st["h2"]))
+        items = b["sections"].get(key) or []
+        if not items:
+            story.append(_p("근거가 있는 내용이 없어 쓰지 않았습니다.", st["small"]))
+        for it in items:
+            used.update({s["id"]: s for s in it["sources"]})
+            story.append(_bullet(it["text"], it["sources"], st["body"]))
+    story.append(_p("예상 질문", st["h2"]))
+    if not b.get("questions"):
+        story.append(_p("근거가 있는 질문이 없어 쓰지 않았습니다.", st["small"]))
+    for q in b.get("questions") or []:
+        used.update({s["id"]: s for s in q["sources"]})
+        story.append(KeepTogether([_p("Q. " + q["question"], q_style), _bullet(q["answer_direction"], q["sources"], a_style, "A. ")]))
+    if b.get("gaps"):
+        story.append(Spacer(1, 4))
+        story.append(_p("근거 부족으로 쓰지 않은 내용: " + "; ".join(b["gaps"]), st["small"]))
+    if b.get("removed"):
+        story.append(_p("코드 검사로 뺀 문장 %d개" % len(b["removed"]), st["h2"]))
+        for r in b["removed"]:
+            story.append(_p("· %s · %s — %s" % (r["section"], r["text"], r["reason"]), st["small"]))
+    story.append(_p("출처", st["h2"]))
+    for sid in sorted(used):
+        src = used[sid]
+        story.append(_p("%s · %s · %s" % (sid, src.get("name") or "", src.get("date") or ""), st["cell"]))
+        story.append(_link(src.get("url"), st["small"]))
+    u = b.get("usage") or {}
+    story.append(Spacer(1, 4))
+    story.append(_p("모델 %s · 호출 %s회 · 입력 %s / 출력 %s 토큰 · 프롬프트 %s" % (
+        u.get("model") or "-", u.get("calls") or 0, u.get("input_tokens") or 0, u.get("output_tokens") or 0, b.get("prompt_version") or "-"), st["small"]))
+
+    def footer(canvas, d):
+        canvas.saveState()
+        canvas.setFont(FONT, 7)
+        canvas.setFillColor(C_MUTED)
+        canvas.drawString(16 * mm, 9 * mm, "fionex 바이어 AI 브리핑 · %s · AI 초안(연락 전 원문 확인)" % c["razao_social"][:60])
+        canvas.drawRightString(A4[0] - 16 * mm, 9 * mm, "%d쪽" % d.page)
+        canvas.restoreState()
+
+    doc.build(story, onFirstPage=footer, onLaterPages=footer)
+    return buf.getvalue()

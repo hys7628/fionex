@@ -246,14 +246,62 @@
 .feature-market_analysis .ma-grade-cell { min-width: 11rem; }
 .feature-market_analysis .ma-brief-btn { min-height: 34px; padding: var(--space-1) var(--space-3); white-space: nowrap; }
 .feature-market_analysis [data-ma-briefing] { display: flex; flex-direction: column; gap: var(--space-4); }
-.feature-market_analysis .ma-brief-head { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border-subtle); }
-.feature-market_analysis .ma-brief-company { font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); }
-.feature-market_analysis .ma-brief-section ul { margin: var(--space-2) 0 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); }
-.feature-market_analysis .ma-brief-qa { margin: var(--space-2) 0 0; display: flex; flex-direction: column; gap: var(--space-2); }
-.feature-market_analysis .ma-brief-qa dt { font-weight: var(--font-weight-semibold); }
-.feature-market_analysis .ma-brief-qa dd { margin: 0 0 0 var(--space-4); color: var(--color-text-muted); }
 .feature-market_analysis .ma-src {
   display: inline-block; padding: 0 var(--space-1); border-radius: var(--radius-sm); background: var(--color-surface-muted);
   color: var(--color-primary-text); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); text-decoration: none;
 }
 .feature-market_analysis .ma-src:hover { text-decoration: underline; }
+
+/* 바이어 검색·등급 거르기 */
+.feature-market_analysis .ma-buyer-tools { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3) var(--space-4); }
+.feature-market_analysis .ma-buyer-search { flex: 1 1 18rem; min-width: 0; }
+.feature-market_analysis .ma-grade-filter { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.feature-market_analysis .ma-filter-chip {
+  display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--control-height); padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text);
+  font: inherit; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+.feature-market_analysis .ma-filter-chip:hover { border-color: var(--color-primary); background: var(--color-surface-hover); }
+.feature-market_analysis .ma-filter-chip[aria-pressed="true"] { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary-text); font-weight: var(--font-weight-semibold); }
+.feature-market_analysis .ma-filter-count { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.feature-market_analysis .ma-buyer-count { color: var(--color-text-muted); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
+
+/* 브리핑: 머리 요약 → 2열 블록(1100px 이상) → 안내·출처 */
+.feature-market_analysis .ma-brief-head {
+  display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface-muted);
+}
+.feature-market_analysis .ma-brief-title-row { display: flex; align-items: center; gap: var(--space-3); }
+.feature-market_analysis .ma-brief-title-row .ma-grade { min-width: 2.25rem; font-size: var(--font-size-lg); line-height: 2; }
+.feature-market_analysis .ma-brief-company { font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.feature-market_analysis .ma-brief-sub { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.feature-market_analysis .ma-brief-meta { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); margin: 0; }
+.feature-market_analysis .ma-brief-meta div { display: flex; gap: var(--space-2); font-size: var(--font-size-sm); }
+.feature-market_analysis .ma-brief-meta dt { color: var(--color-text-muted); }
+.feature-market_analysis .ma-brief-meta dd { margin: 0; font-weight: var(--font-weight-semibold); }
+.feature-market_analysis .ma-brief-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+.feature-market_analysis .ma-brief-col { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+@media (min-width: 1100px) {
+  .feature-market_analysis .ma-brief-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.feature-market_analysis .ma-brief-block {
+  display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle); border-left: 3px solid var(--color-primary); border-radius: var(--radius-md); background: var(--color-surface);
+}
+.feature-market_analysis .ma-brief-block-title { font-size: var(--font-size-md); font-weight: var(--font-weight-bold); }
+.feature-market_analysis .ma-brief-list { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); line-height: 1.65; }
+.feature-market_analysis .ma-qa-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.feature-market_analysis .ma-qa { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border-subtle); }
+.feature-market_analysis .ma-qa:last-child { padding-bottom: 0; border-bottom: 0; }
+.feature-market_analysis .ma-qa-q, .feature-market_analysis .ma-qa-a { display: flex; gap: var(--space-2); line-height: 1.6; }
+.feature-market_analysis .ma-qa-q { font-weight: var(--font-weight-semibold); }
+.feature-market_analysis .ma-qa-a { color: var(--color-text-muted); }
+.feature-market_analysis .ma-qa-mark {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: var(--radius-sm);
+  background: var(--color-primary-soft); color: var(--color-primary-text); font-size: var(--font-size-xs); font-weight: var(--font-weight-bold);
+}
+.feature-market_analysis .ma-qa-mark-a { background: var(--color-accent-soft); color: var(--color-accent-text); }
+.feature-market_analysis .ma-brief-notes { margin: var(--space-1) 0 0; padding-left: var(--space-5); color: var(--color-text); }
+.feature-market_analysis .ma-brief-sources-title { font-size: var(--font-size-sm); font-weight: var(--font-weight-bold); }
+.feature-market_analysis .ma-brief-sources ul { margin: var(--space-1) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--font-size-sm); overflow-wrap: anywhere; }

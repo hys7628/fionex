@@ -608,3 +608,23 @@
 - 검증: validation.md DEV-MA-BUYER-002.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 실제 OpenAI 브리핑 품질·비용·소요 시간 미검증, 숫자 없는 사실 오류는 코드로 못 잡음(고정 안내로 사람 확인 요구), 관세·반덤핑 자료·재생·T2T 근거·브랜드 묶음 미준비, ③ PDF 미구현, PDF가 53→65쪽(등급 열로 행 높이 증가).
+
+## DEV-MA-BUYER-003 탭 이름 '시장/바이어 분석'·바이어 검색·브리핑 PDF·가독성
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis (브랜치 feature/common_setup, 작업 전 미커밋 변경 없음, 최근 커밋 c28f265)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "시장분석탭을 시장/바이어 분석탭이라는 이름도 바꾸고 바이어쪽에 ai 분석한 후 pdf 변환기능 넣고 가독성 좋게 만들어줘 그리고 검색기능도 넣어줘"
+- 판단:
+  - 이름은 FEATURE label·title·설명만 변경(기능 id·주소·API 경로·Git 브랜치명 유지). 통계 PDF 제목·바닥글도 맞춤. 담당 배정 기록(decisions.md)·브랜치 규칙의 '시장 분석'은 과거 기록이라 유지.
+  - 브리핑 PDF는 화면이 보낸 JSON 대신 서버 보관본(briefing_id)으로 생성 → 내용 변조·AI 재호출 없음, 만료 시 410 안내.
+  - 가독성: 브리핑을 요약 머리 + 2열 블록 + Q/A 카드 + 안내 한 상자로 재구성(정보 항목은 그대로). 기존 고정 안내 3개 notice를 한 상자 목록으로 합쳐 세로 길이 감소.
+  - 검색: 839곳을 받은 상태라 브라우저에서 거름(서버 요청 없음). 국세청 자료가 악센트 없는 대문자라 악센트·대소문자·CNPJ 기호 무시.
+  - 함께 고친 것: 통계 PDF 축 눈금 반올림 겹침(DEV-COMMON-008에서 보고한 남은 문제).
+- 발견 문제(검증 도구): 기존 검증 스크립트가 바뀌기 전 브리핑 마크업을 찾아 2건 실패 → 선택자만 갱신. 기존 PDF 테스트의 제목 기대값을 새 제목으로 수정. 새 테스트의 문자열 비교를 assertIs → assertEqual.
+- 변경 파일: features/market_analysis/routes.py, buyer_briefing.py, pdf_report.py, static/market_analysis.js·css, templates/market_analysis/panel.html, feature_spec.md, tests/test_market_analysis/test_buyer_briefing.py·test_phase2.py, README.md, docs/design_system.md.
+- API contract: 새 엔드포인트 POST /api/market-analysis/buyer-briefing/pdf, 브리핑 응답에 briefing_id 추가(기존 필드 유지).
+- 외부 호출: 0건(브라우저 검증은 브리핑 generate만 가짜로 바꾼 저장소 밖 실행기).
+- 검증: validation.md DEV-MA-BUYER-003.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 OpenAI 브리핑 미실행, 브리핑 보관은 서버 메모리 3시간(재시작 시 PDF 받으려면 다시 브리핑 필요), 검색은 현재 받은 기준 자료 범위.

@@ -125,7 +125,12 @@
         <p class="card-description" id="market_analysis-briefing-cost">목록에서 고른 업체 1곳의 회사 개요·시장 맥락·접근 포인트·예상 질문입니다.
           출처 있는 자료만 쓰고, 'AI 브리핑'을 누를 때마다 OpenAI를 1회 호출합니다(유료, 같은 업체는 다시 호출하지 않음).</p>
       </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" disabled aria-describedby="market_analysis-briefing-pdf-hint" data-ma-brief-pdf>PDF 다운로드</button>
+        <span class="field-hint" id="market_analysis-briefing-pdf-hint" data-ma-brief-pdf-hint>브리핑을 받으면 PDF로 내려받을 수 있습니다.</span>
+      </div>
     </div>
+    <div data-ma-brief-pdf-message aria-live="polite"></div>
     <p class="visually-hidden" role="status" data-ma-briefing-status></p>
     <div data-ma-briefing aria-busy="false">
       <div class="empty-state">

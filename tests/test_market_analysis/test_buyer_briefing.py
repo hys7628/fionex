@@ -212,6 +212,25 @@ class BriefingRouteTest(unittest.TestCase):
         self.assertEqual(body["data"]["company"]["cnpj"], self.cnpj)
         self.assertEqual(self.post({"cnpj": "00000000000000"}).status_code, 404)
 
+    def test_briefing_pdf_from_server_copy(self):
+        body = self.post({"cnpj": self.cnpj}).get_json()
+        bid = body["data"]["briefing_id"]
+        self.assertEqual(bb.get(bid)["briefing_id"], bid)
+        res = self.client.post("/api/market-analysis/buyer-briefing/pdf", json={"briefing_id": bid})
+        self.assertEqual((res.status_code, res.mimetype), (200, "application/pdf"))
+        self.assertIn("buyer_briefing_%s_" % self.cnpj, res.headers["Content-Disposition"])
+        from pypdf import PdfReader
+        import io
+        reader = PdfReader(io.BytesIO(res.get_data()))
+        text = "".join(p.extract_text() for p in reader.pages)
+        for word in ("바이어 AI 브리핑", body["data"]["company"]["razao_social"], "회사 개요", "접근 포인트", "예상 질문", "출처"):
+            self.assertIn(word, text)
+        fonts = {str(f.get_object()["/BaseFont"]) for p in reader.pages for f in p["/Resources"]["/Font"].values()} - {"/Helvetica"}
+        self.assertTrue(fonts and all("Pretendard" in f for f in fonts), fonts)
+        # 화면이 보낸 내용이 아니라 서버 보관본만 사용: 없는·만료 ID는 410
+        self.assertEqual(self.client.post("/api/market-analysis/buyer-briefing/pdf", json={"briefing_id": "nope"}).status_code, 410)
+        self.assertEqual(self.client.post("/api/market-analysis/buyer-briefing/pdf", json={}).status_code, 410)
+
     def test_buyers_route_has_grades(self):
         body = self.client.get("/api/market-analysis/buyers").get_json()
         self.assertTrue(body["ok"])
