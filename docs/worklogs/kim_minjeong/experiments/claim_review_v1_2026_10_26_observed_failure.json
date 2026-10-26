@@ -1,0 +1,55 @@
+{
+  "experiment_id": "SPE-2026_10_26-01",
+  "type": "service_prompt_experiment",
+  "worker": "김민정",
+  "feature": "green_claim",
+  "executed_by": "사용자(담당자) 직접 실행. Claude는 실행하지 않았고 API를 호출하지 않음",
+  "recorded_at": "2026-10-26 (Asia/Seoul)",
+  "model_reported": "gpt-5.4-mini-2026-03-17",
+  "prompt": {
+    "path": "features/green_claim/prompts/claim_review_v1.md",
+    "version": "claim_review_v1"
+  },
+  "criteria": "기준 버전·해시는 결과 PDF에 포함(사용자·ChatGPT 확인). 값은 이 기록에 옮기지 않음",
+  "input_text": "Este é um texto fictício para teste.\nNosso tecido é 100% sustentável, totalmente ecológico e não causa nenhum impacto ambiental.\nÉ a opção mais verde do mercado.",
+  "input_note": "공개 가능한 가상 테스트 문구(서비스 사용자 자료 아님)",
+  "raw_api_response": null,
+  "raw_api_response_note": "원본 API 응답 JSON은 보관되지 않았음. 아래는 사용자가 전달한 관측 결과이며 응답을 복원한 것이 아님",
+  "observed_by_user": {
+    "items": "수정 권고 1개, 검토 필요 1개",
+    "screen_and_pdf": "검수 결과 화면 표시와 PDF 다운로드 성공",
+    "criteria_check": "CDC 조회 실패, 저장 기준 사용과 경고 표시",
+    "alternatives_quoted": {
+      "R1": [
+        "Nosso tecido tem atributos socioambientais que podem ser comprovados dentro do escopo avaliado.",
+        "Nosso tecido apresenta atributos socioambientais comprováveis dentro do escopo avaliado."
+      ],
+      "R2": [
+        "É uma opção com atributos socioambientais que devem ser comprovados em relação ao critério comparativo adotado."
+      ]
+    },
+    "not_measured": [
+      "비용",
+      "토큰",
+      "처리 시간"
+    ]
+  },
+  "checked_by_chatgpt_from_pdf": {
+    "pages": 8,
+    "contains": "원문·검토 항목·모델·기준 버전·해시, 부적절한 대체 문장도 그대로 포함",
+    "review_time": "11:24:50",
+    "report_generated_time": "11:28:00",
+    "not_checked": [
+      "PDF 전체 배치",
+      "링크 클릭",
+      "비용",
+      "응답 시간"
+    ]
+  },
+  "problems": [
+    "대체 문장이 입력에 없는 평가 수행·평가 범위·입증 가능한 사회·환경 특성을 전제함(R1·R2). '입증되어야 함'을 덧붙인 문장(R2)도 특성 보유를 전제함",
+    "원문 언어가 브라질 포르투갈어인데 R1에 표현만 다른 포르투갈어 예시 두 개가 표시됨(기존 서버 중복 제거는 문자열이 같을 때만)"
+  ],
+  "change": "claim_review_v2.md 작성, 서버 근거 필요 표현 어간 검사·언어 기준 중복 제거 추가(feature_spec.md \"대체 문장 보완\")",
+  "rerun_result": "미실행(claim_review_v2 실제 모델 재검증 안 함). 모의 검증만"
+}

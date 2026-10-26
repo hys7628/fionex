@@ -1,0 +1,4 @@
+# 실행 상태 파일은 Git에 올리지 않습니다. active.json(활성 버전 포인터)은 교체 후 담당자가 검토해 커밋합니다.
+check_state.json
+criteria.lock
+.*.tmp
