@@ -31,9 +31,10 @@
   </button>
 </div>
 
-{# 1단계: 왼쪽 자료 선택(넓게), 오른쪽 진행 순서·개발용 예시(좁게). 좁은 화면은 세로로 쌓임 #}
+{# 1단계: 넓은 화면은 왼쪽 진행 순서·개발용 예시(좁게), 오른쪽 자료 선택(넓게).
+   마크업은 자료 선택이 먼저라 좁은 화면·키보드 순서는 자료 선택 → 진행 순서(.pb-split-guide-first가 row-reverse) #}
 <div class="pb-pane" role="tabpanel" id="product_brochure-pane-source" aria-labelledby="product_brochure-tab-source" data-pb-pane="source">
-  <div class="pb-split">
+  <div class="pb-split pb-split-guide-first">
     <form class="card pb-split-main" aria-labelledby="product_brochure-input-title" novalidate>
       <div class="card-header">
         <div>

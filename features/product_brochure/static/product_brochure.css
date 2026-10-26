@@ -1310,3 +1310,8 @@
 }
 
 .feature-product_brochure .pb-toggle input { width: 16px; height: 16px; }
+
+/* 1단계: 넓을 때 진행 순서(왼쪽)·자료 선택(오른쪽). 줄바꿈되면 마크업 순서대로 자료 선택이 위 */
+.feature-product_brochure .pb-split-guide-first {
+  flex-direction: row-reverse;
+}
