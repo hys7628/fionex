@@ -448,3 +448,30 @@
 ### 미실행·미검증
 - **수정 후 쪽별 육안 확인 미실행**: 렌더링 도구 없음(pdftoppm 미설치, Edge headless는 이전에 빈 화면). 새 패키지 미설치. 영역 대조는 글자 줄의 가로 범위·기준선만 보며 글자 높이·이미지와의 겹침·시각 품질은 확인하지 않음
 - 이전 검증 PDF 폴더(pdf_samples, _v2, _v3)는 삭제하지 않고 보존(수정 전 코드로 만든 파일이라 잘림 포함)
+
+## 2026-10-26 가로 넘침 수정 후 외부 시각 검증(전달받은 결과, Claude 미관찰)
+- 사용자가 ChatGPT로 pdf_samples_v4_fix_hoverflow의 기본형·긴 문단형·긴 단어형 PDF 3개(12쪽)를 렌더링해 확인
+  - 글자 잘림·의도하지 않은 겹침 없음, 긴 문단·가상 안내와 하단 안내 겹침 없음, 긴 단어 줄바꿈·악센트·특수문자 표시 정상
+  - 미검증: 실제 생성·편집 결과의 다운로드, 다른 PDF 뷰어·인쇄
+- Claude는 이 시각 확인을 직접 수행하지 않음(렌더링 도구 없음)
+
+## 2026-10-26 카탈로그 PDF 다운로드 API — 서버·테스트
+- 변경 내용: routes.py(POST /api/product-brochure/pdf), pdf_download.py(신규), test_pdf_download_api.py(신규), test_pdf_catalog.py, feature_spec.md §26
+- 실제 API 호출·서비스 프롬프트 실험·화면 수정 없음
+
+### Claude가 직접 실행한 검증
+- `python -W error::ResourceWarning -m unittest discover -s tests/test_product_brochure` → 1차 45개 중 2개 실패(테스트 측 문제, prompt_log DI-2026_10_26-05) → 수정 후 전체 122개 OK
+  - 신규 API 테스트 16개: 실제 렌더러 경유 200·%PDF·고정 파일명·no-store·nosniff·Content-Length·4쪽 A4, 편집값·가상 안내 출력·시안 문구 미혼입, 사용자 값이 헤더에 들어가지 않음, 키 없이 첫 화면 200·PDF 200
+  - 잘못된 Content-Type 2종·손상 JSON·빈 본문·최상위 형식 11종·catalog 내부 6종·32 KiB 초과 → 지정 코드, 렌더러 실행 0회·슬롯 반환, 앱 전역 MAX_CONTENT_LENGTH 미설정 유지
+  - 렌더러 오류: 넘침·글리프 422, 자산 500(내부 경로 미노출)
+  - 예상하지 못한 오류: 500 고정 문구, 응답·로그에 입력·경로·키 형태 문자열·Traceback 없음, 로그에는 예외 종류만
+  - 동시 실행: 슬롯 2개 점유 시 렌더링 없이 429, 실제 요청 2건 진행 중 세 번째 즉시 429 후 두 요청 200, 예상 외 오류 3회 연속에도 슬롯 누수 없음
+  - OpenAI 클라이언트 생성·생성 함수·소켓 연결 금지 모의, 쓰기 모드 open 0회, 새 ResourceWarning 0건
+- `python -W error::ResourceWarning -m unittest discover -s tests/test_common` → 56개 OK
+- `pip check` 이상 없음, `node --check product_brochure.js` 오류 없음(JS 변경 없음)
+- ResourceWarning 출처 확인: 전체 실행 중 경고 10건은 기존 test_analyze_api.py(분석 업로드 임시 파일, 이번 미변경)에서만 발생, 신규·변경 PDF 테스트 파일은 0건. 기존 경고는 이번 범위에서 수정하지 않음
+
+### 미실행·미검증
+- 화면 다운로드 버튼(미구현), 실제 브라우저 다운로드·저장, 실제 생성·편집 결과로 만든 PDF
+- 여러 워커 환경의 동시 제한(프로세스당 제한만 구현), 큰 부하에서 메모리·시간, 렌더링 강제 시간 제한(없음)
+- 이번 단계 PDF 육안 확인(새 샘플 미생성, 기존 샘플 삭제·덮어쓰기 없음)

@@ -585,3 +585,26 @@ PDF 선택
 미검증: PDF의 쪽별 시각 확인(이미지 렌더링 도구 없음), 다른 PDF 뷰어·인쇄, 실제 생성 결과로 출력, 동시 요청 시 메모리·시간.
 
 (2026-10-26 후속 수정: 가로 넘침) 외부 시각 검증에서 2·3·4쪽 본문이 오른쪽 경계를 넘는 문제가 보고됨. 원인은 머리말의 글자 간격(PDF Tc)이 상태 격리 없이 설정되어 같은 쪽의 이후 문구에 남은 것(Tc는 BT/ET로 초기화되지 않음). 머리말·하단 안내를 saveState/restoreState로 가두고 글자 간격을 0으로 명시 초기화, 머리말 폭(자간 포함)도 영역 검사에 추가. 테스트는 내용 스트림에서 실제 그려진 줄 폭을 계산해 쪽별 영역과 대조(pdf_geometry.py). 배치·문구·4쪽 구성 변경 없음. 쪽별 육안 재확인은 미실행.
+
+## 26. 카탈로그 PDF 다운로드 API (2026-10-26, 서버 API·테스트만)
+범위 [확정, 담당자 지시]: 서버 라우트와 테스트. **미구현**: 화면 "PDF 다운로드" 버튼 연결(다음 단계), 렌더링 강제 시간 제한.
+
+`POST /api/product-brochure/pdf` (`routes.download_pdf` → `pdf_download.render` → `pdf_catalog.build_pdf`)
+- 요청: `Content-Type: application/json`, 본문 `{"catalog": <§25 parse_catalog 계약 그대로>}`. 최상위는 catalog 하나만, catalog는 객체. 다음 단계에서 화면이 generation.current의 허용 필드만 보낼 예정.
+- 이 라우트에만 본문 32 KiB 상한(`request.max_content_length`, 앱 전역 설정 변경 없음).
+- 성공 200: `application/pdf`, `Content-Disposition: attachment; filename="fionex_catalog_pt-BR.pdf"`(고정), `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`. 본문은 렌더러가 만든 완성 bytes(A4 4쪽). 다운로드 요청 성공이 사용자의 실제 파일 저장 완료를 뜻하지 않음.
+- 실패: 공통 `{"ok": false, "error": {"code", "message"}}`
+
+| 상황 | HTTP | code |
+|---|---|---|
+| Content-Type이 JSON 아님, 손상된 JSON, 빈 본문 | 400 | BROCHURE_PDF_INVALID_JSON |
+| 최상위 형식(배열·추가 필드·catalog 누락/타입), catalog 내부 검증 실패 | 400 | BROCHURE_PDF_INVALID_INPUT |
+| 본문 32 KiB 초과 | 413 | BROCHURE_PDF_REQUEST_TOO_LARGE |
+| 렌더링 동시 실행 자리 없음 | 429 | BROCHURE_PDF_BUSY |
+| 배치 넘침 / 글리프 없음 | 422 | BROCHURE_PDF_LAYOUT_OVERFLOW / BROCHURE_PDF_GLYPH_MISSING |
+| 이미지·글꼴 자산 오류 | 500 | BROCHURE_PDF_ASSET_UNAVAILABLE |
+| 예상하지 못한 오류 | 500 | BROCHURE_PDF_RENDER_FAILED(고정 문구, 로그에는 예외 종류만) |
+
+- 동시 실행: 기능 전용 `threading.BoundedSemaphore(2)`, 대기열 없이 즉시 429. 형식 검사를 먼저 해 잘못된 요청은 슬롯·렌더러를 쓰지 않음. 성공·실패 모두 finally로 반환. **프로세스(워커)당 제한이며 여러 워커·서버 전체의 전역 제한이 아님.**
+- OpenAI 재호출·업로드 원본 재분석·디스크 저장·이력 저장·입력/PDF 로그 없음. OpenAI 키 없이 동작.
+- 화면 연결 시 미정 정책(§25 이전 점검 제안): 적용하지 않은 편집이 있을 때·"현재 입력과 다를 수 있음" 상태에서의 다운로드 처리, setDraft/setResult 연동, 화면 미리보기 항목명(AI 라벨)과 PDF 상수 라벨 정렬.

@@ -409,3 +409,21 @@
 - 변경: features/product_brochure/pdf_catalog.py, feature_spec.md §25 후속 메모, tests/test_product_brochure/test_pdf_catalog.py·pdf_fixtures.py·make_pdf_samples.py, pdf_geometry.py(신규)
 - 이전 기록(DI-2026_10_26-03·validation의 103개 통과)은 당시 상태로 보존. 당시 테스트는 텍스트·페이지 수·자체 측정만 확인해 실제 그려진 폭의 누적 자간을 잡지 못했음
 - 남은 한계: 수정 후 쪽별 육안 확인 미실행(렌더링 도구 없음)
+
+## DI-2026_10_26-05 카탈로그 PDF 다운로드 API 연결(서버·테스트)
+- 유형: development_instruction / **서비스 프롬프트 변경·실험 없음, OpenAI 호출 없음**
+- 날짜/시간: 2026-10-26 02:03 (Asia/Seoul, 기록 시각) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure
+- 도구·모델: Claude Code (Opus 5.5)
+- 사전 확인: HEAD 7b38daf, 작업 트리 깨끗, 병합 중 아님, develop 로컬·원격 존재(이번 작업에 사용하지 않음), stash@{0} 미조작. routes.py·pdf_catalog(parse_catalog/build_pdf·오류 클래스)·generation 구조·기존 API 테스트 패턴을 읽고 재사용
+- 이전 작업 후속(외부 전달, Claude 미관찰): 사용자가 ChatGPT로 수정 후 기본형·긴 문단형·긴 단어형 PDF 3개(12쪽)를 렌더링해 확인 — 글자 잘림·의도하지 않은 겹침 없음, 긴 문단·가상 안내가 하단 안내와 겹치지 않음, 긴 단어 줄바꿈·악센트·특수문자 표시 확인. 실제 생성·편집 결과 다운로드, 다른 뷰어·인쇄는 미검증
+- 지시 요약: POST /api/product-brochure/pdf, {"catalog": parse_catalog 계약}, 라우트 전용 32 KiB, 일관된 JSON 오류, 렌더러 오류 코드 유지, 고정 파일명·no-store, 동시 렌더링 프로세스당 2건·즉시 429, 화면 연결 금지
+- 설계 이유
+  - catalog 내부는 기존 parse_catalog를 그대로 쓰고 최상위만 별도 검사(중복 스키마 없음)
+  - 형식 검사를 슬롯 획득 전에 해 잘못된 요청이 렌더링 자리를 차지하지 않게 함(build_pdf도 다시 검사)
+  - 응답은 완성된 bytes를 Response로 반환해 버퍼 수명 문제를 없앰(send_file+BytesIO 대신)
+  - 예상하지 못한 오류는 CatalogPdfRenderError의 고정 문구, 로그에는 예외 종류만
+- 실제 실패와 수정(테스트 작성 중)
+  - 파일명 테스트용 표시명이 표지 칸보다 긴 한 단어여서 422(렌더러 넘침 검사 정상 동작) → 짧은 단어 값으로 교체
+  - 라우트 소스 검사 금지어 "exc)"가 type(exc).__name__에 걸림 → 예외 원문 노출 패턴(str(exc·repr(exc·exc_info 등)으로 수정
+- 변경: features/product_brochure/routes.py, pdf_download.py(신규), feature_spec.md §26, tests/test_product_brochure/test_pdf_download_api.py(신규)·test_pdf_catalog.py(라우트 미연결 단언 제거, 소스 검사 대상에 pdf_download 추가)
+- 남은 한계: 화면 다운로드 미구현, 여러 워커 전역 동시 제한 없음, 렌더링 강제 시간 제한 없음

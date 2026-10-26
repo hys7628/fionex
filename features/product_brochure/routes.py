@@ -3,15 +3,16 @@
 API(docs/data_contracts.md 접두어 규칙):
 - POST /api/product-brochure/analyze  PDF 분석(추출)
 - POST /api/product-brochure/generate  확인된 항목 → pt-BR 카탈로그 문구 초안
+- POST /api/product-brochure/pdf  적용된 편집본(catalog) → A4 4쪽 PDF 다운로드(화면 버튼 연결 전)
 """
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from common import config
 from common.errors import AIError, PdfTooLargeError
-from features.product_brochure import generation, service
+from features.product_brochure import generation, pdf_catalog, pdf_download, service
 
 logger = logging.getLogger(__name__)
 
@@ -113,3 +114,29 @@ def generate():
     except Exception as exc:
         logger.error("product_brochure generate 예기치 않은 오류: type=%s", type(exc).__name__)
         return _error(AIError())
+
+
+@bp.post("/api/product-brochure/pdf")
+def download_pdf():
+    # 본문을 읽기 전에 이 요청에만 크기 제한을 적용합니다(다른 탭·앱 설정에는 영향 없음).
+    request.max_content_length = pdf_download.MAX_REQUEST_BYTES
+    try:
+        if not request.is_json:
+            raise pdf_download.PdfDownloadInvalidJsonError()
+        try:
+            payload = request.get_json(silent=True)  # 잘못된 JSON·빈 본문은 None
+        except RequestEntityTooLarge:
+            raise pdf_download.PdfDownloadTooLargeError() from None
+        pdf = pdf_download.render(payload)
+        # 완성된 bytes를 그대로 응답(버퍼 수명 문제 없음). 파일명·헤더에 사용자 입력을 쓰지 않습니다.
+        return Response(pdf, mimetype="application/pdf", headers=pdf_download.RESPONSE_HEADERS)
+    except AIError as err:
+        # 카탈로그 문구·PDF는 로그에 남기지 않습니다.
+        logger.warning("product_brochure pdf 실패: code=%s", err.code)
+        return _error(err)
+    except RequestEntityTooLarge:
+        logger.warning("product_brochure pdf 실패: code=%s", pdf_download.PdfDownloadTooLargeError.code)
+        return _error(pdf_download.PdfDownloadTooLargeError())
+    except Exception as exc:
+        logger.error("product_brochure pdf 예기치 않은 오류: type=%s", type(exc).__name__)
+        return _error(pdf_catalog.CatalogPdfRenderError())

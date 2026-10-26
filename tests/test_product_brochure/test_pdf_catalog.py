@@ -351,27 +351,29 @@ class IsolationTests(unittest.TestCase):
             with self.assertRaises(CatalogPdfOverflowError):
                 build_pdf(pdf_fixtures.overflow_details())
 
-    def test_source_has_no_ai_disk_write_or_route(self):
+    def test_source_has_no_ai_disk_write(self):
+        # 렌더러·다운로드 보조 코드 모두(라우트 연결은 2026-10-26 다운로드 API 단계에서 추가, routes.py는 test_pdf_download_api 참고)
         import ast
-        tree = ast.parse((ROOT / "features" / "product_brochure" / "pdf_catalog.py").read_text(encoding="utf-8"))
-        used = set()
-        for node in ast.walk(tree):  # 주석·문서 문자열이 아닌 실제 import·이름·속성만
-            if isinstance(node, ast.Import):
-                used.update(a.name for a in node.names)
-            elif isinstance(node, ast.ImportFrom):
-                used.add(node.module or "")
-                used.update(a.name for a in node.names)
-            elif isinstance(node, ast.Name):
-                used.add(node.id)
-            elif isinstance(node, ast.Attribute):
-                used.add(node.attr)
-        joined = " ".join(used)
-        for forbidden in ("ai_client", "generate_structured", "openai", "httpx", "requests", "urllib", "socket",
-                          "logging", "logger", "write_bytes", "write_text", "tempfile", "pdf_utils", "inspect_pdf"):
-            self.assertNotIn(forbidden, joined)
-        names = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
-        self.assertNotIn("open", names)  # 내장 open(파일 쓰기) 없음. 이미지는 PIL Image.open으로 읽기만
-        self.assertNotIn("pdf_catalog", (ROOT / "features" / "product_brochure" / "routes.py").read_text(encoding="utf-8"))
+        for name in ("pdf_catalog.py", "pdf_download.py"):
+            tree = ast.parse((ROOT / "features" / "product_brochure" / name).read_text(encoding="utf-8"))
+            used = set()
+            for node in ast.walk(tree):  # 주석·문서 문자열이 아닌 실제 import·이름·속성만
+                if isinstance(node, ast.Import):
+                    used.update(a.name for a in node.names)
+                elif isinstance(node, ast.ImportFrom):
+                    used.add(node.module or "")
+                    used.update(a.name for a in node.names)
+                elif isinstance(node, ast.Name):
+                    used.add(node.id)
+                elif isinstance(node, ast.Attribute):
+                    used.add(node.attr)
+            joined = " ".join(used)
+            for forbidden in ("ai_client", "generate_structured", "openai", "httpx", "requests", "urllib", "socket",
+                              "logging", "logger", "write_bytes", "write_text", "tempfile", "pdf_utils", "inspect_pdf",
+                              "service"):
+                self.assertNotIn(forbidden, joined, name)
+            names = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
+            self.assertNotIn("open", names, name)  # 내장 open(파일 쓰기) 없음. 이미지는 PIL Image.open으로 읽기만
 
 
 if __name__ == "__main__":
