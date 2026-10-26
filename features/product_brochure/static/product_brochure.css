@@ -874,27 +874,169 @@
 
 .feature-product_brochure .pb-guide[open] summary { margin-bottom: var(--space-2); }
 
-/* 2단계: 항목 묶음을 옅은 면 상자로(제목은 상자 안 머리) */
+/* 2단계: 항목 묶음은 상자 없이 제목 줄(이름 + "확인 x/y" 칩)만 두고, 항목마다 유리 카드 */
 .feature-product_brochure .pb-pane .product_brochure-group {
-  gap: var(--space-4);
-  padding: var(--space-5);
-  border: 1px solid var(--color-glass-edge);
-  border-radius: var(--radius-md);
-  background: var(--color-glass-card-inner);
-  box-shadow: var(--shadow-sm);
+  gap: var(--space-3);
+  padding: 0;
+  border: 0;
+  background: none;
 }
 
 .feature-product_brochure .pb-pane .product_brochure-group > legend {
   float: left;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   width: 100%;
   margin: 0;
-  padding: 0 0 var(--space-3);
-  border-bottom: 1px solid var(--color-border-subtle);
+  padding: 0;
   color: var(--color-text);
   font-size: var(--font-size-md);
 }
 
-.feature-product_brochure .pb-pane .product_brochure-choices { padding-top: var(--space-1); }
+.feature-product_brochure .pb-pane .product_brochure-group > legend::before {
+  content: "";
+  width: 3px;
+  height: 1em;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-gradient);
+}
+
+.feature-product_brochure .pb-group-count {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-pill);
+  background: var(--color-glass-card-strong);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.feature-product_brochure .pb-group-count:empty { display: none; }
+
+.feature-product_brochure .pb-group-count-done {
+  border-color: var(--color-success-border);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.feature-product_brochure .pb-pane .product_brochure-items { gap: var(--space-4); }
+
+/* 항목 카드(표시명 칸도 같은 모양) */
+.feature-product_brochure .pb-item,
+.feature-product_brochure .pb-pane [data-display-name] > .field {
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-strong);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.feature-product_brochure .pb-item:focus-within,
+.feature-product_brochure .pb-pane [data-display-name] > .field:focus-within {
+  border-color: var(--color-info-border);
+  box-shadow: var(--shadow-hover);
+}
+
+.feature-product_brochure .pb-item-confirmed {
+  border-color: var(--color-success-border);
+  box-shadow: inset 3px 0 0 var(--color-accent), var(--shadow-sm);
+}
+
+.feature-product_brochure .pb-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.feature-product_brochure .pb-item-head .product_brochure-badges { justify-content: flex-end; }
+.feature-product_brochure .pb-item .field-hint,
+.feature-product_brochure .pb-item .field-error { margin: 0; }
+
+/* 확인·가상 토글 칩(체크박스는 그대로, 체크 상태를 칩 색으로도 표시) */
+.feature-product_brochure .pb-pane .product_brochure-choices {
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--color-border);
+}
+
+.feature-product_brochure .pb-toggle {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.feature-product_brochure .pb-toggle:hover { border-color: var(--color-primary); }
+
+.feature-product_brochure .pb-toggle-confirm:has(input:checked) {
+  border-color: var(--color-success-border);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  font-weight: var(--font-weight-semibold);
+}
+
+.feature-product_brochure .pb-toggle-virtual:has(input:checked) {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.feature-product_brochure .pb-toggle:has(input:disabled) { cursor: default; }
+.feature-product_brochure .pb-toggle:has(input:disabled):hover { border-color: var(--color-warning-border); }
+
+.feature-product_brochure .pb-toggle.product_brochure-choice-invalid {
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+/* 표시명 칸: 확인 토글을 카드 아래에 */
+.feature-product_brochure .pb-pane [data-display-name] > .pb-toggle { align-self: flex-start; }
+
+/* 하단 버튼 줄의 확인 진행률 */
+.feature-product_brochure .pb-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 140px;
+}
+
+.feature-product_brochure .pb-progress-text {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.feature-product_brochure .pb-progress-text strong {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.feature-product_brochure .pb-progress-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-neutral-soft);
+  overflow: hidden;
+}
+
+.feature-product_brochure .pb-progress-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--color-aqua), var(--color-accent));
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--transition-base);
+}
 
 /* 2단계: 적용·생성 버튼 줄(목록을 내려도 화면 아래에 붙음) */
 .feature-product_brochure .pb-actionbar {

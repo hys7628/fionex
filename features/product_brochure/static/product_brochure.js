@@ -1448,8 +1448,9 @@
 
   function renderField(field) {
     const id = FEATURE_ID + "-field-" + field.key;
-    const wrap = el("div", "field product_brochure-item" + (field.multiline ? " product_brochure-item-wide" : ""));
     const required = Review.REQUIRED_KEYS.indexOf(field.key) >= 0;
+    // 긴 항목·필수 항목(제품명·제품 설명)은 전체 폭(기본 정보 묶음에 빈 칸이 남지 않게)
+    const wrap = el("div", "field product_brochure-item pb-item" + (field.multiline || required ? " product_brochure-item-wide" : ""));
     const label = el("label", "field-label", field.label);
     label.htmlFor = id;
     if (required) label.append(el("span", "field-required", "필수"));
@@ -1470,13 +1471,13 @@
     const confirmBox = el("input");
     confirmBox.type = "checkbox";
     confirmBox.id = FEATURE_ID + "-confirm-" + field.key;
-    const confirmLabel = el("label", "choice");
+    const confirmLabel = el("label", "choice pb-toggle pb-toggle-confirm");
     confirmLabel.append(confirmBox, document.createTextNode(required ? "사용자 확인(필수)" : "사용자 확인"));
     const virtualBox = el("input");
     virtualBox.type = "checkbox";
     virtualBox.id = FEATURE_ID + "-virtual-" + field.key;
     virtualBox.disabled = field.sourceVirtual;
-    const virtualLabel = el("label", "choice");
+    const virtualLabel = el("label", "choice pb-toggle pb-toggle-virtual");
     virtualLabel.append(virtualBox, document.createTextNode("가상 정보"));
     choices.append(confirmLabel, virtualLabel);
 
@@ -1490,6 +1491,7 @@
       if (describedBy) input.setAttribute("aria-describedby", describedBy);
       else input.removeAttribute("aria-describedby");
       renderBadges(field, badges);
+      wrap.classList.toggle("pb-item-confirmed", field.confirmed); // 확인한 항목 카드는 민트 테두리(배지·체크로도 표시)
     }
     if (required) {
       requiredUi[field.key] = { input: input, confirmBox: confirmBox, confirmLabel: confirmLabel, error: error, sync: sync };
@@ -1512,7 +1514,10 @@
     });
 
     sync();
-    wrap.append(label, badges, input, hint, error);
+    // 항목 카드: 머리(이름 + 상태 배지) → 입력 → 안내·경고 → 근거 → 확인 토글
+    const head = el("div", "pb-item-head");
+    head.append(label, badges);
+    wrap.append(head, input, hint, error);
     const details = renderDetails(field);
     if (details) wrap.append(details);
     wrap.append(choices);
@@ -1543,14 +1548,37 @@
     }
   }
 
+  // 확인 진행률: 묶음 제목 옆 "확인 x/y"와 하단 버튼 줄의 전체 막대(화면 표시만, 상태 판단에는 쓰지 않음)
+  let groupCounts = [];
+  const progressCount = panel.querySelector("[data-review-progress-count]");
+  const progressBar = panel.querySelector("[data-review-progress-bar]");
+
+  function syncProgress() {
+    if (!fields) return;
+    groupCounts.forEach(function (g) {
+      const done = g.fields.filter(function (f) { return f.confirmed; }).length;
+      g.node.textContent = "확인 " + done + "/" + g.fields.length;
+      g.node.classList.toggle("pb-group-count-done", done === g.fields.length);
+    });
+    const total = fields.length;
+    const done = fields.filter(function (f) { return f.confirmed; }).length;
+    progressCount.textContent = done + "/" + total;
+    progressBar.style.transform = "scaleX(" + (total ? done / total : 0) + ")";
+  }
+
   function renderReview(meta) {
     groupsRoot.replaceChildren();
     requiredUi = {};
+    groupCounts = [];
     Review.GROUPS.forEach(function (g) {
       const groupFields = fields.filter(function (f) { return f.group === g.key; });
       if (!groupFields.length) return;
       const fieldset = el("fieldset", "fieldset product_brochure-group");
-      fieldset.append(el("legend", "field-label", g.label));
+      const legend = el("legend", "field-label", g.label);
+      const count = el("span", "pb-group-count");
+      legend.append(count);
+      groupCounts.push({ fields: groupFields, node: count });
+      fieldset.append(legend);
       // 공통 .grid: 검토 카드의 실제 폭이 충분할 때만 2열, 좁으면 1열
       const items = el("div", "grid product_brochure-items");
       groupFields.forEach(function (f) { items.append(renderField(f)); });
@@ -1560,6 +1588,7 @@
     renderSourceNotice(meta);
     reviewEmpty.hidden = true;
     review.hidden = false;
+    syncProgress();
   }
 
   /* 카탈로그 표시명 입력: 원본 제품명을 바꾸지 않고 카탈로그 표지에만 쓰는 값 */
@@ -1672,6 +1701,7 @@
     syncGenerate();
     syncWork();
     showRequired();
+    syncProgress();
   }
 
   function resetApplied() {
