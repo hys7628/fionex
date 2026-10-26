@@ -771,3 +771,82 @@
 .feature-market_analysis [data-ma-rpane="s2"] .ma-details .table tbody th[scope="row"] {
   font-variant-numeric: tabular-nums;
 }
+
+/* ===== 바이어 목록·AI 브리핑 창 디자인 통일(2026-10-27) =====
+ * 창 안 탭(업체 상세/AI 브리핑)은 결과 ①~⑤와 같은 알약 막대, 브리핑 구역은 핵심 수치 타일과 같은 흰 카드 + 위쪽 강조선,
+ * 업체 상세 항목·행 아래 펼침은 유리 구획. 문구·동작은 그대로. */
+.feature-market_analysis .ma-dialog-tabs {
+  gap: var(--space-1);
+  margin: 0 var(--space-6) var(--space-3);
+  padding: var(--space-1);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-inner);
+}
+
+.feature-market_analysis .ma-dialog-tabs .ma-subtab {
+  flex: 1 1 0;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.feature-market_analysis .ma-dialog-tabs .ma-subtab:hover { background: var(--color-surface-hover); }
+
+.feature-market_analysis .ma-dialog-tabs .ma-subtab[aria-selected="true"] {
+  border-color: var(--color-glass-edge);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 브리핑 구역 카드: 왼쪽 굵은 선 대신 위쪽 블루→민트 강조선 */
+.feature-market_analysis .ma-brief-block {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-glass-edge);
+  border-left: 1px solid var(--color-glass-edge);
+  box-shadow: var(--shadow-sm);
+}
+
+.feature-market_analysis .ma-brief-block::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+}
+
+.feature-market_analysis .ma-brief-block-title {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+/* 시장 맥락 미포함 안내 줄·출처: 옅은 유리 구획 */
+.feature-market_analysis .ma-brief-market {
+  border: 1px solid var(--color-glass-edge);
+  background: var(--color-glass-card-inner);
+}
+
+.feature-market_analysis .ma-brief-sources {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+/* 업체 상세(창 안·행 아래 펼침): 항목을 작은 흰 칸으로 */
+.feature-market_analysis .ma-detail-grid > div {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.feature-market_analysis .ma-inline-row > td {
+  background: var(--color-glass-card-inner);
+}
+
+/* 행 버튼: 같은 폭으로 정렬 */
+.feature-market_analysis .ma-row-actions .btn { width: 100%; }
