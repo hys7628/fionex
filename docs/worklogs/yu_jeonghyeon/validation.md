@@ -567,3 +567,25 @@
 - 판정 범위: 선명한 150dpi 디지털 이미지형 PDF 1건에서 실제 분석 요청이 성공하고 결과가 화면에 표시됨(텍스트 레이어 없는 입력)
 - 미검증 유지: 원문과 추출값·발췌의 정확한 일치, 실제 종이 스캔, 흐림·회전, 다양한 입력의 정확성, 비용·소요 시간·토큰 사용량, 실행 프롬프트 버전
 - 이전 기록의 "스캔 PDF 판독 미검증·서비스 프롬프트 실험 미실행"은 당시 상태로 보존하며 이 항목으로 후속 보완
+
+## 2026-10-26 AI 표지 배경 생성 API — 모의 테스트
+- 변경 내용: cover_image.py, prompts/brochure_cover_image_v1.md, routes.py, test_cover_image_api.py, feature_spec.md(머리말 정정·§28)
+- 실제 OpenAI 호출·서비스 프롬프트 실험 없음, 화면·PDF 변경 없음
+
+### Claude가 직접 실행한 검증
+- `unittest discover -p test_cover_image_api.py` → 1차 14개 중 오류 4건(테스트 측: 클라이언트 인자 기록 없음, PNG 응답 텍스트 디코딩) → 수정 후 14개 OK
+  - 세 분위기 각각 200·image/png 바이너리(base64 아님)·no-store·nosniff·X-Prompt-Version, 요청 1회(재시도 없음), 공급자 요청 model·n=1·1024x1536·medium·png, 프롬프트에 선택 분위기
+  - 공통 함수 호출 인자 prompt·size·quality만, 클라이언트 timeout 180·max_retries 0
+  - 명령처럼 보이는 설명: 지시 구역·끝 구역에 사용자 문장 없음, 참고 데이터 블록이 JSON으로 그대로 해석됨, 입력 속 자리표시자 미치환, 금지 규칙 문구 존재(주입 완전 차단 확인 아님)
+  - 한국어 설명·줄바꿈·탭·pt-BR 악센트 표시명 허용
+  - JSON 아님·손상·빈 본문·배열 → INVALID_JSON, 추가 필드(prompt·size·quality 등)·필드 누락·잘못된 분위기·대소문자·None·잘못된 타입·빈 값·공백만·한글 표시명·표시명 줄바꿈·81자·설명 1501자·제어 문자 → INVALID_INPUT, 16 KiB 초과 → 413. 모든 경우 외부 호출 0회, 앱 전역 MAX_CONTENT_LENGTH 미설정 유지
+  - 공급자 429·500, 크기 다른 이미지, 빈 data → 공통 JSON 오류·요청 1회·공급자 원문 미노출, 이미지 모델 미설정 → 503 호출 0회, 예상 외 오류 → AI_UNKNOWN_ERROR·경로·키·입력 미노출(로그에는 예외 종류만)
+  - 쓰기 모드 open 0회, 로그에 입력·표시명·이미지 바이트 없음, 고정 이미지 2개·PDF 렌더러는 표지 생성 코드를 참조하지 않음
+  - `-W always::ResourceWarning`로 이 파일 실행 시 경고 0건
+- `unittest discover -s tests/test_product_brochure` → 143개 OK(기존 분석·생성·편집·PDF·다운로드 회귀 포함)
+- `unittest discover -s tests/test_common` → 56개 OK, `node --check product_brochure.js` 오류 없음(JS 변경 없음)
+
+### 미실행·미검증
+- 실제 이미지 생성(서비스 프롬프트 실험), 이미지 품질·글자·로고 혼입 여부·왼쪽 위 여백·분위기별 차이, 1쪽 표지 크롭과의 실제 맞춤
+- 비용·소요 시간, OpenAI 측 데이터 보관 조건(이 작업에서 확인하지 않음)
+- 화면 버튼·결과 상태·미리보기·PDF 반영(미구현)

@@ -516,3 +516,23 @@
 - 변경 이유·제어 방법·재실행: 해당 없음(프롬프트·코드 변경 없음, 재실행 없음)
 - 담당자 판단(사용자 보고): 정상. 범위는 선명한 150dpi 디지털 이미지형 PDF 1건의 실제 분석·화면 표시 확인
 - 남은 한계: 원문과 추출값·근거 발췌의 정확한 일치, 실제 종이 스캔, 흐림·회전·기울기 자료, 다양한 입력에서의 정확성, 비용·소요 시간·토큰 사용량, 실행 프롬프트 버전 확인
+
+## DI-2026_10_26-10 AI 표지 배경 생성 — 최소 범위 서버 API·서비스 프롬프트 v1(모의 테스트)
+- 유형: development_instruction / **서비스 프롬프트 brochure_cover_image_v1 작성, 실제 실행(service_prompt_experiment)은 미실행. OpenAI 호출 없음**
+- 날짜/시간: 2026-10-26 03:25 (Asia/Seoul, 기록 시각) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure(HEAD 1db3463, 작업 트리 깨끗, 병합 중 아님, stash 미조작)
+- 도구·모델: Claude Code (Opus 5.5)
+- 사전 확인(공통 코드): generate_image(*, prompt, size, quality) — size는 1024x1024·1536x1024·1024x1536, quality는 low·medium·high, n=1·output_format png 고정, 모델 OPENAI_IMAGE_MODEL, timeout 180초, SDK·모듈 재시도 0회, base64 길이·16 MiB 상한·PNG 서명·IHDR 크기 일치 검증 후 GeneratedImage(data, mime_type image/png, width, height, model). 요구 옵션을 모두 지원해 공통 변경 불필요
+  - 제약: 프롬프트 문자열 하나만 받아 지시·데이터 채널을 분리할 수 없음 → 기능 프롬프트 안에서 구획(지시 → JSON 참고 데이터 블록)으로 분리
+- 사전 확인(표지): 결과 1쪽 이미지 영역 794×940px(object-fit cover, object-position 50% 70%), 제목·소개는 왼쪽 위(64px, 폭 440px). 1024×1536 생성 이미지는 이 영역에서 위아래가 잘리므로 프롬프트에 왼쪽 위 여백을 요구(실제 맞춤은 미확인)
+- 지시 요약: 표시명·설명·분위기(minimal/premium/soft_texture)만 받는 엄격 계약, 라우트 전용 16 KiB, 생성 입력 한도 재사용, 1024x1536·medium, 바이너리 응답·no-store·nosniff, 저장·로그·재시도 없음, 별도 프롬프트 버전 파일, 화면·PDF 연결 금지, 명세 머리말 정정
+- 설계 이유
+  - 사용자 값은 json.dumps 문자열로만 넣고 템플릿 치환 순서를 고정해 입력 속 자리표시자가 다시 치환되지 않게 함
+  - 서비스 프롬프트는 이미지 모델 특성을 고려해 영문으로 작성(개발 지시는 한국어 기록)
+  - 표시명 규칙은 생성 기능 기준(80자·한글·제어 문자 불가), 설명 한도는 MAX_VALUE_CHARS["description"] 재사용
+  - 응답은 공통 함수가 검증한 PNG bytes와 MIME을 그대로 Response로 반환, 프롬프트 버전은 고정 헤더
+- 실제 실패와 수정(테스트 작성 중)
+  - 기존 테스트 기반 클래스에 클라이언트 생성 인자 기록이 없어 오류 → 테스트 클래스에서 factory를 감싸 기록
+  - 성공 검사의 실패 메시지 인자가 PNG 응답을 텍스트로 디코딩해 오류 → 메시지 인자 제거
+- 명세: feature_spec.md 머리말의 "카탈로그 생성·PDF 출력 미구현·미검증" 등 오래된 상태를 실제 구현·근거 구분(실제/자동)으로 정정, §28 추가. 이미지 업로드·바이어 입력 등 [제안]은 확정하지 않고 그대로 둠
+- 변경: features/product_brochure/cover_image.py(신규), prompts/brochure_cover_image_v1.md(신규), routes.py(라우트 추가), feature_spec.md(머리말·§28), tests/test_product_brochure/test_cover_image_api.py(신규)
+- 남은 한계: 실제 생성 품질·글자 혼입·제목 여백·분위기 차이·비용·시간 미검증, 화면·PDF 연결 미구현, 프롬프트 주입 완전 차단 아님

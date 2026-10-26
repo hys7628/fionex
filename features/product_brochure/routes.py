@@ -3,7 +3,8 @@
 API(docs/data_contracts.md 접두어 규칙):
 - POST /api/product-brochure/analyze  PDF 분석(추출)
 - POST /api/product-brochure/generate  확인된 항목 → pt-BR 카탈로그 문구 초안
-- POST /api/product-brochure/pdf  적용된 편집본(catalog) → A4 4쪽 PDF 다운로드(화면 버튼 연결 전)
+- POST /api/product-brochure/pdf  적용된 편집본(catalog) → A4 4쪽 PDF 다운로드
+- POST /api/product-brochure/cover-image  표시명·설명·분위기 → AI 표지 배경 PNG 1장(화면·PDF 연결 전)
 """
 import logging
 
@@ -12,7 +13,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 from common import config
 from common.errors import AIError, PdfTooLargeError
-from features.product_brochure import generation, pdf_catalog, pdf_download, service
+from features.product_brochure import cover_image, generation, pdf_catalog, pdf_download, service
 
 logger = logging.getLogger(__name__)
 
@@ -140,3 +141,33 @@ def download_pdf():
     except Exception as exc:
         logger.error("product_brochure pdf 예기치 않은 오류: type=%s", type(exc).__name__)
         return _error(pdf_catalog.CatalogPdfRenderError())
+
+
+@bp.post("/api/product-brochure/cover-image")
+def generate_cover_image():
+    # 본문을 읽기 전에 이 요청에만 크기 제한을 적용합니다(다른 탭·앱 설정에는 영향 없음).
+    request.max_content_length = cover_image.MAX_REQUEST_BYTES
+    try:
+        if not request.is_json:
+            raise cover_image.CoverImageInvalidJsonError()
+        try:
+            payload = request.get_json(silent=True)  # 잘못된 JSON·빈 본문은 None
+        except RequestEntityTooLarge:
+            raise cover_image.CoverImageRequestTooLargeError() from None
+        image = cover_image.generate_cover(payload)
+        # 공통 함수가 검증한 PNG bytes를 메모리에서 그대로 반환(base64·파일 저장 없음)
+        return Response(image.data, mimetype=image.mime_type, headers={
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+            "X-Prompt-Version": cover_image.PROMPT_VERSION,
+        })
+    except AIError as err:
+        # 입력 값·프롬프트·이미지는 로그에 남기지 않습니다.
+        logger.warning("product_brochure cover-image 실패: code=%s", err.code)
+        return _error(err)
+    except RequestEntityTooLarge:
+        logger.warning("product_brochure cover-image 실패: code=%s", cover_image.CoverImageRequestTooLargeError.code)
+        return _error(cover_image.CoverImageRequestTooLargeError())
+    except Exception as exc:
+        logger.error("product_brochure cover-image 예기치 않은 오류: type=%s", type(exc).__name__)
+        return _error(AIError())
