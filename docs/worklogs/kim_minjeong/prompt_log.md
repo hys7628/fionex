@@ -752,3 +752,15 @@
 - 미확인: 이번 v5 PDF, 비용, 토큰, 응답 시간(표시 시각 차이로 추정하지 않음)
 - 코드·프롬프트 변경: 없음(기록만)
 - 담당자 판단: 미기록
+
+## DEV-2026_10_26-12 CDC 공식 출처 확인 실패 진단과 실패 구분 보완
+- 유형: development_instruction (공식 사이트 읽기 전용 조회 1요청 허용 범위 안, OpenAI 호출 없음)
+- 날짜/시간: 2026-10-26 14:10~14:30 무렵 (Asia/Seoul)
+- 작업자: 김민정 / 기능: green_claim / 브랜치: feature/green_claim (HEAD 9264a0d, 작업 전 변경 없음·충돌 없음. 마지막 fetch 2026-10-25 19:38 이후 원격 최신성 미확인)
+- 도구·모델/설정: Claude Code(VS Code 확장), 모델 ID claude-opus-5-5(세션 시스템 정보)
+- 지시 요약: 반복되는 "SRC-CDC: 연결하지 못했습니다"의 실패 단계를 증거로 구분(네트워크·TLS·프록시·robots·리다이렉트·응답·비교), CDC robots.txt·공식 페이지만 최소 횟수 읽기 전용 조회, 상태 저장 없는 진단, TLS 끄기·차단/robots 우회·미러·호스트 확대·실패를 성공 처리·성공 없이 시각 갱신 금지, 담당 기능 안 최소 수정, 모의 테스트·회귀, 기록
+- 진행: 정책·제한 확인 → 상태 저장 없는 진단 스크립트(운영 경로 그대로, 변환 전 예외 기록) → 사전 확인(프록시·CA·DNS) → 실제 조회 1회(robots.txt 요청 1개) → 원인 단계 확인 → 최소 수정 → 모의 테스트 → 명세·기록
+- 실제 결과: robots.txt 요청에서 서버가 HTTP 응답 없이 연결을 끊음(http.client.RemoteDisconnected). DNS·연결·TLS는 통과. 정책상 공식 페이지는 요청하지 않음. 실제 조회 총 1요청
+- 수정(features/green_claim/criteria_check.py): RemoteDisconnected(직접·URLError 원인)를 network_error와 구분한 reason_code server_closed와 고정 문장 추가, 실패 결과에 failed_step(robots/page/content)과 상태 파일 last_failed_step 추가. 실패 판정·마지막 성공 시각 보존·기존 기준 사용·제한·TLS 검증·robots 정책은 그대로
+- 그 밖의 변경: tests/test_criteria_update.py(테스트 1개), feature_spec.md(실패 이유 표·진단 결과), data/README.md(실패 시 조치 1줄)
+- 한계: 서버가 연결을 끊는 실제 이유는 확정하지 못함. 코드 수정으로 조회가 성공하게 되지는 않음(안내가 정확해질 뿐)

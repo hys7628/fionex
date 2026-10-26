@@ -613,3 +613,16 @@
 - 구분 2. 전달된 결과에 대한 평가: 이 1회 실행에서 앞선 문제(SPE-2026_10_26-03~05)의 재발은 관측되지 않음. 전체 품질 개선·반복 안정성·다른 사례 결과는 판단하지 않음. Claude는 실제 화면·응답·PDF를 보지 않음
 - 구분 3. Claude 직접 검증: 이번 후속에서는 없음(기록만, 코드·프롬프트·테스트 변경 및 실행 없음)
 - 미검증: 원본 API 응답, 이번 v5 PDF, 비용·토큰, 응답 시간(표시 시각 차이로 추정하지 않음), 반복 실행, 다른 문구·사례 A·B·모순 사례, 예시를 낼 때 v5 수치 규칙 준수 여부
+
+## 2026-10-26 CDC 공식 출처 확인 실패 진단 (DEV-2026_10_26-12)
+- 구분 1. 사용자 실제 검수에서 관측(사용자 보고): 12:16·12:19·13:21·13:23·13:24·13:40·13:54 모두 "SRC-CDC: 연결하지 못했습니다.", 저장 기준으로 검수 계속. 실제 사용자 서버의 실행 환경(네트워크·프록시)은 확인하지 않음
+- 구분 2. Claude 직접 실제 조회(읽기 전용 1회 실행, 상태 저장 없음): jasonenv C:\Users\user\miniforge3\envs\jasonenv\python.exe 3.11.17, OpenSSL 3.6.5. 진단 스크립트(scratchpad/tools/diag_cdc.py)는 운영 경로 criteria_check._check_source + default_open(TLS 검증 유지, 기존 제한·정책 그대로)을 쓰고 check_sources(상태 기록)는 부르지 않음
+  - 사전 확인(HTTP 요청 아님): urllib 프록시 감지 없음·프록시 환경변수 이름 없음, 기본 SSL 컨텍스트 CA 41개, www.planalto.gov.br 이름 해석 성공(IPv4 1개), CDC 정책 auto_fetch·check_robots·호스트 일치, 제한 10초·30초·2요청·5,000,000바이트
+  - 실제 요청 1회: GET https://www.planalto.gov.br/robots.txt → 1.67초 뒤 http.client.RemoteDisconnected("Remote end closed connection without response"). 이름 해석·TCP 연결·TLS 핸드셰이크 뒤 HTTP 요청에 서버가 응답 없이 연결을 끊음(TLS 오류·시간 초과 아님)
+  - robots.txt를 확인하지 못해 정책대로 공식 페이지는 요청하지 않음(요청 수 1, 페이지 직접 조회는 robots 정책 우회라 하지 않음). 결과 status failed, 기존 코드의 reason_code network_error(RemoteDisconnected가 OSError 하위라 일반 연결 실패와 섞임)
+  - 실행 전후 data/criteria_state/check_state.json 수정 시각 13:54 그대로(상태 저장 없음), 기준 갱신·활성화 없음
+  - CONAR·다른 출처·OpenAI 요청 없음
+- 원인 판단: 실패 단계는 robots.txt 요청의 HTTP 응답 수신 단계. 서버가 응답 없이 연결을 끊는 이유(자동 조회 차단·User-Agent·접속 위치·일시 장애 등)는 확정하지 못함. 다른 User-Agent·브라우저 흉내로 재시도하는 것은 차단 우회라 하지 않음. 이 도구 환경에서 재현됐으나 사용자 서버 환경과 같다고 단정하지 않음
+- 구분 3. Claude 직접 검증(모의, 실제 소켓 차단): 수정 후 tests/test_criteria_update.py 29개 통과. 신규 test_server_closed_is_distinguished_and_kept_failed: robots 요청 RemoteDisconnected(직접·URLError 감쌈)·페이지 요청 RemoteDisconnected → reason_code server_closed·failed_step robots/page·status failed·success false, robots 실패 시 페이지 요청 없음, 마지막 성공 시각 유지, criteria_usable·"기존 기준" 경고 유지, 상태 파일 last_reason_code·last_failed_step 기록, 연결 거부는 계속 network_error, 다음 정상 확인에서 failed_step None
+  - 회귀: 기준 로더 14, 검수 서버 38, 서버 통합 2, 보고서 12, Word 18, 이미지 판독 32, 스캔 PDF 판독 14, PDF 추출 17, 공통 56 통과. 화면 코드 변경 없어 브라우저 회귀는 이번에 미실행
+- 미검증: 수정 후 코드로의 실제 조회(추가 조회 안 함), 다른 네트워크·사용자 서버 환경에서의 결과, 서버가 연결을 끊는 실제 이유, robots.txt 이후 공식 페이지 조회·조항 비교

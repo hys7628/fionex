@@ -9,6 +9,7 @@
 - 로그에는 출처 ID와 상태 코드만 남깁니다.
 """
 import hashlib
+import http.client
 import json
 import logging
 import re
@@ -119,6 +120,8 @@ REASONS = {
     "page_unrecognized": "출처 식별 문구가 없어 오류·로그인·다른 페이지로 보고 비교하지 않았습니다.",
     "extraction_failed": "대상 조항을 하나도 찾지 못해 본문 추출 실패로 처리했습니다(변경으로 단정하지 않음).",
     "network_error": "연결하지 못했습니다.",
+    # 연결·TLS는 된 뒤 공식 서버가 HTTP 응답 없이 연결을 끊음(2026-10-26 진단). 자동 조회를 막는 서버 설정일 수 있으나 원인은 확인하지 못함
+    "server_closed": "공식 서버가 응답 없이 연결을 끊었습니다(자동 조회를 막는 서버 설정일 수 있으나 원인은 확인하지 못함).",
     "tls_error": "TLS 인증서 검증 또는 연결에 실패했습니다.",
     "robots_unavailable": "robots.txt를 확인하지 못해 조회하지 않았습니다.",
     "robots_disallowed": "robots.txt가 이 경로의 자동 조회를 허용하지 않아 보류했습니다.",
@@ -182,10 +185,13 @@ class _Session:
                 raise FetchFailure("timeout") from None
             except ssl.SSLError:
                 raise FetchFailure("tls_error") from None
+            except http.client.RemoteDisconnected:
+                raise FetchFailure("server_closed") from None  # ConnectionResetError(OSError) 하위라 OSError보다 먼저
             except urllib.error.URLError as err:
                 reason = getattr(err, "reason", None)
                 code = "tls_error" if isinstance(reason, ssl.SSLError) else (
-                    "timeout" if isinstance(reason, (socket.timeout, TimeoutError)) else "network_error")
+                    "timeout" if isinstance(reason, (socket.timeout, TimeoutError)) else (
+                        "server_closed" if isinstance(reason, http.client.RemoteDisconnected) else "network_error"))
                 raise FetchFailure(code) from None
             except OSError:
                 raise FetchFailure("network_error") from None
@@ -483,11 +489,14 @@ def _check_source(source, criteria, policy, opener, clock, deadline, coverage=No
     if parts.scheme != "https" or parts.hostname != policy["host"]:
         return dict(result, status=STATUS_FAILED, reason_code="url_not_allowed", reason=REASONS["url_not_allowed"]), None
     session = _Session(opener, clock, deadline)
+    step = "robots" if policy.get("check_robots") else "page"  # 실패한 단계(개발 진단용): robots / page / content
     try:
         if policy.get("check_robots") and not _robots_allows(session, source["url"]):
             return dict(result, requests_used=session.requests, status=STATUS_DEFERRED, reason_code="robots_disallowed",
                         reason=REASONS["robots_disallowed"]), None
+        step = "page"
         status, headers, body = session.get(source["url"])
+        step = "content"
         result["requests_used"] = session.requests
         result["http_status"] = status
         result["server_last_modified"] = headers.get("Last-Modified") if headers is not None else None
@@ -504,7 +513,7 @@ def _check_source(source, criteria, policy, opener, clock, deadline, coverage=No
         result["requests_used"] = session.requests
         result["http_status"] = failure.http_status or result["http_status"]
         code = failure.code
-        return dict(result, status=STATUS_FAILED, reason_code=code, reason=REASONS[code]), None
+        return dict(result, status=STATUS_FAILED, reason_code=code, reason=REASONS[code], failed_step=step), None
 
     rules = UNIT_RULES[source["id"]]
     outcomes = {item["id"]: compare_criterion(item, lines, rules, policy["strip_list_markers"], coverage.get(item["id"], {}))
@@ -641,6 +650,7 @@ def check_sources(root=cl.DATA_ROOT, opener=None, clock=time.monotonic, now=None
                     "last_reason_code": result["reason_code"], "last_reason": result["reason"],
                     "last_success_at": last_success, "last_page_text_sha256": result.get("page_text_sha256"),
                     "server_last_modified": result["server_last_modified"],
+                    "last_failed_step": result.get("failed_step"),  # 실패 단계만(성공·보류면 None)
                 }
                 if result["status"] == STATUS_CHANGED:
                     _record_change(root, state, source_id, attempted_at, result,

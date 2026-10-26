@@ -7,6 +7,7 @@
 """
 import hashlib
 import html
+import http.client
 import io
 import json
 import multiprocessing
@@ -18,6 +19,7 @@ import tempfile
 import threading
 import time
 import unittest
+import urllib.error
 import urllib.request
 from email.message import Message
 from pathlib import Path
@@ -409,6 +411,41 @@ class CheckTest(Base):
                 self.assertEqual(cdc["last_success_at"], "2026-10-26T08:00:00+09:00")  # 마지막 성공 시각 유지
                 self.assertTrue(result["criteria_usable"])
                 self.assertIn("기존 기준", " ".join(result["warnings"]))
+
+    def test_server_closed_is_distinguished_and_kept_failed(self):
+        # 2026-10-26 실제 진단: robots.txt 요청에 Planalto가 HTTP 응답 없이 연결을 끊음(http.client.RemoteDisconnected).
+        # 연결 실패(network_error)와 구분하되 실패 그대로 처리하고, 마지막 성공 시각·기존 기준 사용을 유지하는지 확인(가상 응답).
+        def closed():
+            raise http.client.RemoteDisconnected("Remote end closed connection without response")
+
+        def closed_wrapped():
+            raise urllib.error.URLError(http.client.RemoteDisconnected("closed"))
+
+        def refused():
+            raise ConnectionRefusedError(10061, "refused")
+
+        self.check(self.web(), now="2026-10-26T08:00:00+09:00")  # 이전 성공 기록
+        cases = [
+            ("robots closed", {"robots": closed}, "server_closed", "robots", 1),
+            ("robots closed (URLError)", {"robots": closed_wrapped}, "server_closed", "robots", 1),
+            ("page closed", {"cdc": closed}, "server_closed", "page", 2),
+            ("robots refused", {"robots": refused}, "network_error", "robots", 1),
+        ]
+        for name, routes, code, step, requests in cases:
+            with self.subTest(name):
+                web = self.web(**routes)
+                result = self.check(web, now="2026-10-26T13:54:36+09:00")
+                cdc = self.source(result, "SRC-CDC")
+                self.assertEqual((cdc["status"], cdc["reason_code"], cdc["success"], cdc["failed_step"]), ("failed", code, False, step))
+                self.assertEqual((cdc["requests_used"], len(web.requests)), (requests, requests))  # robots 실패 시 페이지 요청 없음
+                self.assertEqual(cdc["last_success_at"], "2026-10-26T08:00:00+09:00")  # 실제 성공 없이 갱신하지 않음
+                self.assertTrue(result["criteria_usable"])
+                self.assertIn("기존 기준", " ".join(result["warnings"]))
+                state = cs.read_check_state(self.root)["sources"]["SRC-CDC"]
+                self.assertEqual((state["last_reason_code"], state["last_failed_step"]), (code, step))
+        ok = self.source(self.check(self.web(), now="2026-10-26T15:00:00+09:00"), "SRC-CDC")
+        self.assertEqual((ok["status"], ok.get("failed_step")), ("no_change_found", None))
+        self.assertIsNone(cs.read_check_state(self.root)["sources"]["SRC-CDC"]["last_failed_step"])
 
     def test_windows_1252_page_without_charset(self):
         body = self.cdc_page(encoding="windows-1252")

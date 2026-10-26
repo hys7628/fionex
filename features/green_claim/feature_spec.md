@@ -662,7 +662,7 @@ Pillow 역할 [구현]
 | `no_change_found` | 모든 대상 조항 **전체**를 읽고 비교해 변경을 발견하지 못함(대상 외 조항·공식 개정 여부 보장 아님) |
 | `partial_checked` | 읽고 비교했으나 일부 조항은 발췌가 조항 일부이거나 경계를 못 찾아 부분 확인만 함(조항 전체 변경 없음 아님) |
 | `change_detected` | 대상 조항 변경 감지, 검토 필요 |
-| `failed` | 조회·본문 추출·비교 실패(`reason_code`: timeout, too_large, too_many_requests, redirect_refused, http_error, not_html, decode_error, page_unrecognized, extraction_failed, robots_disallowed→보류로 분류, network_error, deadline) |
+| `failed` | 조회·본문 추출·비교 실패(`reason_code`: timeout, too_large, too_many_requests, redirect_refused, http_error, not_html, decode_error, page_unrecognized, extraction_failed, robots_disallowed→보류로 분류, network_error, server_closed(2026-10-26 추가: 연결·TLS 뒤 서버가 HTTP 응답 없이 연결을 끊음), deadline). 실패 결과에 failed_step(robots/page/content), 상태 파일에 last_failed_step |
 | `deferred` | 이용 조건 등으로 조회 보류 |
 | `baseline_missing` | 비교 기준 부족 |
 각 출처 결과: 상태·이유, 이번 시도 시각·성공 여부·요청 수·HTTP 상태, 마지막 성공 확인 시각, 확인한 기준 ID·확인 못 한 기준 ID·변경 기준 ID, 서버 응답 날짜(참고).
@@ -1041,6 +1041,11 @@ AppShell·PDF
 
 ### 구현 상태 갱신 (2026-10-26 수치 삭제 예시 보완)
 - 추가·변경: prompts/claim_review_v5.md(새 파일, v1~v4 보존), review_service.py(PROMPT_VERSION claim_review_v5), tests/test_review.py. 응답 계약 변화는 prompt_version claim_review_v5뿐. 실제 모델(claim_review_v5) 검증 미실행.
+
+### 구현 상태 갱신 (2026-10-26 CDC 확인 실패 진단)
+- 사용자 실제 검수에서 SRC-CDC가 반복해서 "연결하지 못했습니다"(12:16~13:54, 7회, 저장 기준으로 계속 진행).
+- 진단(Claude 실제 조회 1요청, 상태 저장 없음, jasonenv Python 3.11.17): 프록시 없음·CA 정상·DNS 성공, robots.txt 요청에서 TLS 연결 뒤 서버가 HTTP 응답 없이 연결을 끊음(http.client.RemoteDisconnected). 정책대로 공식 페이지는 요청하지 않음. 서버가 끊는 이유는 확정하지 못함(차단 우회·User-Agent 변경 시도 안 함). 사용자 서버 환경과 같다고 단정하지 않음.
+- 수정: 이 경우를 network_error와 구분한 server_closed와 failed_step 기록. 실패 판정·마지막 성공 시각 보존·기존 기준 사용·제한·TLS 검증·robots 정책은 바꾸지 않음. 조회가 성공하게 하는 수정이 아니다.
 
 ### 완료 기준·검증 계획
 - 직접 입력과 파일 업로드의 각 흐름.
