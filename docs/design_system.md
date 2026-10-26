@@ -127,7 +127,7 @@
 | 접근성 | `.visually-hidden` |
 
 ### 컴포넌트 규칙 (2026-10-26)
-- **카드**: 글래스 면(`--color-glass-card` + `--glass-card-blur`), 1px `--color-glass-card-border`, `--radius-lg` 16px, `--shadow-glass`, 안쪽 여백 24px(960px 미만 20px), 머리→본문 16px, 제목→설명 4px. 모든 카드에 움직임을 넣지 않는다. 누를 수 있는 카드만 `.card-interactive`로 hover 시 2px 상승·`--shadow-hover`·테두리 블루 tint.
+- **카드**: 글래스 면(`--color-glass-card`, 흐림 없음), 1px `--color-glass-card-border`, `--radius-lg` 16px, `--shadow-glass`, 안쪽 여백 24px(960px 미만 20px), 머리→본문 16px, 제목→설명 4px. 모든 카드에 움직임을 넣지 않는다. 누를 수 있는 카드만 `.card-interactive`로 hover 시 2px 상승·`--shadow-hover`·테두리 블루 tint.
 - **머리글** `.page-header`: 카드와 같은 글래스 면·테두리·`--shadow-glass`, 여백 24px 32px(작은 화면 20px).
 - **사이드바**: 진한 글래스 면(`--color-glass-card-strong` + blur) + 오른쪽 1px 흰 유리 선(그림자 없음). 메뉴 radius 10px, 기본 보조 글자색, hover `--color-surface-hover` + 아이콘 블루, 선택 `--color-primary-soft` 배경 + `--color-primary-text` 글자·아이콘 semibold. 폭 248px 유지.
 - **버튼**: 높이 42px, radius 10px, 글자 sm bold.
@@ -140,7 +140,7 @@
 - **표**: 틀 1px 옅은 선 + radius 10px, 머리 `--color-surface-muted`·xs 보조 글자, 행 구분 1px `--color-border-subtle`, 행 hover `--color-row-hover`, 숫자 칸 `.num` 오른쪽·tabular-nums·medium. 열 너비는 기능이 정한다. `.table-wrap`은 `position: relative`라 칸 안 `.visually-hidden`이 스크롤 상자 밖으로 나가 페이지 가로 스크롤을 만들지 않는다(2026-10-26).
 - **빈 상태**: 점선 `--color-border-strong` + 옅은 면, radius 10px, 최소 높이 160px.
 - **로딩**: `.spinner`(블루·아쿠아 테두리 회전) + 텍스트, 버튼 `disabled`, 영역 `aria-busy`. 누른 버튼은 아래 '작업 중 버튼'.
-- **글래스 질감** (2026-10-26 전체 적용, 홍은주 지시): 카드·머리글·사이드바는 common.css에서 글래스 면을 쓴다. 기능 CSS의 카드 안 구획(묶음 상자·선택 타일 등)은 `--color-glass-card-inner` + `--color-glass-edge` 바깥선 + `--shadow-sm`, 화면에 붙는 막대(고정 버튼 줄·단계 표시줄)는 `--color-glass-card-strong` + blur. 글자는 반투명 흰 면 위에 두고 진한 유리는 쓰지 않는다. `backdrop-filter` 미지원·`prefers-reduced-transparency: reduce`이면 common.css가 카드·머리글·사이드바를 불투명 흰 면으로 바꾼다(기능 CSS는 @media를 쓰지 않는 탭이 있어 구획은 반투명 그대로, 배경이 밝아 대비 유지). 첫 적용: 제품소개서 단계 화면.
+- **글래스 질감** (2026-10-26 전체 적용, 홍은주 지시): 카드·머리글·사이드바는 common.css에서 글래스 면을 쓴다. 카드·머리글에는 `backdrop-filter`(흐림)를 쓰지 않는다(2026-10-27): 흐림이 있으면 그 안의 `position: fixed` 팝오버(그린 클레임 도움말 등)가 화면이 아닌 카드 기준으로 놓여 위치가 어긋나고 스크롤이 생긴다. 흐림은 안에 고정 위치 요소가 없는 사이드바·단계 표시줄·떠 있는 창에만 쓴다. 기능 CSS의 카드 안 구획(묶음 상자·선택 타일 등)은 `--color-glass-card-inner` + `--color-glass-edge` 바깥선 + `--shadow-sm`, 화면에 붙는 막대(고정 버튼 줄·단계 표시줄)는 `--color-glass-card-strong` + blur. 글자는 반투명 흰 면 위에 두고 진한 유리는 쓰지 않는다. `backdrop-filter` 미지원·`prefers-reduced-transparency: reduce`이면 common.css가 카드·머리글·사이드바를 불투명 흰 면으로 바꾼다(기능 CSS는 @media를 쓰지 않는 탭이 있어 구획은 반투명 그대로, 배경이 밝아 대비 유지). 첫 적용: 제품소개서 단계 화면.
 - **떠 있는 창(글래스)** (2026-10-26): 모달 `<dialog>` 같은 떠 있는 창은 아래 창 전용 글래스 토큰을 쓴다. 토큰 `--color-glass-backdrop/-surface/-inner/-border`, `--glass-blur`(패널), `--glass-backdrop-blur`(뒤 배경). 패널은 `overflow: clip`(hidden이면 초점 이동 스크롤이 패널을 밀어 머리가 가려짐), 본문만 세로 스크롤. `backdrop-filter` 미지원·`prefers-reduced-transparency: reduce`이면 흰 불투명 면·`--color-overlay` 배경으로 대체. 글자는 흰 면 위에 두어 대비를 유지한다. 열 때 `showModal()`(초점 가둠·Esc·닫으면 연 버튼으로 초점 복귀), 등장 애니메이션은 reduced-motion에서 0s. 창 안 내용이 둘 이상이면 머리 바로 아래 `.ma-subtab` 모양 하위 탭으로 나누고(본문만 스크롤), 탭을 바꿔도 탭 위치가 흔들리지 않게 창 높이를 고정한다. 첫 사용: 시장/바이어 분석 AI 브리핑 창.
 
 ### 움직임
