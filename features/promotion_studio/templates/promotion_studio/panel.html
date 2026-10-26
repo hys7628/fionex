@@ -24,7 +24,10 @@
       </div>
     </div>
 
+    {# 입력을 세 묶음(기본 정보 · 영상 설정 · 자료 첨부)으로 나누고, 입력 확인·생성 버튼은 아래 고정 막대에 둡니다(promotion_studio.css) #}
     <div class="stack">
+      <section class="ps-section" aria-labelledby="promotion_studio-sec-1">
+        <h3 class="ps-section-title" id="promotion_studio-sec-1"><span class="ps-section-no" aria-hidden="true">1</span>기본 정보</h3>
       <fieldset class="fieldset" aria-describedby="promotion_studio-audience-error">
         <legend class="field-label">대상<span class="field-required">필수</span></legend>
         <div class="ps-choices">
@@ -69,6 +72,10 @@
         {{ error("cta") }}
       </div>
 
+      </section>
+
+      <section class="ps-section" aria-labelledby="promotion_studio-sec-2">
+        <h3 class="ps-section-title" id="promotion_studio-sec-2"><span class="ps-section-no" aria-hidden="true">2</span>영상 설정</h3>
       <fieldset class="fieldset" aria-describedby="promotion_studio-tone-error">
         <legend class="field-label">홍보 톤<span class="field-required">필수</span></legend>
         <div class="ps-choices">
@@ -136,6 +143,11 @@
         {{ error("max_wait_seconds") }}
       </div>
 
+      </section>
+
+      <section class="ps-section" aria-labelledby="promotion_studio-sec-3">
+        <h3 class="ps-section-title" id="promotion_studio-sec-3"><span class="ps-section-no" aria-hidden="true">3</span>자료 첨부<span class="ps-section-sub">선택 사항</span></h3>
+      <div class="ps-files">
       <div class="field">
         <label class="field-label" for="promotion_studio-documents">보조 문서</label>
         <input class="file-input" id="promotion_studio-documents" name="documents" type="file" multiple
@@ -173,6 +185,7 @@
         <ul class="ps-file-list" data-ps-file-list="logo" hidden></ul>
         {{ error("logo") }}
       </div>
+      </div>
 
       <fieldset class="fieldset" data-ps-logo-scope hidden aria-describedby="promotion_studio-logo_scope-error">
         <legend class="field-label">로고 적용 범위<span class="field-required">필수</span></legend>
@@ -184,6 +197,9 @@
         {{ error("logo_scope") }}
       </fieldset>
 
+      </section>
+
+      <div class="ps-submit-bar">
       <div class="notice notice-info" data-ps-summary role="status" aria-live="polite">
         <p class="notice-title">입력 확인</p>
         <p data-ps-summary-text>필수 항목을 입력하세요.</p>
@@ -195,6 +211,7 @@
         <span class="field-hint" id="promotion_studio-generate-hint">
           제품 설명으로 텍스트 콘티를 만듭니다. 보조 문서·사진은 아직 반영하지 않으며, 이미지 생성은 다음 단계입니다.
         </span>
+      </div>
       </div>
     </div>
   </form>
