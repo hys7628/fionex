@@ -19,7 +19,7 @@ from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import (KeepTogether, Paragraph, SimpleDocTemplate, Spacer)
+from reportlab.platypus import (KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle)
 
 from common import pdf_theme as theme
 from common.config import PDF_FONT_NAMES
@@ -60,6 +60,12 @@ def _styles():
         "cell": ParagraphStyle("cell", fontSize=8.6, leading=12.4, **base),
         "cell_num": ParagraphStyle("cell_num", fontSize=8.6, leading=12.4, alignment=2,
                                    **{k: v for k, v in base.items() if k != "alignment"}),
+        "cell_head_num": ParagraphStyle("cell_head_num", fontSize=8.4, leading=12, fontName=FONT_BOLD, textColor=C_TEXT, alignment=2,
+                                        **{k: v for k, v in base.items() if k not in ("fontName", "textColor", "alignment")}),
+        "cell_muted": ParagraphStyle("cell_muted", fontSize=8.6, leading=12.4, textColor=C_MUTED,
+                                     **{k: v for k, v in base.items() if k != "textColor"}),
+        "cell_muted_num": ParagraphStyle("cell_muted_num", fontSize=8.6, leading=12.4, textColor=C_MUTED, alignment=2,
+                                         **{k: v for k, v in base.items() if k not in ("textColor", "alignment")}),
         "cell_head": ParagraphStyle("cell_head", fontSize=8.4, leading=12, fontName=FONT_BOLD, textColor=C_TEXT,
                                     **{k: v for k, v in base.items() if k not in ("fontName", "textColor")}),
         "notice": ParagraphStyle("notice", fontSize=9, leading=13.6, textColor=C_WARN, backColor=C_WARN_SOFT,
@@ -128,7 +134,15 @@ def _country(c):
     return "%s (%s)" % (ko, pt) if ko and pt else (ko or pt or "")
 
 
-def _table(rows, widths, st, head_rows=1, num_cols=(), zebra=False, highlight=None):
+# 표 색(2026-10-27 가독성 정리): 숫자가 잘 읽히도록 무채색 블루그레이 머리 + 얇은 선 + 아주 옅은 줄무늬.
+T_HEAD_BG = colors.HexColor("#eef2f7")
+T_HEAD_LINE = colors.HexColor("#9aa8bc")
+T_LINE = colors.HexColor("#e3e8ef")
+T_ZEBRA = colors.HexColor("#f8fafc")
+T_HIGHLIGHT = colors.HexColor("#e8f1fd")  # 한국 행
+
+
+def _table(rows, widths, st, head_rows=1, num_cols=(), zebra=False, highlight=None, muted_rows=(), valign="MIDDLE"):
     data = []
     for ri, row in enumerate(rows):
         cells = []
@@ -136,11 +150,35 @@ def _table(rows, widths, st, head_rows=1, num_cols=(), zebra=False, highlight=No
             if hasattr(v, "wrap") or isinstance(v, list):  # 이미 만든 단락(들)
                 cells.append(v)
             elif ri < head_rows:
-                cells.append(_p(v, st["cell_head"]))
+                cells.append(_p(v, st["cell_head_num"] if ci in num_cols else st["cell_head"]))
+            elif ri in muted_rows:
+                cells.append(_p(v, st["cell_muted_num"] if ci in num_cols else st["cell_muted"]))
             else:
                 cells.append(_p(v, st["cell_num"] if ci in num_cols else st["cell"]))
         data.append(cells)
-    return theme.data_table(data, widths, head_rows=head_rows, zebra=zebra or len(data) > 6, highlight=highlight or ())
+    t = Table(data, colWidths=widths, repeatRows=head_rows)
+    style = [
+        ("VALIGN", (0, 0), (-1, -1), valign),  # 숫자 표는 가운데, 긴 문장 표(AI)는 위
+        ("TOPPADDING", (0, 0), (-1, -1), 5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("LINEBELOW", (0, head_rows), (-1, -1), 0.4, T_LINE),
+    ]
+    if head_rows:
+        style += [("BACKGROUND", (0, 0), (-1, head_rows - 1), T_HEAD_BG),
+                  ("LINEBELOW", (0, head_rows - 1), (-1, head_rows - 1), 0.9, T_HEAD_LINE)]
+    if zebra or len(data) > 6:
+        for r in range(head_rows + 1, len(data), 2):
+            style.append(("BACKGROUND", (0, r), (-1, r), T_ZEBRA))
+    for r in highlight or []:
+        style.append(("BACKGROUND", (0, r), (-1, r), T_HIGHLIGHT))
+        style.append(("LINEBEFORE", (0, r), (0, r), 2.2, C_PRIMARY))
+    t.setStyle(TableStyle(style))
+    return t
+
+
+def yoy_cell(y):
+    """표 칸용 전년 대비: 계산할 수 없으면 '—'(사유는 표 아래 각주 한 줄)."""
+    return "—" if not y or y.get("value") is None else yoy(y)
 
 
 # ---------- 그래프 ----------
@@ -286,16 +324,23 @@ def build_pdf(payload):
         for metric, label in (("fob", "수입액 월별 추이 (USD)"), ("kg", "수입량 월별 추이 (t)"), ("unit_price", "평균 수입단가(FOB) 월별 추이 (USD/kg)")):
             story.append(KeepTogether([_p(label, st["cell_head"]), _chart(stats["monthly"], metric, W)]))
         story.append(_p("막대·점이 없는 달은 수입 기록이 없는 달입니다. 단가 그래프의 테두리 점은 '확인 필요'(중앙값의 ½ 미만 또는 2배 초과).", st["small"]))
-        mrows = [["월", "수입액 (USD)", "전년 동월 대비", "수입량 (t)", "전년 동월 대비", "평균 수입단가 (USD/kg)", "전년 동월 대비"]]
+        mrows = [["월", "수입액 (USD)", "전년 대비", "수입량 (t)", "전년 대비", "단가 (USD/kg)", "전년 대비"]]
+        muted = []
         for m in stats["monthly"]:
             if not m["has_record"]:
-                mrows.append([m["month"], "기록 없음", "", "", "", "", ""])
+                muted.append(len(mrows))
+                mrows.append([m["month"], "기록 없음", "—", "—", "—", "—", "—"])
                 continue
-            flag = " · 확인 필요" if m.get("price_flag") else ""
-            mrows.append([m["month"], usd(m["fob"]), yoy(m["yoy"]["fob"]), tons(m["kg"]), yoy(m["yoy"]["kg"]),
-                          price(m["unit_price"], m.get("unit_price_reason")) + flag, yoy(m["yoy"]["unit_price"])])
-        story.append(Spacer(1, 4))
-        story.append(_table(mrows, [16 * mm, 27 * mm, 25 * mm, 22 * mm, 25 * mm, 32 * mm, W - 147 * mm], st, num_cols=(1, 2, 3, 4, 5, 6)))
+            flag = " ※" if m.get("price_flag") else ""
+            mrows.append([m["month"], usd(m["fob"]), yoy_cell(m["yoy"]["fob"]), tons(m["kg"]), yoy_cell(m["yoy"]["kg"]),
+                          price(m["unit_price"], m.get("unit_price_reason")) + flag, yoy_cell(m["yoy"]["unit_price"])])
+        story.append(Spacer(1, 6))
+        story.append(_p("월별 상세", st["cell_head"]))
+        story.append(Spacer(1, 3))
+        story.append(_table(mrows, [20 * mm, 32 * mm, 22 * mm, 27 * mm, 22 * mm, 30 * mm, W - 153 * mm], st,
+                            num_cols=(1, 2, 3, 4, 5, 6), muted_rows=muted))
+        story.append(_p("— : 기록이 없거나 전년 같은 달 기록이 없어 계산할 수 없음 · ※ : 단가 확인 필요(중앙값의 ½ 미만 또는 2배 초과) · "
+                        "단가 = 평균 수입단가(FOB)", st["small"]))
 
         # ③ 공급국
         story.append(_h2("③ 공급국 비교", "수입액 기준 순위"))
@@ -311,6 +356,7 @@ def build_pdf(payload):
             story.append(_p("선택한 공급국 (비중은 전체 시장 기준)", st["cell_head"]))
             story.append(Spacer(1, 3))
             story.append(_supplier_table(sup["selected"], W, st))
+        story.append(_p("— : 기록이 없거나 전년 같은 기간 기록이 없어 계산할 수 없음 · 파란 줄 = 한국 · 단가 = 평균 수입단가(FOB)", st["small"]))
 
     # ④ AI 분석
     story.append(_h2("④ AI 분석", "출처로 확인된 사실 행만"))
@@ -332,19 +378,20 @@ def build_pdf(payload):
 
 
 def _supplier_table(lst, W, st):
-    rows = [["순위", "공급국", "수입액 (USD)", "비중", "수입량 (t)", "평균 수입단가 (USD/kg)", "수입액 전년 대비"]]
-    hl = []
+    rows = [["순위", "공급국", "수입액 (USD)", "비중", "수입량 (t)", "단가 (USD/kg)", "수입액 전년 대비"]]
+    hl, muted = [], []
     for c in lst:
         if c.get("no_record"):
-            rows.append(["—", _country(c["country"]), "조회 기간 수입 기록 없음", "", "", "", ""])
+            muted.append(len(rows))
+            rows.append(["—", _country(c["country"]), "기록 없음", "—", "—", "—", "—"])
             continue
         if (c.get("country") or {}).get("code") == "190":
             hl.append(len(rows))
         # 공급국 단가에는 '확인 필요'를 붙이지 않습니다(화면과 같음, 2026-10-26 담당자 지시). 월별 표의 표시는 유지.
         rows.append([str(c["rank"]), _country(c["country"]), usd(c["fob"]), pct(c["share"]), tons(c["kg"]),
-                     price(c["unit_price"], c.get("unit_price_reason")), yoy(c["yoy"]["fob"])])
-    return _table(rows, [11 * mm, 44 * mm, 27 * mm, 14 * mm, 22 * mm, 30 * mm, W - 148 * mm], st,
-                  num_cols=(0, 2, 3, 4, 5, 6), highlight=hl)
+                     price(c["unit_price"], c.get("unit_price_reason")), yoy_cell(c["yoy"]["fob"])])
+    return _table(rows, [13 * mm, 50 * mm, 30 * mm, 15 * mm, 24 * mm, 22 * mm, W - 154 * mm], st,
+                  num_cols=(0, 2, 3, 4, 5, 6), highlight=hl, muted_rows=muted)
 
 
 def _ai_section(ai, W, st):
@@ -360,7 +407,7 @@ def _ai_section(ai, W, st):
         err = ai.get("error") or {}
         out.append(_p("검토 미완료: 5차례 검토 중 %d회만 끝났습니다. %s 아래 표는 마지막으로 끝난 단계의 결과입니다." % (
             len(ai.get("rounds") or []), err.get("message") or ""), st["notice"]))
-    rows = [["구분", "핵심 내용", "영업·마케팅 시사점", "사실/추정/미확인", "출처·기준일"]]
+    rows = [["구분", "핵심 내용", "영업·마케팅 시사점", "판정", "출처·기준일"]]
     # 출처로 확인된 사실 행만 싣습니다(추정·미확인 행 삭제, 2026-10-26 담당자 지시).
     for r in [r for r in ai.get("rows") or [] if r.get("status") == "사실"]:
         srcs = [_p("%s %s (%s)" % (x["id"], x.get("name", ""), x.get("date", "")), st["cell"]) for x in r.get("sources") or []] \
@@ -370,7 +417,7 @@ def _ai_section(ai, W, st):
     if len(rows) == 1:
         out.append(_p("표에 남은 행이 없습니다(근거 부족).", st["body"]))
     else:
-        out.append(_table(rows, [18 * mm, 52 * mm, 48 * mm, 24 * mm, W - 142 * mm], st))
+        out.append(_table(rows, [20 * mm, 56 * mm, 48 * mm, 16 * mm, W - 140 * mm], st, valign="TOP"))
     if ai.get("gaps"):
         out.append(_p("근거 부족으로 작성하지 않은 내용: " + "; ".join(ai["gaps"]), st["small"]))
     if ai.get("remaining_findings"):
@@ -388,7 +435,7 @@ def _ai_section(ai, W, st):
                       "완료" if r.get("status") == "done" else "미완료"])
     for n in range(len(ai.get("rounds") or []) + 1, (ai.get("rounds_total") or 5) + 1):
         rrows.append(["%d회차" % n, "-", "-", "-", "미실행"])
-    out.append(_table(rrows, [30 * mm, 50 * mm, 45 * mm, 38 * mm, W - 163 * mm], st))
+    out.append(_table(rrows, [30 * mm, 50 * mm, 45 * mm, 38 * mm, W - 163 * mm], st, valign="TOP"))
     removed = ai.get("removed_rows") or []
     if removed:
         out.append(_p("출처로 확인되지 않아 표에서 뺀 항목 %d건: %s" % (
