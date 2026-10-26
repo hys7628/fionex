@@ -325,3 +325,27 @@
 - 실제 실패와 수정: 요청 계약 변경(display_name 필수)으로 기존 테스트 31건 실패·2건 오류 → 테스트 준비 코드(요청 본문·Node 고정 데이터·교차 테스트)를 새 계약에 맞게 갱신. 이후 프롬프트 버전 기대값(v1→v2) 1건 갱신
 - 변경: generation.py, prompts/brochure_generate_v2.md(신규), static/product_brochure.js, templates/product_brochure/panel.html, feature_spec.md(§21 표시·§23), tests/test_product_brochure/test_generate_api.py·review_logic_check.js·test_review_logic.py
 - 남은 한계: v2 실제 번역·반복 개선 미검증, 표시명 입력 DOM 미확인, 페이지 넘침·비용·시간 미검증
+
+## SPE-2026_10_26-01 카탈로그 생성 프롬프트 brochure_generate_v2 실제 실행(화면, 재실행)
+- 유형: service_prompt_experiment
+- 날짜: 2026-10-26 (Asia/Seoul, 실행 시각은 전달받지 못함) / 작업자: 유정현 / 기능: 제품소개서
+- 실행 주체: 사용자(실제 화면에서 생성 → 결과 미리보기). **Claude는 호출·관측·검증하지 않았고 사용자 보고를 전달받아 기록함**
+- 이력: DI-2026_10_25-17의 "v2 실제 실행 미실행"과 SPE-2026_10_25-02(v1 문제 발견)는 당시 상태로 보존하며, 이 항목이 v2의 후속 첫 실제 실행
+- 모델/설정: 응답 모델명·사용량 전달받지 못함(미확인). 코드 기준 설정은 커밋 cf81010(timeout 60초·재시도 0·store=False·max_output_tokens 4096)
+- 프롬프트: features/product_brochure/prompts/brochure_generate_v2.md
+- 입력: 사용자가 적용한 제품 정보와 확인한 카탈로그 표시명(원문·생성 결과 전문은 기록하지 않음)
+- 비교 기준: SPE-2026_10_25-02(v1)에서 발견한 세 문제. 같은 입력이었는지는 전달받지 못함(미확인)
+- 관측(사용자 보고, 세 항목 모두 정상)
+  1. 표지 제품명이 한글 없이 "regen T2T"로 표시됨(표시명 분리, 제어: 서버가 확인된 display_name 사용)
+  2. 샘플 문구가 평가용 샘플 요청 의미로 표현됨(제어: v2 프롬프트 샘플 표현 지침)
+  3. 표지 소개와 2쪽 설명이 그대로 반복되는 문제가 개선됨(제어: v2 표지/소개 역할 구분 지침, repeated_text 검토 표시)
+- 재실행 결과: v1 대비 위 세 문제는 이번 실행에서 정상으로 보고됨
+- 담당자 판단: 세 문제는 이번 실행 기준 해결로 보고
+- 남은 한계: 응답 모델명·사용량·비용·소요 시간 미확인, 전체 번역 정확성·다른 항목 문구·페이지 넘침 미검증, 다른 입력에서도 같은 품질이 유지되는지 미검증(1회 실행)
+
+## DI-2026_10_26-01 v2 실제 실행 결과 기록
+- 유형: development_instruction / 날짜: 2026-10-26 00:40 (Asia/Seoul) / 작업자: 유정현
+- 도구·모델: Claude Code (Opus 5.5). 서비스 코드 수정·API 재호출·테스트 재실행 없음
+- 사전 확인: 브랜치 feature/product_brochure, HEAD cf81010, 작업 트리 깨끗, 병합 중 아님
+- 지시: 사용자 보고 v2 실행 결과를 SPE-2026_10_26-01로 기록(사용자 보고·Claude 미검증 명시), 기존 미실행·실패 기록 보존, 미확인·미검증 범위 유지
+- 변경: docs/worklogs/yu_jeonghyeon/prompt_log.md, validation.md
