@@ -397,3 +397,134 @@
   .feature-market_analysis .ma-dialog-head, .feature-market_analysis .ma-dialog-tabs, .feature-market_analysis .ma-dialog-body { padding-left: var(--space-4); padding-right: var(--space-4); }
   .feature-market_analysis .ma-glass-block { padding: var(--space-4); }
 }
+
+/* ===== 2026-10-27 디자인 통일(다른 탭 단계 표시줄과 같은 유리 막대) =====
+ * 바깥 하위 탭(시장 통계 / 바이어 목록)만 아이콘 + 이름·짧은 설명의 유리 막대로. 결과 ①~⑤·창 안 탭은 기존 밑줄 모양 유지.
+ * 흐림(backdrop-filter)은 쓰지 않음(안의 fixed 요소 위치 기준이 바뀌지 않게).
+ */
+.feature-market_analysis > .ma-subtabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(max-content, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  padding: var(--space-2);
+  border: 1px solid var(--color-glass-card-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-glass-card);
+  box-shadow: var(--shadow-glass);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.feature-market_analysis > .ma-subtabs .ma-subtab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  text-align: left;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.feature-market_analysis > .ma-subtabs .ma-subtab:hover { background: var(--color-glass-card-inner); }
+
+.feature-market_analysis > .ma-subtabs .ma-subtab[aria-selected="true"] {
+  border-color: var(--color-glass-card-border);
+  background: var(--color-glass-card-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.feature-market_analysis .ma-tab-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.feature-market_analysis > .ma-subtabs .ma-subtab[aria-selected="true"] .ma-tab-icon {
+  border-color: transparent;
+  background: var(--color-primary-gradient);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-primary);
+}
+
+.feature-market_analysis .ma-tab-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.feature-market_analysis .ma-tab-label {
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.feature-market_analysis .ma-tab-sub {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  white-space: nowrap;
+}
+
+/* 공급국 목록: 옅은 유리 구획, 체크한 나라는 블루 강조 */
+.feature-market_analysis .ma-country-list {
+  border-color: var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-inner);
+}
+
+.feature-market_analysis .ma-country:has(input:checked) {
+  color: var(--color-primary-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* 결과 구역·표: 카드 안 유리 구획 */
+.feature-market_analysis .table-wrap {
+  border-color: var(--color-glass-edge);
+  background: var(--color-surface);
+}
+
+/* 핵심 수치 타일: 흰 유리 카드 + 위쪽 블루→민트 강조선(홈 카드와 같은 결) */
+.feature-market_analysis .ma-tile {
+  position: relative;
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-strong);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.feature-market_analysis .ma-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+}
+
+/* 결과 화면 위 막대(조회 조건 변경 · 조건 요약 · 다시 불러오기)를 옅은 유리 줄로 묶고, 다시 불러오기는 테두리 버튼으로 */
+.feature-market_analysis .ma-step-bar {
+  padding: var(--space-2);
+  border: 1px solid var(--color-glass-card-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-glass-card);
+  box-shadow: var(--shadow-glass);
+}
+
+.feature-market_analysis .ma-step-bar [data-ma-refresh] {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+/* 바이어 표: 행 사이 여백을 살짝 줄이고 등급 근거 글자는 보조 색 */
+.feature-market_analysis .ma-grade-cell { color: var(--color-text-muted); }

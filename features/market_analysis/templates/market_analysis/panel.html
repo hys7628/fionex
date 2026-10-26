@@ -3,9 +3,11 @@
    하위 탭: 시장 통계(조회 조건 + 분석 결과) / 바이어 목록(전체 폭). 탭 전환은 market_analysis.js #}
 <div class="ma-subtabs" role="tablist" aria-label="시장 분석 화면">
   <button type="button" class="ma-subtab" role="tab" id="market_analysis-tab-stats" aria-controls="market_analysis-pane-stats"
-          aria-selected="true" data-ma-tab="stats">시장 통계</button>
+          aria-selected="true" data-ma-tab="stats"><span class="ma-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" focusable="false" fill="none"
+          stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><span class="ma-tab-text"><span class="ma-tab-label">시장 통계</span><span class="ma-tab-sub">수입 추세·공급국</span></span></button>
   <button type="button" class="ma-subtab" role="tab" id="market_analysis-tab-buyers" aria-controls="market_analysis-pane-buyers"
-          aria-selected="false" tabindex="-1" data-ma-tab="buyers">바이어 목록</button>
+          aria-selected="false" tabindex="-1" data-ma-tab="buyers"><span class="ma-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" focusable="false" fill="none"
+          stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l6-4 6 4v13"/><path d="M15 21V11l6 3v7M3 21h18M7 11h4M7 15h4"/></svg></span><span class="ma-tab-text"><span class="ma-tab-label">바이어 목록</span><span class="ma-tab-sub">잠재 바이어·AI 브리핑</span></span></button>
 </div>
 
 {# 시장 통계는 두 화면 순서: ① 조회 조건 → '분석 실행' → ② 분석 결과('← 조회 조건 변경'으로 돌아감, 결과는 유지) #}
