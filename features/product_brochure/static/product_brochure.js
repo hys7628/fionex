@@ -1071,6 +1071,17 @@
     tab.scrollIntoView({ block: "nearest", behavior: "auto" });
   }
 
+  // 끝난 단계 표시: 1단계는 분석·예시 결과가 있을 때, 2단계는 카탈로그 생성 결과가 있을 때(번호 → ✓, 화면낭독 "(완료)")
+  function syncSteps() {
+    const done = { source: !!fields, review: !!generation, catalog: false };
+    stepTabs.forEach(function (t, i) {
+      const on = done[t.dataset.pbTab];
+      t.classList.toggle("pb-step-is-done", on);
+      t.querySelector(".pb-step-no").textContent = on ? "✓" : String(i + 1);
+      t.querySelector(".pb-step-done").textContent = on ? " (완료)" : "";
+    });
+  }
+
   stepTabs.forEach(function (t, i) {
     t.addEventListener("click", function () { selectStep(t, false); });
     t.addEventListener("keydown", function (event) {
@@ -1110,6 +1121,7 @@
     const protect = working() || !!generation || !!editing || !!cover.candidate || !!cover.applied ||
       (!!fields && (fieldsSource === "analysis" || Review.isDirty(fields)));
     AppShell.work.setDraft(FEATURE_ID, protect);
+    syncSteps();
   }
 
   /* 파일 선택 */

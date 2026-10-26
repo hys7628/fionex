@@ -1,60 +1,104 @@
 {# 제품소개서 작업 영역: 한국어 PDF 선택 → 분석 요청 → 결과 확인·수정 → 카탈로그 미리보기·AI 표지 배경.
-   하위 탭 3개를 순서대로 넘깁니다. 탭 전환은 패널을 hidden으로만 숨겨 입력·파일·결과를 그대로 유지합니다(product_brochure.js). #}
-<div class="pb-subtabs" role="tablist" aria-label="제품소개서 작업 단계">
-  <button type="button" class="pb-subtab" role="tab" id="product_brochure-tab-source" aria-controls="product_brochure-pane-source"
-          aria-selected="true" data-pb-tab="source">1. 자료 조사</button>
-  <button type="button" class="pb-subtab" role="tab" id="product_brochure-tab-review" aria-controls="product_brochure-pane-review"
-          aria-selected="false" tabindex="-1" data-pb-tab="review">2. 분석 결과 확인·수정</button>
-  <button type="button" class="pb-subtab" role="tab" id="product_brochure-tab-catalog" aria-controls="product_brochure-pane-catalog"
-          aria-selected="false" tabindex="-1" data-pb-tab="catalog">3. 카탈로그 미리보기·AI 표지 배경</button>
+   하위 탭 3개(단계 표시줄)를 순서대로 넘깁니다. 탭 전환은 패널을 hidden으로만 숨겨 입력·파일·결과를 그대로 유지합니다(product_brochure.js).
+   단계 번호 칸(.pb-step-no)은 끝난 단계에서 JS가 ✓로 바꾸고, 화면낭독용 "(완료)"는 .pb-step-done에 넣습니다. #}
+<div class="pb-steps" role="tablist" aria-label="제품소개서 작업 단계">
+  <button type="button" class="pb-step" role="tab" id="product_brochure-tab-source" aria-controls="product_brochure-pane-source"
+          aria-selected="true" data-pb-tab="source">
+    <span class="pb-step-no" aria-hidden="true">1</span>
+    <span class="pb-step-text">
+      <span class="pb-step-label"><span class="visually-hidden">1단계 </span>자료 조사</span>
+      <span class="pb-step-sub">PDF 선택·분석</span>
+    </span>
+    <span class="visually-hidden pb-step-done"></span>
+  </button>
+  <button type="button" class="pb-step" role="tab" id="product_brochure-tab-review" aria-controls="product_brochure-pane-review"
+          aria-selected="false" tabindex="-1" data-pb-tab="review">
+    <span class="pb-step-no" aria-hidden="true">2</span>
+    <span class="pb-step-text">
+      <span class="pb-step-label"><span class="visually-hidden">2단계 </span>분석 결과 확인·수정</span>
+      <span class="pb-step-sub">항목 검토·카탈로그 생성</span>
+    </span>
+    <span class="visually-hidden pb-step-done"></span>
+  </button>
+  <button type="button" class="pb-step" role="tab" id="product_brochure-tab-catalog" aria-controls="product_brochure-pane-catalog"
+          aria-selected="false" tabindex="-1" data-pb-tab="catalog">
+    <span class="pb-step-no" aria-hidden="true">3</span>
+    <span class="pb-step-text">
+      <span class="pb-step-label"><span class="visually-hidden">3단계 </span>카탈로그 미리보기·AI 표지 배경</span>
+      <span class="pb-step-sub">미리보기·표지·PDF 다운로드</span>
+    </span>
+    <span class="visually-hidden pb-step-done"></span>
+  </button>
 </div>
 
+{# 1단계: 왼쪽 자료 선택(넓게), 오른쪽 진행 순서·개발용 예시(좁게). 좁은 화면은 세로로 쌓임 #}
 <div class="pb-pane" role="tabpanel" id="product_brochure-pane-source" aria-labelledby="product_brochure-tab-source" data-pb-pane="source">
-  <form class="card" aria-labelledby="product_brochure-input-title" novalidate>
-    <div class="card-header">
-      <div>
-        <h2 class="card-title" id="product_brochure-input-title" tabindex="-1">자료 선택</h2>
-        <p class="card-description">소개서에 사용할 한국어 제품 자료 PDF 1개를 선택합니다.</p>
+  <div class="pb-split">
+    <form class="card pb-split-main" aria-labelledby="product_brochure-input-title" novalidate>
+      <div class="card-header">
+        <div>
+          <h2 class="card-title" id="product_brochure-input-title" tabindex="-1">자료 선택</h2>
+          <p class="card-description">소개서에 사용할 한국어 제품 자료 PDF 1개를 선택합니다.</p>
+        </div>
       </div>
-    </div>
 
-    <div class="field">
-      <label class="field-label" for="product_brochure-file">한국어 제품 자료 PDF<span class="field-required">필수</span></label>
-      <input class="file-input" id="product_brochure-file" name="source_file" type="file"
-             accept=".pdf,application/pdf"
-             aria-describedby="product_brochure-file-hint product_brochure-file-status">
+      <div class="pb-upload">
+        <span class="pb-upload-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="28" height="28" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+            <path d="M14 3v5h5"/><path d="M12 17v-6"/><path d="m9.5 13.5 2.5-2.5 2.5 2.5"/></svg>
+        </span>
+        <div class="field pb-upload-field">
+          <label class="field-label" for="product_brochure-file">한국어 제품 자료 PDF<span class="field-required">필수</span></label>
+          <input class="file-input" id="product_brochure-file" name="source_file" type="file"
+                 accept=".pdf,application/pdf"
+                 aria-describedby="product_brochure-file-hint product_brochure-file-status">
+          <p class="field-hint" id="product_brochure-file-status" data-file-status aria-live="polite">선택된 파일이 없습니다.</p>
+        </div>
+        <dl class="product_brochure-file-info" data-file-info hidden>
+          <div><dt>파일명</dt><dd data-file-name></dd></div>
+          <div><dt>크기</dt><dd data-file-size></dd></div>
+        </dl>
+      </div>
       <p class="field-hint" id="product_brochure-file-hint">
         PDF 1개, 최대 10 MiB·20쪽. 스캔 PDF도 분석을 요청할 수 있지만 판독 품질은 아직 확인하지 않았습니다.
         화면에서는 확장자·빈 파일·크기만 확인하고, 실제 PDF 형식·손상·암호화·페이지 수는 서버에서 검사합니다.
         파일은 영구 저장하지 않습니다.
       </p>
-      <p class="field-hint" id="product_brochure-file-status" data-file-status aria-live="polite">선택된 파일이 없습니다.</p>
-    </div>
 
-    <dl class="product_brochure-file-info" data-file-info hidden>
-      <div><dt>파일명</dt><dd data-file-name></dd></div>
-      <div><dt>크기</dt><dd data-file-size></dd></div>
-    </dl>
-
-    <div class="btn-row">
-      <button type="submit" class="btn btn-primary" data-analyze disabled aria-describedby="product_brochure-analyze-status">PDF 분석</button>
-      <span class="field-hint" id="product_brochure-analyze-status" data-analyze-status role="status">10 MiB 이하의 PDF를 선택하면 분석할 수 있습니다.</span>
-    </div>
-    <div class="notice notice-danger" data-analyze-error role="alert" hidden></div>
-
-    <div class="product_brochure-dev" aria-labelledby="product_brochure-dev-title">
-      <p class="field-label" id="product_brochure-dev-title">개발용 화면 확인</p>
-      <p class="field-hint" id="product_brochure-dev-hint">
-        API 없이 확인·수정 화면을 점검하기 위한 고정 예시입니다. 선택한 PDF를 읽거나 업로드하지 않습니다.
-      </p>
       <div class="btn-row">
-        <button type="button" class="btn btn-secondary" data-load-example aria-describedby="product_brochure-dev-hint">개발용 예시 불러오기</button>
+        <button type="submit" class="btn btn-primary" data-analyze disabled aria-describedby="product_brochure-analyze-status">PDF 분석</button>
+        <span class="field-hint" id="product_brochure-analyze-status" data-analyze-status role="status">10 MiB 이하의 PDF를 선택하면 분석할 수 있습니다.</span>
       </div>
-    </div>
-  </form>
+      <div class="notice notice-danger" data-analyze-error role="alert" hidden></div>
+    </form>
+
+    <aside class="card pb-split-side" aria-labelledby="product_brochure-flow-title">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title" id="product_brochure-flow-title">진행 순서</h2>
+          <p class="card-description">분석이 끝나면 다음 단계로 자동으로 넘어갑니다.</p>
+        </div>
+      </div>
+      <ol class="pb-flow">
+        <li><span class="pb-flow-no" aria-hidden="true">1</span><span><strong>PDF 분석</strong> 제품 자료에서 소개서 항목을 AI가 추출합니다.</span></li>
+        <li><span class="pb-flow-no" aria-hidden="true">2</span><span><strong>확인·수정</strong> 값과 근거를 검토하고 "확인 내용 적용" 뒤 카탈로그를 생성합니다.</span></li>
+        <li><span class="pb-flow-no" aria-hidden="true">3</span><span><strong>미리보기</strong> 4쪽 카탈로그를 보고 표지 배경을 고른 뒤 PDF로 내려받습니다.</span></li>
+      </ol>
+      <div class="product_brochure-dev" aria-labelledby="product_brochure-dev-title">
+        <p class="field-label" id="product_brochure-dev-title">개발용 화면 확인</p>
+        <p class="field-hint" id="product_brochure-dev-hint">
+          API 없이 확인·수정 화면을 점검하기 위한 고정 예시입니다. 선택한 PDF를 읽거나 업로드하지 않습니다.
+        </p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary" data-load-example aria-describedby="product_brochure-dev-hint">개발용 예시 불러오기</button>
+        </div>
+      </div>
+    </aside>
+  </div>
   <div class="pb-pager">
     <span></span>
-    <button type="button" class="btn btn-secondary" data-pb-go="review">다음: 분석 결과 확인·수정 →</button>
+    <button type="button" class="btn btn-ghost" data-pb-go="review">다음: 분석 결과 확인·수정 →</button>
   </div>
 </div>
 
@@ -65,15 +109,21 @@
         <h2 class="card-title" id="product_brochure-review-title" tabindex="-1">분석 결과 확인·수정</h2>
         <p class="card-description">항목별 값과 상태·가상·확인 여부를 검토합니다.</p>
       </div>
+      {# 지금 검토 중인 자료(분석한 PDF 파일명 또는 개발용 예시). 텍스트는 JS가 textContent로만 넣음 #}
+      <p class="pb-source-chip" data-review-source hidden>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+        <span class="pb-source-chip-label">분석 자료</span>
+        <span class="pb-source-chip-name" data-review-source-name></span>
+      </p>
     </div>
-    {# 지금 검토 중인 자료(분석한 PDF 파일명 또는 개발용 예시). 텍스트는 JS가 textContent로만 넣음 #}
-    <dl class="product_brochure-file-info" data-review-source hidden>
-      <div><dt>분석 자료</dt><dd data-review-source-name></dd></div>
-    </dl>
 
     <div class="empty-state" data-review-empty>
       <p class="empty-state-title">아직 분석 결과가 없습니다</p>
-      <p>PDF를 선택하고 "PDF 분석"을 누르세요. API 없이 화면만 점검하려면 "개발용 예시 불러오기"를 사용하세요.</p>
+      <p>"자료 조사" 단계에서 PDF를 선택하고 "PDF 분석"을 누르세요. API 없이 화면만 점검하려면 "개발용 예시 불러오기"를 사용하세요.</p>
+      <div class="btn-row pb-empty-actions">
+        <button type="button" class="btn btn-secondary" data-pb-go="source">← 자료 조사로 가기</button>
+      </div>
     </div>
 
     <div class="stack" data-review hidden>
@@ -87,8 +137,9 @@
         <p data-analysis-meta></p>
       </div>
       <div class="notice notice-info" data-review-notes hidden></div>
-      <div class="notice notice-info" role="note">
-        <p class="notice-title">검토 방법</p>
+      {# 검토 방법은 접어 두고 필요할 때 펼침(내용은 그대로) #}
+      <details class="pb-guide">
+        <summary>검토 방법 보기</summary>
         <ul class="product_brochure-guide">
           <li>"사용자 확인"은 검토했다는 표시이며 원문 대조·사실 검증·인증 완료를 뜻하지 않습니다.</li>
           <li>값을 수정하면 그 항목의 사용자 확인이 해제됩니다.</li>
@@ -96,7 +147,7 @@
           <li>상태: "문서에서 추출"은 AI가 근거와 함께 읽은 값, "확인 필요"는 불명확·근거 부족·충돌, "문서에서 찾지 못함"은 AI가 찾지 못한 항목입니다.</li>
           <li>값이 없던 항목에 입력한 값은 사용자 추가 정보로 구분되며 문서 근거가 아닙니다.</li>
         </ul>
-      </div>
+      </details>
       <div class="stack" data-review-groups></div>
       <fieldset class="fieldset product_brochure-group" data-display-name hidden>
         <legend class="field-label">카탈로그 표시명</legend>
@@ -114,22 +165,27 @@
         <label class="choice"><input type="checkbox" id="product_brochure-display-name-confirm" aria-describedby="product_brochure-display-name-error"> 카탈로그 표시명 확인(필수)</label>
       </fieldset>
       <div class="notice notice-info" data-apply-status role="status" hidden></div>
-      <div class="btn-row">
-        <button type="button" class="btn btn-primary" data-apply>확인 내용 적용</button>
-        <button type="button" class="btn btn-secondary" data-generate disabled aria-describedby="product_brochure-generate-status">카탈로그 생성</button>
-      </div>
-      <p class="field-hint" id="product_brochure-generate-status" data-generate-status role="status"></p>
       <div class="notice notice-danger" data-generate-error role="alert" hidden></div>
+      {# 적용·생성 버튼 줄: 긴 목록을 내려가도 화면 아래에 붙어 있음 #}
+      <div class="pb-actionbar">
+        <p class="field-hint" id="product_brochure-generate-status" data-generate-status role="status"></p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary" data-apply>확인 내용 적용</button>
+          <button type="button" class="btn btn-primary" data-generate disabled aria-describedby="product_brochure-generate-status">카탈로그 생성</button>
+        </div>
+      </div>
     </div>
   </section>
   <div class="pb-pager">
-    <button type="button" class="btn btn-secondary" data-pb-go="source">← 이전: 자료 조사</button>
-    <button type="button" class="btn btn-secondary" data-pb-go="catalog">다음: 카탈로그 미리보기 →</button>
+    <button type="button" class="btn btn-ghost" data-pb-go="source">← 이전: 자료 조사</button>
+    <button type="button" class="btn btn-ghost" data-pb-go="catalog">다음: 카탈로그 미리보기 →</button>
   </div>
 </div>
 
+{# 3단계: 왼쪽 카탈로그 미리보기(좁게), 오른쪽 AI 표지 배경(넓게). 좁은 화면은 세로로 쌓임 #}
 <div class="pb-pane" role="tabpanel" id="product_brochure-pane-catalog" aria-labelledby="product_brochure-tab-catalog" data-pb-pane="catalog" hidden>
-<section class="card product_brochure-design" aria-labelledby="product_brochure-design-title">
+<div class="pb-split pb-split-reverse">
+<section class="card product_brochure-design pb-split-side" aria-labelledby="product_brochure-design-title">
   <div class="card-header">
     <div>
       <h2 class="card-title" id="product_brochure-design-title" tabindex="-1">카탈로그 미리보기</h2>
@@ -137,27 +193,36 @@
         "디자인 시안 보기"는 4페이지 레이아웃을 검토하기 위한 고정 예시입니다(분석 결과·수정값을 쓰지 않고 API를 호출하지 않음).
         "생성 결과 보기"는 마지막으로 성공한 카탈로그 생성 결과를 같은 디자인으로 보여 줍니다.
       </p>
-      <p class="field-hint" id="product_brochure-result-status" data-result-status role="status">아직 생성 결과가 없습니다.</p>
-      {# PDF 다운로드: 미리보기에 적용된 생성 결과만 대상(디자인 시안 제외). 안내는 JS가 textContent로만 넣음 #}
-      <p class="field-hint" id="product_brochure-pdf-status" data-pdf-status role="status" aria-live="polite">
-        카탈로그를 생성한 뒤 PDF를 다운로드할 수 있습니다(디자인 시안은 대상이 아님).
-      </p>
     </div>
-    <div class="btn-row">
-      <button type="button" class="btn btn-secondary" data-catalog-open aria-haspopup="dialog"
-              aria-describedby="product_brochure-design-hint">디자인 시안 보기</button>
-      <button type="button" class="btn btn-primary" data-result-open aria-haspopup="dialog" disabled
-              aria-describedby="product_brochure-result-status">생성 결과 보기</button>
-      <button type="button" class="btn btn-secondary" data-pdf-download disabled
-              aria-describedby="product_brochure-pdf-status">PDF 다운로드</button>
-    </div>
+  </div>
+  {# 카탈로그 4쪽 구성(장식용 축소 도식, 실제 내용 아님) #}
+  <ol class="pb-pages" aria-label="카탈로그 구성 4쪽">
+    <li class="pb-page pb-page-cover"><span class="pb-page-no">1</span><span class="pb-page-name">표지</span></li>
+    <li class="pb-page"><span class="pb-page-no">2</span><span class="pb-page-name">제품 소개</span></li>
+    <li class="pb-page"><span class="pb-page-no">3</span><span class="pb-page-name">제품 상세</span></li>
+    <li class="pb-page"><span class="pb-page-no">4</span><span class="pb-page-name">샘플·거래 조건</span></li>
+  </ol>
+  <div class="pb-status-box">
+    <p class="field-hint" id="product_brochure-result-status" data-result-status role="status">아직 생성 결과가 없습니다.</p>
+    {# PDF 다운로드: 미리보기에 적용된 생성 결과만 대상(디자인 시안 제외). 안내는 JS가 textContent로만 넣음 #}
+    <p class="field-hint" id="product_brochure-pdf-status" data-pdf-status role="status" aria-live="polite">
+      카탈로그를 생성한 뒤 PDF를 다운로드할 수 있습니다(디자인 시안은 대상이 아님).
+    </p>
+  </div>
+  <div class="btn-row">
+    <button type="button" class="btn btn-primary" data-result-open aria-haspopup="dialog" disabled
+            aria-describedby="product_brochure-result-status">생성 결과 보기</button>
+    <button type="button" class="btn btn-secondary" data-pdf-download disabled
+            aria-describedby="product_brochure-pdf-status">PDF 다운로드</button>
+    <button type="button" class="btn btn-ghost" data-catalog-open aria-haspopup="dialog"
+            aria-describedby="product_brochure-design-hint">디자인 시안 보기</button>
   </div>
   <div class="notice notice-danger product_brochure-pdf-error" data-pdf-error role="alert" hidden></div>
 </section>
 
 {# AI 표지 배경(생성 결과 미리보기 1쪽 표지에만 적용). 생성은 버튼 클릭 때만, 후보는 직접 "표지에 적용"해야 반영.
    이미지·안내 문구는 JS가 브라우저 메모리(object URL)·textContent로만 다룸. 분위기 선택만으로는 작업 상태를 만들지 않음 #}
-<section class="card product_brochure-cover" aria-labelledby="product_brochure-cover-title" data-cover>
+<section class="card product_brochure-cover pb-split-main" aria-labelledby="product_brochure-cover-title" data-cover>
   <div class="card-header">
     <div>
       <h2 class="card-title" id="product_brochure-cover-title">AI 표지 배경</h2>
@@ -171,9 +236,15 @@
   <fieldset class="fieldset" data-cover-moods data-work-ignore>
     <legend class="field-label">분위기</legend>
     <div class="cover-moods">
-      <label class="choice"><input type="radio" name="product_brochure-cover-mood" value="minimal" checked> 미니멀</label>
-      <label class="choice"><input type="radio" name="product_brochure-cover-mood" value="premium"> 프리미엄</label>
-      <label class="choice"><input type="radio" name="product_brochure-cover-mood" value="soft_texture"> 부드러운 소재감</label>
+      <label class="pb-mood"><input type="radio" name="product_brochure-cover-mood" value="minimal" checked>
+        <span class="pb-mood-swatch pb-mood-minimal" aria-hidden="true"></span>
+        <span class="pb-mood-name">미니멀</span><span class="pb-mood-desc">밝은 자연광·넓은 여백</span></label>
+      <label class="pb-mood"><input type="radio" name="product_brochure-cover-mood" value="premium">
+        <span class="pb-mood-swatch pb-mood-premium" aria-hidden="true"></span>
+        <span class="pb-mood-name">프리미엄</span><span class="pb-mood-desc">딥그린 톤·은은한 광택</span></label>
+      <label class="pb-mood"><input type="radio" name="product_brochure-cover-mood" value="soft_texture">
+        <span class="pb-mood-swatch pb-mood-soft" aria-hidden="true"></span>
+        <span class="pb-mood-name">부드러운 소재감</span><span class="pb-mood-desc">따뜻한 빛·원단 주름</span></label>
     </div>
   </fieldset>
   <div class="btn-row">
@@ -215,8 +286,9 @@
     </div>
   </div>
 </section>
+</div>
 <div class="pb-pager">
-  <button type="button" class="btn btn-secondary" data-pb-go="review">← 이전: 분석 결과 확인·수정</button>
+  <button type="button" class="btn btn-ghost" data-pb-go="review">← 이전: 분석 결과 확인·수정</button>
   <span></span>
 </div>
 </div>
