@@ -874,6 +874,12 @@
       rows.map(function (c, i) { return buyerRow(c, offset + i); }).join("") + "</tbody></table></div>";
   }
 
+  // ⓘ 아이콘(장식). 그린 클레임 도움말 아이콘과 같은 모양
+  const INFO_ICON = '<svg class="ma-info-icon" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">' +
+    '<circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
+    '<path d="M10 9.2v4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>' +
+    '<circle cx="10" cy="6.3" r="1.15" fill="currentColor"/></svg>';
+
   function renderBuyers(d) {
     // 안내 문구·선정 조건·출처는 '참고 사항'으로 접어 둡니다(2026-10-26 담당자 지시).
     let notes = d.notes.map(function (n) { return '<div class="notice notice-info"><p>' + esc(n) + "</p></div>"; }).join("");
@@ -889,13 +895,16 @@
     notes += '<p class="field-hint">출처: ' + esc(d.source.name) + " · " + linkHtml(d.source.url) + " · " +
       esc("자료 기준월 " + d.source.reference_month + " · 생성 " + kstTime(d.source.generated_at)) + "</p>";
     const g = d.counts.grades || {};
-    let html = '<div class="ma-buyer-summary"><p><strong>' + esc(fmtInt.format(list.length)) + "곳</strong> · " +
+        // 개수 요약·등급 기준·규칙·참고 사항은 ⓘ 접힘 상자 하나에(2026-10-27). 등급별 개수는 아래 거르기 칩에도 보입니다.
+    let html = '<details class="ma-info"><summary>' + INFO_ICON + "<span>등급 기준·참고 사항</span>" +
+      '<span class="ma-info-brief">' + esc(fmtInt.format(list.length)) + "곳 · 재생·T2T 근거 " + esc(fmtInt.format(d.counts.with_evidence)) + "곳</span></summary>" +
+      '<div class="ma-buyer-summary"><p><strong>' + esc(fmtInt.format(list.length)) + "곳</strong> · " +
       ["A", "B", "C"].map(function (k) { return '<span class="ma-grade ma-grade-' + k + '">' + k + "</span> " + esc(fmtInt.format(g[k] || 0)) + "곳"; }).join(" · ") +
       " · 재생·T2T 근거 " + esc(d.counts.with_evidence + "곳" + (d.counts.with_evidence ? "" : " (검토된 근거 없음)")) + "</p>" +
       '<p class="ma-grade-note">우선순위 등급: ' + esc(d.grade_note) + "</p>" +
-      '<details class="ma-details"><summary>등급 규칙 보기</summary><ul class="ma-grade-rules">' +
-      d.grade_rules.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul></details>" +
-      '<details class="ma-details"><summary>참고 사항</summary>' + notes + "</details></div>";
+      '<p class="ma-info-sub">등급 규칙</p><ul class="ma-grade-rules">' +
+      d.grade_rules.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>" +
+      '<p class="ma-info-sub">참고 사항</p>' + notes + "</div></details>";
     // 검색·등급 거르기: 받은 목록에서만 거릅니다(추가 요청 없음). 보기 설정이라 작성 중 감지에서 제외(data-work-ignore).
     html += '<div class="ma-buyer-tools" role="search" aria-label="바이어 검색" data-work-ignore>' +
       '<div class="field ma-buyer-search"><label class="field-label" for="market_analysis-buyer-query">업체 검색</label>' +
