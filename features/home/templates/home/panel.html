@@ -23,9 +23,9 @@
     {# 바이어 시간: 시각·상태 계산은 home.js(Intl.DateTimeFormat), 공휴일은 /api/home/holidays.
        도시 선택은 보기 설정이라 작성 중 감지에서 제외합니다(data-work-ignore). #}
     {# 1행은 빠르게 훑는 상태 요약: 부제 없이 제목 → 핵심 데이터. 기준 도시 선택은 제목 줄 오른쪽(라벨은 화면낭독용). #}
-    <article class="card home-summary-card" aria-labelledby="home-buyer-title" id="home-buyer-time">
+    <article class="card home-summary-card home-main-card" aria-labelledby="home-buyer-title" id="home-buyer-time">
       <div class="card-header home-summary-head">
-        <h2 class="card-title" id="home-buyer-title">바이어 시간</h2>
+        <h2 class="card-title home-card-title" id="home-buyer-title">바이어 시간</h2>
         <div class="home-city-field" data-work-ignore>
           <label class="visually-hidden" for="home-city">기준 도시</label>
           <select class="select" id="home-city" aria-describedby="home-hours-hint">
@@ -70,9 +70,9 @@
 
     {# 환율: /api/home/fx. 공식 고시값과 실제 고시일만 표시합니다. 값이 없으면 숫자 자리를 비우고 "확인 불가".
        BRL/KRW는 USD/KRW ÷ USD/BRL로 계산한 값이며 두 값이 모두 있을 때만 표시합니다. 전망·해석 없음. #}
-    <article class="card home-summary-card" aria-labelledby="home-fx-title" id="home-fx">
+    <article class="card home-summary-card home-main-card" aria-labelledby="home-fx-title" id="home-fx">
       <div class="card-header home-summary-head">
-        <h2 class="card-title" id="home-fx-title">환율</h2>
+        <h2 class="card-title home-card-title" id="home-fx-title">환율</h2>
       </div>
       <div class="home-card-body" id="home-fx-body" aria-busy="true">
         <p class="home-news-loading" id="home-fx-loading"><span class="spinner" aria-hidden="true"></span>환율을 불러오는 중...</p>
@@ -87,12 +87,9 @@
        수집 경로(KOTRA·Google News·ABIT)별 상태·건수와 재시도는 home.js가 그립니다.
        Google News·ABIT 포르투갈어 제목의 AI 한 줄 요약은 목록을 먼저 보여 준 뒤 /api/home/news/summaries로 채웁니다.
        외부 제목·매체명·요약은 textContent로만 넣습니다. 본문은 표시하지 않습니다. #}
-    <article class="card" aria-labelledby="home-news-title" id="home-news">
+    <article class="card home-main-card" aria-labelledby="home-news-title" id="home-news">
       <div class="card-header">
-        <div>
-          <h2 class="card-title" id="home-news-title">업계 소식</h2>
-          <p class="card-description">브라질 섬유·의류 관련 최신 소식입니다.</p>
-        </div>
+        <h2 class="card-title home-card-title" id="home-news-title">업계 소식</h2>
       </div>
       <div class="home-card-body" id="home-news-body" aria-busy="true">
         <div class="home-news-filter" id="home-news-filter" role="group" aria-label="매체별 보기" hidden></div>
@@ -121,12 +118,9 @@
     {# 다가오는 전시회: /api/home/fairs(기능 전용 정적 자료). 출처 링크 있는 행사만.
        기본 화면은 D-day·행사명·기간·도시, 장소·분야·확인일·메모·출처는 행사별 접기 영역에 둡니다.
        외부 문자열은 textContent로만 넣습니다. 자동 수집·AI 생성 없음. #}
-    <article class="card" aria-labelledby="home-fairs-title" id="home-fairs">
+    <article class="card home-main-card" aria-labelledby="home-fairs-title" id="home-fairs">
       <div class="card-header">
-        <div>
-          <h2 class="card-title" id="home-fairs-title">다가오는 전시회</h2>
-          <p class="card-description">브라질·중남미 섬유 전시회 일정입니다.</p>
-        </div>
+        <h2 class="card-title home-card-title" id="home-fairs-title">다가오는 전시회</h2>
       </div>
       <div class="home-card-body" id="home-fairs-body" aria-busy="true">
         <div class="home-news-filter" id="home-fairs-filter" role="group" aria-label="지역별 보기" hidden></div>

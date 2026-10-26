@@ -566,3 +566,14 @@
 - 검증: validation.md 2026-10-26 DEV-COMMON-008.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 시장 분석 PDF 차트 축 라벨이 작은 값에서 반올림으로 겹침(1500→"2K", 0.x→"1/0") — 글꼴과 무관한 기존 표기 규칙, 이번 미수정. PDF 글꼴 크기 변화로 실제 데이터(긴 뉴스 제목·AI 표)의 줄바꿈은 가상 데이터로만 확인. Flask가 woff2를 application/octet-stream으로 응답(로드는 정상). 미추적 원본 폴더 2곳(약 71MB) 처리 결정 필요.
+
+## DEV-HOME-021 Home 주요 카드 제목 강조·설명 문장 삭제
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/common_setup, 작업 전 미커밋 변경 없음, 최근 커밋 f5813d9)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "홈에 이거 브라질 섬유·의류 관련 최신 소식입니다.브라질·중남미 섬유 전시회 일정입니다.  빼고 바이어시간, 환율,업계 소식,다가오는 전시회 이거를 좀 강조하고 싶은데 그림자나 굵기나 색상을 다르게? 보기 좋게해"
+- 판단: 두 설명 문장(card-description) 삭제. 강조는 네 카드에 똑같이 적용(카드마다 다른 그림자 금지 규칙 유지): 위쪽 3px 로고색 그라데이션 띠(배경 레이어라 모서리에 맞게 잘림), 제목 --font-size-xl·Bold·자간 -0.02em + 앞 4px 세로 포인트 막대(블루→아쿠아→민트). 공통 .card·.card-title은 수정하지 않고 Home 전용 클래스(.home-main-card·.home-card-title)로 한정, 색은 토큰만. 960px 미만은 제목 18px.
+- 변경 파일: features/home/templates/home/panel.html, features/home/static/home.css, features/home/feature_spec.md.
+- 외부 호출: 0건. 검증: validation.md DEV-HOME-021.
+- 담당자 판단: 미기재(담당자 검토 필요)
