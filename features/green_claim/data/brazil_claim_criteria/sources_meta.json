@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "note": "기준 묶음 생성 입력: 자료별 메타데이터. 자료 이름·기관·버전 단서·조회 시각은 source_register.md 행에서 읽는다. 값은 2026-10-26 기준 묶음(schema 1)의 sources에서 그대로 옮겼다.",
+  "sources": [
+    {
+      "id": "SRC-CDC",
+      "legal_nature": "law",
+      "url": "https://www.planalto.gov.br/ccivil_03/leis/l8078compilado.htm",
+      "role": "원문 발췌 출처",
+      "excerpt_file": "cdc_l8078_excerpt.md",
+      "supporting_excerpt_ids": [
+        "CDC-118"
+      ],
+      "criteria_compared_with_source_id": null,
+      "official_edition": null,
+      "dates": {
+        "enacted": "1990-09-11",
+        "official_gazette_published": "1990-09-12",
+        "official_gazette_rectified": "2007-01-10",
+        "effective": null,
+        "effective_rule": "Art. 118: 공포 후 180일(정확한 시행 일자는 기록에 없음)",
+        "note": "공식 판·버전 번호 없음. Planalto 통합본(compilado)이며 페이지 고지상 관보(DOU) 게재본을 대체하지 않음"
+      },
+      "usage_rights": {
+        "status": "stored_law_text_no_legal_review",
+        "note": "Lei 9.610/1998 Art. 8º IV(법령 텍스트는 저작권 보호 대상 아님)에 따라 발췌 저장. 법률 전문가 검토 없음(source_register.md)"
+      }
+    },
+    {
+      "id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "url": "https://www.conar.org.br/codigos",
+      "role": "원문 발췌 출처(웹 게시본)",
+      "excerpt_file": "conar_excerpt.md",
+      "supporting_excerpt_ids": [],
+      "criteria_compared_with_source_id": "SRC-CONAR-PDF",
+      "official_edition": null,
+      "dates": {
+        "annex_u_amendment_approved": null,
+        "effective": null,
+        "note": "웹 게시본에서 Anexo U 날짜 표기를 찾지 못함(source_register.md)"
+      },
+      "usage_rights": {
+        "status": "ai_use_permission_unconfirmed",
+        "note": "CONAR 이용약관(2026년 5월, 2026-10-25 16:34:00 확인)상 상업·광고 목적 이용과 AI 시스템 입력 등은 사전 명시 허가 필요. 담당자의 기준 포함 결정은 허가가 아니며 AI 이용 허가는 미확인(source_register.md)"
+      }
+    },
+    {
+      "id": "SRC-CONAR-PDF",
+      "legal_nature": "advertising_self_regulation",
+      "url": "https://conar.wpenginepowered.com/wp-content/uploads/2026/08/Codigo_CONAR_2026.pdf",
+      "role": "웹 게시본 대조용(발췌는 웹 게시본 기준)",
+      "excerpt_file": null,
+      "supporting_excerpt_ids": [],
+      "criteria_compared_with_source_id": null,
+      "official_edition": "Edição 2025",
+      "dates": {
+        "annex_u_amendment_approved": "2025-11",
+        "effective": null,
+        "note": "PDF 각주의 Anexo U 개정 승인은 월까지만 표기. 시행일 미확인(review_criteria_ko.md)"
+      },
+      "usage_rights": {
+        "status": "ai_use_permission_unconfirmed",
+        "note": "SRC-CONAR-WEB과 같음. PDF 사본은 저장소에 넣지 않음"
+      }
+    }
+  ]
+}

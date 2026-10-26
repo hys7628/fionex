@@ -1,0 +1,50 @@
+{
+ "experiment_id": "SVC-MA-20261026-04",
+ "type": "service_prompt_experiment",
+ "date_kst": "2026-10-26 02:46 (대시보드 실행)",
+ "worker": "한윤수",
+ "feature": "market_analysis",
+ "prompt": "features/market_analysis/prompts/news_title_translate_v1.md",
+ "model": "OPENAI_MODEL(.env, gpt-5.4-mini 계열 — 이번 호출의 응답 모델명·토큰은 화면에 표시하지 않아 미기록)",
+ "input": "NewsData.io 무료 플랜 포르투갈어 기사 제목(같은 날 수집분, 공개 기사 제목)",
+ "result_screen": "포르투갈어·스페인어 제목 24건에 한국어 AI 번역(OpenAI 기계 번역)을 붙였습니다. 번역은 이해를 돕기 위한 것이며 원문 제목이 기준입니다. ",
+ "pairs_sample": [
+  [
+   "N1 Plástico domina 59% da produção mundial de fibras e compõe 37% da massa dos celulares",
+   "AI 번역 플라스틱이 세계 섬유 생산의 59%를 차지하고 휴대전화 무게의 37%를 이룬다"
+  ],
+  [
+   "R1 Posso votar de boné?",
+   "AI 번역 모자를 쓰고 투표할 수 있나요?"
+  ],
+  [
+   "R2 Seedorf analisa atuação do Corinthians e explica mudanças na equipe após derrota para o Vasco",
+   "AI 번역 씨도르프, 코린치안스의 경기력을 분석하고 바스쿠전 패배 후 팀 변화 설명"
+  ],
+  [
+   "R3 Eleições 2026: O que você precisa saber para votar no 2º turno",
+   "AI 번역 2026년 선거: 2차 투표를 위해 알아야 할 것"
+  ],
+  [
+   "R4 Calendário do Carnaval 2027 define folia entre 6 e 10 de fevereiro e regras de ponto facultativo",
+   "AI 번역 2027년 카니발 일정, 2월 6일부터 10일까지의 축제와 임시 휴무 규정 확정"
+  ],
+  [
+   "R5 2º turno no RN: tudo o que você precisa saber para votar neste domingo (25)",
+   "AI 번역 리우그란지두노르치주 2차 투표: 이번 일요일(25일) 투표를 위해 알아야 할 모든 것"
+  ],
+  [
+   "R6 Pensão alimentícia atualiza valores pelo piso de R$ 1.621 e ganha cobrança automática via Pix Pensão",
+   "AI 번역 양육비, R$ 1.621 최저액으로 금액 조정되고 Pix Pensão 통한 자동 징수 도입"
+  ],
+  [
+   "R7 Vai votar? Confira tudo o que você precisa saber para a disputa do 2º turno em MS",
+   "AI 번역 투표하나요? 마투그로수두술주 2차 투표 경쟁을 위해 알아야 할 모든 것 확인하세요"
+  ],
+  [
+   "R8 Mais de 1,7 mi de eleitores estão aptos a votar em Sergipe no 2º turno; veja checklist antes de votar",
+   "AI 번역 세르지피주에서 2차 투표에 참여할 수 있는 유권자 170만 명 이상… 투표 전 체크리스트 확인"
+  ]
+ ],
+ "note": "화면에서 읽은 원문 제목·번역 쌍 일부(전체 24건 중). 비밀값 없음."
+}

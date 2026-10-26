@@ -2,4 +2,850 @@
  * 홈 탭 전용 스타일. 선택자는 .feature-home 안으로 한정합니다.
  * 공통 컴포넌트(.card, .btn, .input 등)를 복제·덮어쓰지 말고 tokens.css 변수를 사용합니다.
  * 예) .feature-home .xxx-list { gap: var(--space-3); }
+ *
+ * 간격 체계(모든 주요 카드 같음): 바깥 여백은 공통 .card 값(데스크톱 --space-6 24px, 960px 미만 --space-5 20px),
+ * 제목 → 부제 --space-1(공통 .card-description), 머리 → 본문 --space-4(공통 .card), 본문 안 요소 사이 --space-3.
  */
+
+/* ---------- 공통 머리글 숨김(Home만) ---------- */
+/* Home은 '일일 브리핑' 바부터 시작합니다. 공통 머리글(홈 제목·설명·작업 상태 칩)은 화면에서만 숨기고,
+   h1은 화면낭독기 이름·탭 전환 초점 대상으로 남깁니다(공통 .visually-hidden과 같은 방식). */
+.feature-home > .page-header {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+  box-shadow: none;
+}
+
+/* ---------- 배치 ---------- */
+/* 일일 브리핑 바 → 1행(바이어 시간 1fr · 환율 2fr) → 2행(업계 소식 2fr · 전시회 1fr) → 출처 및 유의사항.
+   1100px(공통 2열 기준) 이상에서 행마다 두 열, 같은 행 카드는 외곽 높이를 맞춥니다(stretch, 고정 높이 없음).
+   1100px 미만은 같은 순서로 세로로 쌓습니다. */
+.feature-home .home-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.feature-home .home-status-grid,
+.feature-home .home-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: stretch;
+}
+
+/* 요약 대시보드 비율: 바이어 시간 40 · 환율 60, 업계 소식 60 · 전시회 40 */
+@media (min-width: 1100px) {
+  .feature-home .home-status-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  }
+
+  .feature-home .home-content-grid {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+}
+
+/* 카드 본문: 요소 사이 간격을 한 값으로. 비어 있는 안내 칸(notices)은 간격을 차지하지 않습니다. */
+.feature-home .home-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.feature-home .home-card-body > div:empty,
+.feature-home .home-toolbar > div:empty {
+  display: none;
+}
+
+/* ---------- 일일 브리핑 바 ---------- */
+.feature-home .home-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.feature-home .home-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.feature-home .home-toolbar-text {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-3);
+  min-width: 0;
+}
+
+.feature-home .home-toolbar-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.feature-home .home-toolbar-hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.feature-home .home-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-3);
+}
+
+.feature-home .home-toolbar-status {
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+@media (max-width: 959.98px) {
+  .feature-home .home-toolbar {
+    padding: var(--space-3) var(--space-5);
+  }
+}
+
+/* ---------- 바이어 시간 ---------- */
+/* 현지 시각이 핵심: 도시명 → 큰 시각 → 작은 상태 글자·날짜.
+   시각·상태 글자 색 = 업무시간 초록, 업무시간 외·주말 주황, 공휴일 빨강(공통 상태 색, 글자와 함께 표시) */
+.feature-home .home-clock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--color-text-muted);
+}
+
+.feature-home .home-clock-city {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.feature-home .home-clock-time {
+  font-size: 2.5rem;
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--color-text);
+}
+
+.feature-home .home-clock-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.feature-home .home-clock-date {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+}
+
+.feature-home .home-status-success .home-clock-time,
+.feature-home .home-status-success .home-clock-meta {
+  color: var(--color-success);
+}
+
+.feature-home .home-status-warning .home-clock-time,
+.feature-home .home-status-warning .home-clock-meta {
+  color: var(--color-warning);
+}
+
+.feature-home .home-status-danger .home-clock-time,
+.feature-home .home-status-danger .home-clock-meta {
+  color: var(--color-danger);
+}
+
+/* 전시회 국가·도시 줄 */
+.feature-home .home-fair-place {
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+/* 이름 | 값 두 열, 행 사이 좁게. 보조 정보는 값 아래 작은 회색 글씨 */
+.feature-home .home-time-list {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+}
+
+.feature-home .home-time-pair {
+  display: contents;
+}
+
+.feature-home .home-time-list dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.4rem;
+}
+
+.feature-home .home-time-list dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  min-width: 0;
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.4rem;
+}
+
+.feature-home .home-time-value {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.feature-home .home-time-sub {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* Home 요약에서 숨기는 바이어 정보(계산·DOM은 유지): 서울 시각, 다음 연락 가능(KST), 정상일 때의 공휴일 자료 출처 줄.
+   공휴일 자료 조회 실패·대체 자료 안내(notice)는 계속 보입니다. */
+.feature-home .home-buyer-extra,
+.feature-home #home-holiday-source.field-hint {
+  display: none;
+}
+
+.feature-home .home-time-sub-line {
+  flex-basis: 100%;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+}
+
+/* 도시 선택은 카드 아래쪽 보조 컨트롤: 이름과 선택을 한 줄에 */
+.feature-home .home-city-field {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 14rem);
+  justify-content: start;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+/* 같은 행 카드가 늘어날 때 마지막 줄(도시 선택·환율 안내)이 카드 아래에 붙도록 본문을 채웁니다(빈 칸 추가 없음). */
+.feature-home #home-buyer-time .home-card-body,
+.feature-home #home-fairs .home-card-body {
+  flex: 1;
+}
+
+/* 같은 행 뉴스 카드에 맞춰 늘어날 때 전시회 안내 줄이 카드 아래에 붙습니다(빈 칸 요소 없음). */
+.feature-home #home-fairs-foot {
+  margin-top: auto;
+}
+
+/* ---------- 환율: 숫자 타일 3개 ---------- */
+.feature-home .home-fx-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feature-home .home-fx-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.feature-home .home-fx-pair {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.02em;
+}
+
+.feature-home .home-fx-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+}
+
+.feature-home .home-fx-number {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: var(--line-height-tight);
+}
+
+.feature-home .home-fx-number-none {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+}
+
+.feature-home .home-fx-unit {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.feature-home .home-fx-line {
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.feature-home .home-fx-aside {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.feature-home .home-fx-source {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 업계 소식 ---------- */
+/* 매체 필터: 회색 기본, 선택한 탭만 공통 포인트 색. 좁으면 줄바꿈합니다. */
+.feature-home .home-news-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+/* Home 요약: 필터는 작게(매체·주제 각 한 줄 목표), 클릭 영역은 28px 이상 유지 */
+.feature-home .home-news-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.feature-home .home-news-tab:hover {
+  border-color: var(--color-border-control);
+  color: var(--color-text);
+}
+
+.feature-home .home-news-tab[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+
+.feature-home .home-news-tab-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-bold);
+}
+
+.feature-home .home-news-tab-warn {
+  color: var(--color-warning);
+}
+
+/* 수집 현황(경로별 상태·갱신 시각·건수)은 필터 바로 아래 한 줄로 접어 둡니다. */
+.feature-home .home-news-status {
+  margin-top: calc(-1 * var(--space-1));
+}
+
+.feature-home .home-news-status > summary,
+.feature-home .home-fair-details > summary {
+  width: fit-content;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+  cursor: pointer;
+}
+
+.feature-home .home-news-status > summary:hover,
+.feature-home .home-fair-details > summary:hover {
+  color: var(--color-text);
+}
+
+.feature-home .home-news-sources {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feature-home .home-news-source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.feature-home .home-news-source-meta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.feature-home .home-news-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* 목록은 카드 안에서 스크롤하지 않고 기사 수만큼 늘어납니다(기본 8건 + 더 보기).
+   기사 하나 = 제목 · AI 요약 · 매체·날짜를 좁은 간격으로 묶고, 기사 사이만 구분선 */
+.feature-home .home-news-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-border);
+  list-style: none;
+}
+
+.feature-home .home-news-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.feature-home .home-news-item:last-child {
+  border-bottom: 0;
+}
+
+.feature-home .home-news-link {
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.feature-home .home-news-link:hover,
+.feature-home .home-news-link:focus-visible {
+  color: var(--color-primary-text);
+  text-decoration: underline;
+}
+
+.feature-home .home-news-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+}
+
+.feature-home .home-news-summary > span:last-child {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.feature-home .home-news-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+}
+
+/* 분류 라벨(KOTRA·Google News·ABIT·AI 요약): 상태 색이 아닌 회색 */
+.feature-home .home-label {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.feature-home .home-card-foot {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* ---------- 다가오는 전시회 ---------- */
+/* D-day(크게) | 행사명 · 기간·도시 · [확인 필요] [상세 정보] */
+.feature-home .home-fair-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-border);
+  list-style: none;
+}
+
+.feature-home .home-fair-item {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.feature-home .home-fair-item:last-child {
+  border-bottom: 0;
+}
+
+.feature-home .home-fair-dday {
+  color: var(--color-primary-text);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.feature-home .home-fair-dday-today {
+  color: var(--color-warning);
+}
+
+.feature-home .home-fair-dday-ongoing {
+  color: var(--color-success);
+}
+
+.feature-home .home-fair-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.feature-home .home-fair-name {
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.feature-home .home-fair-when {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.feature-home .home-fair-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin-top: 2px;
+}
+
+.feature-home .home-fair-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* 펼치면 상세 내용이 배지 아래 한 줄 전체를 씁니다. */
+.feature-home .home-fair-details[open] {
+  flex-basis: 100%;
+}
+
+.feature-home .home-fair-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  min-width: 0;
+  font-size: var(--font-size-sm);
+}
+
+.feature-home .home-fair-label {
+  flex: 0 0 2.5rem;
+  color: var(--color-text-muted);
+}
+
+.feature-home .home-fair-line > span:last-child {
+  flex: 1 1 8rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.feature-home .home-fair-note {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.feature-home .home-fair-link {
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 출처 및 유의사항(접기) ---------- */
+/* 기본 펼침 표시(▶)를 유지하도록 list-item으로 둡니다. */
+.feature-home .home-notes-summary {
+  display: list-item;
+  cursor: pointer;
+}
+
+.feature-home .home-notes-summary .card-title {
+  display: inline;
+}
+
+.feature-home .home-notes-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-4) var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.feature-home .home-notes-title {
+  margin-bottom: var(--space-1);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.feature-home .home-notes-body ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+/* ---------- 업계 소식: 필터 줄 이름(매체·주제) ---------- */
+.feature-home .home-news-filter-label {
+  flex: 0 0 2rem;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  align-self: center;
+}
+
+/* ---------- 1행 상태 요약(바이어 시간 · 환율) compact ---------- */
+/* 두 카드만 위아래 여백을 줄입니다(Home 전용 클래스 home-summary-card). 좌우는 공통 .card 값과 같게 두어
+   아래 카드들과 제목 시작선이 맞습니다(데스크톱 24px, 960px 미만 20px). */
+.feature-home .home-summary-card {
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+}
+
+@media (max-width: 959.98px) {
+  .feature-home .home-summary-card {
+    padding: var(--space-4) var(--space-5);
+  }
+}
+
+/* 제목 줄: 왼쪽 제목, 오른쪽 기준 도시 선택(높이는 공통 컨트롤 그대로) */
+.feature-home .home-summary-head {
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.feature-home .home-summary-head .home-city-field {
+  display: block;
+  flex: 0 1 9.5rem;
+  min-width: 0;
+  margin: 0;
+}
+
+/* 바이어: 큰 현지 시각 옆에 작은 '연락 가능/어려움 · 날짜' 한 줄 */
+.feature-home #home-buyer-time .home-card-body {
+  gap: var(--space-2);
+}
+
+.feature-home .home-clock {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-3);
+}
+
+.feature-home .home-clock-meta {
+  gap: 0 var(--space-1);
+}
+
+/* 환율: 회색 상자 대신 얇은 구분선으로 나눈 한 줄 띠. 좁으면 2+1·세로로 줄바꿈 */
+.feature-home .home-fx-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
+  gap: var(--space-2) 0;
+}
+
+.feature-home .home-fx-tile {
+  gap: 0;
+  padding: 0 var(--space-4);
+  border-left: 1px solid var(--color-border);
+  border-radius: 0;
+  background: none;
+}
+
+.feature-home .home-fx-tile:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.feature-home .home-fx-number {
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.feature-home .home-fx-line {
+  margin-top: 2px;
+}
+
+.feature-home .home-fx-source {
+  margin-top: 2px;
+}
+
+@media (max-width: 599.98px) {
+  .feature-home .home-fx-tiles {
+    gap: var(--space-3) var(--space-4);
+  }
+
+  .feature-home .home-fx-tile {
+    padding: 0;
+    border-left: 0;
+  }
+}
+
+/* 짧은 출처(한국수출입은행 등)가 글자 중간에서 끊기지 않게 */
+.feature-home .home-fx-source {
+  word-break: keep-all;
+}
+
+/* ---------- 색감: 밝은 블루-민트(2026-10-26) ---------- */
+/* 기존 tokens.css 색만 씁니다(새 색 없음). 공통 .card·.btn·배경은 그대로 두고 Home 요소만 다듬습니다.
+   흰 바탕 + 옅은 블루그레이 + 블루(선택)·민트(hover) 포인트, 핵심 숫자는 진한 네이비(--color-text). */
+.feature-home .home-toolbar {
+  border: 1px solid var(--color-border);
+  background: var(--color-hero-gradient);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 필터 칩: 비선택 흰색, hover 옅은 민트, 선택 옅은 블루(상태색 아님) */
+.feature-home .home-news-tab {
+  background: var(--color-surface);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.feature-home .home-news-tab:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+
+.feature-home .home-news-tab[aria-pressed="true"],
+.feature-home .home-news-tab[aria-pressed="true"]:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+
+/* 분류 라벨(매체·주제·AI 요약): 옅은 블루그레이, 상태색과 구분 */
+.feature-home .home-label {
+  border-color: transparent;
+  background: var(--color-surface-hover);
+}
+
+/* 핵심 숫자 = 진한 네이비, 보조 글자 = 블루그레이 */
+.feature-home .home-fx-number,
+.feature-home .home-fair-name {
+  color: var(--color-text);
+}
+
+.feature-home .home-fx-pair,
+.feature-home .home-fair-place {
+  color: var(--color-text-muted);
+}
+
+/* 접기 요약(수집 현황·상세 정보·출처 및 유의사항) hover는 민트 */
+.feature-home .home-news-status > summary:hover,
+.feature-home .home-fair-details > summary:hover,
+.feature-home .home-notes-summary:hover {
+  color: var(--color-accent-text);
+}
+
+/* ---------- 업계 소식 상세(같은 탭 안의 화면) ---------- */
+.feature-home .home-news-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.feature-home .home-detail-bar {
+  display: flex;
+}
+
+/* 검색: 넓으면 입력 + 버튼 한 줄, 좁으면 줄바꿈 */
+.feature-home .home-news-search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.feature-home .home-news-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.feature-home .home-news-search-row .input {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.feature-home .home-detail-count {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.feature-home .home-detail-external {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Google News 추가 검색 결과 구분 라벨(중립, 옅은 민트 테두리) */
+.feature-home .home-search-label {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}

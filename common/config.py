@@ -1,8 +1,8 @@
 """공통 설정. 공통 화면 실행에는 API 키가 필요하지 않습니다.
 
 OpenAI 설정은 import 시점이 아니라 AI 함수를 호출할 때 환경변수에서 읽습니다.
-이 모듈은 .env를 직접 로드하지 않습니다. Flask 실행 경로(app.run, flask run)와
-python-dotenv 설치 여부에 따라 .env의 값이 환경변수로 로드될 수 있습니다(README.md 실행 안내 참고).
+이 모듈은 .env를 직접 로드하지 않습니다. `python app.py`(app.run)·`flask run` 시작 시 Flask가
+python-dotenv(requirements.txt)로 .env를 환경변수에 넣습니다. 이미 설정된 OS 환경변수가 우선합니다(README.md).
 """
 import os
 

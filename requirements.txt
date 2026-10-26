@@ -11,7 +11,25 @@ httpx2==2.16.0
 # PDF 입력 검사(common/pdf_utils.py). BSD-3-Clause, Python 3.11에서 추가 의존성 없음. jasonenv 설치·모의 테스트 확인(2026-10-25).
 # pdf_utils가 pypdf 내부 메서드(PdfReader._handle_encryption)를 덮어쓰므로 버전을 바꾸면 tests/test_common/test_pdf.py로 재확인한다.
 pypdf==6.21.2
-# PDF 출력 도구는 기능 개발 단계에서 선정·검증 후 추가한다.
-# [팀 공유 필요] 홍보 스튜디오 PDF 출력(features/promotion_studio/pdf_builder.py, 정은진 2026-10-25). LGPL-3.0.
-# jasonenv 설치 시 defusedxml 0.7.1, fonttools 4.67.0, pillow 13.0.0이 함께 설치됨. 팀 공통 PDF 도구로 확정된 것은 아니다.
-fpdf2==2.8.9
+# .env 자동 로드. Flask가 `python app.py`(app.run)·`flask run` 시작 시 실행 위치에서 상위 방향으로 찾은 .env를 읽는다(이미 설정된 OS 환경변수 우선).
+# 앱 코드에서 직접 import하지 않는다. BSD-3-Clause, Python 3.11 지원. 2026-10-25 1.1.1로 추가(jasonenv 동작 확인) → 2026-10-26 담당자(한윤수) 1.2.4로 지정.
+python-dotenv==1.2.4
+# 그린 클레임 Word(.docx) 텍스트 추출(features/green_claim). 팀 협의 후 jasonenv에 설치, pip check 정상(2026-10-25). MIT.
+# 필수 하위 의존성으로 lxml 6.1.3, typing_extensions 4.16.0이 함께 설치되었다(Python 3.11 기준).
+python-docx==1.2.0
+# 그린 클레임 이미지(JPG·JPEG·PNG) AI 판독의 실제 디코딩 검사·판독용 사본(투명 합성·EXIF 방향·메타데이터 제거) 생성(features/green_claim).
+# 제품소개서 표지 PNG 검사·투명 합성과 PDF 이미지 처리(features/product_brochure/pdf_download.py·pdf_catalog.py)에도 사용.
+# 담당자 승인 후 jasonenv에 설치, pip check 정상(2026-10-25). 필수 하위 의존성 없음. MIT-CMU. 실제 OpenAI 판독은 미검증.
+# reportlab 요구 pillow>=9.0.0을 만족하므로 reportlab 설치 시에도 이 버전을 유지한다.
+pillow==13.0.0
+# PDF 출력(생성). BSD. 공통 PDF 입력 검사(pypdf)와는 별개 기능이다. 2026-10-25 공통 담당 합의(한윤수 확인) 후 추가.
+# 설치 시 pillow·charset-normalizer(3.5.2, MIT)가 함께 설치된다. 기능별 사용처와 글꼴:
+# - 홈 일일 브리핑(features/home): 메모리(BytesIO)에서 생성, features/home/fonts의 Noto Sans KR(OFL). jasonenv 생성·렌더링 확인(2026-10-25).
+# - 시장 분석(features/market_analysis/pdf_report.py): features/market_analysis/fonts의 Noto Sans KR(OFL).
+# - 제품소개서 카탈로그(features/product_brochure/pdf_catalog.py): features/product_brochure/fonts의 Noto Sans KR(OFL).
+#   jasonenv 설치·pip check·모의 데이터 렌더링 테스트 확인(2026-10-26).
+# - 그린 클레임 검수 보고서(features/green_claim/report_worker.py): 라틴 문자는 reportlab 포함 Bitstream Vera, 한글은 features/green_claim/fonts의 나눔고딕(OFL).
+#   jasonenv(Python 3.11.17) 설치, pip check 정상(2026-10-26).
+# - 홍보 스튜디오 콘티 PDF(features/promotion_studio/pdf_builder.py): features/promotion_studio/fonts의 Noto Sans KR(OFL).
+#   2026-10-26 fpdf2에서 reportlab으로 전환(팀 도구 통일), jasonenv 테스트·렌더링 확인.
+reportlab==5.1.0
