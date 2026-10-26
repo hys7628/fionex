@@ -277,6 +277,12 @@
       '<p class="ma-tile-sub">전년 동기 대비 ' + esc(yoyText(yoy)) + "</p>" + (extra || "") + "</div>";
   }
 
+  // ③~⑤는 접어 둡니다(①·② 핵심만 펼침). 제목을 누르면 펼쳐집니다. 닫는 쪽은 "</div></details>".
+  function foldOpen(id, title) {
+    return '<details class="ma-section ma-fold"><summary class="ma-fold-summary"><h3 class="ma-h3" id="market_analysis-' + id + '">' +
+      esc(title) + '</h3></summary><div class="ma-fold-body" role="region" aria-labelledby="market_analysis-' + id + '">';
+  }
+
   function renderResult(d) {
     const q = d.query, s = d.summary, src = d.sources[0];
     const caption = "출처: ComexStat · 브라질 수입 · " + q.code_system_label + " " + q.code + " · " + q.from + "~" + q.to;
@@ -324,18 +330,17 @@
     html += "<details class=\"ma-details\"><summary>월별 상세 표 보기</summary>" + monthlyTable(d, caption) + "</details></section>";
 
     // ③ 공급국
-    html += '<section class="ma-section" aria-labelledby="market_analysis-s3"><h3 class="ma-h3" id="market_analysis-s3">③ 공급국 비교</h3>';
+    html += foldOpen("s3", "③ 공급국 비교");
     html += '<p class="field-hint">수입액 기준 순위. 비중의 분모는 같은 품목·기간의 브라질 전체 수입액입니다. 공급국은 ComexStat 기준 원산지 국가이며 판매 회사의 국가가 아닙니다(MDIC 통계 이용 매뉴얼). 기간 내 공급국 ' + d.suppliers.count + "개국.</p>";
     html += koreaHtml(d.suppliers);
     html += supplierTable(d.suppliers.top, caption + " · 상위 " + d.suppliers.top.length + "개국");
     if (d.suppliers.selected.length) {
       html += '<h4 class="ma-h4">선택한 공급국</h4>' + supplierTable(d.suppliers.selected, caption + " · 선택한 공급국 (비중은 전체 시장 기준)");
     }
-    html += "</section>";
+    html += "</div></details>";
 
     // ④ AI 분석(사용자가 직접 실행하는 유료 호출)
-    html += '<section class="ma-section" aria-labelledby="market_analysis-s4"><h3 class="ma-h3" id="market_analysis-s4">④ AI 분석</h3>' +
-      '<div data-ma-ai>' + aiIdleHtml() + "</div></section>";
+    html += foldOpen("s4", "④ AI 분석") + '<div data-ma-ai>' + aiIdleHtml() + "</div></div></details>";
 
     html += sourcesHtml(d);
     resultBox.innerHTML = html;
@@ -559,11 +564,11 @@
   function sourcesHtml(d) {
     const src = d.sources[0];
     const cache = { fresh: "이번 조회에서 받음", cached: "오늘 받은 자료 재사용", stale: "이전 자료 사용(최신 조회 실패)" }[src.cache_status];
-    let html = '<section class="ma-section" aria-labelledby="market_analysis-s5"><h3 class="ma-h3" id="market_analysis-s5">⑤ 근거 자료</h3><ul class="ma-sources">';
+    let html = foldOpen("s5", "⑤ 근거 자료") + '<ul class="ma-sources">';
     html += "<li><strong>" + esc(src.name) + "</strong> · " + linkHtml(src.url) + "<br>" +
       esc("지표: " + src.metrics + " · 자료 갱신일 " + (src.data_updated || "확인 안 됨") + " · 최신 제공 월 " + (src.latest_month || "확인 안 됨") +
         " · 자료 받은 시각 " + kstTime(src.fetched_at) + " · " + cache) + "</li>";
-    return html + "</ul></section>";
+    return html + "</ul></div></details>";
   }
 
   /* ---------- 그래프 (SVG, 단일 계열 → 범례 없이 제목으로 지표 표시) ---------- */
@@ -676,41 +681,56 @@
   const buyersBox = panel.querySelector("[data-ma-buyers]");
   const BUYERS_SHOWN = 5;
 
+  // 대상 업종(CNAE) 짧은 한글 이름. 국세청 공식 명칭(포르투갈어)은 마우스를 올리면 보입니다.
+  const CNAE_SHORT = {
+    "1313800": "합성섬유 방적", "1314600": "재봉·자수실", "1321900": "면 직물", "1322700": "기타 천연섬유 직물",
+    "1323500": "합성섬유 직물", "1330800": "니트 원단", "1340501": "날염·가공사(텍스처링)", "1340502": "표백·염색·연사",
+  };
+
   function buyerRow(c, i) {
-    const name = esc(c.razao_social) + (c.nome_fantasia ? '<br><span class="field-hint">' + esc(c.nome_fantasia) + "</span>" : "");
+    const name = '<span class="ma-buyer-name">' + esc(c.razao_social) + "</span>" +
+      (c.nome_fantasia && c.nome_fantasia !== c.razao_social ? '<br><span class="field-hint">' + esc(c.nome_fantasia) + "</span>" : "") +
+      '<br><span class="field-hint">CNPJ ' + esc(c.cnpj) + "</span>";
     const ev = c.evidence.length ? c.evidence.map(function (e) {
       return linkHtml(e.url, e.title) + '<br><span class="field-hint">확인 ' + esc(e.checked_at) + "</span>";
-    }).join("<br>") : "—";
-    const contact = c.phones.map(esc).concat(c.domain ? ["도메인 " + esc(c.domain)] : []).join("<br>") || "등록 없음";
-    return "<tr><td>" + (i + 1) + "</td><td>" + name + "<br><span class=\"field-hint\">CNPJ " + esc(c.cnpj) + "</span></td><td>" +
-      esc((c.uf || "") + " · " + (c.municipio || "")) + "</td><td>" + esc(c.cnae + " " + (c.cnae_desc || "")) + "</td><td>" +
+    }).join("<br>") : '<span class="field-hint">없음</span>';
+    const contact = c.phones.map(esc).concat(c.domain ? ['<span class="field-hint">' + esc(c.domain) + "</span>"] : []).join("<br>") ||
+      '<span class="field-hint">등록 없음</span>';
+    return "<tr><td class=\"num\">" + (i + 1) + "</td><td>" + name + "</td><td>" + esc(c.uf || "") +
+      '<br><span class="field-hint">' + esc(c.municipio || "") + "</span></td>" +
+      '<td title="' + esc(c.cnae + " " + (c.cnae_desc || "")) + '">' + esc(CNAE_SHORT[c.cnae] || c.cnae_desc || c.cnae) + "</td><td>" +
       contact + "</td><td>" + ev + "</td></tr>";
   }
 
   function buyerTable(rows, offset, caption) {
-    return '<div class="table-wrap"><table class="table"><caption>' + esc(caption) + "</caption><thead><tr>" +
-      '<th scope="col">#</th><th scope="col">회사명</th><th scope="col">지역(주·시)</th><th scope="col">업종(CNAE)</th>' +
-      '<th scope="col">법인 대표 전화 · 회사 도메인</th><th scope="col">재생·T2T 근거</th></tr></thead><tbody>' +
+    return '<div class="table-wrap"><table class="table ma-buyer-table"><caption>' + esc(caption) + "</caption><thead><tr>" +
+      '<th scope="col" class="num">#</th><th scope="col">회사명</th><th scope="col">지역</th><th scope="col">업종</th>' +
+      '<th scope="col">전화 · 회사 도메인</th><th scope="col">재생·T2T 근거</th></tr></thead><tbody>' +
       rows.map(function (c, i) { return buyerRow(c, offset + i); }).join("") + "</tbody></table></div>";
   }
 
   function renderBuyers(d) {
-    let html = d.notes.map(function (n) { return '<div class="notice notice-info"><p>' + esc(n) + "</p></div>"; }).join("");
+    // 안내 문구·선정 조건·출처는 '참고 사항'으로 접어 둡니다(2026-10-26 담당자 지시).
+    let notes = d.notes.map(function (n) { return '<div class="notice notice-info"><p>' + esc(n) + "</p></div>"; }).join("");
     if (!d.ready) {
-      buyersBox.innerHTML = html + '<div class="empty-state"><p class="empty-state-title">기준 자료가 아직 없습니다</p>' +
+      buyersBox.innerHTML = '<details class="ma-details"><summary>참고 사항</summary>' + notes + "</details>" +
+        '<div class="empty-state"><p class="empty-state-title">기준 자료가 아직 없습니다</p>' +
         "<p>buyer_data_builder로 국세청 공개 자료에서 목록을 만든 뒤 표시됩니다.</p></div>";
       return;
     }
     const list = d.companies;
-    html += '<p class="field-hint">' + esc("전체 " + list.length + "곳 · 재생·T2T 근거 " + d.counts.with_evidence + "곳" +
-      (d.counts.with_evidence ? "" : "(검토된 근거 없음)") + " · 조건: 주 업종 대상 CNAE, 활성, 법인, 규모 '" + d.filters.porte + "'") + "</p>";
-    html += buyerTable(list.slice(0, BUYERS_SHOWN), 0, "바이어 목록 · 첫 " + Math.min(BUYERS_SHOWN, list.length) + "곳");
-    if (list.length > BUYERS_SHOWN) {
-      html += '<details class="ma-details"><summary>나머지 ' + (list.length - BUYERS_SHOWN) + "곳 보기</summary>" +
-        buyerTable(list.slice(BUYERS_SHOWN), BUYERS_SHOWN, "바이어 목록 · 나머지") + "</details>";
-    }
-    html += '<p class="field-hint">출처: ' + esc(d.source.name) + " · " + linkHtml(d.source.url) + " · " +
+    notes += '<p class="field-hint">' + esc("선정 조건: 주 업종이 원사·원단 제조 8개 업종, 영업 중, 법인(개인사업자 제외), 규모 '" + d.filters.porte +
+      "', 외국 법인·파산·회생 절차 회사 제외") + "</p>";
+    notes += '<p class="field-hint">출처: ' + esc(d.source.name) + " · " + linkHtml(d.source.url) + " · " +
       esc("자료 기준월 " + d.source.reference_month + " · 생성 " + kstTime(d.source.generated_at)) + "</p>";
+    let html = '<div class="ma-buyer-summary"><p><strong>' + esc(fmtInt.format(list.length)) + "곳</strong> · 재생·T2T 근거 " +
+      esc(d.counts.with_evidence + "곳" + (d.counts.with_evidence ? "" : " (검토된 근거 없음)")) + "</p>" +
+      '<details class="ma-details"><summary>참고 사항</summary>' + notes + "</details></div>";
+    html += buyerTable(list.slice(0, BUYERS_SHOWN), 0, "근거 업체 먼저 · 첫 " + Math.min(BUYERS_SHOWN, list.length) + "곳");
+    if (list.length > BUYERS_SHOWN) {
+      html += '<details class="ma-details"><summary>나머지 ' + fmtInt.format(list.length - BUYERS_SHOWN) + "곳 보기</summary>" +
+        buyerTable(list.slice(BUYERS_SHOWN), BUYERS_SHOWN, "나머지 업체") + "</details>";
+    }
     buyersBox.innerHTML = html;
   }
 
@@ -724,6 +744,33 @@
       buyersBox.innerHTML = '<div class="notice notice-danger" role="alert"><p>바이어 목록을 불러오지 못했습니다. 새로고침해 주세요.</p></div>';
     }
   }
+
+  /* ---------- 하위 탭(시장 통계 / 바이어 목록) ---------- */
+  const tabs = Array.from(panel.querySelectorAll("[data-ma-tab]"));
+
+  function selectTab(tab, focus) {
+    tabs.forEach(function (t) {
+      const on = t === tab;
+      t.setAttribute("aria-selected", on ? "true" : "false");
+      t.tabIndex = on ? 0 : -1;
+      panel.querySelector('[data-ma-pane="' + t.dataset.maTab + '"]').hidden = !on;
+    });
+    if (focus) tab.focus();
+  }
+
+  tabs.forEach(function (t, i) {
+    t.addEventListener("click", function () { selectTab(t, false); });
+    t.addEventListener("keydown", function (event) {
+      const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+      if (event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        selectTab(tabs[event.key === "Home" ? 0 : tabs.length - 1], true);
+      } else if (step) {
+        event.preventDefault();
+        selectTab(tabs[(i + step + tabs.length) % tabs.length], true);
+      }
+    });
+  });
 
   loadMeta();
   loadBuyers();

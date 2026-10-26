@@ -1,6 +1,14 @@
 {# 시장 분석 작업 영역. 통계·차트는 실제 조회 결과만 표시합니다. 꾸민 수치를 넣지 않습니다.
-   기본값(품목·기간)은 /api/market-analysis/meta 응답으로 채웁니다. #}
-<div class="workspace">
+   기본값(품목·기간)은 /api/market-analysis/meta 응답으로 채웁니다.
+   하위 탭: 시장 통계(조회 조건 + 분석 결과) / 바이어 목록(전체 폭). 탭 전환은 market_analysis.js #}
+<div class="ma-subtabs" role="tablist" aria-label="시장 분석 화면">
+  <button type="button" class="ma-subtab" role="tab" id="market_analysis-tab-stats" aria-controls="market_analysis-pane-stats"
+          aria-selected="true" data-ma-tab="stats">시장 통계</button>
+  <button type="button" class="ma-subtab" role="tab" id="market_analysis-tab-buyers" aria-controls="market_analysis-pane-buyers"
+          aria-selected="false" tabindex="-1" data-ma-tab="buyers">바이어 목록</button>
+</div>
+
+<div class="workspace" role="tabpanel" id="market_analysis-pane-stats" aria-labelledby="market_analysis-tab-stats" data-ma-pane="stats">
   <form class="card" aria-labelledby="market_analysis-input-title" novalidate data-ma-form>
     <div class="card-header">
       <div>
@@ -90,13 +98,16 @@
       </div>
     </div>
   </section>
+</div>
 
-  {# ⑥ 바이어 목록: 조회 조건과 무관한 기준 자료. 분석 PDF에도 전체 목록이 들어갑니다. #}
+{# 바이어 목록(PDF의 ⑥): 조회 조건과 무관한 기준 자료. 분석 PDF에도 전체 목록이 들어갑니다. #}
+<div role="tabpanel" id="market_analysis-pane-buyers" aria-labelledby="market_analysis-tab-buyers" data-ma-pane="buyers" hidden>
   <section class="card" aria-labelledby="market_analysis-buyers-title">
     <div class="card-header">
       <div>
-        <h2 class="card-title" id="market_analysis-buyers-title">⑥ 바이어 목록 (리젠 T2T 잠재 바이어)</h2>
-        <p class="card-description">브라질 원사·원단 제조 기업(국세청 CNPJ 공개 자료). 재생·T2T 관심 근거가 있는 업체를 먼저 표시합니다.</p>
+        <h2 class="card-title" id="market_analysis-buyers-title">바이어 목록 (리젠 T2T 잠재 바이어)</h2>
+        <p class="card-description">브라질 원사·원단 제조 기업(국세청 CNPJ 공개 자료). 재생·T2T 관심 근거가 있는 업체를 먼저 표시합니다.
+          전체 목록은 '시장 통계' 탭의 PDF(⑥)에도 들어갑니다.</p>
       </div>
     </div>
     <div data-ma-buyers aria-live="polite"><p class="field-hint">바이어 목록을 불러오는 중입니다.</p></div>
