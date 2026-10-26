@@ -169,9 +169,11 @@
   height: calc(100dvh - var(--space-8));
   max-height: none;
   padding: 0;
-  border: 0;
+  border: 1px solid var(--color-glass-border);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  background: var(--color-glass-surface);  /* 떠 있는 창 글래스(시장 분석 브리핑 창과 같은 토큰) */
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   color: var(--color-text);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
@@ -183,7 +185,9 @@
 }
 
 .feature-product_brochure .catalog-dialog::backdrop {
-  background: rgba(23, 36, 59, 0.55);
+  background: var(--color-glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop-blur);
+  backdrop-filter: var(--glass-backdrop-blur);
 }
 
 .feature-product_brochure .catalog-dialog-head {
@@ -213,8 +217,8 @@
   min-height: 0;
   overflow: auto;
   padding: var(--space-6);
-  background: var(--color-surface-muted);
-  border-top: 1px solid var(--color-border);
+  background: var(--color-glass-inner);
+  border-top: 1px solid var(--color-glass-border);
 }
 
 .feature-product_brochure .catalog-pages {
@@ -854,9 +858,11 @@
 /* 2단계: 접는 검토 방법 */
 .feature-product_brochure .pb-guide {
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-info-border);
+  border: 1px solid var(--color-glass-edge);
+  border-left: 3px solid var(--color-info-border);
   border-radius: var(--radius-sm);
-  background: var(--color-info-soft);
+  background: var(--color-glass-card-inner);
+  box-shadow: var(--shadow-sm);
   font-size: var(--font-size-sm);
 }
 
@@ -962,6 +968,10 @@
   flex-direction: column;
   gap: var(--space-1);
   margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-sm);
+  background: var(--color-glass-card-inner);
 }
 
 .feature-product_brochure .pb-status-box .field-hint { margin: 0; }
@@ -1039,3 +1049,22 @@
 }
 
 .feature-product_brochure .pb-pager .btn { max-width: 100%; white-space: normal; }
+
+/* 3단계: 표지 후보(생성 뒤 나타남)도 카드 안 유리 구획으로 */
+.feature-product_brochure .pb-pane .cover-candidate {
+  padding: var(--space-4);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-inner);
+  box-shadow: var(--shadow-sm);
+}
+
+.feature-product_brochure .pb-pane .cover-candidate[hidden] { display: none; }
+
+/* 1단계 오른쪽 개발용 예시: 점선 구분 대신 옅은 유리 구획 */
+.feature-product_brochure .pb-split-side .product_brochure-dev {
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-inner);
+}
