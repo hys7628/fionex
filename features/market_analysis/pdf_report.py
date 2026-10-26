@@ -13,7 +13,8 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 from xml.sax.saxutils import escape
 
-from reportlab.graphics.shapes import Drawing, Line, PolyLine, Rect, String, Circle
+from reportlab.graphics.shapes import Circle, Drawing, Line, Polygon, PolyLine, Rect, String
+from reportlab.pdfbase import pdfmetrics
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import A4
@@ -182,6 +183,17 @@ def yoy_cell(y):
 
 
 # ---------- 그래프 ----------
+# 그래프 색(2026-10-27): 화면 그래프와 같은 느낌. 막대는 부드러운 하늘색, 마지막 달만 진한 블루, 단가 선은 블루 + 옅은 면.
+G_BAR = colors.HexColor("#8cc4ea")        # 화면 아쿠아→블루 그라데이션 막대(55% 불투명)를 흰 바탕에 섞은 색
+G_BAR_LAST = colors.HexColor("#1d6ad4")   # 마지막 달 강조
+G_LINE = colors.HexColor("#1d6ad4")
+G_AREA = colors.HexColor("#e6f0fc")       # 단가 선 아래 옅은 면
+G_GRID = colors.HexColor("#e6ebf2")
+G_AXIS = colors.HexColor("#c3cedc")
+G_AVG = colors.HexColor("#0a7262")        # 월평균 점선(민트 글자색)
+G_FLAG = colors.HexColor("#d97706")       # 단가 '확인 필요' 점(주황)
+
+
 def _chart(monthly, metric, width, height=62 * mm):
     """월별 단일 계열 그래프. fob·kg는 막대, unit_price는 선. 기록 없는 달은 비움."""
     def val(m):
@@ -196,15 +208,21 @@ def _chart(monthly, metric, width, height=62 * mm):
     d = Drawing(width, height)
     left, bottom, top, right = 38, 22, 8, 6
     pw, ph = width - left - right, height - bottom - top
-    vmax = max(present) if present else 1
-    nice = _nice(vmax)
+    is_line = metric == "unit_price"
+    lo, hi = 0, _nice(max(present) if present else 1)
+    if is_line and present:  # 단가는 값 범위에 맞춘 눈금(작은 변화도 보이게, 화면 그래프와 같음)
+        tick = _nice(max(max(present) - min(present), max(present) * 0.1) / 4)
+        lo = max(0, (min(present) // tick) * tick - tick)
+        hi = (-(-max(present) // tick)) * tick + tick
+    y_of = lambda v: bottom + ph * (v - lo) / (hi - lo)
     for i in range(5):
         y = bottom + ph * i / 4
-        d.add(Line(left, y, left + pw, y, strokeColor=C_BORDER, strokeWidth=0.4, strokeDashArray=[2, 2]))
-        d.add(String(left - 3, y - 2.5, _axis(nice * i / 4, metric), fontName=FONT, fontSize=7, fillColor=C_MUTED, textAnchor="end"))
+        d.add(Line(left, y, left + pw, y, strokeColor=G_GRID, strokeWidth=0.5))
+        d.add(String(left - 4, y - 2.5, _axis(lo + (hi - lo) * i / 4, metric), fontName=FONT, fontSize=7, fillColor=C_MUTED, textAnchor="end"))
     n = max(1, len(monthly))
     step = pw / n
     every = max(1, -(-n // 8))
+    last = max((i for i, v in enumerate(values) if v is not None), default=None)
     segments, seg, dots = [], [], []  # 단가 선은 값이 없는 달에서 끊습니다
     for i, m in enumerate(monthly):
         cx = left + step * i + step / 2
@@ -216,27 +234,35 @@ def _chart(monthly, metric, width, height=62 * mm):
                 segments.append(seg)
                 seg = []
             continue
-        h = ph * v / nice
-        if metric == "unit_price":
-            seg += [cx, bottom + h]
-            dots.append((cx, bottom + h, bool(m.get("price_flag"))))
+        if is_line:
+            seg += [cx, y_of(v)]
+            dots.append((cx, y_of(v), bool(m.get("price_flag"))))
         else:
-            bw = max(1.2, step * 0.7)
-            d.add(Rect(cx - bw / 2, bottom, bw, h, fillColor=C_AQUA if i == len(monthly) - 1 else C_PRIMARY, strokeColor=None))
+            bw = max(1.2, step * 0.62)
+            d.add(Rect(cx - bw / 2, bottom, bw, y_of(v) - bottom, fillColor=G_BAR_LAST if i == last else G_BAR, strokeColor=None))
     if seg:
         segments.append(seg)
-    for s in segments:
-        if len(s) >= 4:
-            d.add(PolyLine(s, strokeColor=C_PRIMARY, strokeWidth=1.2))
+    for sgm in segments:
+        if len(sgm) >= 4:  # 선 아래 옅은 면 + 선
+            area = sgm + [sgm[-2], bottom, sgm[0], bottom]
+            d.add(Polygon(area, fillColor=G_AREA, strokeColor=None))
+    for sgm in segments:
+        if len(sgm) >= 4:
+            d.add(PolyLine(sgm, strokeColor=G_LINE, strokeWidth=1.6))
     for x, y, flagged in dots:
-        d.add(Circle(x, y, 2.6 if flagged else 1.4, fillColor=colors.white if flagged else C_PRIMARY,
-                     strokeColor=C_WARN if flagged else C_PRIMARY, strokeWidth=1 if flagged else 0.4))
-    if present:  # 월평균 점선(민트)
+        d.add(Circle(x, y, 2.6 if flagged else 1.5, fillColor=colors.white,
+                     strokeColor=G_FLAG if flagged else G_LINE, strokeWidth=1.1 if flagged else 0.9))
+    if present:  # 월평균 점선
         avg = sum(present) / len(present)
-        ya = bottom + ph * avg / nice
-        d.add(Line(left, ya, left + pw, ya, strokeColor=C_MINT, strokeWidth=0.8, strokeDashArray=[4, 3]))
-        d.add(String(left + 3, ya + 2.5, "월평균 " + _axis(avg, metric), fontName=FONT_BOLD, fontSize=6, fillColor=C_MINT))
-    d.add(Line(left, bottom, left + pw, bottom, strokeColor=C_MUTED, strokeWidth=0.6))
+        ya = y_of(avg)
+        d.add(Line(left, ya, left + pw, ya, strokeColor=G_AVG, strokeWidth=0.8, strokeDashArray=[4, 3]))
+        label = "월평균 " + _axis(avg, metric)
+        lw = pdfmetrics.stringWidth(label, FONT_BOLD, 6.5) + 6
+        # 오른쪽 끝 바깥 여백 쪽(그래프 위)에 흰 바탕으로: 선·막대 시작 부분을 가리지 않게
+        lx = left + pw - lw - 2
+        d.add(Rect(lx, ya + 1.5, lw, 9, fillColor=colors.white, strokeColor=None))
+        d.add(String(lx + 3, ya + 3.6, label, fontName=FONT_BOLD, fontSize=6.5, fillColor=G_AVG))
+    d.add(Line(left, bottom, left + pw, bottom, strokeColor=G_AXIS, strokeWidth=0.8))
     return d
 
 
@@ -322,9 +348,11 @@ def build_pdf(payload):
         story.append(_p("증감률 = (현재 − 전년 동기) ÷ 전년 동기 × 100. 평균 수입단가 = FOB 합계 ÷ 순중량 합계.", st["small"]))
 
         # ② 월별 추세
-        story.append(_h2("② 시장 추세 (월별)", "MDIC 공개 원본 자료 월별 집계" if snap else "ComexStat 월별 집계"))
-        for metric, label in (("fob", "수입액 월별 추이 (USD)"), ("kg", "수입량 월별 추이 (t)"), ("unit_price", "평균 수입단가(FOB) 월별 추이 (USD/kg)")):
-            story.append(KeepTogether([_p(label, st["cell_head"]), _chart(stats["monthly"], metric, W)]))
+        trend_title = _h2("② 시장 추세 (월별)", "MDIC 공개 원본 자료 월별 집계" if snap else "ComexStat 월별 집계")
+        for i, (metric, label) in enumerate((("fob", "수입액 월별 추이 (USD)"), ("kg", "수입량 월별 추이 (t)"),
+                                             ("unit_price", "평균 수입단가(FOB) 월별 추이 (USD/kg)"))):
+            # 구역 제목이 쪽 끝에 홀로 남지 않게 첫 그래프와 묶음
+            story.append(KeepTogether(([trend_title] if i == 0 else []) + [_p(label, st["cell_head"]), _chart(stats["monthly"], metric, W)]))
         story.append(_p("막대·점이 없는 달은 수입 기록이 없는 달입니다. 단가 그래프의 테두리 점은 '확인 필요'(중앙값의 ½ 미만 또는 2배 초과).", st["small"]))
         mrows = [["월", "수입액 (USD)", "전년 대비", "수입량 (t)", "전년 대비", "단가 (USD/kg)", "전년 대비"]]
         muted = []
