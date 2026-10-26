@@ -883,3 +883,29 @@
     font-size: var(--font-size-lg);
   }
 }
+
+/* ---------- 환율 등락 색 ---------- */
+/* 전일 대비(USD/KRW·USD/BRL): 상승 빨강·하락 파랑(국내 시세 표기 관례)·변동 없음 회색, 옅은 배경 알약.
+   ▲·▼ 기호와 '상승/하락' 낱말을 함께 표시하므로 색만으로 구분하지 않습니다. 비교 데이터가 없거나 BRL/KRW(계산값)는 색 없음. */
+.feature-home .home-fx-line[data-direction] {
+  width: fit-content;
+  max-width: 100%;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-weight: var(--font-weight-semibold);
+}
+
+.feature-home .home-fx-line[data-direction="up"] {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.feature-home .home-fx-line[data-direction="down"] {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+.feature-home .home-fx-line[data-direction="flat"] {
+  background: var(--color-neutral-soft);
+  color: var(--color-neutral-text);
+}

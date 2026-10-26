@@ -820,6 +820,12 @@
     return direction + " " + Math.abs(pct).toFixed(2) + "%";
   }
 
+  // 등락 색(home.css data-direction): 상승 빨강·하락 파랑(국내 시세 표기 관례)·변동 없음 회색. 비교 데이터가 없으면 색 없음.
+  function fxChangeDirection(info) {
+    if (info.change_pct === null || info.change_pct === undefined || !info.previous) return "";
+    return info.change_pct > 0 ? "up" : info.change_pct < 0 ? "down" : "flat";
+  }
+
   // Home 요약 타일: 통화쌍 → 큰 숫자(+작은 단위) → 전일 대비 → 가장 작은 회색 한 줄(월/일 고시 · 짧은 출처).
   // 전체 출처명·고시일·직전 고시일은 타일 title로 두고, 자세한 설명은 '출처 및 유의사항'에 있습니다.
   // 값이 없으면 숫자 자리에 "확인 불가"/"계산 불가"만 둡니다.
@@ -849,6 +855,8 @@
     const tile = fxTile(info.pair, formatRate(info.rate, FX_DIGITS[name]), quote, fxChangeText(info),
       shortFxDate(info.date) + " 고시 · " + (FX_SHORT_SOURCES[info.source] || info.source_name));
     tile.title = info.date + " 고시 · " + info.source_name + (info.previous ? " · 전일 대비: 직전 고시일 " + info.previous.date + " 대비" : "");
+    const direction = fxChangeDirection(info);
+    if (direction) tile.querySelector(".home-fx-line").dataset.direction = direction;
     return tile;
   }
 

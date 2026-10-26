@@ -577,3 +577,14 @@
 - 변경 파일: features/home/templates/home/panel.html, features/home/static/home.css, features/home/feature_spec.md.
 - 외부 호출: 0건. 검증: validation.md DEV-HOME-021.
 - 담당자 판단: 미기재(담당자 검토 필요)
+
+## DEV-HOME-022 환율 전일 대비 등락 색 표시
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/common_setup, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "환율 등락 색상으로 나타내줘"
+- 판단: 국내 시세 표기 관례대로 상승 빨강·하락 파랑·변동 없음 회색, 옅은 배경 알약(기존 상태 토큰 danger/info/neutral, 대비 5.8·6.1·6.6:1). 기존 ▲·▼ 기호와 '상승/하락' 낱말 유지(색만으로 구분하지 않음). 전일 대비가 있는 USD/KRW·USD/BRL만 적용, BRL/KRW(USD 경유 계산값)·비교 데이터 없음은 색 없음. 서버·API·계산 변경 없음(화면 JS가 change_pct 부호로 data-direction만 붙임). PDF의 전일 대비 표기는 이번에 바꾸지 않음.
+- 변경 파일: features/home/static/home.js(fxChangeDirection, data-direction), features/home/static/home.css(등락 색 규칙), features/home/feature_spec.md.
+- 외부 호출: 0건(가상 FX 응답으로 화면 확인). 검증: validation.md DEV-HOME-022.
+- 담당자 판단: 미기재(담당자 검토 필요)
