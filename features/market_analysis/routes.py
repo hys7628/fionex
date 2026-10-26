@@ -3,9 +3,8 @@
 API(docs/data_contracts.md 응답 형식)
 - GET  /api/market-analysis/meta     화면 초기값(최신 제공 월, 기본 품목·기간, 공급국 목록)
 - POST /api/market-analysis/analyze  조회 조건(JSON) → 통계 결과 + bundle_id
-- POST /api/market-analysis/news     {bundle_id, refresh} → 뉴스·보고서 수집 결과(출처별 상태 포함)
 - POST /api/market-analysis/ai       {bundle_id} → AI 분석(초안+5차례 검토). 유료 호출. 끝난 묶음은 재호출 없음
-- POST /api/market-analysis/pdf      화면에 표시된 결과 {stats, news, ai} → PDF 파일(재조회·재분석 없음)
+- POST /api/market-analysis/pdf      화면에 표시된 결과 {stats, ai} → PDF 파일(재조회·재분석 없음)
 요청·응답 필드: features/market_analysis/feature_spec.md
 """
 import logging
@@ -34,7 +33,7 @@ FEATURE = {
     "id": "market_analysis",
     "label": "시장 분석",
     "title": "시장 분석",
-    "description": "브라질 수입 통계와 업계 소식을 바탕으로 수입액·수입량·공급국·평균단가 추세를 살펴봅니다.",
+    "description": "브라질 수입 통계를 바탕으로 수입액·수입량·공급국·평균단가 추세를 살펴봅니다.",
     "icon": "chart",
 }
 
@@ -72,19 +71,6 @@ def _bundle_id():
     return payload if isinstance(payload, dict) else {}
 
 
-@bp.post("/api/market-analysis/news")
-def news():
-    payload = _bundle_id()
-    try:
-        data = service.collect_news(payload.get("bundle_id"), refresh=bool(payload.get("refresh")))
-    except service.BundleError as err:
-        return _fail(err.code, err.message, err.http_status)
-    except Exception:
-        logger.error("뉴스 수집 중 예상하지 못한 오류")
-        return _fail("MA_INTERNAL_ERROR", "근거 자료 수집 중 알 수 없는 오류가 발생했습니다. 다시 시도해 주세요.", 500)
-    return jsonify({"ok": True, "data": data})
-
-
 @bp.post("/api/market-analysis/ai")
 def ai():
     payload = _bundle_id()
@@ -110,7 +96,7 @@ def pdf():
     if not isinstance(stats, dict) or not isinstance(stats.get("query"), dict):
         return _fail("MA_INVALID_INPUT", "PDF로 만들 조회 결과가 없습니다. 먼저 분석을 실행해 주세요.", 400)
     try:
-        data = pdf_report.build_pdf({"stats": stats, "news": payload.get("news"), "ai": payload.get("ai")})
+        data = pdf_report.build_pdf({"stats": stats, "ai": payload.get("ai")})
     except (KeyError, TypeError, ValueError, AttributeError):
         logger.warning("PDF 입력 형식 오류")
         return _fail("MA_INVALID_INPUT", "결과 형식이 올바르지 않아 PDF를 만들지 못했습니다. 분석을 다시 실행해 주세요.", 400)

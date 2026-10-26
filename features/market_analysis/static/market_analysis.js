@@ -29,7 +29,6 @@
   let meta = null;
   let busy = false;
   let lastResult = null;  // 통계(analyze 응답)
-  let lastNews = null;    // 근거 자료(news 응답)
   let lastAi = null;      // AI 분석(ai 응답)
   let aiBusy = false;
   let chartMetric = "fob";
@@ -247,13 +246,12 @@
         throw body.error;
       }
       lastResult = body.data;
-      lastNews = null;
       lastAi = null;
       renderResult(body.data);
       refreshBtn.hidden = false;
       AppShell.work.setResult(FEATURE_ID, true);
       updatePdfButton();
-      loadNews(false);
+      refreshAiPanel();
     } catch (err) {
       resultBox.innerHTML = previous;
       showFormError("자료 조회 실패", (err && err.message) || "네트워크 오류로 조회하지 못했습니다. 다시 시도해 주세요.");
@@ -344,139 +342,6 @@
     drawChart();
   }
 
-  /* ---------- 근거 자료(뉴스·보고서) ---------- */
-  const STATE_TONE = { ok: "success", pending: "info", config: "warning", auth: "danger", rate_limited: "warning",
-    unavailable: "danger", bad_response: "danger", rejected: "danger" };
-
-  async function loadNews(refresh) {
-    const box = resultBox.querySelector("[data-ma-news]");
-    if (!box || !lastResult) return;
-    box.setAttribute("aria-busy", "true");
-    box.innerHTML = '<p class="field-hint"><span class="spinner" aria-hidden="true"></span> 근거 자료(KOTRA 해외시장뉴스·NewsData.io 일반 뉴스)를 불러오고 포르투갈어·스페인어 제목을 번역하는 중입니다. 통계는 위에 먼저 표시했습니다.</p>';
-    try {
-      const res = await fetch("/api/market-analysis/news", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bundle_id: lastResult.bundle_id, refresh: !!refresh }),
-      });
-      const body = await res.json();
-      if (!body.ok) throw body.error;
-      lastNews = body.data;
-      box.innerHTML = newsHtml(body.data);
-    } catch (err) {
-      box.innerHTML = '<div class="notice notice-danger" role="alert"><p class="notice-title">근거 자료를 불러오지 못했습니다</p><p>' +
-        esc((err && err.message) || "네트워크 오류입니다.") + " 통계 결과는 그대로 사용할 수 있습니다.</p></div>" +
-        '<button type="button" class="btn btn-secondary" data-ma-news-retry>근거 자료 다시 불러오기</button>';
-    } finally {
-      box.setAttribute("aria-busy", "false");
-      refreshAiPanel();
-      updatePdfButton();
-    }
-  }
-
-  const WINDOW_TEXT = { ok: "조회됨", partial: "일부 실패", failed: "실패", skipped: "미조회" };
-
-  function coverageText(c) {
-    if (!c) return "";
-    if (!c.windows) return "검색 기간 " + c.searched_from + " ~ " + c.searched_to;
-    return "구간별: " + c.windows.map(function (w) {
-      return w.from + "~" + w.to + " " + (WINDOW_TEXT[w.status] || w.status) + " " + w.count + "건";
-    }).join(", ");
-  }
-
-  // 포르투갈어·스페인어 제목은 서버가 붙인 한국어 번역(title_ko)을 함께 표시합니다(AI 번역으로 명시).
-  function titleHtml(it) {
-    return '<p class="ma-news-title"><span class="ma-news-id">' + esc(it.id) + "</span> " + esc(it.title) + "</p>" +
-      (it.title_ko ? '<p class="ma-news-ko"><span class="ma-news-ko-label">AI 번역</span> ' + esc(it.title_ko) + "</p>" : "");
-  }
-
-  function articleMeta(it) {
-    const date = it.published ? "게시일 " + it.published + (it.source === "newsdata" ? "(UTC)" : "")
-      : (it.seen_at ? "GDELT 최초 발견 " + it.seen_at : "날짜 미확인");
-    // 확보 범위·이용 범위 배지는 표시하지 않습니다(2026-10-26 담당자 지시). 값은 응답(access·ai_input)에 남습니다.
-    return '<p class="field-hint">' + esc([it.source_name, date, it.topics && it.topics.length ? "주제: " + it.topics.join(", ") : ""]
-      .filter(Boolean).join(" · ")) + "</p>";
-  }
-
-  // 기사별 표: 기사 제목 | 원문 URL. 좁은 화면에서는 CSS가 행을 카드로 바꿉니다.
-  function articleTable(items, caption) {
-    const rows = items.map(function (it) {
-      return '<tr><th scope="row" data-label="기사 제목">' + titleHtml(it) + articleMeta(it) +
-        '</th><td data-label="원문 URL" class="ma-news-url">' + linkHtml(it.url) + "</td></tr>";
-    });
-    if (!rows.length) rows.push('<tr><td colspan="2">표시할 기사가 없습니다.</td></tr>');
-    return '<div class="table-wrap ma-news-wrap"><table class="table ma-news-table ma-stack-table"><caption>' + esc(caption) + "</caption><thead><tr>" +
-      '<th scope="col">기사 제목</th><th scope="col">원문 URL</th></tr></thead><tbody>' +
-      rows.join("") + "</tbody></table></div>";
-  }
-
-  const TRANSLATION_TEXT = { ok: "", partial: "일부 제목은 번역하지 못했습니다.", skipped: "", failed: "" };
-
-  function translationHtml(t) {
-    if (!t || t.status === "none") return "";
-    if (t.status === "ok" || t.status === "partial") {
-      // 제목마다 'AI 번역' 표시가 있으므로 건수 설명 없이 기준만 알립니다.
-      return '<p class="field-hint">AI 번역은 OpenAI 기계 번역이며 원문 제목이 기준입니다. ' + esc(TRANSLATION_TEXT[t.status]) + "</p>";
-    }
-    return '<p class="field-hint">' + esc(t.reason || "제목 번역을 하지 못해 원문 제목만 표시합니다.") + "</p>";
-  }
-
-  function newsHtml(n) {
-    const items = n.items || [];
-    const others = n.other_items || [];
-    // 출처별 연결 상태(연결·대기·실패 안내). 기사 목록은 아래 기사별 표가 담당합니다. 건수는 응답(count)에만 남깁니다.
-    let html = '<div class="table-wrap ma-source-wrap"><table class="table ma-source-table ma-stack-table"><caption>출처별 연결 상태 · 요청 수집 기간 ' + esc(n.window.from + " ~ " + n.window.to) +
-      " (최근 " + esc(n.window.months) + "개월)</caption><thead><tr><th scope=\"col\">출처</th><th scope=\"col\">상태</th><th scope=\"col\">안내</th></tr></thead><tbody>";
-    n.sources.forEach(function (s) {
-      // 안내 칸에는 오류·대기 사유, 검색 기간, 수집 시각만 둡니다(이용 조건 설명 usage_note는 응답에만 유지).
-      const info = [s.message || "", coverageText(s.coverage), s.collected_at ? "수집 시각 " + kstTime(s.collected_at) : ""]
-        .filter(Boolean).join(" · ");
-      html += '<tr><th scope="row" data-label="출처">' + esc(s.label) + '</th><td data-label="상태">' + badge(STATE_TONE[s.state] || "info", s.status_text) +
-        '</td><td data-label="안내">' + esc(info) + "</td></tr>";
-    });
-    if (!n.sources.length) html += '<tr><td colspan="3">출처 상태 정보가 없습니다.</td></tr>';
-    html += "</tbody></table></div>";
-    const notes = n.window.notes || [];
-    if (notes.length) {
-      // 검색 기간 제한 안내는 기본으로 접어 둡니다(펼치면 전체 문장).
-      html += '<details class="ma-details ma-period-notes"><summary>검색 기간 제한 안내</summary>' +
-        notes.map(function (note) { return '<div class="notice notice-warning"><p>' + esc(note) + "</p></div>"; }).join("") + "</details>";
-    }
-    const failed = n.sources.filter(function (s) { return s.state !== "ok" && s.state !== "pending"; });
-    if (failed.length) {
-      html += '<div class="notice notice-warning"><p class="notice-title">일부 출처 누락</p><p>' +
-        esc(failed.map(function (s) { return s.label + ": " + s.status_text; }).join(" · ")) +
-        ". 확보한 자료만 표시했습니다. 결과가 완전하지 않을 수 있습니다. 아래 '근거 자료 다시 불러오기'로 다시 시도할 수 있습니다.</p></div>";
-    }
-    const hasGdelt = items.concat(others).some(function (it) { return it.source === "gdelt"; });
-    const hasNewsdata = n.sources.some(function (s) { return s.source === "newsdata" && s.state === "ok"; });
-    if (hasNewsdata) {
-      // 이용 조건상 필요한 표기만 둡니다. 48시간 제한은 '검색 기간 제한 안내' 토글에 있습니다.
-      html += '<p class="field-hint">일반 뉴스: <a href="https://newsdata.io" target="_blank" rel="noopener noreferrer">Powered by NewsData.io</a></p>';
-    }
-    // 핵심 기사 건수·기준은 표 제목(caption)에 있으므로 별도 안내 문단을 두지 않습니다.
-    if (hasGdelt) {
-      html += '<p class="field-hint">일반 뉴스 출처: The GDELT Project — 제목·메타데이터만 확인했고 본문은 확인하지 않았습니다. GDELT 시각은 처음 발견한 시각이며 게시일이 아닙니다.</p>';
-    }
-    html += translationHtml(n.translation);
-    if (!items.length && !others.length) {
-      const anyOk = n.sources.some(function (s) { return s.state === "ok"; });
-      html += '<div class="empty-state"><p class="empty-state-title">' + (anyOk ? "조회 결과 없음" : "기사를 받지 못했습니다") + "</p><p>" +
-        (anyOk ? "연결된 출처에서 조건에 맞는 기사를 찾지 못했습니다." : "모든 출처의 조회가 실패했거나 설정이 필요합니다. 위 상태 표를 확인해 주세요.") + "</p></div>";
-    } else {
-      if (items.length) {
-        html += articleTable(items, "핵심 기사 " + items.length + "건 · 섬유 업계 관련 · N 번호는 AI 분석의 출처 ID");
-      } else {
-        html += '<div class="empty-state"><p class="empty-state-title">주제에 맞는 기사 없음</p><p>수집한 기사 중 섬유·원사·재생 섬유 주제에 해당하는 기사가 없습니다. 아래 기타 기사를 참고하세요.</p></div>';
-      }
-      if (others.length) {
-        html += '<details class="ma-details"><summary>그 밖에 수집한 브라질 기사 ' + others.length + "건 보기 (주제 기준 밖 · AI 분석에 쓰지 않음)</summary>" +
-          articleTable(others, "주제 기준 밖 수집 기사 " + others.length + "건 · 최근 순") + "</details>";
-      }
-    }
-    html += '<button type="button" class="btn btn-ghost" data-ma-news-retry>근거 자료 다시 불러오기</button>';
-    return html;
-  }
-
   /* ---------- AI 분석 ---------- */
   const DIAG_ENV_TEXT = { OPENAI_API_KEY: "키 미설정", OPENAI_MODEL: "모델 미설정" };
 
@@ -502,19 +367,19 @@
           detail: ".env 파일은 앱이 직접 읽지 않습니다(python-dotenv 미설치 시). 서버를 시작하는 셸의 환경변수로 넣어야 합니다." }) + "</div>";
     }
     // 소요 시간은 2026-10-26 실제 실행 3회(44~56초) 기준. 회차별 검토 항목은 실행 후 '5차례 검토 기록'에 나옵니다.
-    return html + '<p class="field-hint">근거 자료를 불러온 뒤 실행할 수 있습니다. OpenAI를 최대 6번 호출하는 유료 기능(초안 1회 + 5차례 검토)이며 1분 안팎 걸립니다. ' +
+    return html + '<p class="field-hint">통계(ComexStat)를 근거로 분석합니다. OpenAI를 최대 6번 호출하는 유료 기능(초안 1회 + 5차례 검토)이며 1분 안팎 걸립니다. ' +
       "같은 조회 결과로는 한 번만 실행됩니다.</p>" +
       '<button type="button" class="btn btn-primary" data-ma-ai-run disabled>AI 분석 실행</button>';
   }
 
   function refreshAiPanel() {
     const run = resultBox.querySelector("[data-ma-ai-run]");
-    if (run) run.disabled = aiBusy || !lastNews || !aiReady();
+    if (run) run.disabled = aiBusy || !lastResult || !aiReady();
   }
 
   async function runAi() {
     const box = resultBox.querySelector("[data-ma-ai]");
-    if (!box || aiBusy || !lastNews) return;
+    if (!box || aiBusy || !lastResult) return;
     aiBusy = true;
     box.setAttribute("aria-busy", "true");
     const previous = lastAi ? aiHtml(lastAi) : null;
@@ -582,7 +447,6 @@
     }
     if (a.gaps.length) html += '<p class="field-hint">근거 부족으로 작성하지 않은 내용: ' + esc(a.gaps.join("; ")) + "</p>";
     if (a.remaining_findings.length) html += '<div class="notice notice-warning"><p class="notice-title">자동 검사에서 남은 문제</p><p>' + esc(a.remaining_findings.join("; ")) + "</p></div>";
-    if (a.excluded_count) html += '<p class="field-hint">이용 범위가 확인되지 않은 기사 ' + a.excluded_count + "건(KOTRA 등)은 AI 입력에서 제외했습니다.</p>";
     html += '<details class="ma-details"><summary>5차례 검토 기록 보기</summary><div class="table-wrap"><table class="table"><thead><tr>' +
       '<th scope="col">회차</th><th scope="col">확인한 항목</th><th scope="col">수정 사항</th><th scope="col">근거</th><th scope="col">미해결</th><th scope="col">코드 검사(전→후)</th><th scope="col">완료</th></tr></thead><tbody>';
     for (let i = 0; i < a.rounds_total; i++) {
@@ -616,7 +480,7 @@
     pdfBtn.disabled = !ready;
     pdfHint.textContent = !lastResult ? "분석 결과가 생기면 화면 내용 그대로 A4 PDF로 받을 수 있습니다."
       : aiBusy ? "AI 분석이 끝나면 PDF를 받을 수 있습니다."
-      : "현재 화면의 통계" + (lastNews ? "·근거 자료" : "") + (lastAi ? "·AI 분석" : "") + "로 PDF를 만듭니다. 다시 조회하거나 분석하지 않습니다.";
+      : "현재 화면의 통계" + (lastAi ? "·AI 분석" : "") + "로 PDF를 만듭니다. 다시 조회하거나 분석하지 않습니다.";
   }
 
   pdfBtn.addEventListener("click", async function () {
@@ -626,7 +490,7 @@
     try {
       const res = await fetch("/api/market-analysis/pdf", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stats: lastResult, news: lastNews, ai: lastAi }),
+        body: JSON.stringify({ stats: lastResult, ai: lastAi }),
       });
       if (!res.ok) {
         let msg = "PDF를 만들지 못했습니다.";
@@ -647,7 +511,6 @@
   });
 
   resultBox.addEventListener("click", function (event) {
-    if (event.target.closest("[data-ma-news-retry]")) loadNews(true);
     if (event.target.closest("[data-ma-ai-run]")) runAi();
   });
 
@@ -700,7 +563,7 @@
     html += "<li><strong>" + esc(src.name) + "</strong> · " + linkHtml(src.url) + "<br>" +
       esc("지표: " + src.metrics + " · 자료 갱신일 " + (src.data_updated || "확인 안 됨") + " · 최신 제공 월 " + (src.latest_month || "확인 안 됨") +
         " · 자료 받은 시각 " + kstTime(src.fetched_at) + " · " + cache) + "</li>";
-    return html + '</ul><div data-ma-news aria-live="polite"></div></section>';
+    return html + "</ul></section>";
   }
 
   /* ---------- 그래프 (SVG, 단일 계열 → 범례 없이 제목으로 지표 표시) ---------- */

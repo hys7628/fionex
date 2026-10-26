@@ -1,6 +1,6 @@
 """시장 분석 service: 입력 검증, ComexStat 조회·캐시, 수치 계산(코드 계산, AI 미사용).
 
-통계(ComexStat)와 함께 조회 묶음(뉴스 수집·AI 분석 진행 상태)을 관리합니다. 뉴스는 news_sources, AI는 analysis.
+통계(ComexStat)와 함께 조회 묶음(AI 분석 진행 상태)을 관리합니다. AI는 analysis. 뉴스 수집 기능은 2026-10-26 담당자 결정으로 삭제.
 - 평균 수입단가 = FOB 금액 합계(USD) ÷ 순중량 합계(kg). 월별·국가별 단가를 단순 평균하지 않습니다.
 - 행이 없는 월은 0으로 채우지 않고 '기록 없음'으로 둡니다.
 - 단가 '확인 필요': 같은 조회의 단가 중앙값 대비 ½배 미만 또는 2배 초과. 값은 삭제하지 않습니다.
@@ -8,7 +8,6 @@
   사용자 입력·결과는 저장하지 않습니다.
 """
 import json
-import logging
 import re
 import secrets
 import statistics
@@ -18,11 +17,9 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from features.market_analysis import analysis, news_sources, translation
+from features.market_analysis import analysis
 from features.market_analysis import comexstat_client as comex
 from features.market_analysis.comexstat_client import ComexStatError
-
-logger = logging.getLogger(__name__)
 
 KST = timezone(timedelta(hours=9))  # 한국은 서머타임이 없어 고정 오프셋 사용
 
@@ -458,8 +455,6 @@ def meta():
         "error": None,
         # OpenAI 설정 존재 여부(값 없음, 환경변수 이름만). 화면이 AI 실행 전에 안내할 수 있게 합니다.
         "ai": analysis.config_status(),
-        "general_news": {"provider_selected": news_sources.has_general_provider(),
-                         "provider": next((p for p in news_sources.GENERAL_NEWS_PROVIDERS if p in news_sources.PROVIDERS), None)},
     }
     try:
         entry, stale = get_latest()
@@ -519,8 +514,8 @@ def analyze(payload):
 
 
 # ---------- 분석 묶음 ----------
-# 한 번의 조회 결과(공개 통계)와 그에 대해 수집한 공개 뉴스, AI 진행 상태를 서버 메모리에 짧게 보관합니다.
-# 뉴스 수집·AI 분석이 화면에 표시된 것과 같은 통계를 쓰게 하고, 같은 묶음의 유료 분석이 중복 실행되지 않게 합니다.
+# 한 번의 조회 결과(공개 통계)와 AI 진행 상태를 서버 메모리에 짧게 보관합니다.
+# AI 분석이 화면에 표시된 것과 같은 통계를 쓰게 하고, 같은 묶음의 유료 분석이 중복 실행되지 않게 합니다.
 # 디스크·DB에 쓰지 않으며 서버를 다시 시작하면 사라집니다.
 BUNDLE_TTL_SECONDS = 3 * 3600
 MAX_BUNDLES = 30
@@ -546,7 +541,7 @@ def create_bundle(stats):
             del _bundles[k]
         while len(_bundles) >= MAX_BUNDLES:
             del _bundles[min(_bundles, key=lambda k: _bundles[k]["created"])]
-        _bundles[bid] = {"created": now, "stats": stats, "news": None, "ai": None, "lock": threading.Lock()}
+        _bundles[bid] = {"created": now, "stats": stats, "ai": None, "lock": threading.Lock()}
     return bid
 
 
@@ -566,58 +561,17 @@ def clear_bundles():
         _bundles.clear()
 
 
-def _news_public(collected):
-    lists = ("items", "other_items")
-    return {**{k: v for k, v in collected.items() if k not in lists},
-            **{k: [it.public() for it in collected.get(k) or []] for k in lists}}
-
-
-def _ai_usable(news):
-    return sum(1 for it in news["items"] if it.get("ai_input"))
-
-
-def _translate(news):
-    """포르투갈어·스페인어 제목에 한국어 번역(title_ko)을 붙입니다. 실패해도 뉴스 표시는 그대로 진행합니다."""
-    try:
-        news["translation"] = translation.translate_titles(news["items"] + news.get("other_items", []), _today())
-    except Exception:  # 번역은 부가 기능이라 어떤 오류도 뉴스 응답을 막지 않습니다(원문·키는 로그에 남기지 않음).
-        logger.warning("제목 번역 중 예상하지 못한 오류")
-        news["translation"] = {"status": "failed", "count": 0, "calls": 0, "reason": "제목 번역 중 오류가 나 원문 제목만 표시합니다."}
-    return news
-
-
-def collect_news(bundle_id, refresh=False):
-    """조회 묶음에 대한 뉴스 수집. 같은 묶음은 한 번 수집한 결과를 다시 씁니다(refresh=True면 다시 수집)."""
-    b = get_bundle(bundle_id)
-    if b["news"] is not None and not refresh:
-        return b["news"]
-    news = _translate(_news_public(news_sources.collect(refresh=refresh)))
-    b["news"] = news
-    return news
-
-
 def run_ai(bundle_id):
     """AI 분석(초안+5차례 검토). 이미 끝난 묶음은 저장된 결과를 돌려주고 다시 호출하지 않습니다.
     실패·중단된 묶음은 끝난 단계 다음부터 이어서 진행합니다. 같은 묶음이 실행 중이면 409."""
     b = get_bundle(bundle_id)
-    if b["news"] is None:
-        raise BundleError("MA_NEWS_REQUIRED", "근거 자료를 먼저 불러와 주세요.", 409)
     if not b["lock"].acquire(blocking=False):
         raise BundleError("MA_AI_RUNNING", "이 조회의 AI 분석이 이미 진행 중입니다. 끝날 때까지 기다려 주세요.", 409)
     try:
         if b["ai"] is not None and b["ai"]["status"] == "complete":
             return {**b["ai"]["result"], "reused": True}
         state = b["ai"] or analysis.new_state()
-
-        def widen():
-            news = _news_public(news_sources.collect(widen=True))
-            if _ai_usable(news) > _ai_usable(b["news"]):
-                news = _translate(news)
-                b["news"] = news  # 근거가 늘었을 때만 교체(호출 한도 등으로 줄면 기존 유지)
-            return b["news"]
-
-        # 일반 뉴스 공급자가 없으면 넓은 검색으로 AI 입력 가능 근거가 늘 수 없으므로 재수집하지 않습니다.
-        state = analysis.run(state, b["stats"], b["news"], widen_fn=widen if news_sources.has_general_provider() else None)
+        state = analysis.run(state, b["stats"])
         b["ai"] = state
         return {**state["result"], "reused": False}
     finally:

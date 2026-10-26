@@ -1,12 +1,13 @@
 """시장 분석 PDF 출력(A4 세로). 화면에 표시된 결과 dict를 그대로 받아 그립니다. 통계·AI를 다시 호출하지 않습니다.
 
 - ReportLab 5.1.0 + Noto Sans KR(fonts/, OFL). 공통 PDF 입력 검사(common/pdf_utils.py, pypdf)와는 별개입니다.
-- 모든 문자열은 XML 이스케이프 후 Paragraph에 넣습니다(기사 제목 등 외부 문자열의 마크업 해석 방지).
+- 모든 문자열은 XML 이스케이프 후 Paragraph에 넣습니다(외부 문자열·AI 출력의 마크업 해석 방지).
 - 긴 한글·URL은 CJK 줄바꿈으로 칸 안에서 나눕니다. 긴 표는 머리글 행을 페이지마다 반복합니다.
-- 사용 범위상 PDF 수록이 확인되지 않은 기사(pdf_text=False)는 제목·출처·게시일·링크만 넣습니다.
 - 결과는 메모리 bytes로만 만들고 디스크에 쓰지 않습니다.
 """
 import io
+import re
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -21,7 +22,6 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle)
 
-from features.market_analysis.news_sources import safe_url
 
 FONT_DIR = Path(__file__).resolve().parent / "fonts"
 FONT, FONT_BOLD = "NotoSansKR", "NotoSansKR-Bold"
@@ -70,6 +70,17 @@ def _styles():
 
 def _p(text, style):
     return Paragraph(escape(str(text if text is not None else "")), style)
+
+
+def safe_url(value):
+    """링크로 쓸 수 있는 http(s) 절대 주소면 그대로, 아니면 None."""
+    url = str(value or "").strip()
+    if not url or re.search(r"[\s\x00-\x1f\x7f<>\"']", url):
+        return None
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme.lower() not in ("http", "https") or not parts.netloc:
+        return None
+    return url
 
 
 def _link(url, style, label=None):
@@ -211,11 +222,10 @@ def _axis(v, metric):
 
 # ---------- 본문 ----------
 def build_pdf(payload):
-    """payload: {"stats": analyze 결과, "news": news 결과 또는 None, "ai": ai 결과 또는 None} → PDF bytes."""
+    """payload: {"stats": analyze 결과, "ai": ai 결과 또는 None} → PDF bytes."""
     _register_fonts()
     st = _styles()
     stats = payload["stats"]
-    news = payload.get("news")
     ai = payload.get("ai")
     q, s, sup = stats["query"], stats["summary"], stats["suppliers"]
     src = (stats.get("sources") or [{}])[0]
@@ -297,7 +307,6 @@ def build_pdf(payload):
     story.append(_link(src.get("url"), st["cell"]))
     story.append(_p("자료 갱신일 %s · 최신 제공 월 %s · 자료 받은 시각 %s" % (
         src.get("data_updated") or "확인 안 됨", src.get("latest_month") or "확인 안 됨", src.get("fetched_at") or "확인 안 됨"), st["small"]))
-    story.extend(_news_section(news, W, st))
 
     def footer(canvas, d):
         canvas.saveState()
@@ -372,58 +381,3 @@ def _ai_section(ai, W, st):
         out.append(_p("출처로 확인되지 않아 표에서 뺀 항목 %d건: %s" % (
             len(removed), "; ".join("%s · %s" % (r.get("section", ""), r.get("content", "")) for r in removed)), st["small"]))
     return out
-
-
-def _news_section(news, W, st):
-    out = []
-    if not news:
-        out.append(_p("뉴스·보고서는 수집하지 않았습니다.", st["small"]))
-        return out
-    # 출처별 연결 상태(화면과 같은 3열). 건수는 데이터(count)에만 남기고 표에는 넣지 않습니다.
-    srows = [["출처", "상태", "안내"]]
-    for s in news.get("sources") or []:
-        srows.append([s["label"], s["status_text"], s.get("message") or ""])  # 화면과 같이 이용 조건 설명은 넣지 않음
-    if len(srows) == 1:
-        srows.append(["-", "-", "출처 상태 정보가 없습니다."])
-    out.append(Spacer(1, 4))
-    out.append(_table(srows, [36 * mm, 28 * mm, W - 64 * mm], st))
-    w = news.get("window") or {}
-    items, others = news.get("items") or [], news.get("other_items") or []
-    out.append(_p("요청 수집 기간 %s~%s(최근 %s개월) · 섬유 업계 핵심 기사 %d건 / 중복 제거 후 후보 %d건 · 주제 기준 밖 수집 기사 %d건" % (
-        w.get("from", "?"), w.get("to", "?"), w.get("months", "?"), len(items), news.get("candidates", 0), len(others)), st["small"]))
-    # 검색 기간 제한 안내(window.notes, 예: NewsData.io 48시간 제한)는 PDF에 넣지 않습니다(2026-10-26 담당자 지시). 화면 토글에는 유지.
-    for s in news.get("sources") or []:
-        if s.get("stale"):
-            out.append(_p("%s: 새 조회 실패로 %s에 받은 이전 자료를 표시했습니다." % (s["label"], s.get("collected_at") or "?"), st["notice"]))
-    if any(s.get("source") == "newsdata" and s.get("state") == "ok" for s in news.get("sources") or []):
-        # 이용 조건상 필요한 표기만 둡니다(검색 기간 안내는 PDF에 넣지 않음, 2026-10-26 담당자 지시).
-        out.append(_p("일반 뉴스: Powered by NewsData.io (https://newsdata.io)", st["small"]))
-    if any(it.get("source") == "gdelt" for it in items + others):
-        out.append(_p("일반 뉴스 출처: The GDELT Project (https://www.gdeltproject.org/). 일반 뉴스는 제목·메타데이터만 확인했고 기사 본문은 확인하지 않았습니다. "
-                      "GDELT 시각은 GDELT가 기사를 처음 발견한 시각이며 게시일이 아닙니다.", st["small"]))
-    if any(it.get("title_ko") for it in items + others):
-        out.append(_p("포르투갈어·스페인어 제목 아래의 'AI 번역'은 OpenAI 기계 번역이며 원문 제목이 기준입니다.", st["small"]))
-    if items:
-        out.append(_article_table(items, W, st))
-    else:
-        out.append(_p("섬유 업계 핵심 기사를 확보하지 못했습니다.", st["small"]))
-    if others:
-        out.append(_p("그 밖에 수집한 브라질 기사 (주제 기준 밖 · AI 분석에 쓰지 않음)", st["body"]))
-        out.append(_article_table(others, W, st))
-    return out
-
-
-def _article_table(items, W, st):
-    """기사 제목 | 원문 URL (화면과 같은 구성). 제목 칸에 ID·AI 번역 제목·출처·날짜를 함께 적습니다."""
-    rows = [["기사 제목", "원문 URL"]]
-    for it in items:
-        date = ("게시일 " + it["published"]) if it.get("published") else (
-            ("GDELT 최초 발견 " + it["seen_at"]) if it.get("seen_at") else "날짜 미확인")
-        # 확보 범위·이용 범위 문구는 넣지 않습니다(화면과 같음, 2026-10-26 담당자 지시).
-        meta = " · ".join(filter(None, [it.get("source_name"), date]))
-        title = [_p("%s %s" % (it.get("id") or "", it["title"]), st["cell"])]
-        if it.get("title_ko"):
-            title.append(_p("AI 번역: " + it["title_ko"], st["cell"]))
-        title.append(_p(meta, st["small"]))
-        rows.append([title, _link(it.get("url"), st["small"])])
-    return _table(rows, [110 * mm, W - 110 * mm], st)

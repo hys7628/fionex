@@ -1,9 +1,9 @@
 """시장 분석 AI 분석: 초안 1회 + 회차별 목적이 다른 검토 5회. common.ai_client.generate_structured를 재사용합니다.
 
-- 수치는 코드 계산값(facts)과 근거 기사에 있는 값만 허용합니다. 회차마다 코드가 표를 검사해
+- 수치는 코드 계산값(facts, 출처 S1)에 있는 값만 허용합니다. 회차마다 코드가 표를 검사해
   (존재하지 않는 출처 ID, 근거에 없는 수치, 개수 초과, 사실 표시인데 출처 없음, T2T·견적 해석 위험)
   다음 회차 입력에 넣고, 마지막에는 남은 문제를 표에 표시하고 상태를 낮춥니다.
-- 근거 기사는 사용 범위상 AI 입력이 허용된 항목만 넣습니다(news_sources.USAGE).
+- 기사 근거는 쓰지 않습니다(2026-10-26 담당자 결정으로 뉴스 수집 기능 삭제). evidence는 빈 목록으로 보냅니다.
 - 출처명·URL·기준일은 모델이 아니라 코드가 출처 ID로 붙입니다.
 - 진행 상태(state)는 호출한 쪽이 보관합니다. 실패한 회차부터 다시 시작하며 끝난 호출은 다시 하지 않습니다.
 - 호출 상한: 초안 1 + 검토 5 = 6회, 전체 시간 상한 TIME_BUDGET_SECONDS. 무한 반복 없음.
@@ -20,15 +20,12 @@ from common import ai_client, config
 from common.errors import AIConfigError, AIError
 
 PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
-# v2(2026-10-26): 일반 뉴스를 GDELT(제목·메타데이터만)로 통일하며 title_only·최초 발견 시각 규칙 추가. v1은 미실행으로 보존.
+# v2(2026-10-26): 기사 근거 규칙(title_only 등) 포함. 뉴스 수집 삭제 후에는 evidence가 비어 그 규칙은 적용되지 않음. v1은 미실행으로 보존.
 DRAFT_PROMPT = "market_analysis_draft_v2.md"
 # v3(2026-10-26): 매 회차 추정·미확인 행을 출처로 확정하거나 삭제. 최종 표에는 사실 행만 남깁니다(finalize_rows).
 REVIEW_PROMPT = "market_analysis_review_v3.md"
 MAX_OUTPUT_TOKENS = 4096
 TIME_BUDGET_SECONDS = 480.0
-MIN_EVIDENCE_FOR_NO_WIDEN = 5
-# AI 입력에 넣는 기사 설명 길이 상한(토큰 관리). 화면 표시는 자르지 않습니다. 수치 검사도 같은 잘린 문자열 기준입니다.
-EVIDENCE_SUMMARY_CHARS = 1500
 
 SECTIONS = ("핵심 요약", "변화 배경", "영업 기회", "위험")
 SECTION_LIMITS = {"핵심 요약": (3, 5), "변화 배경": (0, 4), "영업 기회": (0, 3), "위험": (0, 3)}
@@ -166,22 +163,9 @@ def build_facts(stats):
     return facts
 
 
-def build_pack(stats, news_items):
-    """AI 입력 JSON(데이터)과 출처 표. 사용 범위상 AI 입력이 허용된 기사만 넣습니다."""
+def build_pack(stats):
+    """AI 입력 JSON(데이터)과 출처 표. 근거는 코드 계산 통계(S1)뿐입니다. 초안·검토 프롬프트 형식에 맞춰 evidence는 빈 목록."""
     facts = build_facts(stats)
-    allowed = [it for it in news_items if it.get("ai_input")]
-    excluded = [it for it in news_items if not it.get("ai_input")]
-    sources_present = {it.get("source") for it in news_items}
-    if "newsdata" in sources_present:
-        general_note = ("일반 뉴스는 NewsData.io 무료 플랜의 제목과 언론사 설명(description, access=description)만 있고 본문은 확인하지 않았다. "
-                        "최근 48시간 기사만 검색됐다. 설명에 없는 수치·원인·회사 계획은 만들지 않는다.")
-    elif "gdelt" in sources_present:
-        general_note = "일반 뉴스는 GDELT 검색 결과의 제목·메타데이터만 있고 본문은 확인하지 않았다(access=title_only)."
-    else:
-        general_note = "일반 뉴스 근거가 없다. 기사 근거가 없으면 기사로 뒷받침되는 내용을 만들지 않는다."
-    evidence = [{"id": it["id"], "title": it["title"], "source": it["source_name"], "outlet": it.get("outlet"),
-                 "language": it.get("language"), "date": evidence_date(it)[0], "date_basis": evidence_date(it)[1],
-                 "access": it["access"], "summary": (it.get("excerpt") or "")[:EVIDENCE_SUMMARY_CHARS]} for it in allowed]
     q = stats["query"]
     pack = {
         "context": {
@@ -191,31 +175,16 @@ def build_pack(stats, news_items):
                 "통계는 해당 코드의 전체 폴리에스터 DTY 시장이며 일반·재생·T2T 원사를 구분하지 않는다.",
                 "평균 수입단가는 FOB 기준이며 견적·판매가·도착가격이 아니다.",
                 "공급국은 ComexStat 기준 원산지(origin) 국가다.",
-                "사용 범위가 확인되지 않은 기사 %d건(KOTRA 등)은 AI 입력에서 제외했다." % len(excluded),
-                general_note,
+                "기사 근거는 없다. 수치·사실은 facts(S1)에 있는 것만 쓰고, 기사로 뒷받침되는 내용을 만들지 않는다.",
             ],
         },
         "facts": [{"id": "S1", "items": facts}],
-        "evidence": evidence,
+        "evidence": [],
     }
     src = stats["sources"][0]
     sources = {"S1": {"name": src["name"], "url": src["url"],
                       "date": "자료 갱신 %s · 최신 월 %s" % (src.get("data_updated") or "?", src.get("latest_month") or "?")}}
-    for it in allowed:
-        date, basis = evidence_date(it)
-        sources[it["id"]] = {"name": it["source_name"], "url": it["url"],
-                             "date": ("%s %s" % (basis, date)) if date else "게시일 미확인",
-                             "title": it["title"], "access": it["access"]}
-    return pack, sources, len(excluded)
-
-
-def evidence_date(it):
-    """(날짜 문자열, 기준). 게시일이 있으면 게시일, 없으면 GDELT 최초 발견 시각(게시일 아님)."""
-    if it.get("published"):
-        return it["published"], "게시일"
-    if it.get("seen_at"):
-        return it["seen_at"], "GDELT 최초 발견 시각"
-    return None, "날짜 미확인"
+    return pack, sources
 
 
 # ---------- 코드 검사 ----------
@@ -360,7 +329,7 @@ def _apply_findings(rows, pack, sources):
 
 # ---------- 실행 ----------
 def new_state():
-    return {"status": "not_started", "draft": None, "rounds": [], "calls": [], "widened": False,
+    return {"status": "not_started", "draft": None, "rounds": [], "calls": [],
             "prompt_versions": {"draft": DRAFT_PROMPT, "review": REVIEW_PROMPT}}
 
 
@@ -385,42 +354,27 @@ def usage_summary(state):
             "cost_basis": "gpt-5.4-mini 공식 단가($0.75/$4.50 per 1M, 2026-10-25 조회) 기준 추정" if cost is not None else None}
 
 
-def run(state, stats, news, widen_fn=None, generate=None, clock=time.monotonic):
+def run(state, stats, generate=None, clock=time.monotonic):
     """state를 진행시킵니다(호출한 쪽이 보관). 성공·실패와 무관하게 state를 돌려줍니다.
 
-    news: news_sources.collect() 결과를 공개 형식으로 바꾼 dict({"items": [...], ...}).
-    widen_fn: 근거가 부족할 때 1회만 호출할 넓은 재수집 함수(→ 새 news dict). None이면 생략.
-    generate: 테스트용 교체(기본 common.ai_client.generate_structured).
+    stats: service.analyze 결과(통계). generate: 테스트용 교체(기본 common.ai_client.generate_structured).
     """
     started = clock()
     state["status"] = "running"
     state["error"] = None
     if generate is None:
-        # 키·모델이 없으면 근거 재수집 등 다른 작업 없이 바로 멈춥니다(유료 호출 없음).
+        # 키·모델이 없으면 바로 멈춥니다(유료 호출 없음).
         status = config_status()
         if not status["ready"]:
             err = AIConfigError()
             state["status"] = "failed"
             state["error"] = {"code": err.code, "message": CONFIG_MESSAGE, "retryable": False, "failed_at": "초안",
                               "needs_restart": True, "diagnostic": config_diagnostic(status)}
-            pack, sources, state["excluded_count"] = build_pack(stats, news["items"])
+            pack, sources = build_pack(stats)
             return _finish(state, pack, sources)
         generate = ai_client.generate_structured
 
-    # 근거 보강: AI 입력 가능 기사가 적으면 넓은 검색 1회(상한)
-    if state["draft"] is None and widen_fn and not state["widened"]:
-        if sum(1 for it in news["items"] if it.get("ai_input")) < MIN_EVIDENCE_FOR_NO_WIDEN:
-            state["widened"] = True
-            try:
-                wider = widen_fn()
-                state["widen_result"] = "넓은 검색 1회 수행" + ("" if wider is not news else "(근거가 늘지 않아 기존 근거로 진행)")
-                news = wider
-            except Exception:
-                state["widen_result"] = "넓은 검색 실패(기존 근거로 진행)"
-    state["news_used"] = news
-
-    pack, sources, excluded = build_pack(stats, news["items"])
-    state["excluded_count"] = excluded
+    pack, sources = build_pack(stats)
     payload_base = {"context": pack["context"], "facts": pack["facts"], "evidence": pack["evidence"]}
 
     try:
@@ -479,10 +433,6 @@ def _finish(state, pack, sources):
         "remaining_findings": [f["detail"] for f in findings],
         "rounds": [{k: v for k, v in r.items() if k != "rows"} for r in state["rounds"]],
         "rounds_total": len(ROUNDS),
-        "excluded_count": state.get("excluded_count", 0),
-        "evidence_count": len(pack["evidence"]),
-        "widened": state["widened"],
-        "widen_result": state.get("widen_result"),
         "usage": usage_summary(state),
         "prompt_versions": state["prompt_versions"],
         "status": state["status"],
