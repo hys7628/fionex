@@ -755,3 +755,30 @@ Firefox·Safari·모바일 기기·화면낭독기 실제 낭독, Firefox에서 
 
 ### 미검증
 실제 화면낭독기 낭독, Firefox·Safari·모바일 기기 초점 동작, 실제 OpenAI AI 분석·그린 클레임 AI 검수, 실제 외부 뉴스가 있는 Home 상세(이번엔 0건 상태에서 확인).
+
+## 2026-10-26 FIONEX 공식 로고 적용 (DEV-COMMON-006)
+변경: static/assets/fionex_logo.png(신규), templates/base.html, static/css/common.css, static/css/tokens.css, docs/design_system.md, tests/test_common/test_shell_a11y.py
+환경: jasonenv Python 3.11.17(Pillow로 원본 검사), 검증 서버 127.0.0.1:5013(저장소 밖 모의 실행기, urlopen 차단), Chrome + playwright-core 1.48.2.
+
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| 원본 검사(Pillow) | 크기·비율·투명 | 2172×724, 3.0, RGBA, 모서리 알파 0 | 확인 |
+| 흰 배경 합성 미리보기 | 글자·리본 식별 | 네이비 글자·블루/민트 리본 선명 | 확인 |
+| 복사본 동일성(cmp) | 원본과 같음 | identical | 통과 |
+| GET /static/assets/fionex_logo.png | 200 | 200, 870,173 bytes | 통과 |
+| 1440·1024 사이드바 | 1개 표시, 168×56, 비율 3.000, 사이드바 안, 메뉴와 간격, 세로 스크롤 없음 | 168×56 at x20 y24, 첫 메뉴와 간격 24px, 스크롤 없음 | 통과 |
+| 로고 정렬 | 로고 글자 시작이 메뉴 아이콘 세로선 근처 | 29.8px vs 28px | 통과 |
+| 390 상단바 | 120×40, 메뉴 버튼 오른쪽, 상단바 높이 안 | 통과 | 통과 |
+| 390 메뉴(드로어) | 로고가 닫기 버튼과 겹치지 않음, 비율 유지 | 통과 | 통과 |
+| alt·filter·brand-mark | alt=FIONEX, filter none, .brand-mark 0개 | 통과 | 통과 |
+| 가로 스크롤·JS·로드 오류(3폭) | 없음 | 없음 | 통과 |
+| 2배율(1440) 캡처 육안 | 흐리지 않음 | 글자·슬로건 선명 | 통과 |
+| 로고 검증 스크립트 | - | 15/15 | 통과 |
+| `-s tests/test_common` | OK | 63 OK(로고 구조 테스트 1건 추가) | 통과 |
+| `-s tests/test_home` / `test_market_analysis` / `features/green_claim/tests` | OK | 94 / 71 / 178 OK | 통과 |
+| 5개 탭 × 1440/1024/390 | 정상 | 15/15, 가로 스크롤·JS 예외 0 | 통과 |
+| 공통 상호작용 / 키보드·초점 | 유지 | 26/26 / 41/41 | 통과 |
+외부 호출: 0건.
+
+### 미검증
+실제 사용자 브라우저(Edge·Safari·모바일 기기)·고해상도 실제 모니터, 1배율 화면에서 슬로건 가독성(약 5px로 판독 어려움 — 원본 축소 그대로), 큰 PNG 첫 로딩 시간.

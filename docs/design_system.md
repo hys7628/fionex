@@ -9,7 +9,7 @@
 ## 화면 구조
 ```
 ┌ 사이드바(248px) ┬ 본문 (최대 1440px, 좁으면 유동 폭) ─────────┐
-│ fionex          │ ┌ 머리글: 탭 제목 · 짧은 설명 · 작업 상태 ┐ │
+│ FIONEX 로고     │ ┌ 머리글: 탭 제목 · 짧은 설명 · 작업 상태 ┐ │
 │ 홈              │ └─────────────────────────────────────────┘ │
 │ 시장 분석       │ ┌ 입력 카드 ─────┐ ┌ 결과 카드 ──────────┐ │
 │ 제품소개서      │ │                │ │ 빈 상태 안내        │ │
@@ -42,6 +42,14 @@
 .feature-green_claim .claim-list { display: flex; flex-direction: column; gap: var(--space-3); }
 .feature-green_claim .claim-risk { color: var(--color-danger); }
 ```
+
+## Brand (2026-10-26 DEV-COMMON-006)
+- 공통 사이드바·960px 미만 상단바는 공식 FIONEX 로고 `static/assets/fionex_logo.png`(2172×724, 3:1, 투명 PNG, 슬로건 'WEAVE A BRIGHTER TOMORROW' 포함 원본)를 쓴다. 이미지 옆에 `fionex` 텍스트를 중복 표시하지 않는다.
+- 크기: 폭만 정하고 높이는 `auto`(비율 변경 금지). 사이드바 `--brand-logo-width` 168px(높이 56px), 상단바 `--brand-logo-width-compact` 120px(높이 40px), `max-width: 100%`. `<img>`에 원본 `width="2172" height="724"`를 적어 로딩 중 자리를 확보한다.
+- 원본 PNG 안 왼쪽 투명 여백(약 6%)을 고려해 사이드바 머리 좌우 여백을 `--space-1`로 두어 로고 글자가 메뉴 아이콘 세로선과 맞게 한다.
+- `alt="FIONEX"`(슬로건은 alt에 넣지 않음). 링크가 아니며(홈 이동은 메뉴 '홈'), hover 효과 없음.
+- 금지: filter·색상 변경·배경 박스·테두리·카드·그라데이션 상자, scale·glow 등 hover 효과, 임시 CSS 브랜드 마크(`.brand-mark`, 삭제됨), 심볼만 잘라 만든 별도 이미지.
+- 로고 색(네이비·블루·아쿠아·민트)은 현재 토큰 방향과 같아 팔레트는 바꾸지 않는다.
 
 ## 팔레트와 분위기
 밝고 깨끗한 B2B SaaS 대시보드. 흰 면 + 아주 옅은 블루그레이 배경, 블루(주요 동작)·아쿠아(보조 빛)·민트(친환경 강조) 포인트, 제목·숫자는 딥 네이비.

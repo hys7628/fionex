@@ -505,3 +505,23 @@
 - 검증: validation.md 2026-10-26 DEV-COMMON-005.
 - 담당자 판단: 미기재(담당자 검토 필요)
 - 남은 한계: 실제 화면낭독기(NVDA·VoiceOver) 미실행(DOM role·aria 점검만). 작업 중에는 초점이 body에 머무름(끝나면 복원) — disabled 대신 aria-disabled로 바꾸면 작업 중에도 유지되지만 3개 탭 버튼 로직 변경이 커서 이번 범위 밖. Firefox·Safari 초점 동작 미확인. ④ AI 분석 summary 안의 h3(details/summary 안 heading)는 기존 구조 유지.
+
+## DEV-COMMON-006 공통 사이드바·상단바에 FIONEX 공식 로고 적용
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통(common_setup) (브랜치 feature/common_setup, 작업 전 git status clean, 최근 커밋 3ce7907)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: 사용자 제공 FIONEX_LOGO.png로 임시 CSS 로고(.brand-mark) 교체. 사이드바 150~170px·상단바 110~130px, height auto, 비율 유지, 텍스트 중복 금지, 슬로건 포함 원본 사용, 투명 여부 확인(배경 있으면 CSS로 제거하지 말고 보고), filter·배경 박스·과한 hover 금지, alt="FIONEX", 심볼 crop 금지, 팔레트 변경 금지, design_system에 Brand 규칙. Git 작업 금지.
+- 원본 확인(사용자 Downloads/FIONEX_LOGO.png, 870,173 bytes): 2172×724(3:1), RGBA, 네 모서리 알파 0(투명 배경). 완전 불투명 픽셀 0.2%(글자 알파 약 202~253, 빛 번짐 반투명) → 흰 배경 합성 미리보기로 글자·리본 식별 확인, 처리 없이 원본 사용. 내용 영역(알파>32) x 127~2032 → 좌우 투명 여백 약 6%.
+- 판단:
+  - 경로: 기존 공통 asset 폴더 static/assets/(README: 공개·사용 허가 자료) + 이름 규칙 snake_case → static/assets/fionex_logo.png(원본과 바이트 동일, 파일 1개).
+  - 기존 브랜드는 링크가 아닌 span → 링크를 새로 만들지 않음(홈 이동은 메뉴 '홈'과 중복). 사이드바·상단바 모두 같은 img, alt="FIONEX", width/height 원본 값으로 자리 확보.
+  - 크기: 사이드바 168px(높이 56px), 상단바 120px(높이 40px, 상단바 56px 안). tokens.css에 --brand-logo-width, --brand-logo-width-compact 추가. 작은 화면 메뉴(드로어)는 닫기 버튼과 같은 줄이라 max-width:100%·min-width:0으로 넘치지 않게.
+  - 정렬: 원본 왼쪽 투명 여백 때문에 로고 글자가 메뉴 아이콘보다 약 10px 안쪽 → .sidebar-head 좌우 padding --space-3 → --space-1(측정: 로고 글자 시작 약 29.8px, 메뉴 아이콘 28px).
+  - .brand-mark는 base.html 한 곳만 사용 → DOM·CSS 삭제. .sidebar-brand/.topbar-brand의 글자 스타일(크기·굵기)도 텍스트가 없어져 삭제.
+  - 파일 크기 870KB를 168px로 표시: 지시가 원본 사용·파일 하나라 리사이즈 사본을 만들지 않음(남은 문제로 보고).
+- 변경 파일: static/assets/fionex_logo.png(신규), templates/base.html, static/css/common.css, static/css/tokens.css, docs/design_system.md, tests/test_common/test_shell_a11y.py(로고 구조 테스트 1건 추가).
+- 외부 호출: 0건(검증 서버 urlopen 차단).
+- 검증: validation.md 2026-10-26 DEV-COMMON-006.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 사이드바 168px에서 슬로건 글자 높이가 약 5px라 1배율 화면에서는 읽기 어려움(원본 축소 지시대로 유지). 870KB PNG를 작은 크기로 표시(첫 로딩 부담) — 표시 크기 2배 정도로 줄인 최적화 사본은 담당자 결정 필요. 로고 사용권·출처 기록(assets.md)은 사용자 제공 파일이라는 사실만 기록.

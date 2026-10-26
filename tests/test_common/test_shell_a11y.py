@@ -34,6 +34,16 @@ class ShellA11yTest(unittest.TestCase):
         self.assertIn('id="main-content" tabindex="-1"', tag(self.html, 'id="main-content"'))
         self.assertIn('aria-label="주 메뉴"', self.html)
 
+    def test_official_logo_in_sidebar_and_topbar(self):
+        logos = re.findall(r'<img class="brand-logo"[^>]*>', self.html)
+        self.assertEqual(len(logos), 2)  # 사이드바·작은 화면 상단바
+        for img in logos:
+            self.assertIn('src="/static/assets/fionex_logo.png"', img)
+            self.assertIn('alt="FIONEX"', img)
+            self.assertIn('width="2172" height="724"', img)  # 원본 비율(3:1) 자리 확보
+        self.assertNotIn("brand-mark", self.html)
+        self.assertTrue((ROOT / "static" / "assets" / "fionex_logo.png").is_file())
+
     def test_each_tab_has_one_h1_focus_target(self):
         for feature in ("home", "market_analysis", "product_brochure", "green_claim", "promotion_studio"):
             h1 = tag(self.html, 'id="title-%s"' % feature)
