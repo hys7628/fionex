@@ -231,11 +231,13 @@ class CoverIsolationTests(CoverBase):
         for forbidden in ("jsonify({\"ok\": True", "b64", "send_file", "save(", "str(exc", "exc_info"):
             self.assertNotIn(forbidden, block)
 
-    def test_existing_fixed_images_and_pdf_unchanged(self):
+    def test_fixed_images_preserved_and_pdf_does_not_generate_image(self):
         from features.product_brochure import pdf_catalog
         self.assertEqual(sorted(p.name for p in pdf_catalog.IMAGE_FILES.values()),
                          ["catalog_cover_concept.png", "catalog_material_concept.png"])
-        self.assertNotIn("cover_image", (Path(pdf_catalog.__file__)).read_text(encoding="utf-8"))
+        source = Path(pdf_catalog.__file__).read_text(encoding="utf-8")
+        self.assertNotIn("generate_image", source)
+        self.assertNotIn("generate_cover", source)
 
 
 if __name__ == "__main__":

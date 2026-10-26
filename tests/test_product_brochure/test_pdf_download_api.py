@@ -294,7 +294,8 @@ class IsolationTests(Base):
         src = (Path(__file__).resolve().parents[2] / "features" / "product_brochure" / "routes.py").read_text(encoding="utf-8")
         start = src.index('@bp.post("/api/product-brochure/pdf")')
         block = src[start:]
-        self.assertIn("pdf_download.render(payload)", block)
+        self.assertIn("pdf_download.render(payload, cover_bytes)", block)
+        self.assertIn("request.close()", block)  # multipart 임시 파일 정리(성공·실패 모두)
         for forbidden in ("generate_catalog", "analyze_pdf", "send_file", "download_name=", "save(", "str(exc", "repr(exc",
                           ", exc)", "exc_info", "logger.exception"):
             self.assertNotIn(forbidden, block)

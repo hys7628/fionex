@@ -406,7 +406,8 @@ class _Page:
 
 # ---------- 페이지 ----------
 def _page_cover(pg, data, images):
-    pg.image(images["cover"], "cover", 0, 0, PAGE_W, COVER_FIGURE_H)
+    # 적용한 AI 표지 배경이 있으면 1쪽에만 사용(같은 크기·같은 크롭), 없으면 기본 콘셉트 이미지
+    pg.image(images.get("cover_page1") or images["cover"], "cover", 0, 0, PAGE_W, COVER_FIGURE_H)
     top = pg.kicker(KICKER_COVER, PAD, PAD, COVER_TEXT_W)
     title = pg.para(data["product_name"]["text"], "title", COVER_TEXT_W, "카탈로그 표시명")
     height = 16 + 12 + title.px_height + 16 + pg.copy(data["tagline"], "lead", 0, 0, COVER_TEXT_W, "소개 문구", True)
@@ -553,11 +554,27 @@ def _check_glyphs(data, glyphs):
                 raise CatalogPdfGlyphError()
 
 
-def build_pdf(payload):
-    """구조화 데이터 → A4 세로 4페이지 PDF bytes. 검증·자산·넘침·페이지 수 중 하나라도 실패하면 예외(부분 PDF 없음)."""
+def _cover_override(image):
+    """사용자가 적용한 AI 표지 배경(pdf_download에서 검증·재구성한 RGB 1024×1536 PIL 이미지) → 1쪽 전용 자원.
+    기본 표지와 같은 크기라 같은 크롭(object-position 50% 70%)이 적용됩니다. 기본 이미지와 같은 방식으로 JPEG 포함."""
+    from PIL import Image
+    from reportlab.lib.utils import ImageReader
+    if not isinstance(image, Image.Image) or image.mode != "RGB" or image.size != IMAGE_SIZES["cover"]:
+        raise CatalogPdfRenderError()
+    buf = io.BytesIO()
+    image.save(buf, format="JPEG", quality=JPEG_QUALITY, optimize=True)
+    buf.seek(0)
+    return ImageReader(buf), image.size
+
+
+def build_pdf(payload, cover_image=None):
+    """구조화 데이터 → A4 세로 4페이지 PDF bytes. 검증·자산·넘침·페이지 수 중 하나라도 실패하면 예외(부분 PDF 없음).
+    cover_image(선택): 1쪽 표지 배경만 바꿉니다. 4쪽 마무리 크롭·2·3쪽 이미지는 기본 자산 그대로. 없으면 기존 동작."""
     data = parse_catalog(payload)
     glyphs = _register_fonts()
     images = _load_images()
+    if cover_image is not None:
+        images = dict(images, cover_page1=_cover_override(cover_image))
     _check_glyphs(data, glyphs)
 
     from reportlab.lib.pagesizes import A4

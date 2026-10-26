@@ -270,7 +270,7 @@ class CatalogPreviewTests(RenderedPanel):
     def test_pdf_stale_confirm_uses_live_inputs(self):
         # 사용자 보고(2026-10-26) 회귀: 검토 입력 수정 → 재적용 없이 다운로드 → 이전 결과 확인
         # 판정은 클릭 시점에 현재 입력 서명으로 계산(캐시 없음)하고 생성 결과 미리보기 경고와 같은 함수를 씀
-        self.assertIn("needsConfirm: function () { return !!generation && Review.isResultStale(generation, generationContext()); }", JS)
+        self.assertIn("needsConfirm: function () { return !!generation && (Review.isResultStale(generation, generationContext()) || coverStale(cover.applied)); }", JS)
         ctx = JS[JS.index("function generationContext()"):JS.index("function syncGenerate()")]
         self.assertIn("currentSignature: currentSignature()", ctx)
         self.assertIn("return fields ? Review.inputSignature(fields, displayName) : null;", JS)
@@ -297,15 +297,17 @@ class CatalogPreviewTests(RenderedPanel):
         self.assertIn('data-cover-error role="alert" hidden', section)
         self.assertEqual(section.count('type="radio"'), 3)
         block = JS[JS.index("/* ---------- AI 표지 배경 ----------"):]
-        # 클릭 시점 적용 스냅샷 + 분위기 3필드만, 210초 대기, 자동 적용 없음(후보만), PDF 차단
+        # 클릭 시점 적용 스냅샷 + 분위기 3필드만, 210초 대기, 자동 적용 없음(후보만)
         self.assertIn("Review.buildCoverPayload(snapshot, selectedCoverMood())", block)
         self.assertIn("const COVER_TIMEOUT_MS = 210000;", JS)
-        self.assertIn("candidate: { url: URL.createObjectURL(data.blob)", block)
+        self.assertIn("candidate: { blob: data.blob, url: URL.createObjectURL(data.blob)", block)
         self.assertIn("applied: cover.applied,", block[block.index("onSuccess"):block.index("onFailure")])
-        self.assertIn("coverApplied: !!cover.applied", JS)
+        self.assertIn("coverBlob: cover.applied ? cover.applied.blob : null", JS)
+        self.assertIn("data-cover-candidate-heading", section)
         self.assertIn('resultDialog.querySelector(".catalog-cover-figure img")', block)  # 결과 1쪽 표지만
         self.assertNotIn("data-catalog-dialog", block)                                  # 고정 시안 미변경
-        self.assertIn("Review.coverUrlsToRevoke(cover, next).forEach(function (url) { URL.revokeObjectURL(url); });", JS)
+        self.assertIn("const unused = Review.coverUrlsToRevoke(cover, next);", JS)
+        self.assertIn("unused.forEach(function (url) { URL.revokeObjectURL(url); });", JS)
         self.assertEqual(JS.count("URL.revokeObjectURL("), 1)          # 해제는 상태 교체 한 곳에서만(AppShell 제외)
         for forbidden in ("localStorage", "sessionStorage", "indexedDB", "innerHTML", "setInterval"):
             self.assertNotIn(forbidden, block)

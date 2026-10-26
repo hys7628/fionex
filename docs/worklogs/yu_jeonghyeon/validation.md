@@ -613,3 +613,63 @@
 - 창 모드 실제 브라우저의 시각 확인(헤드리스는 DOM·상태 값만 확인, 화면 캡처 육안 확인 안 함)·스크린리더 안내
 - 실제 210초 시간 초과(순수 로직·문구만 확인)
 - PDF에 적용 이미지 반영(미구현)
+
+## 2026-10-26 적용 표지 PDF 연결 — Codex 직접 검증(DI-12)
+
+### 인계와 구현
+- Claude 보고: 서버 구현/PDF 57개 통과, 화면 셸 인용 오류로 중단. Codex 시작 시 서버 3개+기존 테스트 1개 수정, 표지 테스트 1개 미추적. 화면은 임시 PDF 차단 및 URL만 보관. 브랜치 정상, 병합 중 아님, develop 확인, stash 1개 보존.
+- 이어서 화면 Blob 보관·multipart 전송·통합 확인·오류 한국어 안내·제목 상태 갱신·URL 해제 순서, 담당 테스트와 명세를 수정. 서버 3개 구현은 인계 상태 그대로.
+
+### Codex가 직접 실행
+- JS 문법: `node --check features/product_brochure/static/product_brochure.js` 및 `node --check tests/test_product_brochure/browser_cover_check.js` 통과.
+- Node: `node tests/test_product_brochure/review_logic_check.js` 50/50. JSON 회귀, 적용 Blob/고정 파일명/multipart 필드, 서버 오류 코드 매핑, 취소 0회·중복 1회·오래된 응답 무시·URL 수명·미적용 편집 차단. DOM 브라우저 검증은 아님.
+- 제품소개서: `python -m unittest discover -s tests/test_product_brochure` 156개 OK. 공통: `python -m unittest discover -s tests/test_common` 56개 OK.
+- PDF 관련: `python -W always::ResourceWarning -m unittest discover -s tests/test_product_brochure -p 'test_pdf*.py'` 57개 OK. 최초 경고 존재: tracemalloc 결과 Werkzeug 테스트 입력의 multipart 인코딩 임시 파일. test_pdf_cover_api.py helper에 테스트 소유 wsgi.input cleanup 추가(서버 자원과 구분).
+- cleanup 추가 후 같은 PDF 57개 재실행: 전부 OK, ResourceWarning 0건. 전체 156개 최초 성공 실행의 경고는 당시 결과로 보존.
+- 최종 대상 환경 `C:/Users/user/miniforge3/envs/jasonenv/python.exe`에서도 제품소개서 156개·공통 56개 OK. 전체 실행에서는 PDF 외 기존 테스트의 임시 입력 자원 경고가 남음(통과와 경고 없음은 구분). 이번 PDF 테스트의 경고 0건 결과를 전체 테스트로 확대 해석하지 않음.
+- 분리 확인: jasonenv에서 `-X tracemalloc=1 -W always::ResourceWarning ... -p test_analyze_api.py`만 실행해 33개 OK 및 같은 임시 파일 경고 재현. 이번에 수정하지 않은 분석 테스트 경로임을 확인했으며 정확한 소유권/전체 원인 수정은 수행하지 않음.
+- 기존 실패: 1차 Node 49/50, Python 156개 중 3개(이전 문구/정적 전제). 기대값을 새 계약으로 정정 후 위 결과. 숨기거나 이전 이력 삭제하지 않음.
+- `python tests/test_product_brochure/check_cover_render.py`: 실제 Flask PDF API로 기본/A/B/복원 4개 PDF(A4 4쪽) 생성, 설치된 PDFium으로 96dpi 렌더. 2~4쪽 모든 픽셀 동일, 복원 1쪽 기본과 동일, A/B 1쪽 다름. CSS 크롭 수식(794×940, 50% 70%)과 띠 경계 오차 3px 미만. OpenAI 클라이언트 생성 금지 패치.
+- 직접 시각 확인: a_contact_sheet.png 4쪽에서 제목/본문/가상/AI 안내 배치와 표지 교체, 4쪽 기존 이미지 유지 확인. **브라우저 화면과 직접 비교한 것은 아님.**
+- 새 샘플 폴더: `tests/test_product_brochure/samples/cover_render_20261026_135436_147831/`(default.pdf, a.pdf, b.pdf, restored.pdf, 쪽별 PNG·연락판). 기존 샘플 삭제/덮어쓰기 없음.
+- `git diff --check` 오류 없음. Git 쓰기·stash 조작·유료 API·패키지 설치·공통 파일 변경 없음.
+
+### 브라우저 중단과 미검증
+- 별도 모의 서버 127.0.0.1:5017 기동 확인 후 중지. AI 라우트만 fixture로 대체, PDF는 실제 라우트, 실제 AI 클라이언트 생성 금지. 환경변수·프롬프트 변경 없음.
+- 컴퓨터 제어 도구가 현재 Chrome URL을 충분히 확인하지 못해 작업을 중단. 이후 UI 제어/우회 없음. **브라우저 스크립트 실행·실제 다운로드·화면 크롭 비교는 미실행**. 브라우저 서버/JS는 준비 및 문법 확인만, PASS 보고 파일 없음.
+- 미검증: 브라우저 DOM 전체 흐름(후보→적용→교체→복원·제목·잠금·다운로드·자원·이탈 보호), 실제 30/210초 시간 초과, 스크린리더/다른 브라우저/인쇄. 순수 로직/API 결과와 구분.
+- 실제 유료 이미지/문구 생성·번역·이미지 품질·비용·시간은 재실행하지 않음.
+
+### 수동 확인 절차(유료 호출 없음)
+1. 프로젝트 루트에서 `python tests/test_product_brochure/browser_cover_server.py` 실행. 기존 앱과 별도 5017 포트.
+2. Chrome/Edge에서 `http://127.0.0.1:5017/#product_brochure` 열기. 가상 데이터 자동 검사 스크립트가 기본/A/B/복원 다운로드를 요청하므로 브라우저 다운로드 설정에 따라 확인이 필요할 수 있음. 다른 서비스나 실제 키를 사용하지 않음.
+3. 페이지 제목 PASS/FAIL 및 새 `tests/test_product_brochure/samples/browser_cover_<실행시각>/report_*.json` 확인. 스크립트는 실제 브라우저에서 아직 검증되지 않았으므로 실패 시 보고된 단계부터 조사.
+4. 기본→후보 A→A 적용→후보 B(미적용)→PDF의 A→B 적용→복원 확인. 후보 제목, 2~4쪽 유지, 다운로드 PDF 1쪽과 화면 크롭 대조.
+5. 오류 시 문구/후보/적용 이미지 보존, 취소 요청 0회, PDF 진행 중 변경 잠금, 미적용 문구 차단, 다운로드 후 새로고침 이탈 경고 확인. 실제 저장 완료는 페이지에서 보장하지 않음.
+6. 확인 후 서버 Ctrl+C. 샘플은 가상 자료만이며 기존 실행 폴더를 덮어쓰지 않음.
+
+### 프리미엄 실제 실행 외부 전달(SPE-03)
+사용자 보고·ChatGPT 작은 캡처 확인: 후보 표시·적용 상태·밝은 제목 여백과 가독성, 적용 후 미적용 제목 모순. Codex 직접 원본 열람 없음. 모델/실행 프롬프트 버전/비용/시간 미확인, 미세 글자·로고 부재 보장 불가. 전문/원본 미저장.
+
+## 2026-10-26 적용 표지 PDF — 기존 실행 앱 사용자 후속 확인(DI-13)
+- 기록 시각: 2026-10-26 14:07 (Asia/Seoul). 실제 확인 시각 미확인. 작업자 유정현.
+- 근거/환경: 사용자 메시지에 따른 확인 결과. **모의 테스트 서버가 아닌 기존 실행 앱에서 사용자가 직접 확인**했으며, Codex가 직접 브라우저로 확인하거나 다운로드 파일을 대조한 결과는 아님.
+
+| 사용자 확인 절차 | 사용자 보고 결과 |
+|---|---|
+| AI 표지 배경 적용 | 정상 |
+| 적용 뒤 후보 영역 제목과 다운로드 버튼 확인 | “현재 표지에 적용된 이미지” 표시 및 PDF 다운로드 활성화 정상 |
+| 다운로드 PDF와 미리보기 대조 | 1쪽 배경 일치, 2~4쪽 및 문구 유지 |
+| 기본 배경 복원 후 PDF 다운로드 | PDF도 기본 표지로 복원, 정상 |
+
+- 판정 범위: 사용자 보고 기준 위 네 항목 정상. 앞선 Codex 브라우저 도구 중단·직접 검증 미실행 기록은 당시 사실로 보존하며, 이번 사용자 확인 결과로 후속 보완한다. 모의 브라우저 검사 스크립트의 실행/통과 근거로 사용하지 않는다.
+- Codex 이번 수행: 규칙·브랜치·status·diff·스테이징 상태 읽기 전용 확인 및 개인 기록 두 파일 추가. 서비스 코드 변경·API 호출·테스트 재실행 없음. 실제 결과 파일/이미지 원본을 복사하거나 기록에 저장하지 않음.
+- 미확인 유지: 추가 이미지 생성 여부·호출 횟수·모델·실행 프롬프트 버전·비용·시간. 이번 보고에 없는 오류·취소·중복·오래된 응답·자원 정리·이탈 보호의 브라우저 확인 여부는 추가 확정하지 않음.
+
+검토용 산출물의 커밋 제외 권장(읽기 전용 확인, 파일 삭제/Git 변경 없음)
+- 현재 feature/product_brochure, 병합 중 아님. 전체 스테이징 목록 비어 있음.
+- `tests/test_product_brochure/samples/cover_render_20261026_135436_147831/`의 23개 파일 전부 미추적:
+  - PDF 4개: `a.pdf`, `b.pdf`, `default.pdf`, `restored.pdf`.
+  - PNG 19개: `a.png`, `b.png`, `a_contact_sheet.png`, `a_page_1.png`~`a_page_4.png`, `b_page_1.png`~`b_page_4.png`, `default_page_1.png`~`default_page_4.png`, `restored_page_1.png`~`restored_page_4.png`.
+- 위 파일은 재생성 가능한 검토용 산출물로 커밋 제외 권장. 미추적 테스트 소스 `test_pdf_cover_api.py`, `browser_cover_check.js`, `browser_cover_server.py`, `check_cover_render.py`는 별도의 소스 검토/커밋 대상이며 산출물 제외 목록에 포함하지 않음. 브라우저 스크립트는 문법/기동 확인만 완료한 기존 상태 유지.
+- 기존 추적 서비스 이미지 `catalog_cover_concept.png`, `catalog_material_concept.png` 및 공통 디자인 참고 이미지는 이번 제외 권장 대상이 아님.

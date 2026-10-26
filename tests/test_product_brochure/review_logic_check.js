@@ -706,7 +706,7 @@ check("PDF 실행기: 이전 결과 확인 취소·진행 중·크기 초과면 
   const cancel = pdfHarness({ stale: true, confirm: false, send: () => Promise.resolve(pdfOk()) });
   assert.equal(await cancel.d.run(pdfInput(current)), "cancelled");
   assert.deepEqual(cancel.log.confirms, [R.PDF_STALE_MESSAGE]);
-  assert.equal(R.PDF_STALE_MESSAGE, "이 결과는 현재 입력과 다를 수 있습니다. 현재 미리보기 내용으로 PDF를 다운로드할까요?");
+  assert.equal(R.PDF_STALE_MESSAGE, "적용된 문구 또는 표지 이미지가 현재 입력과 다른 정보 기준일 수 있습니다. 현재 미리보기에 적용된 문구와 표지 이미지로 PDF를 다운로드할까요?");
   assert.equal(cancel.log.sends.length, 0);
   const blocked = pdfHarness({ blocked: true, send: () => Promise.resolve(pdfOk()) });
   assert.equal(await blocked.d.run(pdfInput(current)), "blocked");
@@ -961,12 +961,34 @@ check("표지 object URL 수명: 후보·적용이 같은 URL이면 유지, 교�
   assert.deepEqual(R.coverUrlsToRevoke({ candidate: a, applied: null }, { candidate: b, applied: null }), ["blob:a"]);
 });
 
-check("PDF 다운로드: 적용한 AI 표지가 있으면 고정 안내로 차단, 후보만 있으면 허용", () => {
+check("PDF 다운로드: 적용한 AI 표지와 기본 배경 모두 허용, 미적용 문구는 계속 차단", () => {
   const base = { hasResult: true, editDirty: false, busy: false, bodyBytes: 100 };
-  const blocked = R.evaluatePdfDownload(Object.assign({}, base, { coverApplied: true }));
-  assert.equal(blocked.reason, "cover_applied");
-  assert.equal(blocked.message, "AI 표지 배경의 PDF 반영은 연결 준비 중입니다. 기본 배경으로 복원하면 다운로드할 수 있습니다.");
+  assert.equal(R.evaluatePdfDownload(Object.assign({}, base, { coverApplied: true })).ok, true);
+  assert.equal(R.evaluatePdfDownload(Object.assign({}, base, { coverApplied: true, editDirty: true })).reason, "edit_pending");
   assert.equal(R.evaluatePdfDownload(Object.assign({}, base, { coverApplied: false })).ok, true);
+});
+
+check("PDF 전송: 기본 JSON 유지, 적용 Blob만 multipart에 고정 파일명으로 전송", async () => {
+  const body = JSON.stringify(R.buildPdfPayload(editableBody()));
+  const json = R.buildPdfRequestBody({ body, coverBlob: null });
+  assert.equal(json.type, "application/json");
+  assert.equal(await json.text(), body);
+  const applied = new Blob(["applied"], { type: "image/png" });
+  const candidate = new Blob(["candidate"], { type: "image/png" });
+  const form = R.buildPdfRequestBody({ body, coverBlob: applied, candidate, url: "blob:ignored" });
+  assert.deepEqual([...form.keys()], ["catalog", "cover_image"]);
+  assert.equal(form.get("catalog"), body);
+  assert.equal(form.get("cover_image").name, "cover.png");
+  assert.equal(await form.get("cover_image").text(), "applied");
+});
+
+check("표지 PDF 오류: 413에서도 이미지 오류 코드 보존, 서버 원문 미노출", () => {
+  for (const [code, status] of [["BROCHURE_PDF_INVALID_FORM", 400], ["BROCHURE_PDF_COVER_INVALID", 400], ["BROCHURE_PDF_COVER_TOO_LARGE", 413]]) {
+    const out = R.interpretPdfResponse({ status, contentType: "application/json", json: { ok: false, error: { code, message: XSS } } });
+    assert.equal(out.code, code);
+    assert.equal(out.message, R.PDF_ERROR_MESSAGES[code]);
+    assert.ok(!out.message.includes(XSS));
+  }
 });
 
 (async () => {

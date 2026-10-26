@@ -119,16 +119,27 @@ def generate():
 
 @bp.post("/api/product-brochure/pdf")
 def download_pdf():
-    # 본문을 읽기 전에 이 요청에만 크기 제한을 적용합니다(다른 탭·앱 설정에는 영향 없음).
-    request.max_content_length = pdf_download.MAX_REQUEST_BYTES
+    # 본문을 읽기 전에 이 요청에만 크기·파트 제한을 적용합니다(다른 탭·앱 설정에는 영향 없음).
+    # 기본 배경: application/json 32 KiB. 적용한 AI 표지 배경 포함: multipart/form-data 16 MiB + 96 KiB, 파트 4개 이하.
+    multipart = request.mimetype == "multipart/form-data"
+    request.max_content_length = pdf_download.MAX_MULTIPART_BYTES if multipart else pdf_download.MAX_REQUEST_BYTES
+    if multipart:
+        request.max_form_parts = pdf_download.MAX_FORM_PARTS
     try:
-        if not request.is_json:
-            raise pdf_download.PdfDownloadInvalidJsonError()
-        try:
-            payload = request.get_json(silent=True)  # 잘못된 JSON·빈 본문은 None
-        except RequestEntityTooLarge:
-            raise pdf_download.PdfDownloadTooLargeError() from None
-        pdf = pdf_download.render(payload)
+        cover_bytes = None
+        if multipart:
+            try:
+                payload, cover_bytes = pdf_download.read_multipart(request.form, request.files)
+            except RequestEntityTooLarge:
+                raise pdf_download.PdfDownloadTooLargeError() from None
+        else:
+            if not request.is_json:
+                raise pdf_download.PdfDownloadInvalidJsonError()
+            try:
+                payload = request.get_json(silent=True)  # 잘못된 JSON·빈 본문은 None
+            except RequestEntityTooLarge:
+                raise pdf_download.PdfDownloadTooLargeError() from None
+        pdf = pdf_download.render(payload, cover_bytes)
         # 완성된 bytes를 그대로 응답(버퍼 수명 문제 없음). 파일명·헤더에 사용자 입력을 쓰지 않습니다.
         return Response(pdf, mimetype="application/pdf", headers=pdf_download.RESPONSE_HEADERS)
     except AIError as err:
@@ -141,6 +152,9 @@ def download_pdf():
     except Exception as exc:
         logger.error("product_brochure pdf 예기치 않은 오류: type=%s", type(exc).__name__)
         return _error(pdf_catalog.CatalogPdfRenderError())
+    finally:
+        # multipart 파일 부분은 OS 임시 파일(SpooledTemporaryFile)일 수 있어 성공·실패 모두 먼저 닫습니다.
+        request.close()
 
 
 @bp.post("/api/product-brochure/cover-image")

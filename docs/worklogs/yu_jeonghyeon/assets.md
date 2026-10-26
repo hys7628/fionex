@@ -44,3 +44,10 @@
 
 - 같은 폴더의 중간 산출물(삭제하지 않고 보존): render_src(배율 보정 전 187.5dpi 렌더링), render_src_150(150dpi 원본 렌더링), render_scan(스캔형 재렌더링), out/…_scan150.pdf(초기 글꼴 설정 남음), out/…_imageonly.pdf(미참조 글꼴 객체 남음), out/…_imageonly_v2.pdf(동일), checklist_temp.md(임시 검증표), render_pdf.ps1·make_scan_pdf.py(준비 스크립트)
 - 검증 입력으로는 v3만 사용. 세션 임시 폴더라 장기 보관이 필요하면 담당자가 저장 위치를 정해 옮겨야 함(tests/fixtures 공개·허가 자료 규칙 확인 필요)
+
+## 2026-10-26 적용 표지 PDF 모의 샘플(DI-12)
+- 경로: `tests/test_product_brochure/samples/cover_render_20261026_135436_147831/`.
+- `a.png`/`b.png`: 코드로 생성한 1024×1536 빨강/파랑 띠 PNG, AI/사용자 이미지 아님. 기본/A/B/복원 PDF 4개, 96dpi 쪽별 PNG·a_contact_sheet.png.
+- 제작: `tests/test_product_brochure/check_cover_render.py`, 실제 PDF API/ReportLab 및 기존 설치 PDFium. 입력은 pdf_fixtures.base 가상 정보. 기존 제품 내장 이미지/글꼴의 사용권 기록은 그대로 적용.
+- Codex는 4쪽 연락판을 직접 확인. 브라우저 화면 캡처는 도구 중단으로 없음. 실행마다 새 폴더, 기존 샘플 미변경.
+- 프리미엄 실제 이미지(SPE-03)는 사용자 보고/작은 캡처 확인 전달만 기록, 원본/사용자 결과 전문 미보관. 미세 글자·로고 부재 판정 없음.

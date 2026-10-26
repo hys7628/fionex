@@ -679,7 +679,7 @@
       sample: "Amostra",
       lead_time: "Prazo de entrega",
     };
-    const PDF_STALE_MESSAGE = "이 결과는 현재 입력과 다를 수 있습니다. 현재 미리보기 내용으로 PDF를 다운로드할까요?";
+    const PDF_STALE_MESSAGE = "적용된 문구 또는 표지 이미지가 현재 입력과 다른 정보 기준일 수 있습니다. 현재 미리보기에 적용된 문구와 표지 이미지로 PDF를 다운로드할까요?";
     const PDF_EDIT_PENDING_MESSAGE = "문구를 적용하거나 편집을 취소한 뒤 다운로드하세요.";
 
     // 적용된 편집본(generation.current)에서 parse_catalog가 받는 필드만 명시적으로 복사합니다.
@@ -703,12 +703,10 @@
       return new TextEncoder().encode(str).length;
     }
 
-    // 다운로드 가능 조건. ctx: { hasResult, editDirty, busy, bodyBytes, coverApplied }
-    // coverApplied: 사용자가 적용한 AI 표지 배경이 있으면 PDF가 미리보기와 달라지므로 막음(PDF 반영은 후속 작업)
+    // 다운로드 가능 조건. bodyBytes는 이미지가 아닌 catalog JSON의 UTF-8 크기.
     function evaluatePdfDownload(ctx) {
       if (!ctx.hasResult) return { ok: false, reason: "no_result", message: "카탈로그를 생성한 뒤 PDF를 다운로드할 수 있습니다(디자인 시안은 대상이 아님)." };
       if (ctx.busy) return { ok: false, reason: "busy", message: "다른 요청이 진행 중입니다. 끝난 뒤 다운로드하세요." };
-      if (ctx.coverApplied) return { ok: false, reason: "cover_applied", message: COVER_PDF_BLOCK_MESSAGE };
       if (ctx.editDirty) return { ok: false, reason: "edit_pending", message: PDF_EDIT_PENDING_MESSAGE };
       if (ctx.bodyBytes > MAX_PDF_REQUEST_BYTES) {
         return { ok: false, reason: "too_large", message: "PDF 요청 크기가 허용 범위(32 KiB)를 넘습니다. 긴 문구를 줄여 적용한 뒤 다시 시도하세요." };
@@ -721,7 +719,10 @@
     const PDF_ERROR_MESSAGES = {
       BROCHURE_PDF_INVALID_JSON: "PDF 요청 형식이 올바르지 않습니다. 다시 시도하세요.",
       BROCHURE_PDF_INVALID_INPUT: "PDF로 만들 수 없는 문구가 있습니다(빈 값·길이·한글·쓸 수 없는 문자). 문구를 확인한 뒤 다시 시도하세요.",
-      BROCHURE_PDF_REQUEST_TOO_LARGE: "PDF 요청 크기가 허용 범위(32 KiB)를 넘습니다. 긴 문구를 줄여 적용한 뒤 다시 시도하세요.",
+      BROCHURE_PDF_REQUEST_TOO_LARGE: "PDF 요청 크기가 허용 범위를 넘습니다(문구 32 KiB, 이미지 16 MiB). 내용을 확인한 뒤 다시 시도하세요.",
+      BROCHURE_PDF_INVALID_FORM: "표지 이미지를 포함한 PDF 요청 형식이 올바르지 않습니다. 다시 시도하세요.",
+      BROCHURE_PDF_COVER_TOO_LARGE: "표지 이미지가 허용 크기(16 MiB)를 넘습니다. 다른 후보를 적용하거나 기본 배경으로 복원하세요.",
+      BROCHURE_PDF_COVER_INVALID: "표지 이미지가 올바른 1024×1536 단일 프레임 PNG가 아니거나 손상되었습니다. 다른 후보를 적용하거나 기본 배경으로 복원하세요.",
       BROCHURE_PDF_BUSY: "PDF를 만드는 요청이 많습니다. 잠시 후 다시 시도하세요.",
       BROCHURE_PDF_LAYOUT_OVERFLOW: "PDF 페이지의 정해진 영역에 들어가지 않는 문구가 있습니다. 긴 문구를 줄여 적용한 뒤 다시 시도하세요.",
       BROCHURE_PDF_GLYPH_MISSING: "PDF 글꼴로 표시할 수 없는 문자(이모지 등)가 있습니다. 해당 문자를 지운 뒤 다시 시도하세요.",
@@ -744,8 +745,6 @@
         }
         return { ok: true, data: null };
       }
-      if (res.status === 413) return { ok: false, kind: "server_error", code: "BROCHURE_PDF_REQUEST_TOO_LARGE",
-        message: PDF_ERROR_MESSAGES.BROCHURE_PDF_REQUEST_TOO_LARGE };
       const body = res.json;
       if (isObj(body) && body.ok === false) {
         const code = isObj(body.error) && isStr(body.error.code) ? body.error.code : null;
@@ -753,13 +752,23 @@
         return { ok: false, kind: "server_error", code: known ? code : null,
           message: known ? PDF_ERROR_MESSAGES[code] : "PDF 요청을 처리하지 못했습니다(HTTP " + res.status + "). 다시 시도하세요." };
       }
+      if (res.status === 413) return { ok: false, kind: "server_error", code: "BROCHURE_PDF_REQUEST_TOO_LARGE",
+        message: PDF_ERROR_MESSAGES.BROCHURE_PDF_REQUEST_TOO_LARGE };
       return { ok: false, kind: res.status === 200 ? "invalid_response" : "not_json",
         message: res.status === 200
           ? "받은 응답이 PDF가 아니어서 다운로드하지 않았습니다. 다시 시도하세요."
           : "서버 응답을 해석하지 못했습니다(HTTP " + res.status + "). 잠시 후 다시 시도하세요." };
     }
 
-    // input: { body: JSON 문자열, revision: 요청 당시 결과 버전 }. 공통 실행기(중복 방지·오래된 응답 무시·재시도 없음)
+    function buildPdfRequestBody(input) {
+      if (!input.coverBlob) return new Blob([input.body], { type: "application/json" });
+      const form = new FormData();
+      form.append("catalog", input.body);
+      form.append("cover_image", input.coverBlob, "cover.png");
+      return form; // Content-Type과 boundary는 브라우저가 설정
+    }
+
+    // body와 coverBlob은 클릭 당시 적용본. revision은 문구·적용 이미지 변경마다 증가.
     function createPdfDownloader(deps) {
       return createRunner(deps, {
         validate: function (input) {
@@ -782,7 +791,6 @@
     const MAX_COVER_BYTES = 16 * 1024 * 1024;  // 공통 config.IMAGE_MAX_BYTES와 같은 값
     const PNG_SIGNATURE = "\u0089PNG\r\n\u001a\n";
     const COVER_STALE_APPLY_MESSAGE = "이 후보는 지금과 다른 제품 정보(표시명·설명)로 생성됐습니다. 그래도 표지에 적용할까요?";
-    const COVER_PDF_BLOCK_MESSAGE = "AI 표지 배경의 PDF 반영은 연결 준비 중입니다. 기본 배경으로 복원하면 다운로드할 수 있습니다.";
 
     // 생성 조건은 카탈로그 생성과 같은 판정(분석 결과·적용 스냅샷·현재 입력 일치·제품명/설명/표시명 확인)을 재사용
     function evaluateCover(ctx) {
@@ -886,12 +894,12 @@
     return {
       COVER_URL: COVER_URL, COVER_MOODS: COVER_MOODS, COVER_WIDTH: COVER_WIDTH, COVER_HEIGHT: COVER_HEIGHT,
       MAX_COVER_BYTES: MAX_COVER_BYTES, PNG_SIGNATURE: PNG_SIGNATURE, COVER_STALE_APPLY_MESSAGE: COVER_STALE_APPLY_MESSAGE,
-      COVER_PDF_BLOCK_MESSAGE: COVER_PDF_BLOCK_MESSAGE, COVER_ERROR_MESSAGES: COVER_ERROR_MESSAGES,
+      COVER_ERROR_MESSAGES: COVER_ERROR_MESSAGES,
       evaluateCover: evaluateCover, coverInfoSignature: coverInfoSignature, buildCoverPayload: buildCoverPayload,
       interpretCoverResponse: interpretCoverResponse, createCoverGenerator: createCoverGenerator, coverUrlsToRevoke: coverUrlsToRevoke,
       PDF_URL: PDF_URL, PDF_FILENAME: PDF_FILENAME, MAX_PDF_REQUEST_BYTES: MAX_PDF_REQUEST_BYTES,
       CATALOG_ITEM_LABELS: CATALOG_ITEM_LABELS, PDF_STALE_MESSAGE: PDF_STALE_MESSAGE, PDF_EDIT_PENDING_MESSAGE: PDF_EDIT_PENDING_MESSAGE,
-      PDF_ERROR_MESSAGES: PDF_ERROR_MESSAGES, buildPdfPayload: buildPdfPayload, utf8Bytes: utf8Bytes,
+      PDF_ERROR_MESSAGES: PDF_ERROR_MESSAGES, buildPdfPayload: buildPdfPayload, buildPdfRequestBody: buildPdfRequestBody, utf8Bytes: utf8Bytes,
       evaluatePdfDownload: evaluatePdfDownload, interpretPdfResponse: interpretPdfResponse, createPdfDownloader: createPdfDownloader,
       ANALYZE_URL: ANALYZE_URL, MAX_FILE_BYTES: MAX_FILE_BYTES, REPLACE_MESSAGE: REPLACE_MESSAGE,
       GROUPS: GROUPS, EXAMPLE_FIELDS: EXAMPLE_FIELDS, FIELD_KEYS: FIELD_KEYS,
@@ -964,6 +972,7 @@
   const coverAppliedStatus = panel.querySelector("[data-cover-applied-status]");
   const coverError = panel.querySelector("[data-cover-error]");
   const coverCandidateBox = panel.querySelector("[data-cover-candidate]");
+  const coverCandidateHeading = panel.querySelector("[data-cover-candidate-heading]");
   const coverCandidateImg = panel.querySelector("[data-cover-candidate-img]");
   const coverCandidateTitle = panel.querySelector("[data-cover-candidate-title]");
   const coverCandidateTagline = panel.querySelector("[data-cover-candidate-tagline]");
@@ -990,11 +999,11 @@
   let busy = false;           // PDF 분석 중
   let generating = false;     // 카탈로그 생성 중
   let pdfBusy = false;        // 카탈로그 PDF 요청 중
-  // 미리보기 적용본(generation.current)이 바뀔 때마다 증가: 생성 성공·편집 적용·원문 복원.
+  // 문구 또는 적용 이미지가 바뀔 때마다 증가: 생성 성공·편집 적용·원문 복원·표지 적용/교체·기본 복원.
   // 다운로드 요청 표시는 요청 당시 버전에만 연결합니다(이후 수정본에 그대로 적용하지 않음).
   let resultRevision = 0;
   let downloadedRevision = null;
-  // AI 표지 배경(브라우저 메모리만). 항목 { url(object URL), payload(요청 3개 필드), infoSignature, mood }
+  // AI 표지 배경(브라우저 메모리만). 항목 { blob, url(object URL), payload(요청 3개 필드), infoSignature, mood }
   // candidate: 마지막으로 성공한 생성 후보, applied: 사용자가 "표지에 적용"한 이미지. 둘이 같은 항목일 수 있음
   let coverBusy = false;      // 표지 배경 생성 요청 중
   let cover = { candidate: null, applied: null };
@@ -1161,7 +1170,6 @@
     const body = generation ? JSON.stringify(Review.buildPdfPayload(generation.current)) : "";
     return Review.evaluatePdfDownload({
       hasResult: !!generation, editDirty: editDirty(), busy: working(), bodyBytes: Review.utf8Bytes(body),
-      coverApplied: !!cover.applied, // 적용한 AI 표지 배경은 아직 PDF에 전달하지 않으므로 다운로드를 막음
     });
   }
 
@@ -1175,10 +1183,10 @@
     } else if (!ev.ok) {
       pdfStatus.textContent = ev.message;
     } else if (downloadedRevision === resultRevision) {
-      pdfStatus.textContent = "다운로드 요청됨 · 저장 여부는 브라우저에서 확인하세요. 문구를 수정·복원하거나 다시 생성하면 새로 다운로드해야 합니다.";
+      pdfStatus.textContent = "다운로드 요청됨 · 저장 여부는 브라우저에서 확인하세요. 문구나 적용 이미지를 변경하면 새로 다운로드해야 합니다.";
     } else {
-      pdfStatus.textContent = "현재 미리보기에 적용된 문구로 A4 4쪽 PDF를 만듭니다. AI 검토 표시·사용자 수정 문구가 검토 완료되었다는 뜻은 아닙니다." +
-        (Review.isResultStale(generation, generationContext()) ? " 이 결과는 현재 입력과 다를 수 있습니다(다운로드 전에 확인)." : "");
+      pdfStatus.textContent = "현재 미리보기에 적용된 문구와 표지 이미지로 A4 4쪽 PDF를 만듭니다. AI 검토 표시·사용자 수정 문구가 검토 완료되었다는 뜻은 아닙니다." +
+        (Review.isResultStale(generation, generationContext()) || coverStale(cover.applied) ? " 문구 또는 표지 이미지가 현재 입력과 다를 수 있습니다(다운로드 전에 확인)." : "");
     }
   }
 
@@ -1232,6 +1240,7 @@
       : "표지는 기본 콘셉트 배경을 사용합니다.";
 
     const c = cover.candidate;
+    coverCandidateHeading.textContent = c && c === cover.applied ? "현재 표지에 적용된 이미지" : "생성 후보";
     coverCandidateBox.hidden = !c;
     if (!c) {
       coverCandidateImg.removeAttribute("src"); // 해제한 object URL을 숨은 요소가 계속 가리키지 않게
@@ -1255,9 +1264,11 @@
 
   // 상태 교체: 이전 상태에서 더 이상 쓰지 않는 object URL만 해제(후보·적용이 같은 URL이면 유지)
   function setCover(next) {
-    Review.coverUrlsToRevoke(cover, next).forEach(function (url) { URL.revokeObjectURL(url); });
+    const unused = Review.coverUrlsToRevoke(cover, next);
     cover = next;
     syncCover();
+    applyCoverToResult(); // DOM 참조를 먼저 교체한 뒤 사용하지 않는 URL만 해제
+    unused.forEach(function (url) { URL.revokeObjectURL(url); });
     syncPdf();
     syncWork();
   }
@@ -2041,7 +2052,7 @@
     const timer = setTimeout(function () { controller.abort(); }, PDF_TIMEOUT_MS);
     try {
       const res = await fetch(Review.PDF_URL, {
-        method: "POST", body: new Blob([input.body], { type: "application/json" }), signal: controller.signal,
+        method: "POST", body: Review.buildPdfRequestBody(input), signal: controller.signal,
         headers: { Accept: "application/pdf, application/json" },
       });
       const contentType = res.headers.get("content-type") || "";
@@ -2065,7 +2076,7 @@
   const pdfDownloader = Review.createPdfDownloader({
     send: sendPdf,
     blocked: function () { return busy || generating || coverBusy; },
-    needsConfirm: function () { return !!generation && Review.isResultStale(generation, generationContext()); },
+    needsConfirm: function () { return !!generation && (Review.isResultStale(generation, generationContext()) || coverStale(cover.applied)); },
     confirm: function (msg) { return window.confirm(msg); },
     onBusy: function (value) {
       pdfBusy = value;
@@ -2096,17 +2107,18 @@
 
   pdfBtn.addEventListener("click", function () {
     const ev = pdfEvaluation();
-    if (!ev.ok) { syncPdf(); return; } // 미생성·미적용 편집·진행 중·크기 초과·AI 표지 적용 중: 요청하지 않음
+    if (!ev.ok) { syncPdf(); return; } // 미생성·미적용 편집·진행 중·크기 초과: 요청하지 않음
     pdfDownloader.run({
       body: JSON.stringify(Review.buildPdfPayload(Review.cloneData(generation.current))), // 클릭 시점 독립 스냅샷
       revision: resultRevision,
+      coverBlob: cover.applied ? cover.applied.blob : null, // 후보나 URL이 아닌 적용 Blob의 참조(Blob은 불변)
     });
   });
 
   /* ---------- AI 표지 배경 ----------
      버튼 클릭 때만 적용 스냅샷의 표시명·설명과 분위기 3개 필드를 보냅니다(자동 호출·재시도 없음).
      성공한 PNG는 후보로만 표시하고, 사용자가 "표지에 적용"해야 생성 결과 미리보기 1쪽 표지에 반영합니다.
-     Blob·object URL은 브라우저 메모리에만 두고 저장소·서버에 저장하지 않습니다. PDF 반영은 후속 작업. */
+     Blob·object URL은 브라우저 메모리에만 두며 PDF 요청 때 적용 Blob만 전달합니다. */
   const resultCoverImg = resultDialog.querySelector(".catalog-cover-figure img");
   const DEFAULT_COVER_SRC = resultCoverImg.getAttribute("src");
   const DEFAULT_COVER_ALT = resultCoverImg.getAttribute("alt");
@@ -2182,7 +2194,7 @@
       // 검사를 통과한 이미지만 후보로. 표지는 자동으로 바꾸지 않음(적용 이미지 유지)
       hideCoverError();
       setCover({
-        candidate: { url: URL.createObjectURL(data.blob), payload: data.payload, infoSignature: data.infoSignature, mood: data.payload.mood },
+        candidate: { blob: data.blob, url: URL.createObjectURL(data.blob), payload: data.payload, infoSignature: data.infoSignature, mood: data.payload.mood },
         applied: cover.applied,
       });
     },
