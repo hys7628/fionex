@@ -11,6 +11,7 @@ import json
 import logging
 import re
 import threading
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -23,7 +24,7 @@ from features.green_claim.service import ExtractError
 
 logger = logging.getLogger(__name__)
 
-PROMPT_VERSION = "claim_review_v1"
+PROMPT_VERSION = "claim_review_v2"  # v1은 2026-10-26 실제 실행 1건 후 보존(feature_spec.md "대체 문장 보완")
 PROMPT_PATH = Path(__file__).resolve().parent / "prompts" / f"{PROMPT_VERSION}.md"
 MAX_CHARS = service.MAX_CHARS
 # 20,000자를 JSON 이스케이프로 보내도(\uXXXX 6바이트, 이모지 서로게이트 쌍 12바이트) 약 240,000바이트 + 여유
@@ -233,8 +234,35 @@ def _numbers(value):
     return {re.sub(r"[.,]", "", number) for number in _NUMBER.findall(value or "")}
 
 
-def _alternative(raw, unavailable, text):
-    """대체 예시 정리: 중복 제거·원문에 없는 숫자 검사. 반환 (예시 또는 None, 안내, 서버 확인 목록)."""
+# 대체 예시에 나오면 근거가 필요한 표현의 어간(소문자·악센트 제거 기준). 입력 문구에 없는 어간이 예시에 있으면 예시를 쓰지 않습니다.
+# 정해진 목록의 기계 검사일 뿐이며, 바꿔 말한 표현·뜻으로만 생기는 새 전제는 찾지 못합니다(feature_spec.md "대체 문장 보완").
+CLAIM_TERMS = (
+    # 평가·시험·검증·입증·인증
+    "comprov", "certific", "atest", "audit", "verific", "avalia", "escopo", "laudo", "ensaio", "testad", "selo",
+    "certif", "verif", "assess", "evaluat", "tested", "proven", "substantiat",
+    "인증", "검증", "입증", "평가", "시험", "실증",
+    # 환경·사회 특성
+    "socioambient", "ambientalmente", "ecologic", "sustentav", "verde", "reciclad", "renovav", "biodegrad", "carbono",
+    "emisso", "pegada", "sustainab", "eco-", "ecolog", "green", "recycl", "renewab", "carbon", "emission", "footprint",
+    "친환경", "지속가능", "재활용", "재생", "탄소", "배출", "생분해", "사회적", "환경적",
+)
+
+
+def _fold(value):
+    """비교용: 소문자 + 악센트 제거(ç→c, ã→a). 한글은 그대로."""
+    decomposed = unicodedata.normalize("NFKD", (value or "").casefold())
+    # NFKD는 한글 음절도 자모로 나누므로 악센트만 뺀 뒤 NFC로 다시 합칩니다
+    return unicodedata.normalize("NFC", "".join(char for char in decomposed if not unicodedata.combining(char)))
+
+
+def _unsupported_terms(values, text):
+    folded_text = _fold(text)
+    found = _fold(" ".join(value for value in values if value))
+    return sorted(term for term in CLAIM_TERMS if term in found and term not in folded_text)
+
+
+def _alternative(raw, unavailable, text, language):
+    """대체 예시 정리: 원문에 없는 숫자·근거 필요 표현 검사, 언어 기준 중복 제거. 반환 (예시 또는 None, 안내, 서버 확인 목록)."""
     checks = []
     if raw is None:
         return None, _text(unavailable, MAX_FIELD_CHARS, "alternative_unavailable_reason_ko", nullable=True), checks
@@ -249,6 +277,14 @@ def _alternative(raw, unavailable, text):
     if new_numbers:
         return None, "대체 문장에 입력 문구에 없는 숫자가 있어 예시를 표시하지 않았습니다. 수정 방향을 참고해 주세요.", \
             ["alternative_removed_new_number"]
+    if _unsupported_terms((original, pt_br, ko), text):
+        return None, ("대체 문장에 입력 문구에 없는 평가·입증·인증 또는 환경·사회 특성 표현이 있어 예시를 표시하지 않았습니다. "
+                      "수정 방향을 참고해 주세요."), ["alternative_removed_unsupported_claim_term"]
+    if language == "pt-BR" and original is not None:
+        # 구절이 브라질 포르투갈어면 포르투갈어 예시는 하나만(문자열이 달라도 같은 언어 중복으로 봄)
+        pt_br = pt_br if pt_br is not None else original
+        original = None
+        checks.append("alternative_same_language_pt_br")
     if original is not None and pt_br is not None and original.strip() == pt_br.strip():
         original = None
         checks.append("alternative_same_as_pt_br")
@@ -318,7 +354,7 @@ def validate_output(data, text, loaded):
             "direction_ko": _text(raw.get("direction_ko"), MAX_FIELD_CHARS, f"{where}.direction_ko"),
             "criteria_ids": ids,
         }
-        alternative, note, checks = _alternative(raw.get("alternative"), raw.get("alternative_unavailable_reason_ko"), text)
+        alternative, note, checks = _alternative(raw.get("alternative"), raw.get("alternative_unavailable_reason_ko"), text, language)
         item.update(alternative=alternative, alternative_note_ko=note, server_checks=checks)
         _check_references([item["interpretation_ko"], item["reason_ko"], item["direction_ko"], note]
                           + ([value for value in alternative.values() if value] if alternative else []),

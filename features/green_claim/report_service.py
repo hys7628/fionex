@@ -168,6 +168,7 @@ def _validate_items(text, items, ref_ids):
             original = _str(alternative["original_text"], rs.MAX_FIELD_CHARS, nullable=True)
             pt_br = _str(alternative["pt_br_text"], rs.MAX_FIELD_CHARS, nullable=True)
             _check(original is not None or pt_br is not None)
+            _check(item["quote_language"] != "pt-BR" or original is None)  # 포르투갈어 구절은 포르투갈어 예시 하나만(검수 응답 계약)
             _str(alternative["ko_interpretation"], rs.MAX_FIELD_CHARS, nullable=True)
         _str(item["alternative_note_ko"], rs.MAX_FIELD_CHARS, nullable=True)
         checks = _list(item["server_checks"], MAX_SERVER_CHECKS)

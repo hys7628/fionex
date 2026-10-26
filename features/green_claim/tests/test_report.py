@@ -27,7 +27,7 @@ from features.green_claim import report_service as rp
 from features.green_claim import report_worker as rw
 from features.green_claim import review_service as rs
 from features.green_claim.criteria_build import KST
-from features.green_claim.tests.test_review import Base, item, result_data
+from features.green_claim.tests.test_review import BAD_R1_A, BAD_R1_B, BAD_R2, FAILURE_TEXT, Base, item, result_data
 
 GENERATED = datetime(2026, 10, 26, 11, 0, 0, tzinfo=KST)
 DISPLAYED = "2026-10-26T10:00:05+09:00"
@@ -40,13 +40,14 @@ TEXT = ("🌱 Produto 100% sustentável e ecológico.\n"
         "Cafe\u0301 natural · " + LONG_URL + " " + SECRET)
 ITEMS = [
     item("100% sustentável", action="revise_recommended", ids=("CDC-37",), language="pt-BR",
-         alternative={"original_text": None, "pt_br_text": "Produto com conteúdo reciclado", "ko_interpretation": "재활용 원료 포함 제품"}),
+         # 대체 예시는 입력에 있는 사실만 다시 쓴 문장(새 특성·평가를 넣으면 서버가 지움, test_review 참고)
+         alternative={"original_text": None, "pt_br_text": "Produto têxtil descrito no texto", "ko_interpretation": "본문에서 설명한 섬유 제품"}),
     item("sustentável e ecológico", action="needs_review", ids=("CONAR-36",), language="pt-BR"),
     item("eco-friendly <b>bold</b> & <script>alert(1)</script>", action="judgment_withheld", ids=(), language="en", unavailable=None),
     item("친환경", occurrence=2, ids=("CDC-37", "CDC-38"), language="ko",
          # 한국어 예시와 해석이 같으면 서버가 해석을 null로 정리(중복 제거)
-         alternative={"original_text": "재생 원료를 사용한 원사", "pt_br_text": "Fio com matéria-prima reciclada",
-                      "ko_interpretation": "재생 원료를 사용한 원사"}),
+         alternative={"original_text": "리젠 원사입니다", "pt_br_text": "É o fio Regen",
+                      "ko_interpretation": "리젠 원사입니다"}),
 ]
 
 
@@ -166,6 +167,7 @@ class ValidationTest(ReportBase):
             "not checked with time": lambda r: r["criteria"].update(check_mode="status_only_error"),
             "source url scheme": lambda r: r["criteria"]["sources"][0].update(official_url="ftp://x.example/a"),
             "alternative empty": lambda r: first(r).update(alternative={"original_text": None, "pt_br_text": None, "ko_interpretation": "x"}),
+            "pt-BR item with original-language sentence": lambda r: first(r)["alternative"].update(original_text="Outra frase"),
             "notices empty": lambda r: r.update(notices=[]),
             "limits bool": lambda r: r["limits"].update(max_chars=True),
         }
@@ -199,7 +201,7 @@ class PdfContentTest(ReportBase):
         self.assertTrue(pdf.startswith(b"%PDF-"))
         self.assertGreaterEqual(len(reader.pages), 2)
         for expected in ("그린클레임문구검수보고서", "브라질대상홍보문구표현위험검토", "사실성", "인증보유", "적법성", "디자인",
-                         "수정권고", "검토필요", "판단보류", "sustentável", "Produtocomconteúdoreciclado", "Fiocommatéria-primareciclada",
+                         "수정권고", "검토필요", "판단보류", "sustentável", "Produtotêxtildescritonotexto", "ÉofioRegen",
                          "[U+1F331]", "<b>bold</b>&<script>alert(1)</script>", "대체예시(참고용·원본을수정한것이아님",
                          "홍보물파일에서글자추출·판독후사용자가확인·수정한문구", "2026-10-2610:00:05(한국시간)·이컴퓨터시계기준",
                          "2026-10-2611:00:00(한국시간)·서버시계기준", "법률", "광고자율규제", "한국어번역(비공식)",
@@ -246,6 +248,28 @@ class PdfContentTest(ReportBase):
                          "검수 결과를 받은 시각", "기록 없음", "문구 직접 입력"):
             with self.subTest(expected=expected):
                 self.assertIn(squash(expected), flat)
+
+
+    def test_observed_failure_case_screen_and_pdf_match(self):
+        """관측 실패 사례: 서버가 예시를 지운 결과가 PDF에도 같게 반영(이유·수정 방향 표시, 문제 문장 없음)."""
+        bad = [
+            item("100% sustentável, totalmente ecológico e não causa nenhum impacto ambiental", action="revise_recommended",
+                 language="pt-BR", direction="범위·근거를 밝히고 절대 표현을 빼세요.",
+                 alternative={"original_text": BAD_R1_A, "pt_br_text": BAD_R1_B, "ko_interpretation": "입증 가능한 특성이 있는 원단"}),
+            item("É a opção mais verde do mercado", language="pt-BR", direction="비교 대상과 기준을 밝히세요.",
+                 alternative={"original_text": BAD_R2, "pt_br_text": BAD_R2, "ko_interpretation": "입증되어야 하는 특성이 있는 선택지"}),
+        ]
+        review = self.review(text=FAILURE_TEXT, items=bad)
+        self.assertTrue(all(entry["alternative"] is None for entry in review["items"]))  # 화면이 받는 값
+        _, text = pdf_text(self.build_inprocess(payload(review)))
+        flat = squash(text)
+        for expected in ("범위·근거를밝히고절대표현을빼세요.", "비교대상과기준을밝히세요.", "예시대신위이유와수정방향을참고해주세요.",
+                         squash(review["items"][0]["alternative_note_ko"])):
+            with self.subTest(expected=expected):
+                self.assertIn(squash(expected), flat)
+        for sentence in (BAD_R1_A, BAD_R1_B, BAD_R2):
+            self.assertNotIn(squash(sentence), flat)
+        self.assertNotIn("원문언어예시", flat)
 
     def test_long_multi_page_report(self):
         text = ("Linha com acentuação: ção ã õ é ú. 한국어 문장입니다. " * 450)[:20_000]

@@ -625,3 +625,42 @@
 - 지시 요약: 사용자 수동 확인 결과(파일 추출 후 2단계에서 페이지 스크롤 없이 파일명·추출 완료 상태·편집 문구·검수 실행 버튼이 보임, 이전→다음 왕복 후 선택 파일·추출 문구 유지, 실제 AI 판독·검수 미실행)를 사용자 보고로 구분해 validation.md·prompt_log.md에 기록
 - 결과: validation.md에 사용자 보고 표 추가. Claude는 사용자 화면을 보지 않았음을 명시
 - 한계: 사용 브라우저·화면 크기·파일·확인 시각은 전달받지 않음. 실제 AI 결과 화면은 계속 미검증
+
+## SPE-2026_10_26-01 claim_review_v1 실제 실행 관측(사용자 실행) → claim_review_v2
+- 유형: service_prompt_experiment (실행: 사용자 직접. Claude는 실행·API 호출하지 않음)
+- 날짜/시간: 2026-10-26 오전(사용자 실행, PDF 기준 검수 시각 11:24:50·보고서 생성 11:28:00), 기록 11:43 무렵 (Asia/Seoul)
+- 작업자: 김민정 / 기능: green_claim
+- 모델/설정: 사용자 보고 gpt-5.4-mini-2026-03-17. 그 밖의 설정은 공통 기본값(코드 기준 timeout 60초·재시도 0·출력 상한 4,096·store False). 사용자 실행 환경의 실제 설정은 미확인
+- 프롬프트: features/green_claim/prompts/claim_review_v1.md(변경 없이 보존)
+- 테스트 입력: 공개 가능한 가상 문구 3문장(experiments/claim_review_v1_2026_10_26_observed_failure.json에 원문). 기준: 활성 base 묶음
+- 실제 응답: 원본 API 응답 JSON 없음(복원하지 않음). 사용자 보고: 수정 권고 1·검토 필요 1, 화면 표시·PDF 다운로드 성공, CDC 조회 실패·저장 기준 사용·경고 표시. ChatGPT가 PDF를 읽어 확인: 8쪽, 원문·항목·모델·기준 버전·해시 포함, 부적절한 대체 문장도 포함, 검수 11:24:50·생성 11:28:00. 비용·토큰·처리 시간은 미측정, PDF 전체 배치·링크 클릭은 미확인
+- 중요 발췌(대체 문장): R1 "Nosso tecido tem atributos socioambientais que podem ser comprovados dentro do escopo avaliado." / "Nosso tecido apresenta atributos socioambientais comprováveis dentro do escopo avaliado.", R2 "É uma opção com atributos socioambientais que devem ser comprovados em relação ao critério comparativo adotado."
+- 발견 문제: (1) 입력에 없는 평가·평가 범위·입증 가능한 사회·환경 특성을 전제(할루시네이션성 사실 추가, "입증되어야 함" 조건을 붙여도 특성 보유 전제). 기존 서버 검증(새 숫자·URL·조항)으로는 막지 못함 (2) 포르투갈어 구절에 같은 언어 예시 두 개(문자열이 달라 기존 중복 제거 통과). v1 문장 "구절이 포르투갈어면 original_text와 pt_br_text가 같아도 된다(서버가 중복을 정리한다)"가 두 칸을 모두 채우게 한 것으로 보임(추정, 검증 안 함)
+- 변경 이유·제어 방법: v2에서 입력에 없는 특성·평가·검증·입증 가능성·인증 전제 금지(조건을 덧붙인 문장 포함), 안전한 예시가 없으면 null+이유+한국어 수정 방향, pt-BR 구절은 pt_br_text 하나·original_text null. 서버에서 근거 필요 표현 어간 검사(입력에 없으면 예시 제거)·언어 기준 중복 제거·보고서 계약 검사 추가
+- 재실행 결과: 미실행(v2 실제 모델 재검증 안 함). 모의: 관측 문장 3개를 넣은 가짜 결과에서 예시 모두 제거·사유·수정 방향 표시, 화면·PDF 같음
+- 담당자 판단: 미기록(전달받지 않음)
+- 남은 한계: 프롬프트·어간 검사로 의미상 새 전제를 모두 막지 못함. 실제 v2 응답에서 null이 지나치게 많아지는지·문제없는 예시가 지워지는지 미확인
+
+## DEV-2026_10_26-08 검수 대체 문장의 근거 없는 주장과 언어 중복 방지
+- 유형: development_instruction (OpenAI·공식 사이트 호출 없음)
+- 날짜/시간: 2026-10-26 11:20~11:45 무렵 (Asia/Seoul)
+- 작업자: 김민정 / 기능: green_claim / 브랜치: feature/green_claim (HEAD b92ceea, 작업 전 변경 없음·병합 중·충돌 없음, origin/develop 뒤처진 커밋 0. 원격 최신성은 마지막 fetch 이후 미확인)
+- 도구·모델/설정: Claude Code(VS Code 확장), 모델 ID claude-opus-5-5(세션 시스템 정보)
+- 지시 요약: 위 실패 사례 보완. v1 보존·v2 생성, 근거 없는 특성·평가·검증·인증·효과 전제 금지, 안전한 예시가 없으면 null+수정 방향·이유, 서버 보수적 검사(금칙어로 의미 추가를 모두 막았다고 주장하지 않기), pt-BR 원문은 포르투갈어 예시 하나(언어 기준), 화면·PDF 일치, 기준·조회 정책 변경 금지, 사용자 실행·ChatGPT 확인·Claude 검증 구분, 원본 응답 복원 금지, 추가 유료 호출·설치·키 조회·Git 변경 금지
+- 진행: 상태·코드 확인 → **feature_spec.md "대체 문장 보완" 절 작성(구현 전)** → v2 프롬프트 → 서버 검사·중복 제거·보고서 계약 검사 → 테스트(기존 기대값 변경 구분) → 모의 서버 브라우저 확인 → 기록
+- 실제 결과: 변경 review_service.py·report_service.py·prompts/README.md·feature_spec.md·tests(test_review·test_report·test_review_report_flow), 신규 prompts/claim_review_v2.md·experiments 관측 기록
+  - 기존 테스트 기대값 변경: test_review의 중복 제거 확인 코드(alternative_same_as_pt_br → alternative_same_language_pt_br, 언어 기준이 먼저 적용), test_report·test_review_report_flow의 가짜 대체 예시가 입력에 없는 '재활용 원료'를 넣고 있어 새 검사에 걸림 → 입력 사실만 다시 쓴 예시로 교체(검사 목적 유지)
+  - 테스트로 발견·수정: 한글 어간이 NFKD 자모 분해로 검출되지 않던 문제(NFC 재조합)
+- 한계: 어간 목록 검사의 누락·과잉 제거, 실제 모델 재검증 미실행
+
+## SPE-2026_10_26-02 claim_review_v2 실제 재검수(사용자 실행 1회)
+- 유형: service_prompt_experiment (실행: 사용자 직접. Claude는 실행·API 호출하지 않음)
+- 날짜/시간: 검수 2026-10-26 11:50:30(사용자 보고), PDF 생성 11:53:07(ChatGPT 확인), 기록 11:55 무렵 (Asia/Seoul)
+- 작업자: 김민정 / 기능: green_claim
+- 모델/설정: 사용자 보고 gpt-5.4-mini-2026-03-17. 그 밖의 실제 설정은 미확인
+- 프롬프트: features/green_claim/prompts/claim_review_v2.md + 같은 날 추가한 서버 대체 예시 검사(DEV-2026_10_26-08)
+- 테스트 입력: SPE-2026_10_26-01과 같은 가상 포르투갈어 문구(experiments/claim_review_v2_2026_10_26_rerun.json)
+- 실제 응답: 원본 API 응답 미확인·미보관(만들지 않음). 사용자 보고: 수정 권고 1·검토 필요 1, 두 항목의 대체 예시가 서버 검증으로 제거, 제거 이유·한국어 수정 방향 유지, CDC 조회 실패 후 저장 기준·경고 사용. ChatGPT의 PDF 본문 확인: 10쪽, 같은 검토 항목, 이전 문제 대체 문장 3개 없음, 두 항목의 예시 미제공 이유·수정 방향 있음
+- 발견 사항: 예시가 '서버 검증으로 제거'되었으므로 v2 모델 응답에도 서버 어간 검사에 걸리는 대체 예시가 있었던 것으로 보임(문장 내용 미확인). 이번 결과는 서버 검사가 작동한 사례이며 v2 프롬프트 단독의 개선 효과로 판단하지 않음
+- 담당자 판단: 미기록(전달받지 않음)
+- 남은 한계: 정상적인 포르투갈어 예시 1개가 표시되는 사례 미검증, 1회 실행, PDF 전체 배치·링크·비용·토큰·처리 시간 미검증, 서버 검사의 과잉 제거 여부 미확인

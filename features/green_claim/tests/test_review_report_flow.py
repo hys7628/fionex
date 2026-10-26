@@ -31,12 +31,12 @@ from features.green_claim.tests.test_review import Base, FakeResult, FakeSchema,
 CASE_A = "Nosso fio é 100% sustentável e não causa nenhum impacto ambiental. 가장 친환경적인 원사입니다."
 FAKE_ITEMS_A = [
     item("100% sustentável", action="revise_recommended", ids=("CDC-37", "CONAR-U-1"), language="pt-BR",
-         alternative={"original_text": None, "pt_br_text": "Fio com matéria-prima reciclada",
-                      "ko_interpretation": "재생 원료를 사용한 원사"}),
+         alternative={"original_text": None, "pt_br_text": "Nosso fio é descrito neste texto",
+                      "ko_interpretation": "이 글에서 설명하는 우리 원사"}),
     item("não causa nenhum impacto ambiental", action="needs_review", ids=("CONAR-U-1",), language="pt-BR"),
     item("가장 친환경적인", action="judgment_withheld", ids=(), language="ko", unavailable=None),
 ]
-FRAGMENTS = ("Nosso fio", "nenhum impacto", "가장 친환경적인 원사", "matéria-prima")  # 로그·파일에 남으면 안 되는 사용자·AI 문구
+FRAGMENTS = ("Nosso fio", "nenhum impacto", "가장 친환경적인 원사", "descrito neste texto")  # 로그·파일에 남으면 안 되는 사용자·AI 문구
 
 
 def squash(text):

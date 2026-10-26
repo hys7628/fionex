@@ -386,7 +386,7 @@ class OutputValidationTest(Base):
         dedup = by_quote["100% sustentável"]
         self.assertEqual((dedup["alternative"]["original_text"], dedup["alternative"]["pt_br_text"]),
                          (None, "Fio com 30% de material reciclado."))
-        self.assertIn("alternative_same_as_pt_br", dedup["server_checks"])
+        self.assertIn("alternative_same_language_pt_br", dedup["server_checks"])  # 2026-10-26: 문자열 일치가 아니라 언어 기준
         new_number = by_quote["Fio com 30%"]
         self.assertIsNone(new_number["alternative"])
         self.assertIn("alternative_removed_new_number", new_number["server_checks"])
@@ -395,6 +395,104 @@ class OutputValidationTest(Base):
         self.assertEqual((korean["original_text"], korean["ko_interpretation"]), ("재활용 원료 일부 사용", None))
         self.assertEqual(by_quote["de material"]["alternative_note_ko"], "시험 성적이 있어야 대체 문장을 쓸 수 있음")
 
+
+# 2026-10-26 사용자 실제 실행(claim_review_v1)에서 관측한 실패 사례의 입력과 문제 대체 문장(공개 가능한 가상 문구).
+# 아래 가짜 AI 결과는 그 관측 문장을 넣어 만든 것이며 원본 API 응답이 아니다.
+FAILURE_TEXT = ("Este é um texto fictício para teste.\n"
+                "Nosso tecido é 100% sustentável, totalmente ecológico e não causa nenhum impacto ambiental.\n"
+                "É a opção mais verde do mercado.")
+BAD_R1_A = "Nosso tecido tem atributos socioambientais que podem ser comprovados dentro do escopo avaliado."
+BAD_R1_B = "Nosso tecido apresenta atributos socioambientais comprováveis dentro do escopo avaliado."
+BAD_R2 = "É uma opção com atributos socioambientais que devem ser comprovados em relação ao critério comparativo adotado."
+
+
+class AlternativeSafetyTest(Base):
+    """대체 문장의 근거 필요 표현 검사(보수적 어간 검사)와 언어 기준 중복 제거. 의미 판단 전체를 검증하지 않는다."""
+
+    def test_observed_failure_case_has_no_assertive_alternative(self):
+        data = result_data([
+            item("100% sustentável, totalmente ecológico e não causa nenhum impacto ambiental", action="revise_recommended",
+                 language="pt-BR", alternative={"original_text": BAD_R1_A, "pt_br_text": BAD_R1_B,
+                                                "ko_interpretation": "평가 범위 안에서 입증 가능한 사회·환경 특성이 있는 원단"}),
+            item("É a opção mais verde do mercado", language="pt-BR",
+                 alternative={"original_text": BAD_R2, "pt_br_text": BAD_R2, "ko_interpretation": "비교 기준에 따라 입증되어야 하는 특성이 있는 선택지"}),
+        ])
+        result, calls = self.run_review(text=FAILURE_TEXT, data=data)
+        self.assertEqual(len(calls), 1)  # 재시도·추가 호출 없음
+        for entry in result["items"]:
+            with self.subTest(item=entry["id"]):
+                self.assertIsNone(entry["alternative"])
+                self.assertEqual(entry["server_checks"], ["alternative_removed_unsupported_claim_term"])
+                self.assertIn("평가·입증·인증", entry["alternative_note_ko"])
+                self.assertTrue(entry["direction_ko"])  # 수정 방향은 그대로
+        dumped = json.dumps(result, ensure_ascii=False)
+        for bad in (BAD_R1_A, BAD_R1_B, BAD_R2):
+            self.assertNotIn(bad, dumped)
+
+    def test_terms_checked_against_input_and_all_fields(self):
+        text = "Nosso tecido é 100% sustentável. Our yarn is certified. 친환경 원사입니다."
+        data = result_data([
+            # 입력에 있는 어간(sustentav)만 쓴 예시는 남김
+            item("100% sustentável", language="pt-BR",
+                 alternative={"original_text": None, "pt_br_text": "Nosso tecido é descrito como sustentável", "ko_interpretation": "지속 가능하다고 설명된 원단"}),
+            # 입력에 certified가 있어도 새 어간(recycl)이 있으면 지움
+            item("certified", language="en",
+                 alternative={"original_text": "Our yarn is certified and recycled", "pt_br_text": "Nosso fio é certificado",
+                              "ko_interpretation": "인증된 원사"}),
+            # 해석에만 새 전제(검증)가 있어도 지움
+            item("친환경 원사", language="ko",
+                 alternative={"original_text": "원사입니다", "pt_br_text": "É um fio", "ko_interpretation": "검증된 원사입니다"}),
+        ])
+        result, _ = self.run_review(text=text, data=data)
+        by = {entry["quote"]: entry for entry in result["items"]}
+        self.assertEqual(by["100% sustentável"]["alternative"]["pt_br_text"], "Nosso tecido é descrito como sustentável")
+        self.assertIsNone(by["certified"]["alternative"])
+        self.assertIsNone(by["친환경 원사"]["alternative"])
+
+    def test_language_based_deduplication(self):
+        text = "Fio de poliéster. 폴리에스터 원사. Polyester yarn. Fio misto 혼합."
+        data = result_data([
+            # 포르투갈어 구절: 문장이 달라도 포르투갈어 예시는 하나(pt_br_text)
+            item("Fio de poliéster", language="pt-BR",
+                 alternative={"original_text": "Fio feito de poliéster", "pt_br_text": "Fio de poliéster para tecidos",
+                              "ko_interpretation": "직물용 폴리에스터 원사"}),
+            # 포르투갈어 구절인데 pt_br_text가 없으면 original_text를 포르투갈어 예시로 옮김
+            item("poliéster", occurrence=1, language="pt-BR", ids=["CDC-37"],
+                 alternative={"original_text": "Fio de poliéster", "pt_br_text": None, "ko_interpretation": "폴리에스터 원사"}),
+            # 한국어·영어 구절: 원문 언어 예시와 포르투갈어 예시 모두 유지
+            item("폴리에스터 원사", language="ko",
+                 alternative={"original_text": "폴리에스터로 만든 원사", "pt_br_text": "Fio feito de poliéster", "ko_interpretation": "폴리에스터로 만든 원사"}),
+            item("Polyester yarn", language="en",
+                 alternative={"original_text": "Yarn made of polyester", "pt_br_text": "Fio feito de poliéster", "ko_interpretation": "폴리에스터 원사"}),
+            # 혼합: 언어를 단정하지 않아 둘 다 유지(문자열이 같을 때만 기존 중복 제거)
+            item("Fio misto 혼합", language="mixed",
+                 alternative={"original_text": "Fio misto 혼합 원사", "pt_br_text": "Fio misto", "ko_interpretation": "혼합 원사"}),
+        ])
+        result, _ = self.run_review(text=text, data=data)
+        by = {(entry["quote"], entry["start"]): entry for entry in result["items"]}
+        alts = {quote: entry["alternative"] for (quote, _), entry in by.items()}
+        pt = alts["Fio de poliéster"]
+        self.assertEqual((pt["original_text"], pt["pt_br_text"]), (None, "Fio de poliéster para tecidos"))
+        moved = alts["poliéster"]
+        self.assertEqual((moved["original_text"], moved["pt_br_text"]), (None, "Fio de poliéster"))
+        ko = alts["폴리에스터 원사"]
+        self.assertEqual((ko["original_text"], ko["pt_br_text"], ko["ko_interpretation"]), ("폴리에스터로 만든 원사", "Fio feito de poliéster", None))
+        en = alts["Polyester yarn"]
+        self.assertEqual((en["original_text"], en["pt_br_text"]), ("Yarn made of polyester", "Fio feito de poliéster"))
+        mixed = alts["Fio misto 혼합"]
+        self.assertEqual((mixed["original_text"], mixed["pt_br_text"]), ("Fio misto 혼합 원사", "Fio misto"))
+        for entry in result["items"]:
+            if entry["quote_language"] == "pt-BR" and entry["alternative"]:
+                self.assertIsNone(entry["alternative"]["original_text"])
+
+    def test_prompt_v2_rules_and_v1_kept(self):
+        instructions = rs.load_instructions()
+        self.assertEqual(rs.PROMPT_VERSION, "claim_review_v2")
+        for rule in ("전제하거나 암시하지 않는다", "입증해야 한다", "alternative를 null로", "pt_br_text 하나에만", "original_text는 null"):
+            self.assertIn(rule, instructions)
+        v1 = rs.PROMPT_PATH.with_name("claim_review_v1.md")
+        self.assertTrue(v1.is_file())
+        self.assertIn("서버가 중복을 정리한다", v1.read_text(encoding="utf-8"))  # 실험한 v1 문장 그대로 보존
 
 class PromptAndPrivacyTest(Base):
     def test_prompt_and_input_as_data(self):

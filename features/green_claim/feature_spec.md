@@ -722,7 +722,7 @@ Pillow 역할 [구현]
 - 기계 검증: 상태값·필드 타입·길이(구절 1,000자, 설명 칸 2,000자, 항목 50개 이하), 기준 ID가 이 요청의 고정 기준에 있는지, 수정 권고·검토 필요 항목은 기준 ID 1개 이상(관련 기준 없이 판정하지 않음, 판단 보류는 0개 가능), 같은 기준 ID 중복 제거.
 - 위치: 구절이 정규화 원문에 있는지 서버가 찾고 `occurrence`번째 발생 위치를 확정한다. 없거나 발생 번호가 범위 밖이면 REVIEW_OUTPUT_INVALID(잘못 강조하지 않음). 같은 위치의 항목이 둘이면 중복으로 보고 REVIEW_OUTPUT_INVALID. 위치는 **정규화 원문의 Unicode 코드 포인트 [start, end)**이며, 브라우저 JavaScript 문자열(UTF-16) 인덱스와 이모지 등에서 다르다(화면 연결 시 변환 필요).
 - 근거 출처: 모델 글에 URL이 있으면 입력 문구에 있는 URL이 아니면 REVIEW_OUTPUT_INVALID. 모델 글의 조항 표기(Art. N, Artigo N)가 제공 기준의 조항 칸에 없는 번호면 REVIEW_OUTPUT_INVALID. 공식 링크·조항·원문 발췌·비공식 번역은 서버가 기준 ID로 기준 자료에서 붙인다(모델 값 사용 안 함).
-- 대체 예시: 예시 문장의 숫자(연속 숫자열, 구분 기호 무시)가 입력 문구에 없으면 예시를 표시하지 않고 사유를 남긴다. 원문 언어 문장이 포르투갈어 문장과 같으면 하나만, 한국어 해석이 원문 문장과 같으면 해석을 생략(중복 제거).
+- 대체 예시: 예시 문장의 숫자(연속 숫자열, 구분 기호 무시)가 입력 문구에 없으면 예시를 표시하지 않고 사유를 남긴다. 원문 언어 문장이 포르투갈어 문장과 같으면 하나만, 한국어 해석이 원문 문장과 같으면 해석을 생략(중복 제거). (2026-10-26 보완: 아래 "대체 문장 보완" 절의 근거 필요 표현 검사·언어 기준 중복 제거 추가)
 - 요약 개수·항목 ID·상태별 목록은 서버가 계산. 항목 ID는 위치 순 `R1`, `R2`…
 - 한계: 새 인증명·새 환경 효과·번역 의미 왜곡은 문자열 검사로 모두 막을 수 없다(프롬프트 지시와 사람 검토에 의존).
 
@@ -741,6 +741,20 @@ Pillow 역할 [구현]
 저장·로그: 사용자 문구·응답·검수 이력을 DB·파일·브라우저 저장소에 남기지 않는다. 기준 확인 상태 파일(`criteria_state/check_state.json`, 사용자 내용 없음)만 갱신될 수 있다. 로그에는 오류 code만.
 
 미검증: 실제 OpenAI 호출, 판단 정확도·번역·대체 문장 품질, 입력 토큰·비용·소요 시간, 4,096토큰으로 처리 가능한 분량, 실제 공식 출처 조회.
+
+### 대체 문장 보완: 근거 없는 전제와 같은 언어 중복 방지 (2026-10-26 구현 전 작성, 실제 모델 재검증 미실행)
+배경(사용자 실제 실행 1건, claim_review_v1·gpt-5.4-mini-2026-03-17, 공개 가능한 가상 문구): 대체 문장이 입력에 없는 평가·평가 범위·입증 가능한 사회·환경 특성을 전제했고("…atributos socioambientais que podem ser comprovados dentro do escopo avaliado", "…que devem ser comprovados…"), 원문이 브라질 포르투갈어인데 같은 언어 예시가 두 개(문장이 조금 달라 기존 문자열 일치 중복 제거를 통과) 표시됨.
+
+변경
+- 서비스 프롬프트 claim_review_v2(새 파일). v1은 실험한 그대로 보존. v2는 대체 문장이 입력에 없는 제품 특성·평가·시험·검증·입증 가능성·인증·환경/사회 효과를 전제하지 못하게 하고("입증해야 함"을 덧붙인 문장도 금지), 안전한 예시를 만들 수 없으면 alternative를 null로 두고 이유와 한국어 수정 방향만 쓰게 하며, 구절이 브라질 포르투갈어면 pt_br_text 하나만 쓰고 original_text는 null로 두게 한다. 결과 스키마(review_schema)는 바꾸지 않는다.
+- 서버 보수적 검사(review_service): 대체 예시의 원문 언어 문장·포르투갈어 문장·한국어 해석에 아래 "근거가 필요한 표현" 어간이 있고 그 어간이 입력 문구에 없으면 예시 전체를 표시하지 않고 사유를 남긴다(server_checks `alternative_removed_unsupported_claim_term`). 비교는 소문자·악센트 제거 후 부분 문자열.
+  - 평가·검증·인증: comprov, certific, atest, audit, verific, avalia, escopo, laudo, ensaio, testad, selo / certif, verif, audit, assess, evaluat, tested, proven, substantiat / 인증, 검증, 입증, 평가, 시험, 실증('감사'는 인사말과 겹쳐 제외)
+  - 환경·사회 특성: socioambient, ambientalmente, ecologic, sustentav, verde, reciclad, renovav, biodegrad, carbono, emisso, pegada / sustainab, eco-, ecolog, green, recycl, renewab, biodegrad, carbon, emission, footprint / 친환경, 지속가능, 재활용, 재생, 탄소, 배출, 생분해, 사회적, 환경적
+  - 한계: 정해진 어간 목록의 기계 검사다. 목록 밖 표현·바꿔 말한 표현·뜻으로만 생기는 새 전제는 찾지 못하고, 입력에 같은 어간이 있으면 새 주장이어도 통과하며, 반대로 문제없는 예시도 지워질 수 있다(이 경우 수정 방향만 표시). 의미 판단은 프롬프트와 사람 검토에 의존한다.
+- 언어 기준 중복 제거(review_service): 구절 언어가 `pt-BR`이면 포르투갈어 예시 하나만 남긴다(pt_br_text가 있으면 그것, 없으면 original_text를 pt_br_text로 옮김), original_text는 null(server_checks `alternative_same_language_pt_br`). `mixed`·`unknown`은 언어를 단정할 수 없어 기존 문자열 일치 중복 제거만. 한국어·영어 구절은 원문 언어 예시와 포르투갈어 예시를 모두 유지.
+- 보고서 요청 검증(report_service): 검수 응답 계약과 맞게 `pt-BR` 항목의 original_text가 null이 아니면 REPORT_RESULT_INVALID.
+- 화면·PDF: 같은 서버 값만 그리므로 코드 변경 없음. 예시가 없으면 사유와 "예시 대신 수정 방향" 표시(기존).
+- 기준 자료·근거·조회 정책은 바꾸지 않는다.
 
 ### 검수 실행·결과 화면 (2026-10-26 구현 전 작성 → 같은 날 구현, 실제 AI 호출 미검증)
 범위: 기존 `POST /api/green-claim/review`를 화면에 연결. 검수 실행 버튼·요청·처리 상태·오류, 검수 원문 강조와 결과 항목 연결, 요약·설명·수정 방향·대체 예시·근거, 입력 변경 시 결과 무효화, AppShell 작업 상태. 결과 PDF·검수 프롬프트·기준 갱신 정책·인증 갭·필터·점수·승인 기능은 범위 밖.
@@ -981,6 +995,13 @@ AppShell·PDF
 - 실측(가상 PDF 3쪽 추출 후): 1440×900 파일 카드 387~867px·검수 실행 버튼 775~817px(첫 화면 안), 1920×1080 파일 카드 343~877px·검수 실행 버튼 892~934px. 앞의 검수 성공 안내가 남아 있는 캡처 순서에서는 1440×900 페이지가 73px 더 길어짐(남은 성공 안내는 기존 동작).
 - 통합 테스트 격리: tests/test_review_report_flow.py가 실제 data/criteria_state·criteria_work가 비어 있다고 가정하던 것을, 실행 전후 파일 목록(경로·크기·수정 시각, 내용은 읽지 않음)이 같은지와 확인 상태가 임시 data 폴더에만 생기는지로 바꿈. 사용자 문구가 로그·임시 폴더에 없다는 검사는 그대로. 2026-10-26 10:09에 실제 폴더에 생긴 check_state.json의 생성 주체는 확인하지 못했다.
 - 미검증: 사람이 조작하는 실제 브라우저·실제 기기, 미지원 요소가 아주 많은 실제 Word·이미지 판독 결과에서의 목록 스크롤 사용성, 화면낭독기.
+
+### 구현 상태 갱신 (2026-10-26 대체 문장 보완)
+- 추가·변경: prompts/claim_review_v2.md(새 파일, v1 보존), review_service.py(PROMPT_VERSION claim_review_v2, 근거 필요 표현 어간 검사, 언어 기준 중복 제거), report_service.py(pt-BR 항목의 original_text 금지 검사), 테스트. 결과 스키마·기준 자료·조회 정책·화면·PDF 코드는 바꾸지 않았다.
+- 응답 계약 변화: `pt-BR` 항목의 alternative.original_text는 항상 null. server_checks에 `alternative_removed_unsupported_claim_term`·`alternative_same_language_pt_br`가 생길 수 있다. 응답의 prompt_version은 claim_review_v2.
+- 같은 작업 중 보완(커밋 전): 비교용 문자 정리에서 NFKD가 한글 음절을 자모로 나눠 한국어 어간을 찾지 못하던 문제를 NFC 재조합으로 고쳤다(테스트로 발견).
+- 모의 검증: 관측 실패 사례의 문제 문장 3개를 넣은 가짜 AI 결과 → 예시 모두 제거·사유·수정 방향 표시, 화면·PDF 같음. 실제 모델(claim_review_v2) 재검증은 미실행.
+- 한계: 어간 목록 기계 검사라 바꿔 말한 표현·뜻으로만 생기는 새 전제를 모두 찾지 못하고, 입력에 같은 어간이 있으면 새 주장이어도 통과하며, 문제없는 예시를 지울 수 있다. 사람 검토가 필요하다.
 
 ### 완료 기준·검증 계획
 - 직접 입력과 파일 업로드의 각 흐름.
