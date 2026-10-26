@@ -32,6 +32,23 @@ def req(start="2026-01", end="2026-03", countries=(), code_system="ncm", code="5
         {"code_system": code_system, "code": code, "from": start, "to": end, "countries": list(countries)}, LATEST)
 
 
+_no_snapshot = None
+
+
+def setUpModule():
+    """이 파일은 스냅샷이 없는 상태(조회 실패 = 오류)를 검사합니다. 실제 data/comexstat_snapshot.json 대신 없는 경로를 씁니다.
+    스냅샷 대체는 test_snapshot.py에서 따로 검사합니다."""
+    global _no_snapshot
+    _no_snapshot = mock.patch.object(service, "SNAPSHOT_FILE", Path(__file__).resolve().parent / "_no_snapshot.json")
+    _no_snapshot.start()
+    service.clear_cache()
+
+
+def tearDownModule():
+    _no_snapshot.stop()
+    service.clear_cache()
+
+
 class ValidateTest(unittest.TestCase):
     def errors(self, **payload):
         base = {"code_system": "ncm", "code": "54023310", "from": "2024-01", "to": "2026-09"}

@@ -68,6 +68,11 @@ def _styles():
     }
 
 
+def snapshot_label(src):
+    """스냅샷 대체 표시 문구(화면과 같음)."""
+    return "MDIC 공개 원본 자료(기준: %s) 사용" % str(src.get("fetched_at") or "")[:10]
+
+
 def _p(text, style):
     return Paragraph(escape(str(text if text is not None else "")), style)
 
@@ -251,6 +256,8 @@ def build_pdf(payload):
     ], [32 * mm, W - 32 * mm], st, zebra=False))
     story.append(_p("무역 통계는 해당 코드의 전체 시장이며 일반 원사·재생 원사·리젠 T2T를 구분하지 않습니다. T2T 수요나 시장 규모로 해석하지 마세요. "
                     "평균 수입단가는 FOB 기준이며 견적·판매가격·도착가격이 아닙니다. 공급국은 ComexStat 기준 원산지 국가입니다.", st["notice"]))
+    if src.get("cache_status") == "snapshot":
+        story.append(_p(snapshot_label(src), st["notice"]))
     for n in stats.get("notes") or []:
         story.append(_p("· " + n, st["small"]))
 
@@ -315,6 +322,9 @@ def build_pdf(payload):
     story.append(_link(src.get("url"), st["cell"]))
     story.append(_p("자료 갱신일 %s · 최신 제공 월 %s · 자료 받은 시각 %s" % (
         src.get("data_updated") or "확인 안 됨", src.get("latest_month") or "확인 안 됨", src.get("fetched_at") or "확인 안 됨"), st["small"]))
+    if src.get("cache_status") == "snapshot":
+        story.append(_p(snapshot_label(src) + " — ComexStat 조회에 실패해 MDIC가 공개한 원본 CSV를 미리 받아 요약한 시연용 자료로 만들었습니다. "
+                        "실시간 조회 결과가 아닙니다.", st["notice"]))
 
     note = "%s %s · %s~%s" % (q["code_system_label"], q["code"], q["from"], q["to"])
     doc.build(story, canvasmaker=theme.numbered_canvas("MARKET REPORT", datetime.now(KST).strftime("%Y.%m.%d"), MARGIN, note))

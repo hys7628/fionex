@@ -1,0 +1,9088 @@
+{
+ "source": {
+  "name": "MDIC 공개 원본 자료(Comex Stat 기본 데이터 CSV)",
+  "files": [
+   {
+    "year": 2022,
+    "url": "https://balanca.mdic.gov.br/balanca/bd/comexstat-bd/ncm/IMP_2022.csv",
+    "rows": 207
+   },
+   {
+    "year": 2023,
+    "url": "https://balanca.mdic.gov.br/balanca/bd/comexstat-bd/ncm/IMP_2023.csv",
+    "rows": 225
+   },
+   {
+    "year": 2024,
+    "url": "https://balanca.mdic.gov.br/balanca/bd/comexstat-bd/ncm/IMP_2024.csv",
+    "rows": 213
+   },
+   {
+    "year": 2025,
+    "url": "https://balanca.mdic.gov.br/balanca/bd/comexstat-bd/ncm/IMP_2025.csv",
+    "rows": 192
+   },
+   {
+    "year": 2026,
+    "url": "https://balanca.mdic.gov.br/balanca/bd/comexstat-bd/ncm/IMP_2026.csv",
+    "rows": 166
+   }
+  ],
+  "code_tables": [
+   "https://balanca.mdic.gov.br/balanca/bd/tabelas/NCM.csv",
+   "https://balanca.mdic.gov.br/balanca/bd/tabelas/NCM_SH.csv"
+  ],
+  "retrieved_at": "2026-10-27T04:22:51+09:00",
+  "latest_month": "2026-09",
+  "ncm_prefix": "540233",
+  "years": [
+   2022,
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "unknown_country_codes": [],
+  "note": "같은 연·월·NCM·국가 행을 합산(FOB USD, 순중량 kg). 수동 생성 시연용 자료이며 실시간 조회가 아님."
+ },
+ "code_names": {
+  "ncm": {
+   "54023300": "Fio texturizado de poliésteres",
+   "54023310": "Fios texturizados de poliésteres, crus",
+   "54023320": "Fios texturizados de poliésteres, tintos",
+   "54023390": "Outros fios texturizados de poliésteres"
+  },
+  "hs6": {
+   "540233": "Fios texturizados de poliésteres"
+  }
+ },
+ "rows": [
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 1,
+   "country": "Bélgica",
+   "fob": 2679,
+   "kg": 384,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 1,
+   "country": "China",
+   "fob": 14465050,
+   "kg": 10217283,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 1,
+   "country": "Egito",
+   "fob": 3193,
+   "kg": 593,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 1,
+   "country": "Estados Unidos",
+   "fob": 11759,
+   "kg": 633,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 1,
+   "country": "Hong Kong",
+   "fob": 428702,
+   "kg": 293640,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 1,
+   "country": "Malásia",
+   "fob": 62529,
+   "kg": 34041,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 1,
+   "country": "Tailândia",
+   "fob": 13833,
+   "kg": 1440,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 1,
+   "country": "Taiwan (Formosa)",
+   "fob": 89998,
+   "kg": 14448,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 1,
+   "country": "Índia",
+   "fob": 5297395,
+   "kg": 3230281,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 1,
+   "country": "China",
+   "fob": 1572083,
+   "kg": 984658,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 1,
+   "country": "Hong Kong",
+   "fob": 127665,
+   "kg": 85192,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 1,
+   "country": "Indonésia",
+   "fob": 1200,
+   "kg": 300,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 1,
+   "country": "Itália",
+   "fob": 2297,
+   "kg": 842,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 1,
+   "country": "Tailândia",
+   "fob": 9690,
+   "kg": 1440,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 1,
+   "country": "Turquia",
+   "fob": 939,
+   "kg": 528,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 1,
+   "country": "Índia",
+   "fob": 1379585,
+   "kg": 770669,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 1,
+   "country": "China",
+   "fob": 8916,
+   "kg": 4113,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 1,
+   "country": "Índia",
+   "fob": 112553,
+   "kg": 73037,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 2,
+   "country": "China",
+   "fob": 12281618,
+   "kg": 8566256,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 2,
+   "country": "Hong Kong",
+   "fob": 98157,
+   "kg": 65628,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 2,
+   "country": "Indonésia",
+   "fob": 1770,
+   "kg": 853,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 2,
+   "country": "Taiwan (Formosa)",
+   "fob": 47824,
+   "kg": 21582,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 2,
+   "country": "Índia",
+   "fob": 6043829,
+   "kg": 3690592,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 2,
+   "country": "China",
+   "fob": 1109952,
+   "kg": 638486,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 2,
+   "country": "Espanha",
+   "fob": 1245,
+   "kg": 245,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 2,
+   "country": "Estados Unidos",
+   "fob": 6950,
+   "kg": 432,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 2,
+   "country": "Indonésia",
+   "fob": 1972,
+   "kg": 487,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 2,
+   "country": "Itália",
+   "fob": 28705,
+   "kg": 5210,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 2,
+   "country": "Tailândia",
+   "fob": 51296,
+   "kg": 9487,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 2,
+   "country": "Índia",
+   "fob": 739898,
+   "kg": 386036,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 2,
+   "country": "Índia",
+   "fob": 117765,
+   "kg": 74016,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 3,
+   "country": "China",
+   "fob": 16540326,
+   "kg": 11664346,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 3,
+   "country": "Espanha",
+   "fob": 2803,
+   "kg": 400,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 3,
+   "country": "Indonésia",
+   "fob": 88773,
+   "kg": 46384,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 3,
+   "country": "Malásia",
+   "fob": 48780,
+   "kg": 22276,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 3,
+   "country": "Tailândia",
+   "fob": 11067,
+   "kg": 1152,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 3,
+   "country": "Taiwan (Formosa)",
+   "fob": 6492,
+   "kg": 1056,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 3,
+   "country": "Índia",
+   "fob": 4216555,
+   "kg": 2637968,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 3,
+   "country": "Alemanha",
+   "fob": 17320,
+   "kg": 2554,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 3,
+   "country": "China",
+   "fob": 769387,
+   "kg": 494074,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 3,
+   "country": "França",
+   "fob": 11351,
+   "kg": 1406,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 3,
+   "country": "Indonésia",
+   "fob": 69863,
+   "kg": 18095,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 3,
+   "country": "Itália",
+   "fob": 3447,
+   "kg": 1282,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 3,
+   "country": "Tailândia",
+   "fob": 5807,
+   "kg": 1953,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 3,
+   "country": "Turquia",
+   "fob": 281,
+   "kg": 150,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 3,
+   "country": "Índia",
+   "fob": 1124694,
+   "kg": 558159,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 3,
+   "country": "China",
+   "fob": 61806,
+   "kg": 21266,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 4,
+   "country": "Bulgária",
+   "fob": 7366,
+   "kg": 1733,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 4,
+   "country": "China",
+   "fob": 15572603,
+   "kg": 10867868,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 4,
+   "country": "Espanha",
+   "fob": 2785,
+   "kg": 404,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 4,
+   "country": "Indonésia",
+   "fob": 135058,
+   "kg": 77729,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 4,
+   "country": "Malásia",
+   "fob": 40167,
+   "kg": 22968,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 4,
+   "country": "Taiwan (Formosa)",
+   "fob": 19636,
+   "kg": 3168,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 4,
+   "country": "Índia",
+   "fob": 3967612,
+   "kg": 2358740,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 4,
+   "country": "Alemanha",
+   "fob": 17415,
+   "kg": 2631,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 4,
+   "country": "Argentina",
+   "fob": 41319,
+   "kg": 4267,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 4,
+   "country": "Bélgica",
+   "fob": 1420,
+   "kg": 1066,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 4,
+   "country": "China",
+   "fob": 523297,
+   "kg": 319603,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 4,
+   "country": "Estados Unidos",
+   "fob": 4537,
+   "kg": 278,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 4,
+   "country": "França",
+   "fob": 6345,
+   "kg": 710,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 4,
+   "country": "Hong Kong",
+   "fob": 101675,
+   "kg": 65880,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 4,
+   "country": "Indonésia",
+   "fob": 27062,
+   "kg": 12000,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 4,
+   "country": "Itália",
+   "fob": 3517,
+   "kg": 523,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 4,
+   "country": "Tailândia",
+   "fob": 26248,
+   "kg": 5472,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 4,
+   "country": "Turquia",
+   "fob": 1345,
+   "kg": 713,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 4,
+   "country": "Índia",
+   "fob": 545039,
+   "kg": 277818,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 4,
+   "country": "Índia",
+   "fob": 123150,
+   "kg": 72575,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 5,
+   "country": "China",
+   "fob": 17034920,
+   "kg": 11741716,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 5,
+   "country": "Estados Unidos",
+   "fob": 15586,
+   "kg": 931,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 5,
+   "country": "Indonésia",
+   "fob": 86318,
+   "kg": 47131,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 5,
+   "country": "Malásia",
+   "fob": 130605,
+   "kg": 69296,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 5,
+   "country": "Taiwan (Formosa)",
+   "fob": 118464,
+   "kg": 39666,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 5,
+   "country": "Índia",
+   "fob": 1250060,
+   "kg": 728269,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 5,
+   "country": "China",
+   "fob": 1831950,
+   "kg": 1024057,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 5,
+   "country": "Estados Unidos",
+   "fob": 8861,
+   "kg": 1440,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 5,
+   "country": "Indonésia",
+   "fob": 49583,
+   "kg": 19750,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 5,
+   "country": "Itália",
+   "fob": 4861,
+   "kg": 1196,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 5,
+   "country": "Suíça",
+   "fob": 2134,
+   "kg": 511,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 5,
+   "country": "Tailândia",
+   "fob": 80665,
+   "kg": 15679,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 5,
+   "country": "Índia",
+   "fob": 830806,
+   "kg": 456437,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 5,
+   "country": "China",
+   "fob": 119768,
+   "kg": 75974,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 5,
+   "country": "Índia",
+   "fob": 122897,
+   "kg": 72617,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 6,
+   "country": "China",
+   "fob": 28945854,
+   "kg": 19860456,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 6,
+   "country": "França",
+   "fob": 2504,
+   "kg": 190,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 6,
+   "country": "Hong Kong",
+   "fob": 4,
+   "kg": 2,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 6,
+   "country": "Indonésia",
+   "fob": 45054,
+   "kg": 23944,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 6,
+   "country": "Malásia",
+   "fob": 42787,
+   "kg": 22984,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 6,
+   "country": "Taiwan (Formosa)",
+   "fob": 45523,
+   "kg": 7224,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 6,
+   "country": "Índia",
+   "fob": 1459599,
+   "kg": 804412,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 6,
+   "country": "China",
+   "fob": 3820977,
+   "kg": 2383033,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 6,
+   "country": "Estados Unidos",
+   "fob": 7193,
+   "kg": 443,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 6,
+   "country": "França",
+   "fob": 6339,
+   "kg": 704,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 6,
+   "country": "Hong Kong",
+   "fob": 223748,
+   "kg": 146880,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 6,
+   "country": "Indonésia",
+   "fob": 851,
+   "kg": 200,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 6,
+   "country": "Tailândia",
+   "fob": 71464,
+   "kg": 14133,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 6,
+   "country": "Índia",
+   "fob": 504375,
+   "kg": 237589,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 6,
+   "country": "China",
+   "fob": 95619,
+   "kg": 38408,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 6,
+   "country": "Turquia",
+   "fob": 1243,
+   "kg": 248,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 6,
+   "country": "Índia",
+   "fob": 131009,
+   "kg": 71206,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 7,
+   "country": "Bulgária",
+   "fob": 18096,
+   "kg": 4157,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 7,
+   "country": "Bélgica",
+   "fob": 1871,
+   "kg": 288,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 7,
+   "country": "China",
+   "fob": 33448768,
+   "kg": 23586451,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 7,
+   "country": "Indonésia",
+   "fob": 101923,
+   "kg": 57710,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 7,
+   "country": "Malásia",
+   "fob": 29726,
+   "kg": 14300,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 7,
+   "country": "Tailândia",
+   "fob": 23976,
+   "kg": 6480,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 7,
+   "country": "Taiwan (Formosa)",
+   "fob": 170187,
+   "kg": 45300,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 7,
+   "country": "Índia",
+   "fob": 617331,
+   "kg": 308911,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 7,
+   "country": "China",
+   "fob": 2826133,
+   "kg": 1812574,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 7,
+   "country": "Espanha",
+   "fob": 465,
+   "kg": 81,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 7,
+   "country": "Estados Unidos",
+   "fob": 6864,
+   "kg": 1310,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 7,
+   "country": "Hong Kong",
+   "fob": 531734,
+   "kg": 362160,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 7,
+   "country": "Indonésia",
+   "fob": 68806,
+   "kg": 21955,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 7,
+   "country": "Itália",
+   "fob": 39297,
+   "kg": 7211,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 7,
+   "country": "Tailândia",
+   "fob": 82833,
+   "kg": 27031,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 7,
+   "country": "Turquia",
+   "fob": 2787,
+   "kg": 1422,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 7,
+   "country": "Índia",
+   "fob": 797133,
+   "kg": 375304,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 7,
+   "country": "China",
+   "fob": 149346,
+   "kg": 82967,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 7,
+   "country": "Turquia",
+   "fob": 2328,
+   "kg": 495,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 7,
+   "country": "Índia",
+   "fob": 797286,
+   "kg": 439899,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 8,
+   "country": "Bulgária",
+   "fob": 8801,
+   "kg": 2018,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 8,
+   "country": "Bélgica",
+   "fob": 926,
+   "kg": 424,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 8,
+   "country": "China",
+   "fob": 41535875,
+   "kg": 29351109,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 8,
+   "country": "Coreia do Sul",
+   "fob": 57816,
+   "kg": 15840,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 8,
+   "country": "Indonésia",
+   "fob": 44855,
+   "kg": 22908,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 8,
+   "country": "Taiwan (Formosa)",
+   "fob": 17050,
+   "kg": 2950,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 8,
+   "country": "Vietnã",
+   "fob": 35980,
+   "kg": 23364,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 8,
+   "country": "Índia",
+   "fob": 2049983,
+   "kg": 1177214,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 8,
+   "country": "Bélgica",
+   "fob": 14253,
+   "kg": 7030,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 8,
+   "country": "China",
+   "fob": 4666686,
+   "kg": 2791124,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 8,
+   "country": "Estados Unidos",
+   "fob": 10955,
+   "kg": 2086,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 8,
+   "country": "Hong Kong",
+   "fob": 398434,
+   "kg": 268884,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 8,
+   "country": "Indonésia",
+   "fob": 16706,
+   "kg": 6075,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 8,
+   "country": "Tailândia",
+   "fob": 172864,
+   "kg": 56270,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 8,
+   "country": "Índia",
+   "fob": 855346,
+   "kg": 423251,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 8,
+   "country": "China",
+   "fob": 198784,
+   "kg": 98741,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 8,
+   "country": "Reino Unido",
+   "fob": 2,
+   "kg": 0,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 8,
+   "country": "Índia",
+   "fob": 302782,
+   "kg": 170897,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 9,
+   "country": "Bélgica",
+   "fob": 5232,
+   "kg": 975,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 9,
+   "country": "China",
+   "fob": 34132821,
+   "kg": 24757745,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 9,
+   "country": "Estados Unidos",
+   "fob": 12469,
+   "kg": 748,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 9,
+   "country": "França",
+   "fob": 10051,
+   "kg": 999,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 9,
+   "country": "Indonésia",
+   "fob": 156513,
+   "kg": 91097,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 9,
+   "country": "Malásia",
+   "fob": 127758,
+   "kg": 70911,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 9,
+   "country": "Taiwan (Formosa)",
+   "fob": 99828,
+   "kg": 43164,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 9,
+   "country": "Índia",
+   "fob": 3059904,
+   "kg": 1735758,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 9,
+   "country": "China",
+   "fob": 5072959,
+   "kg": 3290825,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 9,
+   "country": "Espanha",
+   "fob": 2679,
+   "kg": 559,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 9,
+   "country": "Estados Unidos",
+   "fob": 10333,
+   "kg": 1972,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 9,
+   "country": "França",
+   "fob": 10609,
+   "kg": 1077,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 9,
+   "country": "Hong Kong",
+   "fob": 330402,
+   "kg": 221400,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 9,
+   "country": "Itália",
+   "fob": 13207,
+   "kg": 3179,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 9,
+   "country": "Índia",
+   "fob": 1784131,
+   "kg": 900397,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 9,
+   "country": "China",
+   "fob": 301772,
+   "kg": 156398,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 9,
+   "country": "México",
+   "fob": 14367,
+   "kg": 2031,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 9,
+   "country": "Índia",
+   "fob": 1005436,
+   "kg": 554046,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 10,
+   "country": "China",
+   "fob": 23741149,
+   "kg": 17777276,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 10,
+   "country": "Colômbia",
+   "fob": 3221,
+   "kg": 942,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 10,
+   "country": "Indonésia",
+   "fob": 20216,
+   "kg": 11510,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 10,
+   "country": "Malásia",
+   "fob": 129379,
+   "kg": 79296,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 10,
+   "country": "Taiwan (Formosa)",
+   "fob": 7624,
+   "kg": 1536,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 10,
+   "country": "Vietnã",
+   "fob": 35900,
+   "kg": 23562,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 10,
+   "country": "Índia",
+   "fob": 1722643,
+   "kg": 1047453,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 10,
+   "country": "Alemanha",
+   "fob": 17305,
+   "kg": 2612,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 10,
+   "country": "Argentina",
+   "fob": 21684,
+   "kg": 2110,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 10,
+   "country": "China",
+   "fob": 2841824,
+   "kg": 1695156,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 10,
+   "country": "Espanha",
+   "fob": 690,
+   "kg": 151,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 10,
+   "country": "Indonésia",
+   "fob": 22346,
+   "kg": 10120,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 10,
+   "country": "Itália",
+   "fob": 3925,
+   "kg": 1226,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 10,
+   "country": "México",
+   "fob": 17415,
+   "kg": 9661,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 10,
+   "country": "Tailândia",
+   "fob": 48269,
+   "kg": 8772,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 10,
+   "country": "Taiwan (Formosa)",
+   "fob": 4076,
+   "kg": 221,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 10,
+   "country": "Turquia",
+   "fob": 44869,
+   "kg": 16562,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 10,
+   "country": "Índia",
+   "fob": 950123,
+   "kg": 504997,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 10,
+   "country": "China",
+   "fob": 29673,
+   "kg": 12043,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 10,
+   "country": "Índia",
+   "fob": 289192,
+   "kg": 170144,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 11,
+   "country": "Bulgária",
+   "fob": 20550,
+   "kg": 4676,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 11,
+   "country": "China",
+   "fob": 24069139,
+   "kg": 18388480,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 11,
+   "country": "Espanha",
+   "fob": 1911,
+   "kg": 287,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 11,
+   "country": "Hong Kong",
+   "fob": 65504,
+   "kg": 50400,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 11,
+   "country": "Indonésia",
+   "fob": 197126,
+   "kg": 100347,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 11,
+   "country": "Malásia",
+   "fob": 38978,
+   "kg": 23988,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 11,
+   "country": "Tailândia",
+   "fob": 44333,
+   "kg": 30378,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 11,
+   "country": "Índia",
+   "fob": 3082869,
+   "kg": 2024954,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 11,
+   "country": "China",
+   "fob": 2487708,
+   "kg": 1626667,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 11,
+   "country": "Equador",
+   "fob": 51597,
+   "kg": 13908,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 11,
+   "country": "Estados Unidos",
+   "fob": 6742,
+   "kg": 405,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 11,
+   "country": "Hong Kong",
+   "fob": 138324,
+   "kg": 100800,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 11,
+   "country": "Indonésia",
+   "fob": 25854,
+   "kg": 11000,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 11,
+   "country": "Itália",
+   "fob": 13185,
+   "kg": 2168,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 11,
+   "country": "Tailândia",
+   "fob": 82340,
+   "kg": 26783,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 11,
+   "country": "Turquia",
+   "fob": 11682,
+   "kg": 2124,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 11,
+   "country": "Índia",
+   "fob": 1603936,
+   "kg": 904466,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 11,
+   "country": "China",
+   "fob": 103611,
+   "kg": 71768,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 11,
+   "country": "Índia",
+   "fob": 563631,
+   "kg": 337262,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 12,
+   "country": "China",
+   "fob": 12919048,
+   "kg": 10316020,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 12,
+   "country": "Indonésia",
+   "fob": 98200,
+   "kg": 56203,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 12,
+   "country": "Itália",
+   "fob": 8283,
+   "kg": 587,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 12,
+   "country": "Malásia",
+   "fob": 27709,
+   "kg": 14094,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2022,
+   "month": 12,
+   "country": "Índia",
+   "fob": 1558851,
+   "kg": 994676,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 12,
+   "country": "China",
+   "fob": 1616922,
+   "kg": 997034,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 12,
+   "country": "França",
+   "fob": 9507,
+   "kg": 1062,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 12,
+   "country": "Itália",
+   "fob": 2491,
+   "kg": 250,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 12,
+   "country": "Tailândia",
+   "fob": 48845,
+   "kg": 8108,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2022,
+   "month": 12,
+   "country": "Índia",
+   "fob": 619750,
+   "kg": 331857,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 12,
+   "country": "China",
+   "fob": 86357,
+   "kg": 55872,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 12,
+   "country": "Colômbia",
+   "fob": 148,
+   "kg": 32,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2022,
+   "month": 12,
+   "country": "Índia",
+   "fob": 211719,
+   "kg": 121360,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 1,
+   "country": "Bulgária",
+   "fob": 18209,
+   "kg": 3954,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 1,
+   "country": "Bélgica",
+   "fob": 3000,
+   "kg": 480,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 1,
+   "country": "China",
+   "fob": 15050676,
+   "kg": 12746628,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 1,
+   "country": "Colômbia",
+   "fob": 1458,
+   "kg": 563,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 1,
+   "country": "Equador",
+   "fob": 142886,
+   "kg": 38514,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 1,
+   "country": "Hong Kong",
+   "fob": 133429,
+   "kg": 112560,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 1,
+   "country": "Indonésia",
+   "fob": 74778,
+   "kg": 45320,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 1,
+   "country": "Tailândia",
+   "fob": 52250,
+   "kg": 20900,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 1,
+   "country": "Taiwan (Formosa)",
+   "fob": 11824,
+   "kg": 2286,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 1,
+   "country": "Vietnã",
+   "fob": 16042,
+   "kg": 7200,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 1,
+   "country": "Índia",
+   "fob": 1201718,
+   "kg": 708261,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 1,
+   "country": "China",
+   "fob": 2147371,
+   "kg": 1479035,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 1,
+   "country": "Equador",
+   "fob": 103461,
+   "kg": 27887,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 1,
+   "country": "Hong Kong",
+   "fob": 27352,
+   "kg": 21960,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 1,
+   "country": "Itália",
+   "fob": 6270,
+   "kg": 1528,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 1,
+   "country": "Suíça",
+   "fob": 3669,
+   "kg": 1024,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 1,
+   "country": "Tailândia",
+   "fob": 191029,
+   "kg": 68653,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 1,
+   "country": "Turquia",
+   "fob": 3617,
+   "kg": 1946,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 1,
+   "country": "Índia",
+   "fob": 654069,
+   "kg": 329323,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 1,
+   "country": "China",
+   "fob": 233077,
+   "kg": 155413,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 1,
+   "country": "Índia",
+   "fob": 238440,
+   "kg": 145793,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 2,
+   "country": "China",
+   "fob": 16657397,
+   "kg": 14703145,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 2,
+   "country": "Estados Unidos",
+   "fob": 13546,
+   "kg": 720,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 2,
+   "country": "Tailândia",
+   "fob": 24320,
+   "kg": 6480,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 2,
+   "country": "Taiwan (Formosa)",
+   "fob": 44312,
+   "kg": 7446,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 2,
+   "country": "Turquia",
+   "fob": 1794,
+   "kg": 211,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 2,
+   "country": "Índia",
+   "fob": 535302,
+   "kg": 345213,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 2,
+   "country": "China",
+   "fob": 1916476,
+   "kg": 1376056,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 2,
+   "country": "Hong Kong",
+   "fob": 68711,
+   "kg": 49445,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 2,
+   "country": "Itália",
+   "fob": 55244,
+   "kg": 11547,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 2,
+   "country": "Tailândia",
+   "fob": 37590,
+   "kg": 5062,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 2,
+   "country": "Índia",
+   "fob": 423457,
+   "kg": 221626,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 2,
+   "country": "China",
+   "fob": 132556,
+   "kg": 100387,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 2,
+   "country": "Indonésia",
+   "fob": 53188,
+   "kg": 13151,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 2,
+   "country": "Índia",
+   "fob": 216266,
+   "kg": 139444,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 3,
+   "country": "China",
+   "fob": 20165047,
+   "kg": 17297585,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 3,
+   "country": "Hong Kong",
+   "fob": 177552,
+   "kg": 168480,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 3,
+   "country": "Indonésia",
+   "fob": 30480,
+   "kg": 24012,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 3,
+   "country": "Itália",
+   "fob": 3569,
+   "kg": 504,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 3,
+   "country": "Malásia",
+   "fob": 73897,
+   "kg": 48048,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 3,
+   "country": "Índia",
+   "fob": 1234688,
+   "kg": 863292,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 3,
+   "country": "China",
+   "fob": 1427212,
+   "kg": 900615,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 3,
+   "country": "Estados Unidos",
+   "fob": 10219,
+   "kg": 1950,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 3,
+   "country": "Hong Kong",
+   "fob": 63468,
+   "kg": 50400,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 3,
+   "country": "Indonésia",
+   "fob": 68723,
+   "kg": 32010,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 3,
+   "country": "Itália",
+   "fob": 5633,
+   "kg": 930,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 3,
+   "country": "Suíça",
+   "fob": 5111,
+   "kg": 1003,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 3,
+   "country": "Tailândia",
+   "fob": 39140,
+   "kg": 20600,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 3,
+   "country": "Turquia",
+   "fob": 2535,
+   "kg": 1114,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 3,
+   "country": "Índia",
+   "fob": 681297,
+   "kg": 415597,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 3,
+   "country": "China",
+   "fob": 145445,
+   "kg": 93558,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 3,
+   "country": "França",
+   "fob": 254,
+   "kg": 0,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 3,
+   "country": "Índia",
+   "fob": 219813,
+   "kg": 149096,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 4,
+   "country": "China",
+   "fob": 28658013,
+   "kg": 23377949,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 4,
+   "country": "Colômbia",
+   "fob": 75,
+   "kg": 24,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 4,
+   "country": "Estados Unidos",
+   "fob": 4486,
+   "kg": 5538,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 4,
+   "country": "França",
+   "fob": 19809,
+   "kg": 1787,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 4,
+   "country": "Hong Kong",
+   "fob": 27649,
+   "kg": 21600,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 4,
+   "country": "Indonésia",
+   "fob": 39688,
+   "kg": 26747,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 4,
+   "country": "Malásia",
+   "fob": 56634,
+   "kg": 43772,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 4,
+   "country": "Taiwan (Formosa)",
+   "fob": 56985,
+   "kg": 23694,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 4,
+   "country": "Índia",
+   "fob": 1087632,
+   "kg": 742777,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 4,
+   "country": "Alemanha",
+   "fob": 15192,
+   "kg": 2071,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 4,
+   "country": "China",
+   "fob": 2190481,
+   "kg": 1592412,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 4,
+   "country": "Equador",
+   "fob": 52828,
+   "kg": 13722,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 4,
+   "country": "Espanha",
+   "fob": 3126,
+   "kg": 524,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 4,
+   "country": "Estados Unidos",
+   "fob": 5459,
+   "kg": 5531,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 4,
+   "country": "França",
+   "fob": 14441,
+   "kg": 1407,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 4,
+   "country": "Hong Kong",
+   "fob": 135381,
+   "kg": 100800,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 4,
+   "country": "Tailândia",
+   "fob": 58905,
+   "kg": 29600,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 4,
+   "country": "Taiwan (Formosa)",
+   "fob": 8418,
+   "kg": 338,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 4,
+   "country": "Turquia",
+   "fob": 43935,
+   "kg": 16842,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 4,
+   "country": "Índia",
+   "fob": 864852,
+   "kg": 468518,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 4,
+   "country": "China",
+   "fob": 141933,
+   "kg": 99343,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 4,
+   "country": "Estados Unidos",
+   "fob": 1409,
+   "kg": 1740,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 4,
+   "country": "Índia",
+   "fob": 213576,
+   "kg": 142346,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 5,
+   "country": "Bélgica",
+   "fob": 3243,
+   "kg": 480,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 5,
+   "country": "China",
+   "fob": 27199623,
+   "kg": 22239577,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 5,
+   "country": "Colômbia",
+   "fob": 10380,
+   "kg": 3015,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 5,
+   "country": "Equador",
+   "fob": 51524,
+   "kg": 13383,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 5,
+   "country": "Hong Kong",
+   "fob": 58930,
+   "kg": 48852,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 5,
+   "country": "Indonésia",
+   "fob": 48100,
+   "kg": 32630,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 5,
+   "country": "Malásia",
+   "fob": 7488,
+   "kg": 1967,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 5,
+   "country": "Tailândia",
+   "fob": 724,
+   "kg": 561,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 5,
+   "country": "Taiwan (Formosa)",
+   "fob": 95133,
+   "kg": 29670,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 5,
+   "country": "Índia",
+   "fob": 788190,
+   "kg": 514420,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 5,
+   "country": "China",
+   "fob": 3630689,
+   "kg": 2564347,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 5,
+   "country": "Equador",
+   "fob": 52629,
+   "kg": 13670,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 5,
+   "country": "Espanha",
+   "fob": 655,
+   "kg": 108,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 5,
+   "country": "Hong Kong",
+   "fob": 445253,
+   "kg": 331941,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 5,
+   "country": "Indonésia",
+   "fob": 40331,
+   "kg": 19060,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 5,
+   "country": "Itália",
+   "fob": 67602,
+   "kg": 12300,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 5,
+   "country": "Tailândia",
+   "fob": 125960,
+   "kg": 38120,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 5,
+   "country": "Turquia",
+   "fob": 163677,
+   "kg": 29759,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 5,
+   "country": "Índia",
+   "fob": 464002,
+   "kg": 269416,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 5,
+   "country": "China",
+   "fob": 683510,
+   "kg": 490925,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 5,
+   "country": "Turquia",
+   "fob": 278,
+   "kg": 72,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 5,
+   "country": "Índia",
+   "fob": 317023,
+   "kg": 214859,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 6,
+   "country": "China",
+   "fob": 20168960,
+   "kg": 16284713,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 6,
+   "country": "Hong Kong",
+   "fob": 27864,
+   "kg": 21600,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 6,
+   "country": "Indonésia",
+   "fob": 146435,
+   "kg": 93519,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 6,
+   "country": "Malásia",
+   "fob": 28594,
+   "kg": 22200,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 6,
+   "country": "Tailândia",
+   "fob": 275854,
+   "kg": 204336,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 6,
+   "country": "Índia",
+   "fob": 1677697,
+   "kg": 1123290,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 6,
+   "country": "China",
+   "fob": 3682134,
+   "kg": 2448458,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 6,
+   "country": "Espanha",
+   "fob": 2112,
+   "kg": 294,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 6,
+   "country": "Estados Unidos",
+   "fob": 9721,
+   "kg": 1855,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 6,
+   "country": "Hong Kong",
+   "fob": 241326,
+   "kg": 182160,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 6,
+   "country": "Indonésia",
+   "fob": 23016,
+   "kg": 7988,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 6,
+   "country": "Itália",
+   "fob": 2506,
+   "kg": 292,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 6,
+   "country": "Tailândia",
+   "fob": 74017,
+   "kg": 28520,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 6,
+   "country": "Índia",
+   "fob": 378637,
+   "kg": 210242,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 6,
+   "country": "China",
+   "fob": 151371,
+   "kg": 104854,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 6,
+   "country": "Estados Unidos",
+   "fob": 666,
+   "kg": 2,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 6,
+   "country": "Índia",
+   "fob": 62253,
+   "kg": 39169,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 7,
+   "country": "China",
+   "fob": 17181825,
+   "kg": 14061114,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 7,
+   "country": "Equador",
+   "fob": 154014,
+   "kg": 40003,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 7,
+   "country": "Espanha",
+   "fob": 11493,
+   "kg": 3071,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 7,
+   "country": "França",
+   "fob": 3041,
+   "kg": 266,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 7,
+   "country": "Hong Kong",
+   "fob": 79384,
+   "kg": 87840,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 7,
+   "country": "Indonésia",
+   "fob": 131363,
+   "kg": 92598,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 7,
+   "country": "Itália",
+   "fob": 8680,
+   "kg": 792,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 7,
+   "country": "Tailândia",
+   "fob": 275854,
+   "kg": 204336,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 7,
+   "country": "Taiwan (Formosa)",
+   "fob": 1612,
+   "kg": 540,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 7,
+   "country": "Índia",
+   "fob": 1854188,
+   "kg": 1235747,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 7,
+   "country": "China",
+   "fob": 2260690,
+   "kg": 1568638,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 7,
+   "country": "Equador",
+   "fob": 52513,
+   "kg": 13640,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 7,
+   "country": "Estados Unidos",
+   "fob": 37113,
+   "kg": 7081,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 7,
+   "country": "França",
+   "fob": 23020,
+   "kg": 2216,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 7,
+   "country": "Hong Kong",
+   "fob": 193162,
+   "kg": 151824,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 7,
+   "country": "Itália",
+   "fob": 1395,
+   "kg": 203,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 7,
+   "country": "Tailândia",
+   "fob": 29829,
+   "kg": 5950,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 7,
+   "country": "Índia",
+   "fob": 614656,
+   "kg": 359892,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 7,
+   "country": "China",
+   "fob": 298693,
+   "kg": 205360,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 7,
+   "country": "Índia",
+   "fob": 36402,
+   "kg": 23252,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 8,
+   "country": "Bulgária",
+   "fob": 20176,
+   "kg": 4103,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 8,
+   "country": "China",
+   "fob": 20084883,
+   "kg": 16965669,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 8,
+   "country": "Colômbia",
+   "fob": 22402,
+   "kg": 6704,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 8,
+   "country": "Equador",
+   "fob": 51008,
+   "kg": 13249,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 8,
+   "country": "Estados Unidos",
+   "fob": 13866,
+   "kg": 816,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 8,
+   "country": "Hong Kong",
+   "fob": 129732,
+   "kg": 117720,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 8,
+   "country": "Indonésia",
+   "fob": 432307,
+   "kg": 283837,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 8,
+   "country": "Tailândia",
+   "fob": 25457,
+   "kg": 20850,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 8,
+   "country": "Índia",
+   "fob": 1357449,
+   "kg": 943902,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 8,
+   "country": "China",
+   "fob": 2372729,
+   "kg": 1794909,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 8,
+   "country": "Equador",
+   "fob": 104763,
+   "kg": 27211,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 8,
+   "country": "Estados Unidos",
+   "fob": 5398,
+   "kg": 318,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 8,
+   "country": "Hong Kong",
+   "fob": 112159,
+   "kg": 90108,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 8,
+   "country": "Indonésia",
+   "fob": 76006,
+   "kg": 41440,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 8,
+   "country": "Itália",
+   "fob": 14011,
+   "kg": 2312,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 8,
+   "country": "Malásia",
+   "fob": 19044,
+   "kg": 10200,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 8,
+   "country": "Tailândia",
+   "fob": 26611,
+   "kg": 3960,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 8,
+   "country": "Índia",
+   "fob": 399791,
+   "kg": 222086,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 8,
+   "country": "China",
+   "fob": 133448,
+   "kg": 93624,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 8,
+   "country": "Índia",
+   "fob": 76495,
+   "kg": 49565,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 9,
+   "country": "Bulgária",
+   "fob": 9854,
+   "kg": 2055,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 9,
+   "country": "China",
+   "fob": 18340338,
+   "kg": 15648877,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 9,
+   "country": "Colômbia",
+   "fob": 21462,
+   "kg": 6399,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 9,
+   "country": "Hong Kong",
+   "fob": 150630,
+   "kg": 131148,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 9,
+   "country": "Malásia",
+   "fob": 37102,
+   "kg": 23562,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 9,
+   "country": "Tailândia",
+   "fob": 110565,
+   "kg": 92310,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 9,
+   "country": "Taiwan (Formosa)",
+   "fob": 93295,
+   "kg": 29862,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 9,
+   "country": "Índia",
+   "fob": 1333252,
+   "kg": 925440,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 9,
+   "country": "Alemanha",
+   "fob": 11277,
+   "kg": 1627,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 9,
+   "country": "Argentina",
+   "fob": 28354,
+   "kg": 2724,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 9,
+   "country": "China",
+   "fob": 2501963,
+   "kg": 1858069,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 9,
+   "country": "Hong Kong",
+   "fob": 81011,
+   "kg": 64953,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 9,
+   "country": "México",
+   "fob": 1104,
+   "kg": 329,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 9,
+   "country": "Tailândia",
+   "fob": 29625,
+   "kg": 6430,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 9,
+   "country": "Índia",
+   "fob": 640559,
+   "kg": 369864,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 9,
+   "country": "China",
+   "fob": 123425,
+   "kg": 72448,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 9,
+   "country": "Índia",
+   "fob": 120639,
+   "kg": 81071,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 10,
+   "country": "Bulgária",
+   "fob": 9231,
+   "kg": 2057,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 10,
+   "country": "China",
+   "fob": 13601906,
+   "kg": 11421026,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 10,
+   "country": "Hong Kong",
+   "fob": 45004,
+   "kg": 43920,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 10,
+   "country": "Indonésia",
+   "fob": 52467,
+   "kg": 45408,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 10,
+   "country": "Tailândia",
+   "fob": 71934,
+   "kg": 62550,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 10,
+   "country": "Taiwan (Formosa)",
+   "fob": 81395,
+   "kg": 27750,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 10,
+   "country": "Índia",
+   "fob": 819304,
+   "kg": 551270,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 10,
+   "country": "China",
+   "fob": 2173841,
+   "kg": 1513735,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 10,
+   "country": "França",
+   "fob": 14789,
+   "kg": 1457,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 10,
+   "country": "Hong Kong",
+   "fob": 26733,
+   "kg": 20031,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 10,
+   "country": "Indonésia",
+   "fob": 43033,
+   "kg": 19750,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 10,
+   "country": "Itália",
+   "fob": 16467,
+   "kg": 2634,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 10,
+   "country": "Tailândia",
+   "fob": 94855,
+   "kg": 43360,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 10,
+   "country": "Índia",
+   "fob": 603774,
+   "kg": 383129,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 10,
+   "country": "China",
+   "fob": 93949,
+   "kg": 67732,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 10,
+   "country": "França",
+   "fob": 178,
+   "kg": 0,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 10,
+   "country": "Índia",
+   "fob": 208510,
+   "kg": 147057,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 11,
+   "country": "Bulgária",
+   "fob": 17868,
+   "kg": 3637,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 11,
+   "country": "China",
+   "fob": 15429190,
+   "kg": 12839519,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 11,
+   "country": "Colômbia",
+   "fob": 2245,
+   "kg": 583,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 11,
+   "country": "Espanha",
+   "fob": 7151,
+   "kg": 964,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 11,
+   "country": "Indonésia",
+   "fob": 144030,
+   "kg": 110893,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 11,
+   "country": "Itália",
+   "fob": 19325,
+   "kg": 1714,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 11,
+   "country": "Tailândia",
+   "fob": 189666,
+   "kg": 162621,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 11,
+   "country": "Taiwan (Formosa)",
+   "fob": 37750,
+   "kg": 20766,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 11,
+   "country": "Vietnã",
+   "fob": 96190,
+   "kg": 70587,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 11,
+   "country": "Índia",
+   "fob": 1141365,
+   "kg": 773188,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 11,
+   "country": "China",
+   "fob": 2095724,
+   "kg": 1481177,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 11,
+   "country": "Hong Kong",
+   "fob": 2567,
+   "kg": 222,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 11,
+   "country": "Indonésia",
+   "fob": 35270,
+   "kg": 11304,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 11,
+   "country": "Itália",
+   "fob": 13912,
+   "kg": 3277,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 11,
+   "country": "Tailândia",
+   "fob": 70872,
+   "kg": 28676,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 11,
+   "country": "Índia",
+   "fob": 692935,
+   "kg": 422286,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 11,
+   "country": "China",
+   "fob": 128828,
+   "kg": 89497,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 11,
+   "country": "Estados Unidos",
+   "fob": 539,
+   "kg": 3,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 11,
+   "country": "Índia",
+   "fob": 106909,
+   "kg": 73338,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 12,
+   "country": "Bulgária",
+   "fob": 4973,
+   "kg": 1029,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 12,
+   "country": "China",
+   "fob": 20917077,
+   "kg": 17686636,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 12,
+   "country": "Hong Kong",
+   "fob": 131490,
+   "kg": 108360,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 12,
+   "country": "Indonésia",
+   "fob": 129567,
+   "kg": 91988,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 12,
+   "country": "Malásia",
+   "fob": 32092,
+   "kg": 24582,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 12,
+   "country": "Tailândia",
+   "fob": 34537,
+   "kg": 40096,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2023,
+   "month": 12,
+   "country": "Índia",
+   "fob": 1628135,
+   "kg": 1179507,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 12,
+   "country": "China",
+   "fob": 2617344,
+   "kg": 1903049,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 12,
+   "country": "Hong Kong",
+   "fob": 254705,
+   "kg": 199692,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 12,
+   "country": "Itália",
+   "fob": 37550,
+   "kg": 5381,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 12,
+   "country": "Malásia",
+   "fob": 16531,
+   "kg": 9214,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 12,
+   "country": "Tailândia",
+   "fob": 18860,
+   "kg": 2257,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 12,
+   "country": "Turquia",
+   "fob": 42123,
+   "kg": 16793,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2023,
+   "month": 12,
+   "country": "Índia",
+   "fob": 793407,
+   "kg": 456256,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 12,
+   "country": "China",
+   "fob": 191922,
+   "kg": 127195,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 12,
+   "country": "Turquia",
+   "fob": 379,
+   "kg": 103,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2023,
+   "month": 12,
+   "country": "Índia",
+   "fob": 322129,
+   "kg": 219404,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 1,
+   "country": "China",
+   "fob": 20635187,
+   "kg": 17964841,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 1,
+   "country": "Hong Kong",
+   "fob": 38355,
+   "kg": 25088,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 1,
+   "country": "Indonésia",
+   "fob": 39888,
+   "kg": 21465,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 1,
+   "country": "Malásia",
+   "fob": 68985,
+   "kg": 46799,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 1,
+   "country": "Tailândia",
+   "fob": 72657,
+   "kg": 65856,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 1,
+   "country": "Taiwan (Formosa)",
+   "fob": 5989,
+   "kg": 1056,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 1,
+   "country": "Índia",
+   "fob": 624130,
+   "kg": 458280,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 1,
+   "country": "Alemanha",
+   "fob": 8689,
+   "kg": 1221,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 1,
+   "country": "China",
+   "fob": 2235616,
+   "kg": 1677710,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 1,
+   "country": "Estados Unidos",
+   "fob": 7021,
+   "kg": 414,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 1,
+   "country": "Hong Kong",
+   "fob": 136631,
+   "kg": 109800,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 1,
+   "country": "Indonésia",
+   "fob": 7269,
+   "kg": 2979,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 1,
+   "country": "Itália",
+   "fob": 109178,
+   "kg": 18687,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 1,
+   "country": "Tailândia",
+   "fob": 153686,
+   "kg": 57793,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 1,
+   "country": "Índia",
+   "fob": 707769,
+   "kg": 430195,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 1,
+   "country": "China",
+   "fob": 61539,
+   "kg": 49584,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 1,
+   "country": "Índia",
+   "fob": 75364,
+   "kg": 50188,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 2,
+   "country": "China",
+   "fob": 17723673,
+   "kg": 15364395,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 2,
+   "country": "Estados Unidos",
+   "fob": 25164,
+   "kg": 21600,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 2,
+   "country": "Indonésia",
+   "fob": 1240,
+   "kg": 1008,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 2,
+   "country": "Malásia",
+   "fob": 38356,
+   "kg": 23562,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 2,
+   "country": "Tailândia",
+   "fob": 111756,
+   "kg": 109443,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 2,
+   "country": "Taiwan (Formosa)",
+   "fob": 6094,
+   "kg": 1056,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 2,
+   "country": "Índia",
+   "fob": 969584,
+   "kg": 708139,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 2,
+   "country": "China",
+   "fob": 1972806,
+   "kg": 1459825,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 2,
+   "country": "França",
+   "fob": 17801,
+   "kg": 1780,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 2,
+   "country": "Hong Kong",
+   "fob": 52265,
+   "kg": 43920,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 2,
+   "country": "Indonésia",
+   "fob": 24015,
+   "kg": 10025,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 2,
+   "country": "Itália",
+   "fob": 120556,
+   "kg": 18425,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 2,
+   "country": "Tailândia",
+   "fob": 75176,
+   "kg": 22117,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 2,
+   "country": "Índia",
+   "fob": 793754,
+   "kg": 511526,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 2,
+   "country": "China",
+   "fob": 146038,
+   "kg": 111576,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 2,
+   "country": "Índia",
+   "fob": 106679,
+   "kg": 75799,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 3,
+   "country": "Brasil",
+   "fob": 79682,
+   "kg": 63188,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 3,
+   "country": "China",
+   "fob": 15017027,
+   "kg": 13096127,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 3,
+   "country": "Hong Kong",
+   "fob": 132633,
+   "kg": 108000,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 3,
+   "country": "Tailândia",
+   "fob": 113620,
+   "kg": 105997,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 3,
+   "country": "Taiwan (Formosa)",
+   "fob": 26356,
+   "kg": 4896,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 3,
+   "country": "Índia",
+   "fob": 2586439,
+   "kg": 2086876,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 3,
+   "country": "Alemanha",
+   "fob": 4297,
+   "kg": 609,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 3,
+   "country": "Argentina",
+   "fob": 46225,
+   "kg": 4340,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 3,
+   "country": "Brasil",
+   "fob": 40581,
+   "kg": 32181,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 3,
+   "country": "China",
+   "fob": 2667555,
+   "kg": 1912964,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 3,
+   "country": "Estados Unidos",
+   "fob": 11950,
+   "kg": 705,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 3,
+   "country": "França",
+   "fob": 9661,
+   "kg": 966,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 3,
+   "country": "Hong Kong",
+   "fob": 36615,
+   "kg": 23832,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 3,
+   "country": "Indonésia",
+   "fob": 11703,
+   "kg": 4945,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 3,
+   "country": "Itália",
+   "fob": 97260,
+   "kg": 16624,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 3,
+   "country": "Portugal",
+   "fob": 2988,
+   "kg": 407,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 3,
+   "country": "Tailândia",
+   "fob": 29030,
+   "kg": 4320,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 3,
+   "country": "Índia",
+   "fob": 527195,
+   "kg": 378288,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 3,
+   "country": "China",
+   "fob": 65719,
+   "kg": 46187,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 3,
+   "country": "Panamá",
+   "fob": 501,
+   "kg": 129,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 3,
+   "country": "Índia",
+   "fob": 72051,
+   "kg": 55410,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 4,
+   "country": "Brasil",
+   "fob": 73623,
+   "kg": 58383,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 4,
+   "country": "China",
+   "fob": 29037231,
+   "kg": 24806296,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 4,
+   "country": "Tailândia",
+   "fob": 213475,
+   "kg": 197714,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 4,
+   "country": "Índia",
+   "fob": 5998989,
+   "kg": 5013419,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 4,
+   "country": "Alemanha",
+   "fob": 14204,
+   "kg": 2031,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 4,
+   "country": "Brasil",
+   "fob": 40399,
+   "kg": 32036,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 4,
+   "country": "China",
+   "fob": 2207468,
+   "kg": 1720955,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 4,
+   "country": "Estados Unidos",
+   "fob": 743,
+   "kg": 459,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 4,
+   "country": "Hong Kong",
+   "fob": 128876,
+   "kg": 100800,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 4,
+   "country": "Itália",
+   "fob": 117354,
+   "kg": 17497,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 4,
+   "country": "Tailândia",
+   "fob": 34970,
+   "kg": 6283,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 4,
+   "country": "Turquia",
+   "fob": 24219,
+   "kg": 15934,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 4,
+   "country": "Índia",
+   "fob": 748104,
+   "kg": 463537,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 4,
+   "country": "China",
+   "fob": 75663,
+   "kg": 48383,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 4,
+   "country": "Turquia",
+   "fob": 585,
+   "kg": 23,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 4,
+   "country": "Índia",
+   "fob": 162675,
+   "kg": 123098,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 5,
+   "country": "Brasil",
+   "fob": 5258,
+   "kg": 4169,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 5,
+   "country": "China",
+   "fob": 29420917,
+   "kg": 24730890,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 5,
+   "country": "Hong Kong",
+   "fob": 280485,
+   "kg": 220680,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 5,
+   "country": "Indonésia",
+   "fob": 83630,
+   "kg": 64680,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 5,
+   "country": "Malásia",
+   "fob": 20370,
+   "kg": 10080,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 5,
+   "country": "Romênia",
+   "fob": 3840,
+   "kg": 567,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 5,
+   "country": "Tailândia",
+   "fob": 115442,
+   "kg": 95942,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 5,
+   "country": "Taiwan (Formosa)",
+   "fob": 51176,
+   "kg": 8280,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 5,
+   "country": "Índia",
+   "fob": 5632344,
+   "kg": 4637393,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 5,
+   "country": "Alemanha",
+   "fob": 4275,
+   "kg": 611,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 5,
+   "country": "Brasil",
+   "fob": 20343,
+   "kg": 16132,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 5,
+   "country": "China",
+   "fob": 3591579,
+   "kg": 2714321,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 5,
+   "country": "Hong Kong",
+   "fob": 162368,
+   "kg": 123726,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 5,
+   "country": "Tailândia",
+   "fob": 69009,
+   "kg": 24272,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 5,
+   "country": "Turquia",
+   "fob": 3436,
+   "kg": 1015,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 5,
+   "country": "Índia",
+   "fob": 717932,
+   "kg": 446805,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 5,
+   "country": "China",
+   "fob": 61837,
+   "kg": 42833,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 5,
+   "country": "Panamá",
+   "fob": 13294,
+   "kg": 3571,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 5,
+   "country": "Turquia",
+   "fob": 235,
+   "kg": 121,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 5,
+   "country": "Índia",
+   "fob": 106419,
+   "kg": 75871,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 6,
+   "country": "Bulgária",
+   "fob": 16989,
+   "kg": 3500,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 6,
+   "country": "China",
+   "fob": 23084254,
+   "kg": 19267533,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 6,
+   "country": "Hong Kong",
+   "fob": 90397,
+   "kg": 74160,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 6,
+   "country": "Malásia",
+   "fob": 24315,
+   "kg": 14580,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 6,
+   "country": "Taiwan (Formosa)",
+   "fob": 41835,
+   "kg": 21582,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 6,
+   "country": "Vietnã",
+   "fob": 289053,
+   "kg": 211761,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 6,
+   "country": "Índia",
+   "fob": 4159575,
+   "kg": 3235305,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 6,
+   "country": "China",
+   "fob": 3211834,
+   "kg": 2327452,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 6,
+   "country": "França",
+   "fob": 10490,
+   "kg": 1081,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 6,
+   "country": "Hong Kong",
+   "fob": 28300,
+   "kg": 24768,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 6,
+   "country": "Indonésia",
+   "fob": 48167,
+   "kg": 16174,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 6,
+   "country": "Itália",
+   "fob": 27412,
+   "kg": 5003,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 6,
+   "country": "Tailândia",
+   "fob": 35832,
+   "kg": 6675,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 6,
+   "country": "Turquia",
+   "fob": 23507,
+   "kg": 15465,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 6,
+   "country": "Índia",
+   "fob": 875985,
+   "kg": 592099,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 6,
+   "country": "China",
+   "fob": 118040,
+   "kg": 81116,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 6,
+   "country": "Índia",
+   "fob": 95229,
+   "kg": 67095,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 7,
+   "country": "China",
+   "fob": 22432383,
+   "kg": 18501237,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 7,
+   "country": "Coreia do Sul",
+   "fob": 39600,
+   "kg": 14400,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 7,
+   "country": "Hong Kong",
+   "fob": 40827,
+   "kg": 30208,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 7,
+   "country": "Indonésia",
+   "fob": 27557,
+   "kg": 22660,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 7,
+   "country": "Itália",
+   "fob": 6595,
+   "kg": 451,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 7,
+   "country": "Singapura",
+   "fob": 28298,
+   "kg": 25080,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 7,
+   "country": "Tailândia",
+   "fob": 47661,
+   "kg": 42002,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 7,
+   "country": "Taiwan (Formosa)",
+   "fob": 102675,
+   "kg": 16520,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 7,
+   "country": "Índia",
+   "fob": 5177443,
+   "kg": 4027699,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 7,
+   "country": "Alemanha",
+   "fob": 7194,
+   "kg": 1012,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 7,
+   "country": "China",
+   "fob": 2803409,
+   "kg": 2113829,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 7,
+   "country": "França",
+   "fob": 13824,
+   "kg": 1425,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 7,
+   "country": "Indonésia",
+   "fob": 11732,
+   "kg": 4950,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 7,
+   "country": "Itália",
+   "fob": 104320,
+   "kg": 16642,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 7,
+   "country": "Tailândia",
+   "fob": 14633,
+   "kg": 1497,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 7,
+   "country": "Turquia",
+   "fob": 23392,
+   "kg": 15389,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 7,
+   "country": "Índia",
+   "fob": 572540,
+   "kg": 336512,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 7,
+   "country": "China",
+   "fob": 215678,
+   "kg": 147207,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 7,
+   "country": "Índia",
+   "fob": 389920,
+   "kg": 279741,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 8,
+   "country": "Bulgária",
+   "fob": 30200,
+   "kg": 6018,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 8,
+   "country": "China",
+   "fob": 19881045,
+   "kg": 16344900,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 8,
+   "country": "Hong Kong",
+   "fob": 106337,
+   "kg": 93600,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 8,
+   "country": "Indonésia",
+   "fob": 91773,
+   "kg": 67980,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 8,
+   "country": "Itália",
+   "fob": 2833,
+   "kg": 390,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 8,
+   "country": "Malásia",
+   "fob": 20914,
+   "kg": 10574,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 8,
+   "country": "Singapura",
+   "fob": 57038,
+   "kg": 48960,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 8,
+   "country": "Taiwan (Formosa)",
+   "fob": 153913,
+   "kg": 39534,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 8,
+   "country": "Vietnã",
+   "fob": 33329,
+   "kg": 23529,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 8,
+   "country": "Índia",
+   "fob": 13919062,
+   "kg": 10805206,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 8,
+   "country": "China",
+   "fob": 3325257,
+   "kg": 2470350,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 8,
+   "country": "Hong Kong",
+   "fob": 109800,
+   "kg": 81189,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 8,
+   "country": "Indonésia",
+   "fob": 30791,
+   "kg": 13375,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 8,
+   "country": "Itália",
+   "fob": 72632,
+   "kg": 11749,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 8,
+   "country": "Tailândia",
+   "fob": 62719,
+   "kg": 23826,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 8,
+   "country": "Índia",
+   "fob": 1144745,
+   "kg": 711628,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 8,
+   "country": "China",
+   "fob": 107068,
+   "kg": 72554,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 8,
+   "country": "Espanha",
+   "fob": 292,
+   "kg": 14,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 8,
+   "country": "Índia",
+   "fob": 200683,
+   "kg": 145282,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 9,
+   "country": "China",
+   "fob": 16615912,
+   "kg": 13542382,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 9,
+   "country": "Hong Kong",
+   "fob": 185706,
+   "kg": 163800,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 9,
+   "country": "Indonésia",
+   "fob": 73465,
+   "kg": 41276,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 9,
+   "country": "Itália",
+   "fob": 1478,
+   "kg": 100,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 9,
+   "country": "Vietnã",
+   "fob": 35529,
+   "kg": 23529,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 9,
+   "country": "Índia",
+   "fob": 12312937,
+   "kg": 9516354,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 9,
+   "country": "China",
+   "fob": 1925949,
+   "kg": 1380939,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 9,
+   "country": "Indonésia",
+   "fob": 3921,
+   "kg": 575,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 9,
+   "country": "Itália",
+   "fob": 117789,
+   "kg": 18032,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 9,
+   "country": "Tailândia",
+   "fob": 75955,
+   "kg": 27070,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 9,
+   "country": "Turquia",
+   "fob": 23535,
+   "kg": 15484,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 9,
+   "country": "Índia",
+   "fob": 2052119,
+   "kg": 1464351,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 9,
+   "country": "China",
+   "fob": 77985,
+   "kg": 54881,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 9,
+   "country": "Turquia",
+   "fob": 35825,
+   "kg": 10236,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 9,
+   "country": "Índia",
+   "fob": 205691,
+   "kg": 144396,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 10,
+   "country": "Bulgária",
+   "fob": 10008,
+   "kg": 2058,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 10,
+   "country": "China",
+   "fob": 27807061,
+   "kg": 22350971,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 10,
+   "country": "Hong Kong",
+   "fob": 329542,
+   "kg": 280800,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 10,
+   "country": "Indonésia",
+   "fob": 105709,
+   "kg": 68780,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 10,
+   "country": "Tailândia",
+   "fob": 33592,
+   "kg": 10498,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 10,
+   "country": "Taiwan (Formosa)",
+   "fob": 70501,
+   "kg": 26478,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 10,
+   "country": "Turquia",
+   "fob": 3093,
+   "kg": 375,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 10,
+   "country": "Índia",
+   "fob": 11201905,
+   "kg": 8817471,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 10,
+   "country": "China",
+   "fob": 3214989,
+   "kg": 2376524,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 10,
+   "country": "Estados Unidos",
+   "fob": 10020,
+   "kg": 591,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 10,
+   "country": "França",
+   "fob": 13976,
+   "kg": 1503,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 10,
+   "country": "Hong Kong",
+   "fob": 110491,
+   "kg": 91080,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 10,
+   "country": "Itália",
+   "fob": 30632,
+   "kg": 5454,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 10,
+   "country": "Tailândia",
+   "fob": 91406,
+   "kg": 43000,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 10,
+   "country": "Turquia",
+   "fob": 47307,
+   "kg": 31123,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 10,
+   "country": "Índia",
+   "fob": 1218431,
+   "kg": 791300,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 10,
+   "country": "China",
+   "fob": 168821,
+   "kg": 118564,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 10,
+   "country": "Índia",
+   "fob": 86056,
+   "kg": 54979,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 11,
+   "country": "Bulgária",
+   "fob": 31182,
+   "kg": 6529,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 11,
+   "country": "China",
+   "fob": 17902580,
+   "kg": 14746026,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 11,
+   "country": "Hong Kong",
+   "fob": 261549,
+   "kg": 222720,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 11,
+   "country": "Indonésia",
+   "fob": 62542,
+   "kg": 45320,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 11,
+   "country": "Tailândia",
+   "fob": 19066,
+   "kg": 19929,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 11,
+   "country": "Taiwan (Formosa)",
+   "fob": 12408,
+   "kg": 2112,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 11,
+   "country": "Vietnã",
+   "fob": 35529,
+   "kg": 23529,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 11,
+   "country": "Índia",
+   "fob": 5041046,
+   "kg": 3971980,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 11,
+   "country": "China",
+   "fob": 3146898,
+   "kg": 2247690,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 11,
+   "country": "Espanha",
+   "fob": 1387,
+   "kg": 251,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 11,
+   "country": "Hong Kong",
+   "fob": 271284,
+   "kg": 223560,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 11,
+   "country": "Indonésia",
+   "fob": 79057,
+   "kg": 29079,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 11,
+   "country": "Tailândia",
+   "fob": 49831,
+   "kg": 8294,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 11,
+   "country": "Turquia",
+   "fob": 90698,
+   "kg": 59669,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 11,
+   "country": "Índia",
+   "fob": 1080470,
+   "kg": 661638,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 11,
+   "country": "China",
+   "fob": 137036,
+   "kg": 103964,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 11,
+   "country": "Indonésia",
+   "fob": 14473,
+   "kg": 5826,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 11,
+   "country": "Índia",
+   "fob": 72571,
+   "kg": 51434,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 12,
+   "country": "Bulgária",
+   "fob": 23747,
+   "kg": 5018,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 12,
+   "country": "China",
+   "fob": 13996653,
+   "kg": 11547530,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 12,
+   "country": "Hong Kong",
+   "fob": 83788,
+   "kg": 69147,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 12,
+   "country": "Indonésia",
+   "fob": 130068,
+   "kg": 90640,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 12,
+   "country": "Malásia",
+   "fob": 38442,
+   "kg": 28024,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 12,
+   "country": "Tailândia",
+   "fob": 43549,
+   "kg": 38787,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 12,
+   "country": "Taiwan (Formosa)",
+   "fob": 38070,
+   "kg": 20526,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 12,
+   "country": "Turquia",
+   "fob": 12428,
+   "kg": 7287,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2024,
+   "month": 12,
+   "country": "Índia",
+   "fob": 4994573,
+   "kg": 4137284,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 12,
+   "country": "Argentina",
+   "fob": 65835,
+   "kg": 6312,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 12,
+   "country": "China",
+   "fob": 2388580,
+   "kg": 1813374,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 12,
+   "country": "França",
+   "fob": 13151,
+   "kg": 1414,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 12,
+   "country": "Hong Kong",
+   "fob": 56475,
+   "kg": 48240,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 12,
+   "country": "Tailândia",
+   "fob": 120227,
+   "kg": 39623,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2024,
+   "month": 12,
+   "country": "Índia",
+   "fob": 468763,
+   "kg": 298277,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 12,
+   "country": "China",
+   "fob": 219664,
+   "kg": 145486,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2024,
+   "month": 12,
+   "country": "Índia",
+   "fob": 64209,
+   "kg": 47398,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 1,
+   "country": "China",
+   "fob": 18401918,
+   "kg": 15789964,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 1,
+   "country": "Indonésia",
+   "fob": 156861,
+   "kg": 97920,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 1,
+   "country": "Malásia",
+   "fob": 60262,
+   "kg": 37656,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 1,
+   "country": "Tailândia",
+   "fob": 20369,
+   "kg": 19079,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 1,
+   "country": "Taiwan (Formosa)",
+   "fob": 101862,
+   "kg": 19008,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 1,
+   "country": "Turquia",
+   "fob": 67450,
+   "kg": 48960,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 1,
+   "country": "Índia",
+   "fob": 5168907,
+   "kg": 4192744,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 1,
+   "country": "China",
+   "fob": 2730378,
+   "kg": 2001057,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 1,
+   "country": "França",
+   "fob": 6395,
+   "kg": 688,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 1,
+   "country": "Hong Kong",
+   "fob": 172106,
+   "kg": 144720,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 1,
+   "country": "Indonésia",
+   "fob": 41162,
+   "kg": 18120,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 1,
+   "country": "Itália",
+   "fob": 61814,
+   "kg": 11671,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 1,
+   "country": "Tailândia",
+   "fob": 68522,
+   "kg": 12552,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 1,
+   "country": "Turquia",
+   "fob": 45238,
+   "kg": 29762,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 1,
+   "country": "Índia",
+   "fob": 1116479,
+   "kg": 744882,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 1,
+   "country": "China",
+   "fob": 153813,
+   "kg": 110203,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 1,
+   "country": "Malásia",
+   "fob": 92973,
+   "kg": 69012,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 1,
+   "country": "Índia",
+   "fob": 6875,
+   "kg": 4023,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 2,
+   "country": "China",
+   "fob": 22725215,
+   "kg": 20594890,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 2,
+   "country": "Espanha",
+   "fob": 745,
+   "kg": 821,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 2,
+   "country": "Hong Kong",
+   "fob": 151483,
+   "kg": 151650,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 2,
+   "country": "Indonésia",
+   "fob": 32033,
+   "kg": 23527,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 2,
+   "country": "Malásia",
+   "fob": 22636,
+   "kg": 14094,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 2,
+   "country": "Tailândia",
+   "fob": 20295,
+   "kg": 9020,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 2,
+   "country": "Taiwan (Formosa)",
+   "fob": 53049,
+   "kg": 9792,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 2,
+   "country": "Índia",
+   "fob": 4255816,
+   "kg": 3674589,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 2,
+   "country": "China",
+   "fob": 3721842,
+   "kg": 2899663,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 2,
+   "country": "Indonésia",
+   "fob": 11682,
+   "kg": 4950,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 2,
+   "country": "Tailândia",
+   "fob": 26347,
+   "kg": 3680,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 2,
+   "country": "Índia",
+   "fob": 897272,
+   "kg": 634806,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 2,
+   "country": "China",
+   "fob": 171245,
+   "kg": 122439,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 2,
+   "country": "Hungria",
+   "fob": 916,
+   "kg": 9,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 2,
+   "country": "Índia",
+   "fob": 132390,
+   "kg": 94260,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 3,
+   "country": "China",
+   "fob": 17377857,
+   "kg": 15855414,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 3,
+   "country": "Indonésia",
+   "fob": 16343,
+   "kg": 10637,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 3,
+   "country": "Malásia",
+   "fob": 34580,
+   "kg": 23562,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 3,
+   "country": "Taiwan (Formosa)",
+   "fob": 12102,
+   "kg": 2112,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 3,
+   "country": "Índia",
+   "fob": 4613343,
+   "kg": 4250607,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 3,
+   "country": "China",
+   "fob": 2564922,
+   "kg": 1991675,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 3,
+   "country": "Itália",
+   "fob": 10800,
+   "kg": 609,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 3,
+   "country": "Malásia",
+   "fob": 19171,
+   "kg": 10574,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 3,
+   "country": "Tailândia",
+   "fob": 87862,
+   "kg": 17981,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 3,
+   "country": "Turquia",
+   "fob": 45170,
+   "kg": 29717,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 3,
+   "country": "Índia",
+   "fob": 484536,
+   "kg": 321392,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 3,
+   "country": "China",
+   "fob": 37212,
+   "kg": 27398,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 4,
+   "country": "China",
+   "fob": 16626811,
+   "kg": 15010879,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 4,
+   "country": "Hong Kong",
+   "fob": 83985,
+   "kg": 73440,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 4,
+   "country": "Indonésia",
+   "fob": 34443,
+   "kg": 22660,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 4,
+   "country": "Malásia",
+   "fob": 34642,
+   "kg": 23562,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 4,
+   "country": "Taiwan (Formosa)",
+   "fob": 406726,
+   "kg": 71232,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 4,
+   "country": "Turquia",
+   "fob": 103,
+   "kg": 29,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 4,
+   "country": "Índia",
+   "fob": 6387218,
+   "kg": 5523471,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 4,
+   "country": "China",
+   "fob": 1986692,
+   "kg": 1678839,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 4,
+   "country": "Hong Kong",
+   "fob": 180051,
+   "kg": 151200,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 4,
+   "country": "Itália",
+   "fob": 2486,
+   "kg": 292,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 4,
+   "country": "Tailândia",
+   "fob": 51002,
+   "kg": 7269,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 4,
+   "country": "Taiwan (Formosa)",
+   "fob": 874,
+   "kg": 68,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 4,
+   "country": "Turquia",
+   "fob": 1320,
+   "kg": 307,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 4,
+   "country": "Índia",
+   "fob": 1102131,
+   "kg": 744762,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 4,
+   "country": "China",
+   "fob": 2377,
+   "kg": 1503,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 4,
+   "country": "Índia",
+   "fob": 126396,
+   "kg": 94264,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 5,
+   "country": "Bulgária",
+   "fob": 27647,
+   "kg": 5572,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 5,
+   "country": "China",
+   "fob": 15953580,
+   "kg": 14545925,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 5,
+   "country": "Hong Kong",
+   "fob": 29120,
+   "kg": 25200,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 5,
+   "country": "Indonésia",
+   "fob": 34443,
+   "kg": 22660,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 5,
+   "country": "Malásia",
+   "fob": 149012,
+   "kg": 114920,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 5,
+   "country": "Taiwan (Formosa)",
+   "fob": 39732,
+   "kg": 20934,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 5,
+   "country": "Índia",
+   "fob": 2971433,
+   "kg": 2615657,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 5,
+   "country": "Argentina",
+   "fob": 53873,
+   "kg": 5058,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 5,
+   "country": "China",
+   "fob": 2404323,
+   "kg": 1831096,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 5,
+   "country": "Estados Unidos",
+   "fob": 10189,
+   "kg": 601,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 5,
+   "country": "Hong Kong",
+   "fob": 85927,
+   "kg": 68400,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 5,
+   "country": "Indonésia",
+   "fob": 80779,
+   "kg": 29360,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 5,
+   "country": "Itália",
+   "fob": 89588,
+   "kg": 21551,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 5,
+   "country": "Tailândia",
+   "fob": 173949,
+   "kg": 34291,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 5,
+   "country": "Turquia",
+   "fob": 21883,
+   "kg": 14397,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 5,
+   "country": "Índia",
+   "fob": 709549,
+   "kg": 497649,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 5,
+   "country": "China",
+   "fob": 66908,
+   "kg": 50975,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 5,
+   "country": "Estados Unidos",
+   "fob": 1006,
+   "kg": 2,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 5,
+   "country": "Hong Kong",
+   "fob": 52344,
+   "kg": 37359,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 5,
+   "country": "Índia",
+   "fob": 12766,
+   "kg": 8063,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 6,
+   "country": "China",
+   "fob": 17538778,
+   "kg": 16085908,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 6,
+   "country": "Hong Kong",
+   "fob": 80182,
+   "kg": 74130,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 6,
+   "country": "Malásia",
+   "fob": 216300,
+   "kg": 162820,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 6,
+   "country": "Tailândia",
+   "fob": 20054,
+   "kg": 20672,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 6,
+   "country": "Taiwan (Formosa)",
+   "fob": 135117,
+   "kg": 41646,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 6,
+   "country": "Índia",
+   "fob": 1629127,
+   "kg": 1431256,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 6,
+   "country": "Argentina",
+   "fob": 56073,
+   "kg": 5265,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 6,
+   "country": "China",
+   "fob": 2219004,
+   "kg": 1808732,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 6,
+   "country": "Estados Unidos",
+   "fob": 10236,
+   "kg": 3278,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 6,
+   "country": "Hong Kong",
+   "fob": 168442,
+   "kg": 148008,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 6,
+   "country": "Indonésia",
+   "fob": 31385,
+   "kg": 14381,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 6,
+   "country": "Malásia",
+   "fob": 20369,
+   "kg": 10608,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 6,
+   "country": "Tailândia",
+   "fob": 100001,
+   "kg": 19503,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 6,
+   "country": "Turquia",
+   "fob": 23038,
+   "kg": 15157,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 6,
+   "country": "Índia",
+   "fob": 748947,
+   "kg": 462636,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 6,
+   "country": "China",
+   "fob": 154679,
+   "kg": 120862,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 6,
+   "country": "Estados Unidos",
+   "fob": 1006,
+   "kg": 2,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 6,
+   "country": "Hong Kong",
+   "fob": 18190,
+   "kg": 11967,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 6,
+   "country": "Índia",
+   "fob": 67690,
+   "kg": 50390,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 7,
+   "country": "China",
+   "fob": 25001752,
+   "kg": 23912878,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 7,
+   "country": "Indonésia",
+   "fob": 1897,
+   "kg": 874,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 7,
+   "country": "Malásia",
+   "fob": 164412,
+   "kg": 120134,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 7,
+   "country": "Taiwan (Formosa)",
+   "fob": 106783,
+   "kg": 16896,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 7,
+   "country": "Índia",
+   "fob": 2427147,
+   "kg": 2175833,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 7,
+   "country": "China",
+   "fob": 2531040,
+   "kg": 2158469,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 7,
+   "country": "Hong Kong",
+   "fob": 165763,
+   "kg": 151200,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 7,
+   "country": "Indonésia",
+   "fob": 57002,
+   "kg": 27610,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 7,
+   "country": "Tailândia",
+   "fob": 35291,
+   "kg": 4765,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 7,
+   "country": "Turquia",
+   "fob": 22366,
+   "kg": 14714,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 7,
+   "country": "Índia",
+   "fob": 497555,
+   "kg": 332570,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 7,
+   "country": "China",
+   "fob": 68137,
+   "kg": 53053,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 8,
+   "country": "China",
+   "fob": 20715075,
+   "kg": 19821643,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 8,
+   "country": "Malásia",
+   "fob": 21416,
+   "kg": 14580,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 8,
+   "country": "Tailândia",
+   "fob": 18040,
+   "kg": 9020,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 8,
+   "country": "Taiwan (Formosa)",
+   "fob": 224703,
+   "kg": 47700,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 8,
+   "country": "Índia",
+   "fob": 2942598,
+   "kg": 2550579,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 8,
+   "country": "China",
+   "fob": 2643909,
+   "kg": 2192226,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 8,
+   "country": "Hong Kong",
+   "fob": 32773,
+   "kg": 25200,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 8,
+   "country": "Itália",
+   "fob": 32724,
+   "kg": 3936,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 8,
+   "country": "Malásia",
+   "fob": 18124,
+   "kg": 10608,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 8,
+   "country": "Tailândia",
+   "fob": 209035,
+   "kg": 37806,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 8,
+   "country": "Turquia",
+   "fob": 34727,
+   "kg": 15234,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 8,
+   "country": "Índia",
+   "fob": 586557,
+   "kg": 407793,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 8,
+   "country": "China",
+   "fob": 74390,
+   "kg": 48669,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 8,
+   "country": "Turquia",
+   "fob": 42339,
+   "kg": 12892,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 8,
+   "country": "Índia",
+   "fob": 27099,
+   "kg": 24035,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 9,
+   "country": "Brasil",
+   "fob": 50918,
+   "kg": 48960,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 9,
+   "country": "China",
+   "fob": 21954850,
+   "kg": 20762672,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 9,
+   "country": "Hong Kong",
+   "fob": 56125,
+   "kg": 50700,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 9,
+   "country": "México",
+   "fob": 4347,
+   "kg": 566,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 9,
+   "country": "Tailândia",
+   "fob": 63281,
+   "kg": 44880,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 9,
+   "country": "Taiwan (Formosa)",
+   "fob": 200197,
+   "kg": 43296,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 9,
+   "country": "Índia",
+   "fob": 5164661,
+   "kg": 4422577,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 9,
+   "country": "Argentina",
+   "fob": 37262,
+   "kg": 3499,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 9,
+   "country": "China",
+   "fob": 2665253,
+   "kg": 2172968,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 9,
+   "country": "Equador",
+   "fob": 112565,
+   "kg": 37901,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 9,
+   "country": "Estados Unidos",
+   "fob": 35801,
+   "kg": 25439,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 9,
+   "country": "França",
+   "fob": 14159,
+   "kg": 1416,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 9,
+   "country": "Hong Kong",
+   "fob": 172872,
+   "kg": 151200,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 9,
+   "country": "Indonésia",
+   "fob": 56305,
+   "kg": 24700,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 9,
+   "country": "México",
+   "fob": 2205,
+   "kg": 519,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 9,
+   "country": "Tailândia",
+   "fob": 18357,
+   "kg": 4433,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 9,
+   "country": "Turquia",
+   "fob": 23166,
+   "kg": 15069,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 9,
+   "country": "Índia",
+   "fob": 707200,
+   "kg": 534152,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 9,
+   "country": "China",
+   "fob": 163909,
+   "kg": 109805,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 9,
+   "country": "Espanha",
+   "fob": 17,
+   "kg": 1,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 9,
+   "country": "Índia",
+   "fob": 96828,
+   "kg": 56814,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 10,
+   "country": "China",
+   "fob": 26678806,
+   "kg": 25569799,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 10,
+   "country": "Hong Kong",
+   "fob": 136527,
+   "kg": 125838,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 10,
+   "country": "Taiwan (Formosa)",
+   "fob": 56015,
+   "kg": 15758,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 10,
+   "country": "Índia",
+   "fob": 3684864,
+   "kg": 3144708,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 10,
+   "country": "Argentina",
+   "fob": 49464,
+   "kg": 4645,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 10,
+   "country": "China",
+   "fob": 3495466,
+   "kg": 2924357,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 10,
+   "country": "Hong Kong",
+   "fob": 56496,
+   "kg": 48700,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 10,
+   "country": "Itália",
+   "fob": 21748,
+   "kg": 3653,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 10,
+   "country": "Tailândia",
+   "fob": 11075,
+   "kg": 1793,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 10,
+   "country": "Turquia",
+   "fob": 93699,
+   "kg": 61102,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 10,
+   "country": "Índia",
+   "fob": 631899,
+   "kg": 406693,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 10,
+   "country": "China",
+   "fob": 125374,
+   "kg": 95438,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 10,
+   "country": "Índia",
+   "fob": 31905,
+   "kg": 24035,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 11,
+   "country": "China",
+   "fob": 18835037,
+   "kg": 17776361,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 11,
+   "country": "Estados Unidos",
+   "fob": 8110,
+   "kg": 401,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 11,
+   "country": "Hong Kong",
+   "fob": 178220,
+   "kg": 176580,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 11,
+   "country": "Itália",
+   "fob": 9085,
+   "kg": 575,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 11,
+   "country": "Malásia",
+   "fob": 30663,
+   "kg": 29160,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 11,
+   "country": "Taiwan (Formosa)",
+   "fob": 233762,
+   "kg": 62766,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 11,
+   "country": "Índia",
+   "fob": 2409005,
+   "kg": 2175507,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 11,
+   "country": "Argentina",
+   "fob": 72801,
+   "kg": 6836,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 11,
+   "country": "China",
+   "fob": 2350279,
+   "kg": 1998533,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 11,
+   "country": "Hong Kong",
+   "fob": 208361,
+   "kg": 174060,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 11,
+   "country": "Tailândia",
+   "fob": 9677,
+   "kg": 1440,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 11,
+   "country": "Turquia",
+   "fob": 65277,
+   "kg": 42945,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 11,
+   "country": "Índia",
+   "fob": 679718,
+   "kg": 440816,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 11,
+   "country": "China",
+   "fob": 15752,
+   "kg": 12319,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 11,
+   "country": "Hong Kong",
+   "fob": 61516,
+   "kg": 48565,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 11,
+   "country": "Polônia",
+   "fob": 16,
+   "kg": 0,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 11,
+   "country": "Turquia",
+   "fob": 31123,
+   "kg": 9721,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 11,
+   "country": "Índia",
+   "fob": 152361,
+   "kg": 104830,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 12,
+   "country": "China",
+   "fob": 16178851,
+   "kg": 15666092,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 12,
+   "country": "Estados Unidos",
+   "fob": 1690,
+   "kg": 83,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 12,
+   "country": "Hong Kong",
+   "fob": 27426,
+   "kg": 24480,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 12,
+   "country": "Indonésia",
+   "fob": 814,
+   "kg": 409,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 12,
+   "country": "Taiwan (Formosa)",
+   "fob": 41011,
+   "kg": 7680,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2025,
+   "month": 12,
+   "country": "Índia",
+   "fob": 861188,
+   "kg": 748519,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 12,
+   "country": "China",
+   "fob": 2228560,
+   "kg": 1869405,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 12,
+   "country": "Itália",
+   "fob": 12941,
+   "kg": 689,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 12,
+   "country": "Tailândia",
+   "fob": 19354,
+   "kg": 2880,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 12,
+   "country": "Turquia",
+   "fob": 41053,
+   "kg": 27008,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2025,
+   "month": 12,
+   "country": "Índia",
+   "fob": 265135,
+   "kg": 175772,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 12,
+   "country": "China",
+   "fob": 140600,
+   "kg": 105852,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2025,
+   "month": 12,
+   "country": "Índia",
+   "fob": 40706,
+   "kg": 30037,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 1,
+   "country": "Bulgária",
+   "fob": 10719,
+   "kg": 2039,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 1,
+   "country": "China",
+   "fob": 23196844,
+   "kg": 23117862,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 1,
+   "country": "Estados Unidos",
+   "fob": 26438,
+   "kg": 24480,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 1,
+   "country": "Hong Kong",
+   "fob": 68260,
+   "kg": 67968,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 1,
+   "country": "Malásia",
+   "fob": 614,
+   "kg": 195,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 1,
+   "country": "Tailândia",
+   "fob": 18040,
+   "kg": 9020,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 1,
+   "country": "Taiwan (Formosa)",
+   "fob": 319642,
+   "kg": 76396,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 1,
+   "country": "Índia",
+   "fob": 2024629,
+   "kg": 1861674,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 1,
+   "country": "Argentina",
+   "fob": 59844,
+   "kg": 5619,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 1,
+   "country": "China",
+   "fob": 3129511,
+   "kg": 2486163,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 1,
+   "country": "Estados Unidos",
+   "fob": 411,
+   "kg": 110,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 1,
+   "country": "França",
+   "fob": 26142,
+   "kg": 2614,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 1,
+   "country": "Hong Kong",
+   "fob": 117282,
+   "kg": 105588,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 1,
+   "country": "Indonésia",
+   "fob": 4308,
+   "kg": 1584,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 1,
+   "country": "Malásia",
+   "fob": 22418,
+   "kg": 10574,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 1,
+   "country": "Tailândia",
+   "fob": 23156,
+   "kg": 6792,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 1,
+   "country": "Taiwan (Formosa)",
+   "fob": 5831,
+   "kg": 232,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 1,
+   "country": "Turquia",
+   "fob": 41730,
+   "kg": 27454,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 1,
+   "country": "Índia",
+   "fob": 663051,
+   "kg": 393158,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 1,
+   "country": "China",
+   "fob": 127855,
+   "kg": 95022,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 1,
+   "country": "Índia",
+   "fob": 43830,
+   "kg": 16484,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 2,
+   "country": "China",
+   "fob": 22267270,
+   "kg": 21519423,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 2,
+   "country": "Hong Kong",
+   "fob": 151180,
+   "kg": 147915,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 2,
+   "country": "México",
+   "fob": 5265,
+   "kg": 595,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 2,
+   "country": "Taiwan (Formosa)",
+   "fob": 30600,
+   "kg": 7200,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 2,
+   "country": "Índia",
+   "fob": 2831404,
+   "kg": 2578996,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 2,
+   "country": "China",
+   "fob": 2482160,
+   "kg": 2121291,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 2,
+   "country": "Hong Kong",
+   "fob": 139061,
+   "kg": 126000,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 2,
+   "country": "Tailândia",
+   "fob": 28042,
+   "kg": 10864,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 2,
+   "country": "Índia",
+   "fob": 722214,
+   "kg": 448601,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 2,
+   "country": "China",
+   "fob": 219640,
+   "kg": 170504,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 2,
+   "country": "Itália",
+   "fob": 1409,
+   "kg": 120,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 2,
+   "country": "Turquia",
+   "fob": 172,
+   "kg": 94,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 2,
+   "country": "Índia",
+   "fob": 34782,
+   "kg": 24920,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 3,
+   "country": "Bulgária",
+   "fob": 10723,
+   "kg": 2057,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 3,
+   "country": "China",
+   "fob": 29235364,
+   "kg": 28421925,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 3,
+   "country": "Hong Kong",
+   "fob": 45514,
+   "kg": 48960,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 3,
+   "country": "Itália",
+   "fob": 1493,
+   "kg": 96,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 3,
+   "country": "Taiwan (Formosa)",
+   "fob": 335696,
+   "kg": 79758,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 3,
+   "country": "Turquia",
+   "fob": 3055,
+   "kg": 360,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 3,
+   "country": "Índia",
+   "fob": 1467926,
+   "kg": 1341467,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 3,
+   "country": "China",
+   "fob": 3905620,
+   "kg": 3341244,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 3,
+   "country": "Estados Unidos",
+   "fob": 923,
+   "kg": 54,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 3,
+   "country": "Tailândia",
+   "fob": 9677,
+   "kg": 1440,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 3,
+   "country": "Turquia",
+   "fob": 88369,
+   "kg": 58138,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 3,
+   "country": "Índia",
+   "fob": 349362,
+   "kg": 213161,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 3,
+   "country": "China",
+   "fob": 292194,
+   "kg": 198857,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 3,
+   "country": "Espanha",
+   "fob": 359,
+   "kg": 1,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 3,
+   "country": "Itália",
+   "fob": 1143,
+   "kg": 100,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 3,
+   "country": "Polônia",
+   "fob": 116,
+   "kg": 0,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 3,
+   "country": "Turquia",
+   "fob": 211,
+   "kg": 78,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 3,
+   "country": "Índia",
+   "fob": 58800,
+   "kg": 46140,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 4,
+   "country": "Bulgária",
+   "fob": 32057,
+   "kg": 6018,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 4,
+   "country": "China",
+   "fob": 32491521,
+   "kg": 30428045,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 4,
+   "country": "Estados Unidos",
+   "fob": 5180,
+   "kg": 1200,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 4,
+   "country": "Hong Kong",
+   "fob": 195156,
+   "kg": 195120,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 4,
+   "country": "Índia",
+   "fob": 1330390,
+   "kg": 1142844,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 4,
+   "country": "Argentina",
+   "fob": 57891,
+   "kg": 5436,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 4,
+   "country": "China",
+   "fob": 3059617,
+   "kg": 2536930,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 4,
+   "country": "Hong Kong",
+   "fob": 27389,
+   "kg": 24480,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 4,
+   "country": "Indonésia",
+   "fob": 35139,
+   "kg": 14369,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 4,
+   "country": "Tailândia",
+   "fob": 47272,
+   "kg": 7000,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 4,
+   "country": "Índia",
+   "fob": 625483,
+   "kg": 466526,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 4,
+   "country": "China",
+   "fob": 91545,
+   "kg": 73120,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 4,
+   "country": "Espanha",
+   "fob": 72,
+   "kg": 1,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 4,
+   "country": "Japão",
+   "fob": 581,
+   "kg": 126,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 4,
+   "country": "Polônia",
+   "fob": 55,
+   "kg": 0,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 4,
+   "country": "Índia",
+   "fob": 50229,
+   "kg": 30000,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 5,
+   "country": "China",
+   "fob": 41045447,
+   "kg": 32960895,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 5,
+   "country": "Estados Unidos",
+   "fob": 10339,
+   "kg": 2084,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 5,
+   "country": "Hong Kong",
+   "fob": 213168,
+   "kg": 149040,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 5,
+   "country": "Malásia",
+   "fob": 15013,
+   "kg": 11275,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 5,
+   "country": "Taiwan (Formosa)",
+   "fob": 6104,
+   "kg": 1056,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 5,
+   "country": "Índia",
+   "fob": 1883715,
+   "kg": 1435131,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 5,
+   "country": "China",
+   "fob": 3186349,
+   "kg": 2297060,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 5,
+   "country": "Estados Unidos",
+   "fob": 12924,
+   "kg": 2599,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 5,
+   "country": "Hong Kong",
+   "fob": 36230,
+   "kg": 24480,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 5,
+   "country": "Indonésia",
+   "fob": 405,
+   "kg": 81,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 5,
+   "country": "Itália",
+   "fob": 20700,
+   "kg": 3273,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 5,
+   "country": "Malásia",
+   "fob": 16487,
+   "kg": 10767,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 5,
+   "country": "Portugal",
+   "fob": 1720,
+   "kg": 320,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 5,
+   "country": "Tailândia",
+   "fob": 47967,
+   "kg": 9346,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 5,
+   "country": "Turquia",
+   "fob": 45860,
+   "kg": 29397,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 5,
+   "country": "Índia",
+   "fob": 602997,
+   "kg": 415048,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 5,
+   "country": "China",
+   "fob": 268019,
+   "kg": 170053,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 5,
+   "country": "Itália",
+   "fob": 4257,
+   "kg": 364,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 5,
+   "country": "Polônia",
+   "fob": 3708,
+   "kg": 319,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 5,
+   "country": "Turquia",
+   "fob": 5168,
+   "kg": 1175,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 5,
+   "country": "Áustria",
+   "fob": 18,
+   "kg": 0,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 5,
+   "country": "Índia",
+   "fob": 92482,
+   "kg": 70920,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 6,
+   "country": "Bulgária",
+   "fob": 40985,
+   "kg": 7935,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 6,
+   "country": "China",
+   "fob": 18044898,
+   "kg": 13440606,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 6,
+   "country": "Egito",
+   "fob": 37094,
+   "kg": 23040,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 6,
+   "country": "Equador",
+   "fob": 1125,
+   "kg": 134,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 6,
+   "country": "Indonésia",
+   "fob": 64865,
+   "kg": 45360,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 6,
+   "country": "Malásia",
+   "fob": 25519,
+   "kg": 23034,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 6,
+   "country": "Taiwan (Formosa)",
+   "fob": 253034,
+   "kg": 52004,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 6,
+   "country": "Índia",
+   "fob": 3205365,
+   "kg": 2317137,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 6,
+   "country": "China",
+   "fob": 2615556,
+   "kg": 1797934,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 6,
+   "country": "Hong Kong",
+   "fob": 74899,
+   "kg": 50148,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 6,
+   "country": "Indonésia",
+   "fob": 40339,
+   "kg": 15925,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 6,
+   "country": "Itália",
+   "fob": 50089,
+   "kg": 6760,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 6,
+   "country": "Tailândia",
+   "fob": 42848,
+   "kg": 6097,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 6,
+   "country": "Turquia",
+   "fob": 21528,
+   "kg": 13800,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 6,
+   "country": "Índia",
+   "fob": 664985,
+   "kg": 409330,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 6,
+   "country": "China",
+   "fob": 77329,
+   "kg": 48523,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 6,
+   "country": "Espanha",
+   "fob": 254,
+   "kg": 5,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 6,
+   "country": "Polônia",
+   "fob": 106,
+   "kg": 0,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 6,
+   "country": "Turquia",
+   "fob": 349,
+   "kg": 167,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 6,
+   "country": "Índia",
+   "fob": 103213,
+   "kg": 77370,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 7,
+   "country": "China",
+   "fob": 21989607,
+   "kg": 16553000,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 7,
+   "country": "Egito",
+   "fob": 241399,
+   "kg": 152280,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 7,
+   "country": "Hong Kong",
+   "fob": 62237,
+   "kg": 48960,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 7,
+   "country": "Indonésia",
+   "fob": 38749,
+   "kg": 22660,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 7,
+   "country": "Malásia",
+   "fob": 34216,
+   "kg": 21626,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 7,
+   "country": "Taiwan (Formosa)",
+   "fob": 293822,
+   "kg": 59136,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 7,
+   "country": "Índia",
+   "fob": 1305884,
+   "kg": 934902,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 7,
+   "country": "Argentina",
+   "fob": 44730,
+   "kg": 4200,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 7,
+   "country": "China",
+   "fob": 3062799,
+   "kg": 2124634,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 7,
+   "country": "Indonésia",
+   "fob": 22769,
+   "kg": 6760,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 7,
+   "country": "Tailândia",
+   "fob": 13639,
+   "kg": 1710,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 7,
+   "country": "Turquia",
+   "fob": 53439,
+   "kg": 24290,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 7,
+   "country": "Índia",
+   "fob": 230425,
+   "kg": 137036,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 7,
+   "country": "China",
+   "fob": 210253,
+   "kg": 123423,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 7,
+   "country": "Espanha",
+   "fob": 86,
+   "kg": 1,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 7,
+   "country": "Estados Unidos",
+   "fob": 58,
+   "kg": 1,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 7,
+   "country": "Hungria",
+   "fob": 2084,
+   "kg": 18,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 7,
+   "country": "Itália",
+   "fob": 6005,
+   "kg": 527,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 7,
+   "country": "Polônia",
+   "fob": 181,
+   "kg": 0,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 7,
+   "country": "Índia",
+   "fob": 84371,
+   "kg": 54336,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 8,
+   "country": "China",
+   "fob": 15394307,
+   "kg": 12122635,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 8,
+   "country": "Egito",
+   "fob": 976641,
+   "kg": 610452,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 8,
+   "country": "Estados Unidos",
+   "fob": 10813,
+   "kg": 580,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 8,
+   "country": "Indonésia",
+   "fob": 40197,
+   "kg": 18271,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 8,
+   "country": "Itália",
+   "fob": 6499,
+   "kg": 790,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 8,
+   "country": "Malásia",
+   "fob": 92328,
+   "kg": 69125,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 8,
+   "country": "Taiwan (Formosa)",
+   "fob": 147251,
+   "kg": 42150,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 8,
+   "country": "Índia",
+   "fob": 5852211,
+   "kg": 4185946,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 8,
+   "country": "China",
+   "fob": 2547764,
+   "kg": 1839946,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 8,
+   "country": "Tailândia",
+   "fob": 39198,
+   "kg": 6707,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 8,
+   "country": "Turquia",
+   "fob": 22763,
+   "kg": 14250,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 8,
+   "country": "Índia",
+   "fob": 1040667,
+   "kg": 641847,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 8,
+   "country": "China",
+   "fob": 159615,
+   "kg": 96047,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 8,
+   "country": "Espanha",
+   "fob": 28,
+   "kg": 4,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 8,
+   "country": "Itália",
+   "fob": 6089,
+   "kg": 529,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 8,
+   "country": "Polônia",
+   "fob": 3151,
+   "kg": 265,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 8,
+   "country": "Turquia",
+   "fob": 162,
+   "kg": 60,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 9,
+   "country": "China",
+   "fob": 25082901,
+   "kg": 20198547,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 9,
+   "country": "Egito",
+   "fob": 410701,
+   "kg": 254520,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 9,
+   "country": "Hong Kong",
+   "fob": 115327,
+   "kg": 97020,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 9,
+   "country": "Indonésia",
+   "fob": 77497,
+   "kg": 45320,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 9,
+   "country": "Malásia",
+   "fob": 81195,
+   "kg": 55634,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 9,
+   "country": "Tailândia",
+   "fob": 13097,
+   "kg": 4018,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 9,
+   "country": "Taiwan (Formosa)",
+   "fob": 4815,
+   "kg": 1152,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023310",
+   "year": 2026,
+   "month": 9,
+   "country": "Índia",
+   "fob": 2421294,
+   "kg": 1748166,
+   "code_name": "Fios texturizados de poliésteres, crus"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 9,
+   "country": "Argentina",
+   "fob": 412,
+   "kg": 100,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 9,
+   "country": "China",
+   "fob": 3888424,
+   "kg": 2868739,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 9,
+   "country": "Indonésia",
+   "fob": 25114,
+   "kg": 9090,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 9,
+   "country": "Itália",
+   "fob": 541,
+   "kg": 100,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 9,
+   "country": "Tailândia",
+   "fob": 25258,
+   "kg": 4254,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 9,
+   "country": "Turquia",
+   "fob": 75272,
+   "kg": 44277,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023320",
+   "year": 2026,
+   "month": 9,
+   "country": "Índia",
+   "fob": 359816,
+   "kg": 215009,
+   "code_name": "Fios texturizados de poliésteres, tintos"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 9,
+   "country": "China",
+   "fob": 169832,
+   "kg": 95599,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 9,
+   "country": "Polônia",
+   "fob": 130,
+   "kg": 1,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 9,
+   "country": "Turquia",
+   "fob": 26261,
+   "kg": 6631,
+   "code_name": "Outros fios texturizados de poliésteres"
+  },
+  {
+   "ncm": "54023390",
+   "year": 2026,
+   "month": 9,
+   "country": "Índia",
+   "fob": 32640,
+   "kg": 24035,
+   "code_name": "Outros fios texturizados de poliésteres"
+  }
+ ]
+}

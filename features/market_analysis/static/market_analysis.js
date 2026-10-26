@@ -217,7 +217,8 @@
       if (!inputs.to.value) setDefault(inputs.to, meta.default.to);
       periodHint.textContent = "최신 제공 월 " + meta.latest.month + " (ComexStat 갱신일 " + meta.latest.updated +
         "). 기본값은 최신 월까지 최근 " + meta.default.months + "개월이며 최대 " + meta.max_months + "개월까지 조회할 수 있습니다." +
-        (meta.latest.stale ? " 오늘 최신 월을 다시 확인하지 못해 이전에 확인한 값을 사용했습니다." : "");
+        (meta.latest.snapshot ? " ComexStat에 연결하지 못해 MDIC 공개 원본 자료(기준: " + String(meta.latest.checked_at || "").slice(0, 10) + ")의 최신 월을 사용했습니다."
+          : meta.latest.stale ? " 오늘 최신 월을 다시 확인하지 못해 이전에 확인한 값을 사용했습니다." : "");
     } else {
       periodHint.textContent = "최신 제공 월을 확인하지 못했습니다(" + (meta.error ? meta.error.message : "") +
         "). 기간을 직접 선택해 주세요. 최대 " + meta.max_months + "개월입니다.";
@@ -423,6 +424,10 @@
     if (d.notes.length) {
       html += '<details class="ma-details ma-period-notes"><summary>통계 참고 사항 ' + d.notes.length + "건 보기</summary>" +
         d.notes.map(function (n) { return '<div class="notice notice-info"><p>' + esc(n) + "</p></div>"; }).join("") + "</details>";
+    }
+    if (src.cache_status === "snapshot") {
+      html += '<div class="notice notice-warning" role="status"><p class="notice-title">' + esc(snapshotLabel(src)) + "</p><p>" +
+        "ComexStat 조회에 실패해 MDIC가 공개한 원본 CSV를 미리 받아 요약한 시연용 자료로 표시했습니다. 실시간 조회 결과가 아닙니다.</p></div>";
     }
     if (src.cache_status === "stale") {
       html += '<div class="notice notice-warning" role="status"><p class="notice-title">이전 자료 사용</p><p>ComexStat 조회에 실패해 ' +
@@ -727,9 +732,15 @@
       "</tr></thead><tbody>" + rows.join("") + "</tbody></table></div>";
   }
 
+  // "MDIC 공개 원본 자료(기준: YYYY-MM-DD) 사용" — 스냅샷 대체 표시(기준일 = 원본을 받은 날)
+  function snapshotLabel(src) {
+    return "MDIC 공개 원본 자료(기준: " + String(src.fetched_at || "").slice(0, 10) + ") 사용";
+  }
+
   function sourcesHtml(d, shown) {
     const src = d.sources[0];
-    const cache = { fresh: "이번 조회에서 받음", cached: "오늘 받은 자료 재사용", stale: "이전 자료 사용(최신 조회 실패)" }[src.cache_status];
+    const cache = src.cache_status === "snapshot" ? snapshotLabel(src) + "(ComexStat 조회 실패)"
+      : { fresh: "이번 조회에서 받음", cached: "6시간 안에 받은 자료 재사용", stale: "이전 자료 사용(최신 조회 실패)" }[src.cache_status];
     let html = paneOpen("s5", "⑤ 근거 자료", shown) + '<ul class="ma-sources">';
     html += "<li><strong>" + esc(src.name) + "</strong> · " + linkHtml(src.url) + "<br>" +
       esc("지표: " + src.metrics + " · 자료 갱신일 " + (src.data_updated || "확인 안 됨") + " · 최신 제공 월 " + (src.latest_month || "확인 안 됨") +

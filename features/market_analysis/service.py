@@ -116,6 +116,64 @@ _latest_cache = {}   # {"at": monotonic, "value": (y, m, updated), "checked_at":
 _rows_cache = {}     # (system, code) → {"at", "used", "year_from", "year_to", "rows", "fetched_at"}
 
 
+# ---------- 스냅샷(ComexStat 점검·장애 대비) ----------
+# build_snapshot.py로 수동 생성한 MDIC 공개 원본 CSV 요약. ComexStat 조회가 실패하고 메모리 캐시도 없을 때만 씁니다.
+SNAPSHOT_FILE = Path(__file__).resolve().parent / "data" / "comexstat_snapshot.json"
+SNAPSHOT_LABEL = "MDIC 공개 원본 자료"
+_snapshot_state = {"loaded": False, "data": None}
+
+
+def load_snapshot():
+    """스냅샷 dict 또는 None(파일 없음·깨짐). 처음 한 번만 읽습니다."""
+    with _cache_lock:
+        if not _snapshot_state["loaded"]:
+            data = None
+            try:
+                data = json.loads(SNAPSHOT_FILE.read_text(encoding="utf-8"))
+                if not isinstance(data.get("rows"), list) or not data.get("source", {}).get("latest_month"):
+                    data = None
+            except (OSError, ValueError, AttributeError):
+                data = None
+            _snapshot_state.update(loaded=True, data=data)
+        return _snapshot_state["data"]
+
+
+def snapshot_date(snap):
+    return str(snap["source"].get("retrieved_at") or "")[:10]
+
+
+def snapshot_rows(code_system, code, year_from, year_to):
+    """스냅샷에서 query_imports와 같은 형식의 행. 범위(코드·연도) 밖이면 None.
+    hs6은 그 6자리로 시작하는 NCM 행을 연·월·국가별로 합산합니다."""
+    snap = load_snapshot()
+    if not snap:
+        return None
+    src = snap["source"]
+    prefix = str(src.get("ncm_prefix") or "")
+    years = set(src.get("years") or [])
+    if not all(y in years for y in range(year_from, year_to + 1)):
+        return None
+    if code_system == "ncm" and code.startswith(prefix):
+        return [{k: r[k] for k in ("year", "month", "country", "fob", "kg", "code_name")}
+                for r in snap["rows"] if r["ncm"] == code and year_from <= r["year"] <= year_to]
+    if code_system == "hs6" and code == prefix:
+        name = (snap.get("code_names") or {}).get("hs6", {}).get(code)
+        sums = {}
+        for r in snap["rows"]:
+            if r["ncm"].startswith(code) and year_from <= r["year"] <= year_to:
+                acc = sums.setdefault((r["year"], r["month"], r["country"]), [0, 0])
+                acc[0] += r["fob"] or 0
+                acc[1] += r["kg"] or 0
+        return [{"year": y, "month": m, "country": c, "fob": fob, "kg": kg, "code_name": name}
+                for (y, m, c), (fob, kg) in sorted(sums.items())]
+    return None
+
+
+def snapshot_code_name(code_system, code):
+    snap = load_snapshot() or {}
+    return ((snap.get("code_names") or {}).get(code_system) or {}).get(code)
+
+
 def _usable(entry, refresh):
     """캐시를 그대로 쓸지: 6시간 안이고, 다시 불러오기여도 받은 지 10분 안이면 재사용."""
     age = _monotonic() - entry["at"]
@@ -133,6 +191,11 @@ def get_latest(refresh=False):
     except ComexStatError:
         if cached:
             return cached, True
+        snap = load_snapshot()
+        if snap:  # 캐시도 없으면 스냅샷의 최신 월(메모리 캐시에는 넣지 않아 다음 요청에서 다시 확인)
+            y, m = (int(v) for v in snap["source"]["latest_month"].split("-"))
+            return {"at": _monotonic(), "value": (y, m, snapshot_date(snap)), "checked_at": snap["source"].get("retrieved_at"),
+                    "snapshot": True}, True
         raise
     entry = {"at": _monotonic(), "value": value, "checked_at": now_kst().isoformat(timespec="seconds")}
     with _cache_lock:
@@ -142,7 +205,7 @@ def get_latest(refresh=False):
 
 
 def _get_rows(code_system, code, year_from, year_to, refresh):
-    """(rows, cache_status, fetched_at). cache_status: fresh | cached | stale."""
+    """(rows, cache_status, fetched_at). cache_status: fresh | cached | stale | snapshot."""
     key = (code_system, code)
     with _cache_lock:
         cached = _rows_cache.get(key)
@@ -156,6 +219,9 @@ def _get_rows(code_system, code, year_from, year_to, refresh):
     except ComexStatError:
         if covers:
             return cached["rows"], "stale", cached["fetched_at"]
+        snap_rows = snapshot_rows(code_system, code, year_from, year_to)
+        if snap_rows is not None:  # 캐시도 없으면 MDIC 공개 원본 스냅샷(범위 밖이면 원래 오류)
+            return snap_rows, "snapshot", load_snapshot()["source"].get("retrieved_at")
         raise
     now = _monotonic()
     entry = {"at": now, "used": now, "year_from": year_from, "year_to": year_to, "rows": rows,
@@ -171,6 +237,7 @@ def clear_cache():
     with _cache_lock:
         _latest_cache.clear()
         _rows_cache.clear()
+        _snapshot_state.update(loaded=False, data=None)  # 스냅샷 파일을 다시 읽게 함
     with _ai_cache_lock:
         _ai_cache.clear()
 
@@ -478,7 +545,8 @@ def meta():
         return out
     y, m, updated = entry["value"]
     latest = month_index(y, m)
-    out["latest"] = {"month": month_label(latest), "updated": updated, "checked_at": entry["checked_at"], "stale": stale}
+    out["latest"] = {"month": month_label(latest), "updated": updated, "checked_at": entry["checked_at"], "stale": stale,
+                     "snapshot": bool(entry.get("snapshot"))}
     out["default"]["from"] = month_label(latest - DEFAULT_MONTHS + 1)
     out["default"]["to"] = month_label(latest)
     return out
@@ -499,7 +567,13 @@ def analyze(payload):
     rows, cache_status, fetched_at = _get_rows(req.code_system, req.code, year_from, year_to, req.refresh)
 
     code_name = next((r["code_name"] for r in rows if r.get("code_name")), None)
-    if not rows:
+    if not rows and cache_status == "snapshot":
+        # 스냅샷 대체 중에는 코드표 조회(ComexStat)도 못 하므로 스냅샷 코드표로 확인합니다.
+        code_name = snapshot_code_name(req.code_system, req.code)
+        if code_name is None:
+            raise InputError({"code": "MDIC 공개 원본 자료에서 %s 코드 %s를 찾지 못했습니다. 코드를 확인해 주세요." % (
+                CODE_LABEL[req.code_system], req.code)})
+    elif not rows:
         # 결과 없음과 존재하지 않는 코드를 구분합니다(현행 코드표 기준).
         found = comex.lookup_code(req.code_system, req.code)
         if found is None:
@@ -513,9 +587,13 @@ def analyze(payload):
                            "같은 조건이라도 조회 시점에 따라 최근 수치가 달라질 수 있습니다.")
     if latest_error:
         result["notes"].insert(0, "최신 제공 월을 확인하지 못해 종료 월 상한을 검사하지 않았습니다.")
+    snap = load_snapshot() if cache_status == "snapshot" else None
+    if snap:
+        result["notes"].insert(0, "ComexStat 조회에 실패해 %s(기준: %s)를 사용했습니다. MDIC가 공개한 원본 CSV를 미리 받아 요약한 시연용 자료이며 "
+                               "실시간 조회 결과가 아닙니다." % (SNAPSHOT_LABEL, snapshot_date(snap)))
     result["sources"] = [{
-        "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
-        "url": comex.SITE_URL,
+        "name": snap["source"]["name"] if snap else "ComexStat (브라질 산업통상서비스부 MDIC)",
+        "url": (snap["source"]["files"][-1]["url"] if snap and snap["source"].get("files") else comex.SITE_URL),
         "api": comex.BASE_URL + "/general",
         "metrics": "FOB 금액(USD), 순중량(kg)",
         "data_updated": latest_entry["value"][2] if latest_entry else None,
