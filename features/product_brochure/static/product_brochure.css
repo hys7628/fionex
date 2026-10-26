@@ -115,7 +115,40 @@
   margin-top: var(--space-4);
 }
 
-.feature-product_brochure .catalog-dialog {
+/* ----- AI 표지 배경: 분위기 선택·후보 미리보기(실제 표지와 같은 크롭·제목 위치를 축소해 표시) ----- */
+.feature-product_brochure .product_brochure-cover {
+  margin-top: var(--space-6);
+}
+
+.feature-product_brochure .cover-moods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.feature-product_brochure .cover-candidate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+
+.feature-product_brochure .cover-candidate-preview {
+  --catalog-scale: 0.3;
+  flex: none;
+  box-shadow: var(--shadow-md);
+}
+
+.feature-product_brochure .cover-candidate-info {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* 카탈로그 문서 변수: 미리보기 대화상자와 AI 표지 후보 축소 미리보기가 같은 값을 씀 */
+.feature-product_brochure .catalog-dialog,
+.feature-product_brochure .cover-candidate-preview {
   --catalog-paper: #f7f5ef;
   --catalog-paper-deep: #efebe2;
   --catalog-ink: #1c2622;
@@ -128,6 +161,9 @@
   --catalog-page-h: 1123px;
   --catalog-pad: calc(var(--space-12) + var(--space-4));
   --catalog-footer-h: calc(var(--space-12) + var(--space-8));
+}
+
+.feature-product_brochure .catalog-dialog {
   width: min(1240px, calc(100vw - var(--space-8)));
   max-width: none;
   height: calc(100dvh - var(--space-8));

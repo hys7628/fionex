@@ -126,8 +126,10 @@ class PanelRenderTests(RenderedPanel):
             self.assertIn(label, self.text)
         disabled = [a for t, a in self.parser.elements if t == "button" and "disabled" in a]
         # 처음 화면: PDF 분석·카탈로그 생성(조건 충족 전)·PDF 다운로드(생성 결과 없음)·생성 결과 보기(결과 없음)·AI 원문 되돌리기(수정 없음)
-        self.assertEqual(len(disabled), 5)
-        for marker in ("data-analyze", "data-generate", "data-pdf-download", "data-result-open", "data-result-edit-restore"):
+        # ·AI 표지 배경 생성(적용 스냅샷 없음)·기본 배경으로 복원(적용 이미지 없음)
+        self.assertEqual(len(disabled), 7)
+        for marker in ("data-analyze", "data-generate", "data-pdf-download", "data-result-open", "data-result-edit-restore",
+                       "data-cover-generate", "data-cover-restore"):
             self.assertTrue(any(marker in a for a in disabled), marker)
         generate = [a for t, a in self.parser.elements if t == "button" and "data-generate" in a]
         self.assertEqual(len(generate), 1)
@@ -252,7 +254,7 @@ class CatalogPreviewTests(RenderedPanel):
         start = JS.index("/* ---------- 카탈로그 PDF 다운로드 ----------")
         block = JS[start:]
         self.assertEqual(JS.count("downloadBlob("), 1)                 # 다운로드 호출은 성공 경로 한 곳
-        self.assertEqual(JS.count("fetch("), 2)                        # 기존 postRequest + PDF 전용 sendPdf
+        self.assertEqual(JS.count("fetch("), 3)                        # 기존 postRequest + PDF 전용 sendPdf + 표지 sendCover
         self.assertIn("Review.PDF_URL", block)
         self.assertIn("const PDF_TIMEOUT_MS = 30000;", JS)
         self.assertIn("buildPdfPayload(Review.cloneData(generation.current))", block)  # 클릭 시점 적용본 스냅샷
@@ -282,9 +284,43 @@ class CatalogPreviewTests(RenderedPanel):
         self.assertEqual(JS.count("Review.isResultStale(generation, generationContext())"), 4)
         self.assertNotIn("isResultStale", JS[JS.index('pdfBtn.addEventListener("click"'):])  # 클릭 처리에서 따로 판정하지 않음
 
+    def test_cover_markup_and_wiring(self):
+        html = create_app().test_client().get("/").get_data(as_text=True)
+        start = html.index("data-cover>")
+        section = html[start:html.index("</section>", start)]
+        for text in ("API 비용", "실제 제품 사진이 아닌 AI 콘셉트 이미지", "미니멀", "프리미엄", "부드러운 소재감",
+                     "AI 표지 배경 생성", "표지에 적용", "후보 버리기", "기본 배경으로 복원",
+                     "Imagem conceitual gerada por IA — não representa o produto real."):
+            self.assertIn(text, section)
+        self.assertIn("data-work-ignore", section[:section.index("data-cover-generate")])  # 분위기 선택만으로 작업 상태 없음
+        self.assertIn("data-cover-candidate hidden", section)
+        self.assertIn('data-cover-error role="alert" hidden', section)
+        self.assertEqual(section.count('type="radio"'), 3)
+        block = JS[JS.index("/* ---------- AI 표지 배경 ----------"):]
+        # 클릭 시점 적용 스냅샷 + 분위기 3필드만, 210초 대기, 자동 적용 없음(후보만), PDF 차단
+        self.assertIn("Review.buildCoverPayload(snapshot, selectedCoverMood())", block)
+        self.assertIn("const COVER_TIMEOUT_MS = 210000;", JS)
+        self.assertIn("candidate: { url: URL.createObjectURL(data.blob)", block)
+        self.assertIn("applied: cover.applied,", block[block.index("onSuccess"):block.index("onFailure")])
+        self.assertIn("coverApplied: !!cover.applied", JS)
+        self.assertIn('resultDialog.querySelector(".catalog-cover-figure img")', block)  # 결과 1쪽 표지만
+        self.assertNotIn("data-catalog-dialog", block)                                  # 고정 시안 미변경
+        self.assertIn("Review.coverUrlsToRevoke(cover, next).forEach(function (url) { URL.revokeObjectURL(url); });", JS)
+        self.assertEqual(JS.count("URL.revokeObjectURL("), 1)          # 해제는 상태 교체 한 곳에서만(AppShell 제외)
+        for forbidden in ("localStorage", "sessionStorage", "indexedDB", "innerHTML", "setInterval"):
+            self.assertNotIn(forbidden, block)
+        self.assertIn("!!cover.candidate || !!cover.applied", JS[JS.index("function syncWork()"):])  # 이탈 보호
+        # 문구 재생성 성공 처리에서 표지 이미지를 지우지 않음
+        gen = JS[JS.index("const generator = Review.createGenerator"):JS.index("generateBtn.addEventListener")]
+        self.assertNotIn("cover", gen.replace("coverBusy", ""))
+
     def test_result_revision_invalidates_download_mark(self):
-        # 생성 성공·편집 적용·원문 복원마다 결과 버전 증가 → 이전 다운로드 요청 표시를 새 내용에 쓰지 않음
-        self.assertEqual(JS.count("resultRevision++"), 3)
+        # 생성 성공·편집 적용·원문 복원·AI 표지 적용·기본 배경 복원마다 결과 버전 증가 → 이전 다운로드 요청 표시를 새 내용에 쓰지 않음
+        self.assertEqual(JS.count("resultRevision++"), 5)
+        for handler in ("coverApplyBtn.addEventListener", "coverRestoreBtn.addEventListener"):
+            seg = JS[JS.index(handler):JS.index("\n  });", JS.index(handler))]
+            self.assertIn("resultRevision++", seg)
+            self.assertIn("working()", seg)
         self.assertIn("downloadedRevision === resultRevision", JS)
         self.assertIn("data.revision !== resultRevision", JS)
         for handler in ("editApplyBtn.addEventListener", "editRestoreBtn.addEventListener"):
@@ -320,14 +356,18 @@ class CatalogPreviewTests(RenderedPanel):
 class StaticRuleTests(unittest.TestCase):
     def test_only_known_requests_and_no_browser_storage(self):
         # 이전: "분석 API 1곳만" → "공통 요청 함수 1곳". 현재(PDF 다운로드 연결 후): 분석·생성은 공통 postRequest,
-        # PDF는 응답을 Blob으로 받는 sendPdf 한 곳. 사용자 파일 내용을 브라우저에서 읽거나 저장하지 않음
-        self.assertEqual(len(re.findall(r"\bfetch\s*\(", JS)), 2)
+        # PDF는 응답을 Blob으로 받는 sendPdf 한 곳, AI 표지 배경은 PNG를 Blob으로 받는 sendCover 한 곳.
+        # 사용자 파일 내용을 브라우저에서 읽거나 저장하지 않음
+        self.assertEqual(len(re.findall(r"\bfetch\s*\(", JS)), 3)
         self.assertIn("fetch(url, {", JS)
         self.assertIn("fetch(Review.PDF_URL, {", JS)
+        self.assertIn("fetch(Review.COVER_URL, {", JS)
         self.assertEqual(len(re.findall(r"pdfDownloader\.run\(", JS)), 1)   # 버튼 클릭 한 곳(자동 요청·재시도 없음)
-        # 응답 PDF 서명 확인(앞 5바이트)만 arrayBuffer 허용. 다른 곳(업로드 파일)에서는 읽지 않음
-        self.assertEqual(len(re.findall(r"\.arrayBuffer\s*\(", JS)), 1)
-        self.assertIn("await blob.slice(0, 5).arrayBuffer()", JS[JS.index("async function sendPdf"):])
+        self.assertEqual(len(re.findall(r"coverGenerator\.run\(", JS)), 1)
+        # 응답 서명 확인(PDF 앞 5바이트·PNG 앞 8바이트)만 arrayBuffer 허용. 다른 곳(업로드 파일)에서는 읽지 않음
+        self.assertEqual(len(re.findall(r"\.arrayBuffer\s*\(", JS)), 2)
+        self.assertIn("await blob.slice(0, 5).arrayBuffer()", JS[JS.index("async function sendPdf"):JS.index("async function sendCover")])
+        self.assertIn("await blob.slice(0, 8).arrayBuffer()", JS[JS.index("async function sendCover"):])
         self.assertIn('ANALYZE_URL = "/api/product-brochure/analyze"', JS)
         self.assertIn('GENERATE_URL = "/api/product-brochure/generate"', JS)
         self.assertEqual(len(re.findall(r"postRequest\(Review\.(ANALYZE|GENERATE)_URL", JS)), 2)

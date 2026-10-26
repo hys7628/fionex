@@ -703,10 +703,12 @@
       return new TextEncoder().encode(str).length;
     }
 
-    // 다운로드 가능 조건. ctx: { hasResult, editDirty, busy, bodyBytes }
+    // 다운로드 가능 조건. ctx: { hasResult, editDirty, busy, bodyBytes, coverApplied }
+    // coverApplied: 사용자가 적용한 AI 표지 배경이 있으면 PDF가 미리보기와 달라지므로 막음(PDF 반영은 후속 작업)
     function evaluatePdfDownload(ctx) {
       if (!ctx.hasResult) return { ok: false, reason: "no_result", message: "카탈로그를 생성한 뒤 PDF를 다운로드할 수 있습니다(디자인 시안은 대상이 아님)." };
       if (ctx.busy) return { ok: false, reason: "busy", message: "다른 요청이 진행 중입니다. 끝난 뒤 다운로드하세요." };
+      if (ctx.coverApplied) return { ok: false, reason: "cover_applied", message: COVER_PDF_BLOCK_MESSAGE };
       if (ctx.editDirty) return { ok: false, reason: "edit_pending", message: PDF_EDIT_PENDING_MESSAGE };
       if (ctx.bodyBytes > MAX_PDF_REQUEST_BYTES) {
         return { ok: false, reason: "too_large", message: "PDF 요청 크기가 허용 범위(32 KiB)를 넘습니다. 긴 문구를 줄여 적용한 뒤 다시 시도하세요." };
@@ -772,7 +774,121 @@
       });
     }
 
+    /* ----- AI 표지 배경(서버 계약: features/product_brochure/cover_image.py, 명세 §28·§29) ----- */
+    const COVER_URL = "/api/product-brochure/cover-image";
+    const COVER_MOODS = { minimal: "미니멀", premium: "프리미엄", soft_texture: "부드러운 소재감" };
+    const COVER_WIDTH = 1024;
+    const COVER_HEIGHT = 1536;
+    const MAX_COVER_BYTES = 16 * 1024 * 1024;  // 공통 config.IMAGE_MAX_BYTES와 같은 값
+    const PNG_SIGNATURE = "\u0089PNG\r\n\u001a\n";
+    const COVER_STALE_APPLY_MESSAGE = "이 후보는 지금과 다른 제품 정보(표시명·설명)로 생성됐습니다. 그래도 표지에 적용할까요?";
+    const COVER_PDF_BLOCK_MESSAGE = "AI 표지 배경의 PDF 반영은 연결 준비 중입니다. 기본 배경으로 복원하면 다운로드할 수 있습니다.";
+
+    // 생성 조건은 카탈로그 생성과 같은 판정(분석 결과·적용 스냅샷·현재 입력 일치·제품명/설명/표시명 확인)을 재사용
+    function evaluateCover(ctx) {
+      return evaluateGeneration(ctx);
+    }
+
+    // 표지 생성 입력의 제품 정보 서명(분위기 제외). 이미지가 어떤 정보로 만들어졌는지 비교할 때 사용
+    function coverInfoSignature(displayName, description) {
+      return JSON.stringify([String(displayName), String(description)]);
+    }
+
+    // 적용 스냅샷에서 서버가 받는 3개 필드만(클릭 시점 독립 복사본)
+    function buildCoverPayload(snapshot, mood) {
+      const desc = snapshotField(snapshot, "description");
+      return { display_name: String(snapshot.displayName.value).trim(), description: String(desc.value).trim(), mood: mood };
+    }
+
+    const COVER_ERROR_MESSAGES = {
+      COVER_IMAGE_INVALID_JSON: "표지 배경 요청 형식이 올바르지 않습니다. 다시 시도하세요.",
+      COVER_IMAGE_INVALID_INPUT: "표지 배경 생성에 쓸 표시명·제품 설명·분위기 형식이 올바르지 않습니다. 확인한 뒤 다시 적용하세요.",
+      COVER_IMAGE_REQUEST_TOO_LARGE: "표지 배경 요청 크기가 허용 범위를 넘습니다. 제품 설명을 줄여 다시 적용하세요.",
+      AI_CONFIG_MISSING: "AI 이미지 기능 설정이 준비되지 않았습니다. 관리자에게 문의하세요.",
+      AI_AUTH_FAILED: "AI 서비스 인증에 실패했습니다. 관리자에게 문의하세요.",
+      AI_PERMISSION_DENIED: "AI 이미지 생성 권한이 없습니다. 관리자에게 문의하세요.",
+      AI_MODEL_UNAVAILABLE: "설정된 AI 이미지 모델을 사용할 수 없습니다. 관리자에게 문의하세요.",
+      AI_RATE_LIMITED: "AI 호출 한도에 도달했습니다. 잠시 후 다시 시도하세요.",
+      AI_CONNECTION_FAILED: "AI 서비스에 연결하지 못했습니다. 잠시 후 다시 시도하세요.",
+      AI_TIMEOUT: "AI 이미지 응답 시간이 초과되었습니다. 잠시 후 다시 시도하세요.",
+      AI_PROVIDER_ERROR: "AI 서비스에서 오류가 발생했습니다. 잠시 후 다시 시도하세요.",
+      AI_BAD_REQUEST: "AI 서비스가 이미지 요청을 처리하지 못했습니다. 입력을 확인하거나 관리자에게 문의하세요.",
+      AI_REFUSED: "AI가 이미지 요청을 처리하지 않았습니다. 제품 설명을 확인한 뒤 다시 시도하세요.",
+      AI_IMAGE_EMPTY: "AI가 이미지를 돌려주지 않았습니다. 다시 시도하세요.",
+      AI_IMAGE_DECODE_FAILED: "생성된 이미지를 해석하지 못했습니다. 다시 시도하세요.",
+      AI_IMAGE_INVALID: "생성된 이미지 형식·크기가 올바르지 않아 사용하지 않았습니다. 다시 시도하세요.",
+      AI_UNKNOWN_ERROR: "표지 배경을 만들지 못했습니다. 잠시 후 다시 시도하세요.",
+    };
+
+    // res: { networkError, aborted } 또는 { status, contentType, json, size, head, decoded, width, height, tooLarge }
+    function interpretCoverResponse(res) {
+      if (!res || res.networkError) {
+        return { ok: false, kind: res && res.aborted ? "timeout" : "network",
+          message: res && res.aborted
+            ? "응답이 210초 안에 오지 않아 화면에서 기다리기를 중단했습니다. 서버·AI 서비스의 작업이 멈췄거나 과금되지 않았다는 뜻은 아닙니다."
+            : "서버에 연결하지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도하세요." };
+      }
+      const type = (res.contentType || "").split(";")[0].trim().toLowerCase();
+      if (res.status === 200 && type === "image/png") {
+        if (res.tooLarge || res.size > MAX_COVER_BYTES) {
+          return { ok: false, kind: "invalid_response", message: "받은 이미지가 허용 크기(16 MiB)를 넘어 사용하지 않았습니다." };
+        }
+        if (!(res.size > 0) || res.head !== PNG_SIGNATURE || !res.decoded) {
+          return { ok: false, kind: "invalid_response", message: "받은 파일이 올바른 PNG 이미지가 아니어서 사용하지 않았습니다." };
+        }
+        if (res.width !== COVER_WIDTH || res.height !== COVER_HEIGHT) {
+          return { ok: false, kind: "invalid_response", message: "받은 이미지 크기가 세로형 1024×1536이 아니어서 사용하지 않았습니다." };
+        }
+        return { ok: true, data: null };
+      }
+      if (res.status === 413) {
+        return { ok: false, kind: "server_error", code: "COVER_IMAGE_REQUEST_TOO_LARGE", message: COVER_ERROR_MESSAGES.COVER_IMAGE_REQUEST_TOO_LARGE };
+      }
+      const body = res.json;
+      if (isObj(body) && body.ok === false) {
+        const code = isObj(body.error) && isStr(body.error.code) ? body.error.code : null;
+        const known = code && Object.prototype.hasOwnProperty.call(COVER_ERROR_MESSAGES, code);
+        return { ok: false, kind: "server_error", code: known ? code : null,
+          message: known ? COVER_ERROR_MESSAGES[code] : "표지 배경 요청을 처리하지 못했습니다(HTTP " + res.status + "). 다시 시도하세요." };
+      }
+      return { ok: false, kind: res.status === 200 ? "invalid_response" : "not_json",
+        message: res.status === 200
+          ? "받은 응답이 PNG 이미지가 아니어서 사용하지 않았습니다. 다시 시도하세요."
+          : "서버 응답을 해석하지 못했습니다(HTTP " + res.status + "). 잠시 후 다시 시도하세요." };
+    }
+
+    // input: { payload: {display_name, description, mood}, infoSignature }. 공통 실행기(중복 방지·오래된 응답 무시·재시도 없음)
+    function createCoverGenerator(deps) {
+      return createRunner(deps, {
+        validate: function (input) {
+          const p = input && input.payload;
+          return isObj(p) && Object.keys(p).sort().join(",") === "description,display_name,mood" &&
+            isStr(p.display_name) && !!p.display_name && isStr(p.description) && !!p.description &&
+            Object.prototype.hasOwnProperty.call(COVER_MOODS, p.mood);
+        },
+        interpret: function (res) {
+          const out = interpretCoverResponse(res);
+          if (out.ok) out.data = { blob: res.blob, payload: res.payload, infoSignature: res.infoSignature };
+          return out;
+        },
+        confirmMessage: "",
+      });
+    }
+
+    // 표지 이미지 상태 전이에서 더 이상 아무 곳(후보·적용)도 참조하지 않는 object URL만 해제 대상으로 돌려줍니다.
+    // 후보와 적용 이미지가 같은 항목(같은 URL)을 가리킬 수 있으므로 사용 중인 URL은 해제하지 않습니다.
+    function coverUrlsToRevoke(prev, next) {
+      const urls = function (s) { return [s.candidate, s.applied].filter(Boolean).map(function (e) { return e.url; }); };
+      const keep = urls(next);
+      return urls(prev).filter(function (u, i, all) { return keep.indexOf(u) < 0 && all.indexOf(u) === i; });
+    }
+
     return {
+      COVER_URL: COVER_URL, COVER_MOODS: COVER_MOODS, COVER_WIDTH: COVER_WIDTH, COVER_HEIGHT: COVER_HEIGHT,
+      MAX_COVER_BYTES: MAX_COVER_BYTES, PNG_SIGNATURE: PNG_SIGNATURE, COVER_STALE_APPLY_MESSAGE: COVER_STALE_APPLY_MESSAGE,
+      COVER_PDF_BLOCK_MESSAGE: COVER_PDF_BLOCK_MESSAGE, COVER_ERROR_MESSAGES: COVER_ERROR_MESSAGES,
+      evaluateCover: evaluateCover, coverInfoSignature: coverInfoSignature, buildCoverPayload: buildCoverPayload,
+      interpretCoverResponse: interpretCoverResponse, createCoverGenerator: createCoverGenerator, coverUrlsToRevoke: coverUrlsToRevoke,
       PDF_URL: PDF_URL, PDF_FILENAME: PDF_FILENAME, MAX_PDF_REQUEST_BYTES: MAX_PDF_REQUEST_BYTES,
       CATALOG_ITEM_LABELS: CATALOG_ITEM_LABELS, PDF_STALE_MESSAGE: PDF_STALE_MESSAGE, PDF_EDIT_PENDING_MESSAGE: PDF_EDIT_PENDING_MESSAGE,
       PDF_ERROR_MESSAGES: PDF_ERROR_MESSAGES, buildPdfPayload: buildPdfPayload, utf8Bytes: utf8Bytes,
@@ -841,6 +957,21 @@
   const pdfBtn = panel.querySelector("[data-pdf-download]");
   const pdfStatus = panel.querySelector("[data-pdf-status]");
   const pdfError = panel.querySelector("[data-pdf-error]");
+  const coverGenerateBtn = panel.querySelector("[data-cover-generate]");
+  const coverRestoreBtn = panel.querySelector("[data-cover-restore]");
+  const coverMoods = panel.querySelector("[data-cover-moods]");
+  const coverStatus = panel.querySelector("[data-cover-status]");
+  const coverAppliedStatus = panel.querySelector("[data-cover-applied-status]");
+  const coverError = panel.querySelector("[data-cover-error]");
+  const coverCandidateBox = panel.querySelector("[data-cover-candidate]");
+  const coverCandidateImg = panel.querySelector("[data-cover-candidate-img]");
+  const coverCandidateTitle = panel.querySelector("[data-cover-candidate-title]");
+  const coverCandidateTagline = panel.querySelector("[data-cover-candidate-tagline]");
+  const coverCandidateMeta = panel.querySelector("[data-cover-candidate-meta]");
+  const coverCandidateStale = panel.querySelector("[data-cover-candidate-stale]");
+  const coverApplyBtn = panel.querySelector("[data-cover-apply]");
+  const coverApplyHint = panel.querySelector("[data-cover-apply-hint]");
+  const coverDiscardBtn = panel.querySelector("[data-cover-discard]");
   const displayNameBox = panel.querySelector("[data-display-name]");
   const displayNameInput = panel.querySelector("#product_brochure-display-name");
   const displayNameConfirm = panel.querySelector("#product_brochure-display-name-confirm");
@@ -863,6 +994,11 @@
   // 다운로드 요청 표시는 요청 당시 버전에만 연결합니다(이후 수정본에 그대로 적용하지 않음).
   let resultRevision = 0;
   let downloadedRevision = null;
+  // AI 표지 배경(브라우저 메모리만). 항목 { url(object URL), payload(요청 3개 필드), infoSignature, mood }
+  // candidate: 마지막으로 성공한 생성 후보, applied: 사용자가 "표지에 적용"한 이미지. 둘이 같은 항목일 수 있음
+  let coverBusy = false;      // 표지 배경 생성 요청 중
+  let cover = { candidate: null, applied: null };
+  const COVER_TIMEOUT_MS = 210000; // 서버 공통 이미지 timeout(180초)보다 길게. 중단해도 공급자 작업 중단·미과금 보장 없음
   // 카탈로그 표시명(원본 제품명과 별도). edited: 사용자가 직접 고쳤으면 제품명 수정 시 제안값으로 덮지 않음
   let displayName = { value: "", confirmed: false, edited: false, suggestion: null };
 
@@ -871,7 +1007,7 @@
   }
 
   function working() {
-    return busy || generating || pdfBusy;
+    return busy || generating || pdfBusy || coverBusy;
   }
 
   function el(tag, className, text) {
@@ -885,7 +1021,7 @@
      setResult는 쓰지 않습니다(PDF 다운로드 뒤에도 생성 결과·편집본이 남으므로 setDraft 보호를 유지).
      조건을 OR로 묶어 한 상태 변화로 보호가 꺼지지 않게 합니다. */
   function syncWork() {
-    const protect = working() || !!generation || !!editing ||
+    const protect = working() || !!generation || !!editing || !!cover.candidate || !!cover.applied ||
       (!!fields && (fieldsSource === "analysis" || Review.isDirty(fields)));
     AppShell.work.setDraft(FEATURE_ID, protect);
   }
@@ -952,6 +1088,8 @@
       analyzeStatus.textContent = "카탈로그 문구를 생성하는 중에는 파일을 바꾸거나 분석할 수 없습니다.";
     } else if (pdfBusy) {
       analyzeStatus.textContent = "PDF를 만드는 중에는 파일을 바꾸거나 분석할 수 없습니다.";
+    } else if (coverBusy) {
+      analyzeStatus.textContent = "AI 표지 배경을 만드는 중에는 파일을 바꾸거나 분석할 수 없습니다.";
     } else {
       analyzeStatus.textContent = valid
         ? "분석을 요청하면 PDF가 서버로 전송되어 OpenAI API로 분석됩니다."
@@ -986,8 +1124,9 @@
   }
 
   function syncResultStatus() {
-    resultOpenBtn.disabled = !generation || working(); // PDF 요청 중에는 편집·원문 복원을 열지 않음
+    resultOpenBtn.disabled = !generation || working(); // PDF·표지 요청 중에는 편집·원문 복원을 열지 않음
     syncPdf();
+    syncCover();
     resultStatus.replaceChildren();
     if (!generation) {
       resultStatus.textContent = "아직 생성 결과가 없습니다.";
@@ -1022,6 +1161,7 @@
     const body = generation ? JSON.stringify(Review.buildPdfPayload(generation.current)) : "";
     return Review.evaluatePdfDownload({
       hasResult: !!generation, editDirty: editDirty(), busy: working(), bodyBytes: Review.utf8Bytes(body),
+      coverApplied: !!cover.applied, // 적용한 AI 표지 배경은 아직 PDF에 전달하지 않으므로 다운로드를 막음
     });
   }
 
@@ -1053,6 +1193,86 @@
   function hidePdfError() {
     pdfError.hidden = true;
     pdfError.replaceChildren();
+  }
+
+  /* AI 표지 배경 버튼·안내 */
+  function selectedCoverMood() {
+    const checked = coverMoods.querySelector("input:checked");
+    return checked ? checked.value : "minimal";
+  }
+
+  // 현재 입력(검토 화면의 제품 설명·표시명)의 정보 서명. 이미지가 이전 정보로 생성됐는지 비교할 때 사용
+  function currentCoverInfo() {
+    if (!fields) return null;
+    const desc = fields.filter(function (f) { return f.key === "description"; })[0];
+    return Review.coverInfoSignature(String(displayName.value).trim(), desc ? String(desc.value).trim() : "");
+  }
+
+  function coverStale(entry) {
+    return !!entry && entry.infoSignature !== currentCoverInfo();
+  }
+
+  function syncCover() {
+    const ev = Review.evaluateCover(generationContext());
+    coverGenerateBtn.disabled = !ev.ok;
+    coverGenerateBtn.setAttribute("aria-busy", coverBusy ? "true" : "false");
+    coverMoods.disabled = working();
+    coverStatus.replaceChildren();
+    if (coverBusy) {
+      coverStatus.append(el("span", "spinner"), document.createTextNode(" AI 표지 배경을 만드는 중… (최대 3분 30초)"));
+    } else if (!ev.ok) {
+      coverStatus.textContent = ev.message;
+    } else {
+      coverStatus.textContent = "생성할 때마다 API 비용이 발생합니다. 결과는 후보로만 표시되며 표지에 자동 적용되지 않습니다.";
+    }
+    coverRestoreBtn.disabled = !cover.applied || working();
+    coverAppliedStatus.textContent = cover.applied
+      ? "생성 결과 미리보기 1쪽 표지에 AI 배경 적용됨(분위기: " + Review.COVER_MOODS[cover.applied.mood] + ")." +
+        (coverStale(cover.applied) ? " 지금과 다른 제품 정보(표시명·설명)로 생성된 이미지입니다." : "")
+      : "표지는 기본 콘셉트 배경을 사용합니다.";
+
+    const c = cover.candidate;
+    coverCandidateBox.hidden = !c;
+    if (!c) {
+      coverCandidateImg.removeAttribute("src"); // 해제한 object URL을 숨은 요소가 계속 가리키지 않게
+      return;
+    }
+    if (coverCandidateImg.getAttribute("src") !== c.url) coverCandidateImg.src = c.url;
+    coverCandidateImg.alt = "AI 표지 배경 후보(분위기: " + Review.COVER_MOODS[c.mood] + ", 실제 제품 사진 아님)";
+    // 실제 표지와 같은 글자: 생성 결과가 있으면 그 표시명·소개, 없으면 요청에 쓴 표시명만
+    coverCandidateTitle.textContent = generation ? generation.current.pages.cover.product_name.text : c.payload.display_name;
+    coverCandidateTagline.textContent = generation ? generation.current.pages.cover.tagline.text : "";
+    coverCandidateMeta.textContent = "분위기: " + Review.COVER_MOODS[c.mood] + " · 1024×1536 · AI 콘셉트 이미지(실제 제품 사진 아님)";
+    coverCandidateStale.hidden = !coverStale(c);
+    coverCandidateStale.textContent = "이 후보는 지금과 다른 제품 정보(표시명·설명)로 생성됐습니다.";
+    const isApplied = c === cover.applied;
+    coverApplyBtn.disabled = !generation || isApplied || working();
+    coverDiscardBtn.disabled = working();
+    coverApplyHint.textContent = !generation
+      ? "카탈로그 생성 결과가 있어야 표지에 적용할 수 있습니다. 후보는 미리 볼 수 있습니다."
+      : isApplied ? "이 후보가 표지에 적용되어 있습니다." : "적용하면 생성 결과 미리보기 1쪽 표지 배경만 바뀝니다(문구·2~4쪽 이미지는 그대로).";
+  }
+
+  // 상태 교체: 이전 상태에서 더 이상 쓰지 않는 object URL만 해제(후보·적용이 같은 URL이면 유지)
+  function setCover(next) {
+    Review.coverUrlsToRevoke(cover, next).forEach(function (url) { URL.revokeObjectURL(url); });
+    cover = next;
+    syncCover();
+    syncPdf();
+    syncWork();
+  }
+
+  function showCoverError(out) {
+    coverError.replaceChildren(
+      el("p", "notice-title", "AI 표지 배경을 만들지 못했습니다"),
+      el("p", "", out.message),
+      el("p", "", "기존 후보·적용한 표지와 카탈로그 문구는 그대로 남아 있습니다. 다시 시도할 수 있습니다(시도할 때마다 비용 발생)."));
+    coverError.hidden = false;
+  }
+
+  function hideCoverError() {
+    coverError.hidden = true;
+    coverError.replaceChildren();
   }
 
   function showError(out) {
@@ -1368,7 +1588,7 @@
 
   const analyzer = Review.createAnalyzer({
     send: sendAnalysis,
-    blocked: function () { return generating || pdfBusy; },
+    blocked: function () { return generating || pdfBusy || coverBusy; },
     needsConfirm: function () { return !!fields && Review.isDirty(fields); },
     confirm: function (msg) { return window.confirm(msg); },
     onBusy: function (value) {
@@ -1400,7 +1620,7 @@
 
   const generator = Review.createGenerator({
     send: sendGeneration,
-    blocked: function () { return busy || pdfBusy; },
+    blocked: function () { return busy || pdfBusy || coverBusy; },
     canGenerate: function () { return Review.evaluateGeneration(generationContext()).ok; },
     needsConfirm: function () { return !!generation; },
     // 직접 수정한 문구나 편집 중 내용이 있으면 대체된다는 점을 따로 알립니다.
@@ -1644,6 +1864,7 @@
     renderInfoPage(pages.details, "details", "details-empty", false);
     renderInfoPage(pages.supply, "supply", "supply-empty", true);
     slots("unofficial").forEach(function (node) { node.textContent = data.notices.unofficial; });
+    applyCoverToResult(); // 적용한 AI 표지 배경(있으면) 또는 기본 배경
 
     // AI 생성 당시 서버 검토 표시(review_flags). 사용자가 문구를 고쳐도 자동으로 해제하지 않습니다.
     const flags = Review.describeReviewFlags(data);
@@ -1843,7 +2064,7 @@
 
   const pdfDownloader = Review.createPdfDownloader({
     send: sendPdf,
-    blocked: function () { return busy || generating; },
+    blocked: function () { return busy || generating || coverBusy; },
     needsConfirm: function () { return !!generation && Review.isResultStale(generation, generationContext()); },
     confirm: function (msg) { return window.confirm(msg); },
     onBusy: function (value) {
@@ -1875,10 +2096,131 @@
 
   pdfBtn.addEventListener("click", function () {
     const ev = pdfEvaluation();
-    if (!ev.ok) { syncPdf(); return; } // 미생성·미적용 편집·진행 중·크기 초과: 요청하지 않음
+    if (!ev.ok) { syncPdf(); return; } // 미생성·미적용 편집·진행 중·크기 초과·AI 표지 적용 중: 요청하지 않음
     pdfDownloader.run({
       body: JSON.stringify(Review.buildPdfPayload(Review.cloneData(generation.current))), // 클릭 시점 독립 스냅샷
       revision: resultRevision,
     });
+  });
+
+  /* ---------- AI 표지 배경 ----------
+     버튼 클릭 때만 적용 스냅샷의 표시명·설명과 분위기 3개 필드를 보냅니다(자동 호출·재시도 없음).
+     성공한 PNG는 후보로만 표시하고, 사용자가 "표지에 적용"해야 생성 결과 미리보기 1쪽 표지에 반영합니다.
+     Blob·object URL은 브라우저 메모리에만 두고 저장소·서버에 저장하지 않습니다. PDF 반영은 후속 작업. */
+  const resultCoverImg = resultDialog.querySelector(".catalog-cover-figure img");
+  const DEFAULT_COVER_SRC = resultCoverImg.getAttribute("src");
+  const DEFAULT_COVER_ALT = resultCoverImg.getAttribute("alt");
+
+  // 생성 결과 미리보기 1쪽 표지에만 반영(고정 시안·2~4쪽 이미지는 그대로). AI 이미지 안내 문구는 템플릿에 항상 있음
+  function applyCoverToResult() {
+    const src = cover.applied ? cover.applied.url : DEFAULT_COVER_SRC;
+    if (resultCoverImg.getAttribute("src") !== src) {
+      resultCoverImg.closest(".catalog-figure").classList.remove("catalog-figure-missing");
+      resultCoverImg.src = src;
+    }
+    resultCoverImg.alt = cover.applied
+      ? "Imagem de fundo da capa gerada por IA (conceitual, não é o produto real)"
+      : DEFAULT_COVER_ALT;
+  }
+
+  async function sendCover(input) {
+    const controller = new AbortController();
+    const timer = setTimeout(function () { controller.abort(); }, COVER_TIMEOUT_MS);
+    try {
+      const res = await fetch(Review.COVER_URL, {
+        method: "POST", body: new Blob([JSON.stringify(input.payload)], { type: "application/json" }),
+        signal: controller.signal, headers: { Accept: "image/png, application/json" },
+      });
+      const contentType = res.headers.get("content-type") || "";
+      const out = { status: res.status, contentType: contentType, payload: input.payload, infoSignature: input.infoSignature };
+      if (contentType.toLowerCase().indexOf("image/png") === 0) {
+        const declared = Number(res.headers.get("content-length"));
+        if (declared > Review.MAX_COVER_BYTES) { // 상한을 넘으면 본문을 읽지 않음
+          controller.abort();
+          out.tooLarge = true;
+          return out;
+        }
+        const blob = await res.blob(); // 본문 수신까지 같은 시간 상한 안에서 기다림
+        out.blob = blob;
+        out.size = blob.size;
+        if (blob.size > 0 && blob.size <= Review.MAX_COVER_BYTES) {
+          out.head = String.fromCharCode.apply(null, new Uint8Array(await blob.slice(0, 8).arrayBuffer()));
+          try { // 브라우저가 실제로 디코딩할 수 있는지와 해상도 확인
+            const bitmap = await createImageBitmap(blob);
+            out.decoded = true;
+            out.width = bitmap.width;
+            out.height = bitmap.height;
+            bitmap.close();
+          } catch (e) {
+            out.decoded = false;
+          }
+        }
+      } else if (contentType.indexOf("application/json") >= 0) {
+        try { out.json = await res.json(); } catch (e) { out.json = undefined; }
+      } // 그 밖의 본문(HTML 등)은 읽거나 표시하지 않음
+      return out;
+    } catch (e) {
+      return { networkError: true, aborted: !!e && e.name === "AbortError" };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  const coverGenerator = Review.createCoverGenerator({
+    send: sendCover,
+    blocked: function () { return busy || generating || pdfBusy; },
+    needsConfirm: function () { return false; },
+    confirm: function () { return true; },
+    onBusy: function (value) {
+      coverBusy = value;
+      if (value) hideCoverError();
+      syncControls();
+      if (!value) AppShell.work.recheckInputs(FEATURE_ID);
+      syncWork();
+    },
+    onSuccess: function (data) {
+      // 검사를 통과한 이미지만 후보로. 표지는 자동으로 바꾸지 않음(적용 이미지 유지)
+      hideCoverError();
+      setCover({
+        candidate: { url: URL.createObjectURL(data.blob), payload: data.payload, infoSignature: data.infoSignature, mood: data.payload.mood },
+        applied: cover.applied,
+      });
+    },
+    onFailure: function (out) {
+      showCoverError(out); // 기존 후보·적용 이미지·문구는 그대로
+    },
+  });
+
+  coverGenerateBtn.addEventListener("click", function () {
+    if (!Review.evaluateCover(generationContext()).ok) { syncCover(); return; }
+    const payload = Review.buildCoverPayload(snapshot, selectedCoverMood()); // 클릭 시점 적용 스냅샷 복사
+    coverGenerator.run({ payload: payload, infoSignature: Review.coverInfoSignature(payload.display_name, payload.description) });
+  });
+
+  coverApplyBtn.addEventListener("click", function () {
+    const c = cover.candidate;
+    if (!c || !generation || c === cover.applied || working()) return;
+    if (coverStale(c) && !window.confirm(Review.COVER_STALE_APPLY_MESSAGE)) return; // 취소하면 그대로
+    setCover({ candidate: c, applied: c }); // 같은 항목(같은 URL)을 후보·적용이 함께 참조
+    resultRevision++; // 이전 "다운로드 요청됨" 표시 무효화
+    applyCoverToResult();
+    syncPdf();
+  });
+
+  coverDiscardBtn.addEventListener("click", function () {
+    const c = cover.candidate;
+    if (!c || working()) return;
+    if (c !== cover.applied && !window.confirm("이 후보를 버릴까요? 다시 보려면 새로 생성해야 합니다(비용 발생).")) return;
+    setCover({ candidate: null, applied: cover.applied }); // 적용 이미지는 유지(같은 URL이면 해제하지 않음)
+  });
+
+  coverRestoreBtn.addEventListener("click", function () {
+    if (!cover.applied || working()) return;
+    if (cover.applied !== cover.candidate &&
+        !window.confirm("적용한 AI 표지 배경을 해제하고 기본 배경으로 되돌릴까요? 이 이미지는 후보로 남아 있지 않아 다시 쓰려면 새로 생성해야 합니다.")) return;
+    setCover({ candidate: cover.candidate, applied: null }); // 문구·분석값·후보는 그대로
+    resultRevision++;
+    applyCoverToResult();
+    syncPdf();
   });
 })();

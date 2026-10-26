@@ -832,6 +832,143 @@ check("화면 항목명: 3·4쪽 고정 pt-BR 표시명(AI 라벨 대신, PDF와
   assert.equal(R.PDF_FILENAME, "fionex_catalog_pt-BR.pdf");
 });
 
+/* ---------- AI 표지 배경 ---------- */
+const PNG_HEAD = "\u0089PNG\r\n\u001a\n";
+function coverOk(over) {
+  return Object.assign({ status: 200, contentType: "image/png", size: 5000, head: PNG_HEAD, decoded: true,
+    width: 1024, height: 1536, blob: { fake: "png" }, payload: { display_name: "regen T2T", description: "설명", mood: "minimal" },
+    infoSignature: "sig" }, over || {});
+}
+function coverHarness(opts) {
+  const log = { sends: [], busy: [], success: [], failure: [] };
+  const g = R.createCoverGenerator({
+    send: (input) => { log.sends.push(input); return opts.send(input); },
+    blocked: () => !!opts.blocked,
+    needsConfirm: () => false, confirm: () => true,
+    onBusy: (v) => log.busy.push(v),
+    onSuccess: (d) => log.success.push(d),
+    onFailure: (o) => log.failure.push(o),
+  });
+  return { g: g, log: log };
+}
+function coverInput(mood) {
+  const payload = { display_name: "regen T2T", description: "설명", mood: mood || "minimal" };
+  return { payload: payload, infoSignature: R.coverInfoSignature(payload.display_name, payload.description) };
+}
+
+check("표지 생성 조건: 카탈로그 생성과 같은 판정(예시·미적용·재적용 필요·확인 누락 거부)", () => {
+  const fs = analysisFields();
+  confirmAll(fs, ["product_name", "description"]);
+  const snap = R.createSnapshot(fs, "analysis", 1, DN);
+  assert.equal(R.evaluateCover(ctxOf(fs, snap)).ok, true);
+  assert.equal(R.evaluateCover(Object.assign(ctxOf(fs, snap), { source: "example" })).reason, "example");
+  assert.equal(R.evaluateCover(ctxOf(fs, null)).reason, "not_applied");
+  assert.equal(R.evaluateCover(ctxOf(fs, snap, { busy: true })).reason, "busy");
+  R.setValue(fs.find((f) => f.key === "description"), "다른 설명");
+  assert.equal(R.evaluateCover(ctxOf(fs, snap)).reason, "reapply");          // 적용 후 입력 변경 → 재적용 안내
+  const fs2 = analysisFields();
+  confirmAll(fs2, ["product_name"]);                                          // 설명 미확인
+  assert.equal(R.evaluateCover(ctxOf(fs2, R.createSnapshot(fs2, "analysis", 1, DN))).reason, "required");
+  const fs3 = analysisFields();
+  confirmAll(fs3, ["product_name", "description"]);
+  const noDn = { value: "regen T2T", confirmed: false };
+  const s3 = R.createSnapshot(fs3, "analysis", 1, noDn);
+  assert.equal(R.evaluateCover(Object.assign(ctxOf(fs3, s3), { currentSignature: R.inputSignature(fs3, noDn) })).reason, "display_name");
+});
+
+check("표지 요청 본문: 적용 스냅샷의 표시명·설명과 분위기 3개만(검토 화면 이후 수정값 미반영)", () => {
+  const fs = analysisFields();
+  confirmAll(fs, ["product_name", "description"]);
+  const snap = R.createSnapshot(fs, "analysis", 1, { value: "  regen T2T  ", confirmed: true });
+  R.setValue(fs.find((f) => f.key === "description"), "적용 뒤 바꾼 설명");
+  const p = R.buildCoverPayload(snap, "premium");
+  assert.deepEqual(Object.keys(p).sort(), ["description", "display_name", "mood"]);
+  assert.equal(p.display_name, "regen T2T");
+  assert.equal(p.description, R.createSnapshot(analysisFields(), "analysis", 1, DN).fields.find((f) => f.key === "description").value.trim());
+  assert.equal(p.mood, "premium");
+  assert.notEqual(R.coverInfoSignature("a", "b"), R.coverInfoSignature("a", "c"));
+});
+
+check("표지 응답 해석: 정상 PNG만 통과, 크기·형식·디코딩·해상도·HTML·JSON 오류 구분(서버 원문 미표시)", () => {
+  assert.equal(R.interpretCoverResponse(coverOk()).ok, true);
+  const bad = [coverOk({ contentType: "image/jpeg" }), coverOk({ size: 0 }), coverOk({ head: "GIF89a\u0000\u0000" }),
+    coverOk({ decoded: false }), coverOk({ width: 1024, height: 1024 }), coverOk({ tooLarge: true }),
+    coverOk({ size: 16 * 1024 * 1024 + 1 }), coverOk({ status: 201 })];
+  bad.forEach((r, i) => assert.equal(R.interpretCoverResponse(r).ok, false, String(i)));
+  assert.ok(R.interpretCoverResponse(coverOk({ size: 16 * 1024 * 1024 + 1 })).message.includes("16 MiB"));
+  assert.ok(R.interpretCoverResponse(coverOk({ width: 1536, height: 1024 })).message.includes("1024×1536"));
+  assert.equal(R.interpretCoverResponse(coverOk({ size: 16 * 1024 * 1024 })).ok, true);   // 경계값
+  const html = R.interpretCoverResponse({ status: 502, contentType: "text/html", json: undefined });
+  assert.equal(html.kind, "not_json");
+  assert.equal(R.interpretCoverResponse({ status: 200, contentType: "text/html" }).kind, "invalid_response");
+  for (const code of ["COVER_IMAGE_INVALID_INPUT", "AI_RATE_LIMITED", "AI_IMAGE_INVALID", "AI_CONFIG_MISSING", "AI_REFUSED"]) {
+    const out = R.interpretCoverResponse({ status: 400, contentType: "application/json", json: { ok: false, error: { code, message: XSS } } });
+    assert.equal(out.code, code);
+    assert.equal(out.message, R.COVER_ERROR_MESSAGES[code]);
+    assert.ok(!out.message.includes(XSS));
+  }
+  const unknown = R.interpretCoverResponse({ status: 500, contentType: "application/json", json: { ok: false, error: { code: "X", message: XSS } } });
+  assert.equal(unknown.code, null);
+  assert.ok(!unknown.message.includes(XSS));
+  assert.equal(R.interpretCoverResponse({ status: 413, contentType: "text/html" }).code, "COVER_IMAGE_REQUEST_TOO_LARGE");
+  const to = R.interpretCoverResponse({ networkError: true, aborted: true });
+  assert.equal(to.kind, "timeout");
+  assert.ok(to.message.includes("과금되지 않았다는 뜻은 아닙니다"));
+});
+
+check("표지 실행기: 3필드 외·빈 값·잘못된 분위기 요청 0회, 중복 클릭 1회, 실패 후 재시도 가능, 오래된 응답 무시", async () => {
+  const h = coverHarness({ send: () => Promise.resolve(coverOk()) });
+  for (const bad of [{ payload: { display_name: "a", description: "b", mood: "dark" } },
+                     { payload: { display_name: "a", description: "b", mood: "minimal", extra: 1 } },
+                     { payload: { display_name: "", description: "b", mood: "minimal" } }, null]) {
+    assert.equal(await h.g.run(bad), "invalid");
+  }
+  assert.equal(h.log.sends.length, 0);
+  const blocked = coverHarness({ blocked: true, send: () => Promise.resolve(coverOk()) });
+  assert.equal(await blocked.g.run(coverInput()), "blocked");
+  assert.equal(blocked.log.sends.length, 0);
+  const gate = deferred();
+  const d = coverHarness({ send: (input) => gate.p.then(() => coverOk({ payload: input.payload, infoSignature: input.infoSignature })) });
+  const first = d.g.run(coverInput("soft_texture"));
+  assert.equal(await d.g.run(coverInput("soft_texture")), "busy");
+  gate.resolve();
+  assert.equal(await first, "success");
+  assert.equal(d.log.sends.length, 1);
+  assert.equal(d.log.success[0].payload.mood, "soft_texture");
+  assert.deepEqual(d.log.busy, [true, false]);
+  let n = 0;
+  const f = coverHarness({ send: () => Promise.resolve(n++ ? coverOk() : { networkError: true, aborted: true }) });
+  assert.equal(await f.g.run(coverInput()), "failure");                // 시간 초과: 자동 재시도 없음
+  assert.equal(f.log.sends.length, 1);
+  assert.equal(await f.g.run(coverInput()), "success");                // 사용자가 다시 누르면 요청
+  const late = deferred();
+  const s = coverHarness({ send: () => late.p.then(() => coverOk()) });
+  const pending = s.g.run(coverInput());
+  s.g.invalidate();
+  late.resolve();
+  assert.equal(await pending, "stale");
+  assert.equal(s.log.success.length, 0);
+});
+
+check("표지 object URL 수명: 후보·적용이 같은 URL이면 유지, 교체·버리기·복원 때 안 쓰는 URL만 해제", () => {
+  const a = { url: "blob:a" }, b = { url: "blob:b" };
+  assert.deepEqual(R.coverUrlsToRevoke({ candidate: a, applied: null }, { candidate: a, applied: a }), []);  // 적용
+  assert.deepEqual(R.coverUrlsToRevoke({ candidate: a, applied: a }, { candidate: null, applied: a }), []); // 적용한 후보 버리기
+  assert.deepEqual(R.coverUrlsToRevoke({ candidate: a, applied: a }, { candidate: b, applied: a }), []);    // 새 후보, 적용 유지
+  assert.deepEqual(R.coverUrlsToRevoke({ candidate: b, applied: a }, { candidate: null, applied: a }), ["blob:b"]);
+  assert.deepEqual(R.coverUrlsToRevoke({ candidate: b, applied: a }, { candidate: b, applied: null }), ["blob:a"]); // 복원
+  assert.deepEqual(R.coverUrlsToRevoke({ candidate: a, applied: a }, { candidate: null, applied: null }), ["blob:a"]); // 중복 해제 없음
+  assert.deepEqual(R.coverUrlsToRevoke({ candidate: a, applied: null }, { candidate: b, applied: null }), ["blob:a"]);
+});
+
+check("PDF 다운로드: 적용한 AI 표지가 있으면 고정 안내로 차단, 후보만 있으면 허용", () => {
+  const base = { hasResult: true, editDirty: false, busy: false, bodyBytes: 100 };
+  const blocked = R.evaluatePdfDownload(Object.assign({}, base, { coverApplied: true }));
+  assert.equal(blocked.reason, "cover_applied");
+  assert.equal(blocked.message, "AI 표지 배경의 PDF 반영은 연결 준비 중입니다. 기본 배경으로 복원하면 다운로드할 수 있습니다.");
+  assert.equal(R.evaluatePdfDownload(Object.assign({}, base, { coverApplied: false })).ok, true);
+});
+
 (async () => {
   let failed = 0;
   for (const [name, fn] of checks) {

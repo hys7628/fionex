@@ -128,4 +128,65 @@
   <div class="notice notice-danger product_brochure-pdf-error" data-pdf-error role="alert" hidden></div>
 </section>
 
+{# AI 표지 배경(생성 결과 미리보기 1쪽 표지에만 적용). 생성은 버튼 클릭 때만, 후보는 직접 "표지에 적용"해야 반영.
+   이미지·안내 문구는 JS가 브라우저 메모리(object URL)·textContent로만 다룸. 분위기 선택만으로는 작업 상태를 만들지 않음 #}
+<section class="card product_brochure-cover" aria-labelledby="product_brochure-cover-title" data-cover>
+  <div class="card-header">
+    <div>
+      <h2 class="card-title" id="product_brochure-cover-title">AI 표지 배경</h2>
+      <p class="card-description" id="product_brochure-cover-hint">
+        적용한 확인 내용(표시명·제품 설명)과 분위기로 표지용 콘셉트 배경 1장을 만듭니다.
+        생성할 때마다 API 비용이 발생하며, 실제 제품 사진이 아닌 AI 콘셉트 이미지입니다.
+        만든 후보는 직접 "표지에 적용"해야 생성 결과 미리보기 1쪽에 반영됩니다.
+      </p>
+    </div>
+  </div>
+  <fieldset class="fieldset" data-cover-moods data-work-ignore>
+    <legend class="field-label">분위기</legend>
+    <div class="cover-moods">
+      <label class="choice"><input type="radio" name="product_brochure-cover-mood" value="minimal" checked> 미니멀</label>
+      <label class="choice"><input type="radio" name="product_brochure-cover-mood" value="premium"> 프리미엄</label>
+      <label class="choice"><input type="radio" name="product_brochure-cover-mood" value="soft_texture"> 부드러운 소재감</label>
+    </div>
+  </fieldset>
+  <div class="btn-row">
+    <button type="button" class="btn btn-primary" data-cover-generate disabled
+            aria-describedby="product_brochure-cover-status">AI 표지 배경 생성</button>
+    <button type="button" class="btn btn-secondary" data-cover-restore disabled>기본 배경으로 복원</button>
+  </div>
+  <p class="field-hint" id="product_brochure-cover-status" data-cover-status role="status" aria-live="polite">
+    PDF 분석 결과를 검토하고 "확인 내용 적용"을 누르면 생성할 수 있습니다.
+  </p>
+  <p class="field-hint" data-cover-applied-status role="status"></p>
+  <div class="notice notice-danger" data-cover-error role="alert" hidden></div>
+  <div class="cover-candidate" data-cover-candidate hidden>
+    <div class="cover-candidate-preview">
+      <div class="catalog-sheet"><div class="catalog-page catalog-cover" lang="pt-BR" role="img"
+           aria-label="후보 표지 축소 미리보기(실제 표지와 같은 크롭·제목 위치)">
+        <figure class="catalog-figure catalog-cover-figure">
+          <img data-cover-candidate-img alt="" width="1024" height="1536">
+        </figure>
+        <div class="catalog-cover-text">
+          <p class="catalog-kicker">fionex · catálogo de demonstração</p>
+          <p class="catalog-title" data-cover-candidate-title></p>
+          <p class="catalog-lead" data-cover-candidate-tagline></p>
+        </div>
+        <div class="catalog-cover-band">
+          <p class="catalog-caption">Imagem conceitual gerada por IA — não representa o produto real.</p>
+        </div>
+      </div></div>
+    </div>
+    <div class="cover-candidate-info">
+      <p class="notice-title">생성 후보(아직 표지에 적용하지 않음)</p>
+      <p class="field-hint" data-cover-candidate-meta></p>
+      <p class="field-hint" data-cover-candidate-stale hidden></p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" data-cover-apply aria-describedby="product_brochure-cover-apply-hint">표지에 적용</button>
+        <button type="button" class="btn btn-secondary" data-cover-discard>후보 버리기</button>
+      </div>
+      <p class="field-hint" id="product_brochure-cover-apply-hint" data-cover-apply-hint></p>
+    </div>
+  </div>
+</section>
+
 {% include "product_brochure/catalog_preview.html" %}

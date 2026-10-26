@@ -536,3 +536,22 @@
 - 명세: feature_spec.md 머리말의 "카탈로그 생성·PDF 출력 미구현·미검증" 등 오래된 상태를 실제 구현·근거 구분(실제/자동)으로 정정, §28 추가. 이미지 업로드·바이어 입력 등 [제안]은 확정하지 않고 그대로 둠
 - 변경: features/product_brochure/cover_image.py(신규), prompts/brochure_cover_image_v1.md(신규), routes.py(라우트 추가), feature_spec.md(머리말·§28), tests/test_product_brochure/test_cover_image_api.py(신규)
 - 남은 한계: 실제 생성 품질·글자 혼입·제목 여백·분위기 차이·비용·시간 미검증, 화면·PDF 연결 미구현, 프롬프트 주입 완전 차단 아님
+
+## DI-2026_10_26-11 AI 표지 배경 화면 연결(후보·적용·기본 복원)
+- 유형: development_instruction / **서비스 프롬프트 변경·실험 없음, OpenAI 호출 없음, 서버·공통 코드 변경 없음**
+- 날짜/시간: 2026-10-26 03:37 (Asia/Seoul, 기록 시각) / 작업자: 유정현 / 기능: 제품소개서 / 브랜치 feature/product_brochure(HEAD 9fbf4a3, 작업 트리 깨끗, 병합 중 아님, stash 미조작)
+- 도구·모델: Claude Code (Opus 5.5)
+- 사전 확인: 적용 스냅샷(createSnapshot)·evaluateGeneration·generation·미리보기 컨트롤러·syncWork·PDF 가능 조건·cover-image API 계약을 실제 코드로 확인. 표지 생성 조건은 evaluateGeneration을 그대로 재사용
+- 지시 요약: 분위기 선택·생성 버튼·비용/콘셉트 안내, 후보 표시·표지 적용·후보 버리기·기본 복원, 적용 스냅샷 3필드만 요청, 210초 대기, PNG·크기·디코딩·해상도 검사, 정보·분위기 서명과 이전 정보 안내, URL 수명 관리, 이탈 보호, 적용 중 PDF 차단
+- 설계 이유
+  - 후보와 적용을 같은 항목 객체로 공유할 수 있게 하고, URL 해제는 상태 교체 한 곳(setCover)에서 "어디에서도 쓰지 않는 URL"만 하도록 순수 함수로 분리(Node 점검 가능)
+  - 응답의 PNG 디코딩·해상도는 요청 함수에서 측정하고, 통과 판정은 순수 함수(interpretCoverResponse)로 분리
+  - 후보 미리보기는 카탈로그 표지 클래스를 재사용하고 문서 변수 규칙을 대화상자와 공유(CSS 선택자 분리), 실제 표지와 같은 크롭·제목 위치를 축소 표시
+  - 적용 이미지는 아직 PDF에 전달하지 않으므로 미리보기와 PDF 불일치를 막기 위해 다운로드를 막음(복원하면 허용)
+- 실제 실패와 수정
+  - test_panel 4건: 기존 개수 검사(fetch 2·arrayBuffer 1·resultRevision 증가 3·초기 비활성 버튼 5)가 새 기능으로 바뀜 → 현재 규칙(3·2·5·7)으로 갱신하고 표지 연결 정적 검사 추가
+  - 헤드리스 확인 1차: 후보를 버린 뒤 숨은 후보 이미지가 해제된 URL을 계속 가리킴 → 후보가 없으면 src 제거
+  - 헤드리스 확인 2차: 스크립트가 설명 수정 후 확인을 다시 체크하지 않아 재적용 후에도 생성 불가(값 변경 시 확인 해제는 기존 정상 규칙) → 스크립트 수정
+- 헤드리스 브라우저 확인: Edge headless + CDP, 로컬 서버(키·모델 환경변수 비움, .env 미로딩), 분석·생성·표지 API는 브라우저에서 가로채 모의 응답(정상 PNG 1024×1536, 1024×1024 PNG, 429 JSON, 502 HTML). 스크립트: scratchpad/cover_dom_check/cover_dom.mjs(세션 임시 폴더, 저장소 밖). 서버 로그에는 PDF 요청만 도달(분석·생성·표지 0건)
+- 변경: static/product_brochure.js, static/product_brochure.css, templates/product_brochure/panel.html, feature_spec.md(머리말 요약·§29), tests/test_product_brochure/review_logic_check.js·test_panel.py
+- 남은 한계: PDF에 적용 이미지 전달 미구현, 실제 이미지 생성·품질·비용·시간 미검증, 창 모드 실제 브라우저·스크린리더 미확인
