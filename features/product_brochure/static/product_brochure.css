@@ -923,7 +923,8 @@
 
 /* 항목 칸: 폭을 고정한 열(auto-fill)이라 항목이 적은 묶음도 카드가 가로로 늘어나지 않음. 긴 글(제품 설명)만 전체 폭 */
 .feature-product_brochure .pb-pane .product_brochure-items {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  align-items: start;  /* 옆 카드(제품 설명) 높이에 맞춰 늘어나 빈 공간이 생기지 않게 */
   gap: var(--space-4);
 }
 
@@ -1010,28 +1011,71 @@
 /* 표시명 칸: 확인 토글을 카드 아래에 */
 .feature-product_brochure .pb-pane [data-display-name] > .pb-toggle { align-self: flex-start; }
 
-/* 하단 버튼 줄의 확인 진행률 */
-.feature-product_brochure .pb-progress {
+/* 2단계 배치: 왼쪽 항목 카드 + 오른쪽 검토 현황 패널(넓을 때 스크롤을 따라옴). 폭이 모자라면 패널이 아래로 */
+.feature-product_brochure .pb-review-layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+
+.feature-product_brochure .pb-review-main {
+  display: flex;
+  flex: 3 1 560px;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+/* 2열 칸에서는 제품 설명도 한 칸(제품명과 나란히, 빈칸 없이) */
+.feature-product_brochure .pb-review-main .product_brochure-item-wide { grid-column: auto; }
+
+.feature-product_brochure .pb-review-main .product_brochure-group { scroll-margin-top: var(--space-6); }
+
+.feature-product_brochure .pb-review-side {
+  position: sticky;
+  top: var(--space-6);
+  display: flex;
+  flex: 1 1 280px;  /* 나란히일 때 본문 3 : 패널 1로 늘고, 아래로 내려가면 전체 폭 */
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-glass-card-border);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-strong);
+  -webkit-backdrop-filter: var(--glass-card-blur);
+  backdrop-filter: var(--glass-card-blur);
+  box-shadow: var(--shadow-md);
+}
+
+.feature-product_brochure .pb-side-head {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  min-width: 140px;
+  gap: var(--space-2);
+}
+
+.feature-product_brochure .pb-side-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
 }
 
 .feature-product_brochure .pb-progress-text {
   margin: 0;
   color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
 }
 
 .feature-product_brochure .pb-progress-text strong {
   color: var(--color-text);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xl);
   font-variant-numeric: tabular-nums;
 }
 
 .feature-product_brochure .pb-progress-track {
-  height: 6px;
+  height: 8px;
   border-radius: var(--radius-pill);
   background: var(--color-neutral-soft);
   overflow: hidden;
@@ -1048,28 +1092,61 @@
   transition: transform var(--transition-base);
 }
 
-/* 2단계: 적용·생성 버튼 줄(목록을 내려도 화면 아래에 붙음) */
-.feature-product_brochure .pb-actionbar {
-  position: sticky;
-  bottom: var(--space-4);
-  z-index: 1;
+/* 묶음별 확인 수(누르면 그 묶음으로 이동) */
+.feature-product_brochure .pb-side-groups {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3) var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-glass-card-border);
-  border-radius: var(--radius-md);
-  background: var(--color-glass-card-strong);
-  -webkit-backdrop-filter: var(--glass-card-blur);
-  backdrop-filter: var(--glass-card-blur);
-  box-shadow: var(--shadow-lg);
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+  list-style: none;
 }
 
-.feature-product_brochure .pb-actionbar .field-hint { flex: 1 1 240px; margin: 0; }
-.feature-product_brochure .pb-actionbar .field-hint:empty { display: none; }
-.feature-product_brochure .pb-actionbar .btn-row { margin-left: auto; }
+.feature-product_brochure .pb-side-group-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.feature-product_brochure .pb-side-group-btn:hover { background: var(--color-surface-hover); }
+.feature-product_brochure .pb-side-group-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.feature-product_brochure .pb-side-group-count {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.feature-product_brochure .pb-side-group-done .pb-side-group-count {
+  color: var(--color-success);
+  font-weight: var(--font-weight-semibold);
+}
+
+.feature-product_brochure .pb-side-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.feature-product_brochure .pb-side-actions .btn { width: 100%; }
+.feature-product_brochure .pb-side-actions .field-hint { margin: 0; }
+.feature-product_brochure .pb-side-actions .field-hint:empty { display: none; }
+
+.feature-product_brochure .pb-review-side .pb-guide { box-shadow: none; }
 
 /* 3단계: 카탈로그 4쪽 구성 도식(장식) */
 .feature-product_brochure .pb-pages {

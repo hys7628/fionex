@@ -1547,17 +1547,21 @@
     }
   }
 
-  // 확인 진행률: 묶음 제목 옆 "확인 x/y"와 하단 버튼 줄의 전체 막대(화면 표시만, 상태 판단에는 쓰지 않음)
+  // 확인 진행률: 묶음 제목 옆 "확인 x/y", 오른쪽 검토 현황 패널의 전체 막대·묶음 목록(화면 표시만, 상태 판단에는 쓰지 않음)
   let groupCounts = [];
   const progressCount = panel.querySelector("[data-review-progress-count]");
   const progressBar = panel.querySelector("[data-review-progress-bar]");
+  const groupNav = panel.querySelector("[data-review-group-nav]");
 
   function syncProgress() {
     if (!fields) return;
     groupCounts.forEach(function (g) {
       const done = g.fields.filter(function (f) { return f.confirmed; }).length;
+      const all = done === g.fields.length;
       g.node.textContent = "확인 " + done + "/" + g.fields.length;
-      g.node.classList.toggle("pb-group-count-done", done === g.fields.length);
+      g.node.classList.toggle("pb-group-count-done", all);
+      g.navCount.textContent = done + "/" + g.fields.length + (all ? " 완료" : "");
+      g.navItem.classList.toggle("pb-side-group-done", all);
     });
     const total = fields.length;
     const done = fields.filter(function (f) { return f.confirmed; }).length;
@@ -1565,8 +1569,26 @@
     progressBar.style.transform = "scaleX(" + (total ? done / total : 0) + ")";
   }
 
+  // 검토 현황 패널의 묶음 버튼: 그 묶음으로 스크롤하고 첫 입력에 초점
+  function groupNavItem(label, fieldset) {
+    const item = el("li", "pb-side-group");
+    const btn = el("button", "pb-side-group-btn");
+    btn.type = "button";
+    const count = el("span", "pb-side-group-count");
+    btn.append(el("span", "pb-side-group-name", label), count);
+    btn.addEventListener("click", function () {
+      const first = fieldset.querySelector("input, textarea");
+      if (first) first.focus({ preventScroll: true });
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      fieldset.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    });
+    item.append(btn);
+    return { item: item, count: count };
+  }
+
   function renderReview(meta) {
     groupsRoot.replaceChildren();
+    groupNav.replaceChildren();
     requiredUi = {};
     groupCounts = [];
     Review.GROUPS.forEach(function (g) {
@@ -1576,7 +1598,9 @@
       const legend = el("legend", "field-label", g.label);
       const count = el("span", "pb-group-count");
       legend.append(count);
-      groupCounts.push({ fields: groupFields, node: count });
+      const nav = groupNavItem(g.label, fieldset);
+      groupNav.append(nav.item);
+      groupCounts.push({ fields: groupFields, node: count, navItem: nav.item, navCount: nav.count });
       fieldset.append(legend);
       // 공통 .grid: 검토 카드의 실제 폭이 충분할 때만 2열, 좁으면 1열
       const items = el("div", "grid product_brochure-items");
