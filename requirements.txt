@@ -32,3 +32,4 @@ pillow==13.0.0
 #   각 기능 fonts 폴더의 Noto Sans KR(OFL). Pretendard 통일은 아직 적용 전(develop 병합 2026-10-26 기준).
 #   홍보 스튜디오는 2026-10-26 fpdf2에서 reportlab으로 전환(팀 도구 통일), jasonenv 테스트·렌더링 확인.
 reportlab==5.1.0
+gunicorn==26.2.0
