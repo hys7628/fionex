@@ -1,0 +1,349 @@
+{
+  "schema_version": 1,
+  "fetched_at": "2026-10-27T07:07:03+00:00",
+  "source": "Google News RSS; original fionex queries and parser",
+  "media": {
+    "google": {
+      "items": [
+        {
+          "id": "d21ec377be791686",
+          "title": "Roupas de grandes marcas saem de fábricas que não aparecem na etiqueta: a cidade catarinense onde a indústria têxtil começou com oito teares ao lado de uma venda",
+          "url": "https://news.google.com/rss/articles/CBMisgJBVV95cUxOcERPVDAzVVVvQ2EyZ0tnNXV6TUNTUWlJNmRHRUFlZXlBajZsaDNtbTcyVFk2UXR0X1VjYkgxS2J6UjFydEF5MFg0ZjRWTXlnYWdSUXlOVFFaUjl3aWlQR191ZFRaTHJRS0txNXlFRGg5dTJIcGR3ZldKZ3E4QzBiY0p6M1FkX3l2NWRpUlB4TmlsanNXbVJiSUliU1BERmhFLXVGaUk0MEgxMjd1aFgzNDU1Slp4Vk5xbFFsWVlSaTVQUFlFWTZoSkhjSUJNak5Wc1dZaEZrTC1MOGZYcnVoTFdXckp1bUsyZTNDQ25IOGpTN2Z3em1INDNwQlVNdzluSTFCUldhZWVjVjJUT0dLZjgyM01VakRFTVZZbVQ5Z25jRUl4TjN2SnJ3TmRfeDZwMmc?oc=5",
+          "media": "Revista Oeste",
+          "media_domain": "revistaoeste.com",
+          "published_at": "2026-10-27T02:35:00+00:00",
+          "origin": "google",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "48f225de3edcd725",
+          "title": "O que muda no setor agropecuário e têxtil do Agreste com a Reforma Tributária",
+          "url": "https://news.google.com/rss/articles/CBMirgFBVV95cUxOam1CTUg4ME5CVXA0RmFiNXBHOW1WMTNiM1ZPdy1OMVFVVEVpVjliZkprMDhNZDlIb3BhSGIwWGF4Y1AyQjRSRGJSM3Zkb0ZRT3NJYnpfRkc5MHBBSG1YejhMaE9IcVBfQ3Z4M2Z1YjJPd3FZckNjWXpPVHlzc1J5Z1lvVUlIZkxGTDhEbFo0OG9ncG9WR2hmMzVNMEM5V3BMVjRleFd6bUVoWVZsNkE?oc=5",
+          "media": "Acessa Caruaru",
+          "media_domain": "acessacaruaru.com",
+          "published_at": "2026-10-26T21:27:16+00:00",
+          "origin": "google",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "6628ff31adb867b4",
+          "title": "Sinditec recebe comitiva italiana para discutir inovação na indústria têxtil",
+          "url": "https://news.google.com/rss/articles/CBMiuAFBVV95cUxOcng5LWlETDdYcHB0cW1XWnJudndfREtOaDRFZkNzZzFRUS1LUG1WZ0lBUW1jVUEwY3NMOW8tdHRGaFFmN3ZvbmdxMlQ1b1ZKQzR2R2xPd0hvSVNyU3Q0VElEUFFtdWVSeHB2RW04a2pDMlVDZ0plUVNEN2lZMjlkaS1LY2I5cEUxTXduSXdYdFUxT1pYSnpxZDVoMUZ3MEdRbWZCTXowRWp0OVN1UFNHODJ2aThwa3Qz?oc=5",
+          "media": "O Liberal",
+          "media_domain": "liberal.com.br",
+          "published_at": "2026-10-24T11:00:00+00:00",
+          "origin": "google",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "326de146b477ccfa",
+          "title": "Minas Gerais certifica 13 fazendas produtoras de algodão",
+          "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxPWjY5V3VZS0VWclVYWXlQZFR3enBaWEROUk9uMERaWE5xcXRtSXk1dzhLTnhkbTJVcTR3T2ZMaTVveldRU0JQRTZvOUo2NjlrU04zUTctZzRJT2lqdC1vdVNJbk9IdnhnRDhpZC1xWWlYTGtIRUs0STBLYWF5S0x1WG9udWx6TFZVVkhvN0F3TzBGcWNYYXB3TmdWZE40Q01uRGFIN21iZzg?oc=5",
+          "media": "Agrolink",
+          "media_domain": "agrolink.com.br",
+          "published_at": "2026-10-22T20:03:00+00:00",
+          "origin": "google",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "e8bc7b6a2a9b5716",
+          "title": "Evento de moda movimenta a indústria têxtil em Minas Gerais",
+          "url": "https://news.google.com/rss/articles/CBMioAFBVV95cUxOTzl5UC1yZGZLZElKazJ4Q0hvRlpnTDB0cU11NTQteFF2RUVqeGMzYnBjaW1MNktLOXhSdktRam9yeWZlLUZnaWVJeVNqdFloMW02ZU5QUHNNRnhycDl6ZEd3M3JPRmszblJoa3pVbHlaSUt4YjYxV0RJaUFHSXZJTHR4anp0LXJxT3A2dkpjaUVWQTh0MExlWFlXYUpHbXlR?oc=5",
+          "media": "Notícias - Canção Nova",
+          "media_domain": "noticias.cancaonova.com",
+          "published_at": "2026-10-21T22:32:11+00:00",
+          "origin": "google",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "f2a09235fb0c6857",
+          "title": "Brasil detém 34% do comércio mundial de algodão, mas avanço dos sintéticos desafia setor",
+          "url": "https://news.google.com/rss/articles/CBMi6gFBVV95cUxQQklDcTM1R1Jna2d2OVFCUnYwVC1BNGhnQW1oeUZQWVRjSm91VUxjYUE1czZMaVd4d2tIVGVJRFhqMkxvVWRrTjd2Mk1vdGhkMThIS2tBQUZROHFyREZiTXBGMGVLdDNqM1VYNjJjV0lseWREXzk4Vk9sQkpOdlJ3c1BCVU9MMzVTQWVvNWl5S0lOQTF6blo2ajh1RXlzT0xWeDVhY3RKV1BrNjRLalVjLWpGMXN6cUNUT25vNm1valU3dUppaHFWdWF4X2NUcnBQRzZVdVN2ejVXNzFtUXRVd1pGVFdpSEJ1WHc?oc=5",
+          "media": "Portal do Agronegócio",
+          "media_domain": "portaldoagronegocio.com.br",
+          "published_at": "2026-10-21T22:00:00+00:00",
+          "origin": "google",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "15f65af868e72d7e",
+          "title": "Câmara analisa regras de saúde e ergonomia na indústria têxtil",
+          "url": "https://news.google.com/rss/articles/CBMiowFBVV95cUxOUmJkTC1JcWRTTElQY29sVFFGZUhoTTdzRGhhdmFHeFF6bWpGbVJIMEVXVDlmWFc2MktkaGRlOEctVnhncmwtS18zeXhCTnZqbnJWYV9HSC1FRmhkM1pacUEtUldfaWlURFNmOFNMaGtpcDBkeUdMbUI0eW5UaGNMZnBwQm9IMk5PUUo4SEpsMzM3d0ZTTWU5TXBFU25pOWYtOU5n?oc=5",
+          "media": "Mix Vale",
+          "media_domain": "mixvale.com.br",
+          "published_at": "2026-10-21T20:36:16+00:00",
+          "origin": "google",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "0fd59c6c7443f821",
+          "title": "CAMARA DOS DEPUTADOS - Projeto de Lei propõe medidas de proteção à saúde dos trabalhadores da indústria têxtil; veja detalhes e tramitação na Câmara.",
+          "url": "https://news.google.com/rss/articles/CBMihwJBVV95cUxNNWlQaWtlWXRnU3B4NWJEV3dpV1pZcGRyUWdvTVBkT2liUHo4VTdVak15aU9UZHU3Um5nNS16Z2Uxa0ZPWUdTVk83UG1hQTFqcVFRaEpBaXJqaVBCR3E3UXU1R3BNcjVhczJJakNwbzJvRHlxX1c4UFR2aTMtcTdCWGlXTlQwbzd1aW1MOXhmZFFPX2FVa0M0ZXFVT2N4ckViLUc2OEZkS1I0V2lGSHEyejlYczVWVG1FRzFWVFNCZFRtVGVMOF9WRnFZTmJqbGp3ZElKdHpuMWNoeW9mWTdYQ01NcVRUakpYRkNxWTM3VmZSTGs3UjRyOHNvc1RMLXhENUc0b2Rfcw?oc=5",
+          "media": "Repórter Maceió",
+          "media_domain": "reportermaceio.com.br",
+          "published_at": "2026-10-21T20:22:00+00:00",
+          "origin": "google",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "2dd9a75e5d113b9c",
+          "title": "Projeto estabelece regras de saúde e ergonomia para trabalhadores do setor têxtil",
+          "url": "https://news.google.com/rss/articles/CBMi2AFBVV95cUxPTnk0bFVaZ2oyZWNZWnMwSnJmM19LQ3ZKTzZDaFFELW9xaUw4dGstRGNnamt3dG51bk1SYThwaFhXVkdFbXY0ZjgzQXB2ZHZJZjFwMy1iVVlaLTkzLThwekxDUWNHRllpbXJOclFNWlo4Mnp6ZDU2VEVhbkh4X0FKdDJMZ1F2UUxxS09hd1FOY1pwa2tSVkxVeWV3Vi1aSFVZZXlONVpYRHBZUFl2Q0J0OV8ySXozak9LU0s5OEZIWUtCbGEyVHp4ZGg4eU5FT2NDSEdlNExsSW0?oc=5",
+          "media": "Tribuna do Sertão",
+          "media_domain": "tribunadosertao.com.br",
+          "published_at": "2026-10-21T20:19:00+00:00",
+          "origin": "google",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "9625eb981491a2cb",
+          "title": "Programa Jovem em Foco leva alunos para visita a indústria têxtil de Guararema",
+          "url": "https://news.google.com/rss/articles/CBMiyAFBVV95cUxPZE42VUhMbkdRV1dJb1RZalVkTWlGMUxKSGxQbnV2aU5hWHFqUEdUNU96V1Jldm81TWg0UHdaVVplQ1dUaUdUYm00WVRVek1JOTlZQUNSc2w4b2NsSG5XSU5DcEUzUUowR1pQaFJLd1dtSDhQUnNzM1NxTDA3WXFGMjROVjN0R0dXYzVEcDBXck5DdVFGM2s1NnE0ektpRHUza2dHSWxVS1prS3JvbUtCZDRyaElud2R0MjNYVHFCbmxrUnBkWW1sVg?oc=5",
+          "media": "Diário do Estado de S. Paulo",
+          "media_domain": "diarioesp.com.br",
+          "published_at": "2026-10-21T14:49:00+00:00",
+          "origin": "google",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "642fc25b2d350b91",
+          "title": "Indústria têxtil de SC fecha parceria inédita com a Hering",
+          "url": "https://news.google.com/rss/articles/CBMilAFBVV95cUxPRWgxeFpMaHN5d01FUVBHdk9NZ3dzcDdwM2dMbUFtalpWMXMyX3doNkFqT0JNdER6MzRVdTROSWNIOVZfUTd0akZVbWVzYXpDR3VmNnJza05pYzBZclhBVFNneUllWmc0VFZ0NUM4Vjc5Sy1QOUFoSGllZDE4M0FfTmN0U05naWh3bDJNczF1YXFHZVVi?oc=5",
+          "media": "Rádio Real News",
+          "media_domain": "realnews.com.br",
+          "published_at": "2026-10-21T05:25:11+00:00",
+          "origin": "google",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "bef2e62c8766c3e0",
+          "title": "Brasil lidera exportações mundiais de algodão e amplia protagonismo no mercado internacional",
+          "url": "https://news.google.com/rss/articles/CBMiugFBVV95cUxOYTd2UEdvSG96RHNLek5ZTFAyME5ZTXJ5SzRiMHFpc3lRelVyV3V4cG56Z3FsNTg4SnRfbXdkTHJJN2xpXzlHOFE5UnlEX3hkSl9JSDNneTc5VlN1OFFXY010YkpSTzVIRmhNNVpwbWZCbGtBdHQ0WXpsWlE2RVVRSDF1c1p5cGNKRjFWdWppMy1aZ2pwYjJYVEcydVlZeWkySkJ5Q0RFeTc3TDM2bmNjc2lFUmVWRmp2WXc?oc=5",
+          "media": "BA de Valor",
+          "media_domain": "badevalor.com.br",
+          "published_at": "2026-10-20T17:41:28+00:00",
+          "origin": "google",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "83ea1aa129812037",
+          "title": "J. Serrano: experiente em tecidos para o setor moveleiro",
+          "url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxQM0VnVjJGdS1IeUsweFJzSk9NQU9qZjZZQmtNcGdKUE0xMTdrMS0tNjdJV2dhUWdWTy1oZVJfcTVjUm13S2JiMFV3YlRxMmRzTFJkOXFFZ1NweVQ1UTZ5OFI0aEFpUWFFc2pQcHZVX0VJNHpoNzlvcXY5SnJqbU1Uc3ROd2l5bi1TZnQyaGhZRTBpMV9XM2phVA?oc=5",
+          "media": "eMóbile",
+          "media_domain": "emobile.com.br",
+          "published_at": "2026-10-20T11:00:00+00:00",
+          "origin": "google",
+          "lang": "pt-BR"
+        }
+      ],
+      "collected": 46,
+      "after_filter": 13
+    },
+    "abit": {
+      "items": [
+        {
+          "id": "90d5fa9a621438af",
+          "title": "Inflação pelo IPC-S da terceira quadrissemana de outubro registrou taxa de variação de 0,46%",
+          "url": "https://news.google.com/rss/articles/CBMiwAFBVV95cUxQeDU4cDVncTMtU2JrQzFBX3MtTGhvWC1GWlZ3RzBmMTNJZ08zNFBWRVoySzVFTGczWEpwN196TGNYR0otX2Vod2JDWkE2SDlqdm1pREx2T0Uzb0hiM01PVzhvd2ZqWTNKX0gyQ09RQlRBX1ZreWdWWS0xYWFURzZfbE1BSTRWSjNGNHBzNWtXSnAxekVPNWxzU0FoTWdreEtfczFxdjlVZ3JrOFp5d0ZCbllOcmdZSHlZMUs0YXdNQ2g?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-26T22:27:11+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "6c0b531f2ce15a79",
+          "title": "Abit",
+          "url": "https://news.google.com/rss/articles/CBMiWEFVX3lxTE8tWVNiNkhzcEh1VzhNbG1YTkxlNUpTZVI3aTdVRy1RcURMNEVmWDEwT29jSFZXUkk0MU8yRVlTcXJaT2tPcDNJZzdNaTBnN2cxMTNESjFRbEs?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-26T18:42:35+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "2d379cde0997b0f4",
+          "title": "Brasil regulamenta acesso a cotas de exportação para a Noruega pelo acordo Mercosul–EFTA",
+          "url": "https://news.google.com/rss/articles/CBMivAFBVV95cUxPNW5hVFNDdU5FOGFSNlV2ODRVeE5SRkVMcjRhUzF3b280U3VDdkYyNUhnRGNablVNR1dmNGxqcHlUblF4YURXanJfUmpRXy1yV0R4RHpnT0wxV2FtTUJtXzFoT2RjNjlhRTVxY2I5UGxOSDFqSG0wMk5vYWt1ZzBKZFpkMTVlNWFEeld2a1hfVXBqRFpCZFpPdDlUNzgzWnVQazFOMWkwT2djOE9od3o3U3pvUTVJcmVZUDRYVg?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-23T20:25:10+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "ddf960d05c1650fe",
+          "title": "Marcas brasileiras participam da Tranoï Paris com apoio do Texbrasil",
+          "url": "https://news.google.com/rss/articles/CBMiowFBVV95cUxPOXprS1VWRkhTQThXMnZwZUV5UUtzXzdMQUVZWVR4UkRiVWNWM0drS01zSFpybTBKSzcxZlNjT1BFYVowNGs2bW5jbVFRZ2tLTnRvU2NoSWx4LVQ0bjR0elV4UUtPWl9kZmJrdmhiLWJkZlV6UnVhdFo3b1ZkeUZFdktKZHNPa0E5M0JkZ2xhRll4MHhIMEZRX1RjYlhZaW4wTmVj?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-22T22:26:58+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "13007e3c7988f115",
+          "title": "Riachuelo capacita colaboradores para desenvolver soluções de inteligência artificial",
+          "url": "https://news.google.com/rss/articles/CBMiugFBVV95cUxQcGluUUNpQ3VuMmpGQXN0S1JpTVBCVm0wSGw4Z3JGR3JDSGdVbE5IQ1R2UW51Vk11NjZhalU3cm5Wd0xUTzczaEVPd0JDTlhaWmVQb2ViMjE3aDh0WG52S2hYZlRtSGpQdDE1alM4S0xUWGx1aTh6eWFWLUhnRGVhTjN5UXdUZ2E4RFFjZXJIOVB5M2N5djhHaC1wQTluM0VNbmNqX3cwWVVXczF0WGx1bkpOalp2SlRKbHc?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-21T22:18:45+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "9998dc71fcf64a3d",
+          "title": "Clipping 21-10-2026",
+          "url": "https://news.google.com/rss/articles/CBMiYkFVX3lxTE5wbEtZSUxjcEZhZzY1Wk5XVlZuT3lZTkV2MFczSGFCM2NyQTg2MEpyTkVzLWlla3cwcHIySnhvMmVNczRYOTRCbFlONFAtb004YzdEa0xOUGIxaVMxWFJqZ0Zn?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-21T20:33:53+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "030659743fd93118",
+          "title": "Indústria paulista sinaliza retração da atividade em outubro, aponta Fiesp",
+          "url": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxOVnNBYjFtcWxGd1liRm9IREtGVHBVMGV0QjAwOFNFMlZZaXNTdXBaaTIzbVZnNHdGamlqLWl0eW9ZWldtWk9kb2xCZ3BuaWRSdUJNQnpxS2tjOWVyZDlYMXMtQTB6c2xpZnhmMTB5dTRndnp5amhDYmRxMGh6WnBsMlVjZHVYLUk5X3NEakpIYVdRUzhiWE55V0Y0YU9zZV9EVDZuS1JqSmN3Zw?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-21T19:55:37+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "44174f5f57a9a764",
+          "title": "Discurso de abertura — Congresso Internacional Abit 2026 Ricardo Steinbruch | Presidente da Abit Fortaleza | Versão revisada MAB",
+          "url": "https://news.google.com/rss/articles/CBMimwFBVV95cUxPd3VOU2l4VHcyYVZIenFwNW0yYVU4Mkd4eVctN1JkMDZHVlRBNkpWVmZ0OFU1aEtBRzJITGdXMnlqVFZDUS1EVHBxOWF6TlZSeHNWVUJWTWZZcUo2eTBjcHF1T1dqeHVYVzFsUlBIcUZpbTlkTlVUZE9UbEplNGFCdmhkN0owbWJ4X1l6OWFYSTBRalRpMDZibVQtbw?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-21T00:20:51+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "840e2e02e6f8e01d",
+          "title": "Abit e Texbrasil levam convidados internacionais ao Dia da Colheita do Algodão Orgânico na Paraíba",
+          "url": "https://news.google.com/rss/articles/CBMiywFBVV95cUxNOHBpb29qc0xKZHlzd2FpalgxUTZoUk9veDFJV0RDdXJpWmtXRXlrOGVxRjh4TVBubUpiT09pdUhrRUJMRGx6MEE3QVcxbEtoTUlVbzI1TDZRRnljOVF2SUpkYklOQWYzaW92STNPUV9XV29pXy1PWEZZLWZQaVVwSG43b0xqOGR0WFZQWWZUdUVoQjZWaVVDOXdfc1BEVDZzZHlmVDdROXF2YVFQUTRLRzh4U1J5M3lHeDhIUnVEWWVaMjB0MU10YmpsOA?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-20T22:33:20+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "8882e3dbcdf73408",
+          "title": "Clipping 20-10-2026",
+          "url": "https://news.google.com/rss/articles/CBMiYkFVX3lxTFBSMHhib2pJbllJRmFmd09UUm9iUXNvS2NQQnozTmlaVFZWWm11Rno1b0EzUmZPNEkwbzhxcEZyVmJuSkloQlE2eVlKV1JPTzlUYkFPdm9EaTBXNzR0NVNPdmd3?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-20T22:33:20+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "5dd655014f81a384",
+          "title": "Vicunha fornece tecidos para uniformes criados pela Egho para restaurante Fôrno",
+          "url": "https://news.google.com/rss/articles/CBMisgFBVV95cUxOUWFRbm5EZ2daRkE4V3lHYjFhcEN0c1N1T3Z3TE5fMFpycVh4VUdYSDdfYjRFTGVWajBxYmdIVGJsTkpTLURzOXhKQmZac2lFYlFlOTdERmtDUGpBZjZ1cVF3RXRIMkkyV29oazd0REZTQzZOQTVlR0wxb1ZUZGVJQjc2V1hFa2tQSnN6SVUyMjRISThvQ2hZb1hPT3BUYlVEMlJ1SXRHQ3pVUG9WVUpfUEx3?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-19T22:37:47+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "28dd1bc59a72c55a",
+          "title": "Fim da escala 6x1 traz dúvidas sobre impacto na produtividade e custos da indústria têxtil",
+          "url": "https://news.google.com/rss/articles/CBMitwFBVV95cUxQQTg3MkdqWTNZZVMzOWp1TjdzTzhQR0lDOG96ZnltWFZGenFkZWMyLWtYUVRiODctbmFRTXBaUV9VU3h1T2F5OExPR2JfVnJIemU0aGtGQ1VIY1RmSHJWdHpLY0dxMXFFTXlzbUwwNmhHM0MxbzV6ZVFZd3FWbHY4dXhrTHUwSE1TZHEycjBJRzVPRmw4MXF4ck1lQmpqSUhzUXNzUURkNnhEZzkzV08ydEJ4MWM1UE0?oc=5",
+          "media": "O POVO",
+          "media_domain": "opovo.com.br",
+          "published_at": "2026-10-16T15:19:24+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "a2cd405a7881dd26",
+          "title": "Polo de Confecções marca presença no Congresso Internacional Abit 2026 em Fortaleza",
+          "url": "https://news.google.com/rss/articles/CBMizgFBVV95cUxQdC1HTnNpQmFtbGp4ZFpucHRmemxLd2xycjNuYXJERGhfUEJibm9rc0hzNkZ3anJYWlBLeUlxVlJOYkgyQ0QzY24wempfVE0wdllZbVpHMFJ6VDQtbU9KQVVLM1plcTNCZnJLRmRhWVZOeHN4dS1ZMWZqdDZVSWl4UTlmSG5pN2JmSVpQbWRjdjRFZnhYX0RMSzhaXzJxT2JXYzVUZUpaWVlDNlptQlAxZ256cmtkLWhZNTduYzJ5SW9hVWdCNWE5MldhOGx0UQ?oc=5",
+          "media": "Mercatus Jornal",
+          "media_domain": "pontoeconomicojornal.com.br",
+          "published_at": "2026-10-16T07:00:00+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "0e9450c3c744230b",
+          "title": "Comportamento do consumidor e IA pautam debate sobre o futuro do mercado",
+          "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxPcDdDOWg5QzBJZExEN2JhOVBDVFEwc0FneEtFblpPejRQa1BTV0JpTFM2TTVQa2F5cHRNcUZ2cjViSjNtYTZ4Z2RMeWhURjdNUnEtdmpsUXBaVTZQRDBkdzgtekVEeUhZLTRUYWw5M2VXR3YtT2NsOU5KbFVYMTRmQVJmVTJQZ3c0N2NpTThDb0Nlay04dlVKeW5KZGNESlJkQWlQYWhOSlQ?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-15T23:24:02+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "3029b7db42de5c75",
+          "title": "Futurismo desafia a indústria têxtil e de confecção a repensar estratégias de longo prazo",
+          "url": "https://news.google.com/rss/articles/CBMivwFBVV95cUxOMzJWQjdwM3JObUxNX1drTjNPeGZGeHJSZDJrRURib2pkZ3JPNW5hdHlTRmtDR3lFWkdUaGppMUJ2OFRzZHhTLWFyR2YwbTFIcDFQZVZPUy1hRnVxeXB3a3F6NGttTTMzYVVnNDNBd1pYT0ttclE5VVNKZmZGTThua0J6cGV3eEVlMlBQNTRpa0o4V1RZdVhjYzRYalMyTEpJTXRTUFRMTlpBV1cwVldaUU9ZUTVzN1g5Ylk4WFBFMA?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-15T07:00:00+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "c0295addb0bd5041",
+          "title": "Abrapa destaca inovação e sustentabilidade como caminhos para o futuro do algodão",
+          "url": "https://news.google.com/rss/articles/CBMiygFBVV95cUxNTFliY0U5SDktMVBONGM2VWJvYnhDWGFRY0tBVkxncFJYMkNtdHphWk03RTMwbXN2SUpSbUwxaFFtaWJIU1B5NzhKNldybXAtT29TZUlhcUVjd3ltUk5tTFZSTlg5WXE4TkpYUEt3UldsX2dFcUk5S0ZXZndVRnlxSWZ1ZEZRbXJNTHlfdlNYWlE1NDdMUGlnMkRXNWFheG5TSVVwc2ZrXzJ5T21vUzNrRFNvZGtQZEtvbHhQa3JtR05NMDJPVVg1RnRR?oc=5",
+          "media": "Agrolink",
+          "media_domain": "agrolink.com.br",
+          "published_at": "2026-10-15T07:00:00+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "75919260927d92ea",
+          "title": "Fortaleza reúne lideranças internacionais para debater o futuro da indústria têxtil e de confecção",
+          "url": "https://news.google.com/rss/articles/CBMi3gFBVV95cUxPMWdlU05kcVhCWEk3UkVsQjRLcnI0WnVELVF3WU81QURtRHhDNmMwOXV5UTE2UExXN2lVN3dJbm1VVTFIVHZoU0lCVjl2QThPWFRXaHo2YzZnTUJaejNEeXM4eVB4LWxDRkdKR2JhdWtqMG5aQlpNMGJqUVpYRWtKN1BMTzE1em5CMkZWRFRrWHl0VGpVUnpwWXJ0cVpoTU9Ga05Va3gxMzFUa2o2M2k0Y1dOSlR5MENpY0lVRXhZWXdYTGVtU2xBdUtFVzhONzRmTmdtV3Z6OC1PMXRJVGc?oc=5",
+          "media": "FIEC - Federação das Indústrias do Estado do Ceará",
+          "media_domain": "www1.sfiec.org.br",
+          "published_at": "2026-10-15T07:00:00+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "1120a947132ab3b5",
+          "title": "Paulo Portas destaca papel estratégico do Brasil no cenário global",
+          "url": "https://news.google.com/rss/articles/CBMioAFBVV95cUxOR2htTlJFSFlTNzhDUHprWkNGTVJRQUdDZm8xZ1VCZTFlUnZSSWVHX3dic0FxZHBYdTdHSnk0T1RYMjQ1SVFJLUlOTHQ2ZUtib1hFNlI4SWFUWTJsWGh5Q0J6dWZhUE1qYmhYWDdjU3EtTzVVM0ExcHprU0MyLXlfTXo1S3pkT2Z3QTJSVTJUcXJIUjBvTFpwMjJ5NHlVYllY?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-14T18:02:02+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "a1bc7151e219e429",
+          "title": "Congresso Internacional Brasil 2026 destaca competitividade e cooperação internacional na abertura",
+          "url": "https://news.google.com/rss/articles/CBMiywFBVV95cUxOSGZacDBYbEhDbWpqSkxlcE04VnIxY2RReFJmQWRyOHR0Y3MtU0xDemszR2tXd21uS1hZZnh1TkR5dTMxVHNjazNwbkx6YkNDMFlJSF96VXByQVdEZ3RQM3VhVlYtTk5ySURnOVdFajVmdDI5YXJGaUpXRzd3Nl85THduVnZ6MmJvOVNwbng5aXFRU2ltOG5BWkVEd0dRR29xWGVPV1JaR00wRmhtOUd0VjFXczJocXYtTEdnWXBTbmpxckQxUXVkV2wtbw?oc=5",
+          "media": "Associação Brasileira da Indústria Têxtil e de Confecção",
+          "media_domain": "abit.org.br",
+          "published_at": "2026-10-14T15:11:54+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        },
+        {
+          "id": "b63353a8ebec463f",
+          "title": "Hari Hartmann participa de congresso internacional da indústria têxtil em Fortaleza",
+          "url": "https://news.google.com/rss/articles/CBMixgFBVV95cUxOVm0yZ3hNYkluckRnUFdhci1aRTRxY3BNZGRVQ29QaEE3ektzeUZiUW5zaERnblUzTFlIWkpERkpOMnhsM3QwX2UxUTB2YXpkQURRQk5HaGJOZ09kMU5POHFwclJvb09FdHFJeTdGZFNSc1FvaHFYdUFhdDd1eTFvZm1zSC1GUWpuYUdrUTJxaVA5Tkphc1ppcHRuZTZJUkxObU9BWkV1dVdlelpJS0hyblFOeW00NzRxQ1JnQ19XcE1pZVBnU1E?oc=5",
+          "media": "Revista Let's Go Bahia",
+          "media_domain": "letsgobahia.com.br",
+          "published_at": "2026-10-14T07:00:00+00:00",
+          "origin": "abit",
+          "lang": "pt-BR"
+        }
+      ],
+      "collected": 45,
+      "after_filter": 39
+    }
+  }
+}
