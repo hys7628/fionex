@@ -1314,4 +1314,13 @@
 /* 1단계: 넓을 때 진행 순서(왼쪽)·자료 선택(오른쪽). 줄바꿈되면 마크업 순서대로 자료 선택이 위 */
 .feature-product_brochure .pb-split-guide-first {
   flex-direction: row-reverse;
+  align-items: stretch;  /* 두 카드 높이를 같게 */
 }
+
+/* 늘어난 높이: 자료 선택은 파일 선택 영역이 채우고, 진행 순서는 개발용 예시 상자를 카드 아래에 붙임 */
+.feature-product_brochure .pb-split-guide-first > .card {
+  display: flex;
+  flex-direction: column;
+}
+.feature-product_brochure .pb-split-guide-first .pb-upload { flex-grow: 1; align-content: center; }
+.feature-product_brochure .pb-split-guide-first > aside > .product_brochure-dev { margin-top: auto; }
