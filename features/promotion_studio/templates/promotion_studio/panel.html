@@ -13,7 +13,30 @@
   {{ error(name) }}
 </div>
 {%- endmacro %}
-<div class="workspace">
+{# 하위 탭(단계): 1~4는 입력 폼 안의 구역, 5는 결과 카드. 탭 전환은 hidden으로만 숨겨 입력·결과를 유지합니다(promotion_studio.js) #}
+<div class="ps-steps" role="tablist" aria-label="홍보 스튜디오 작업 단계">
+  <button type="button" class="ps-step" role="tab" id="promotion_studio-tab-basic" aria-controls="promotion_studio-pane-basic" aria-selected="true" data-ps-tab="basic">
+    <span class="ps-step-no" aria-hidden="true">1</span>
+    <span class="ps-step-text"><span class="ps-step-label"><span class="visually-hidden">1단계 </span>기본 정보</span><span class="ps-step-sub">대상·설명·목적</span></span>
+  </button>
+  <button type="button" class="ps-step" role="tab" id="promotion_studio-tab-video" aria-controls="promotion_studio-pane-video" aria-selected="false" tabindex="-1" data-ps-tab="video">
+    <span class="ps-step-no" aria-hidden="true">2</span>
+    <span class="ps-step-text"><span class="ps-step-label"><span class="visually-hidden">2단계 </span>영상 설정</span><span class="ps-step-sub">톤·길이·장면</span></span>
+  </button>
+  <button type="button" class="ps-step" role="tab" id="promotion_studio-tab-files" aria-controls="promotion_studio-pane-files" aria-selected="false" tabindex="-1" data-ps-tab="files">
+    <span class="ps-step-no" aria-hidden="true">3</span>
+    <span class="ps-step-text"><span class="ps-step-label"><span class="visually-hidden">3단계 </span>자료 첨부</span><span class="ps-step-sub">선택 사항</span></span>
+  </button>
+  <button type="button" class="ps-step" role="tab" id="promotion_studio-tab-review" aria-controls="promotion_studio-pane-review" aria-selected="false" tabindex="-1" data-ps-tab="review">
+    <span class="ps-step-no" aria-hidden="true">4</span>
+    <span class="ps-step-text"><span class="ps-step-label"><span class="visually-hidden">4단계 </span>입력 확인</span><span class="ps-step-sub">확인 후 콘티 생성</span></span>
+  </button>
+  <button type="button" class="ps-step" role="tab" id="promotion_studio-tab-result" aria-controls="promotion_studio-pane-result" aria-selected="false" tabindex="-1" data-ps-tab="result">
+    <span class="ps-step-no" aria-hidden="true">5</span>
+    <span class="ps-step-text"><span class="ps-step-label"><span class="visually-hidden">5단계 </span>콘티 결과</span><span class="ps-step-sub">장면·PDF</span></span>
+  </button>
+</div>
+<div class="ps-flow">
   <form class="card" aria-labelledby="promotion_studio-input-title" novalidate data-ps-form
         data-ps-limits='{{ lim|tojson }}'
         data-ps-doc-ext='{{ ps.doc_extensions|list|tojson }}' data-ps-image-ext='{{ ps.image_extensions|list|tojson }}'>
@@ -24,7 +47,10 @@
       </div>
     </div>
 
+    {# 입력을 세 묶음(기본 정보 · 영상 설정 · 자료 첨부)으로 나누고, 입력 확인·생성 버튼은 아래 고정 막대에 둡니다(promotion_studio.css) #}
     <div class="stack">
+      <section class="ps-section" role="tabpanel" id="promotion_studio-pane-basic" aria-labelledby="promotion_studio-tab-basic" data-ps-pane="basic">
+        <h3 class="ps-section-title" tabindex="-1">기본 정보</h3>
       <fieldset class="fieldset" aria-describedby="promotion_studio-audience-error">
         <legend class="field-label">대상<span class="field-required">필수</span></legend>
         <div class="ps-choices">
@@ -69,6 +95,14 @@
         {{ error("cta") }}
       </div>
 
+      <div class="ps-pager">
+        <span></span>
+        <button type="button" class="btn btn-secondary" data-ps-go="video">다음: 영상 설정 →</button>
+      </div>
+      </section>
+
+      <section class="ps-section" role="tabpanel" id="promotion_studio-pane-video" aria-labelledby="promotion_studio-tab-video" data-ps-pane="video" hidden>
+        <h3 class="ps-section-title" tabindex="-1">영상 설정</h3>
       <fieldset class="fieldset" aria-describedby="promotion_studio-tone-error">
         <legend class="field-label">홍보 톤<span class="field-required">필수</span></legend>
         <div class="ps-choices">
@@ -136,6 +170,15 @@
         {{ error("max_wait_seconds") }}
       </div>
 
+      <div class="ps-pager">
+        <button type="button" class="btn btn-secondary" data-ps-go="basic">← 이전: 기본 정보</button>
+        <button type="button" class="btn btn-secondary" data-ps-go="files">다음: 자료 첨부 →</button>
+      </div>
+      </section>
+
+      <section class="ps-section" role="tabpanel" id="promotion_studio-pane-files" aria-labelledby="promotion_studio-tab-files" data-ps-pane="files" hidden>
+        <h3 class="ps-section-title" tabindex="-1">자료 첨부<span class="ps-section-sub">선택 사항</span></h3>
+      <div class="ps-files">
       <div class="field">
         <label class="field-label" for="promotion_studio-documents">보조 문서</label>
         <input class="file-input" id="promotion_studio-documents" name="documents" type="file" multiple
@@ -173,6 +216,7 @@
         <ul class="ps-file-list" data-ps-file-list="logo" hidden></ul>
         {{ error("logo") }}
       </div>
+      </div>
 
       <fieldset class="fieldset" data-ps-logo-scope hidden aria-describedby="promotion_studio-logo_scope-error">
         <legend class="field-label">로고 적용 범위<span class="field-required">필수</span></legend>
@@ -184,6 +228,17 @@
         {{ error("logo_scope") }}
       </fieldset>
 
+      <div class="ps-pager">
+        <button type="button" class="btn btn-secondary" data-ps-go="video">← 이전: 영상 설정</button>
+        <button type="button" class="btn btn-secondary" data-ps-go="review">다음: 입력 확인 →</button>
+      </div>
+      </section>
+
+      {# 4단계: 넣은 값 전체 확인(묶음별 '수정'으로 해당 탭 이동) + 콘티 생성. 목록은 JS가 textContent로만 채움 #}
+      <section class="ps-section" role="tabpanel" id="promotion_studio-pane-review" aria-labelledby="promotion_studio-tab-review" data-ps-pane="review" hidden>
+        <h3 class="ps-section-title" tabindex="-1">입력 확인<span class="ps-section-sub">생성 전에 넣은 내용을 확인하세요</span></h3>
+        <div class="ps-review" data-ps-review></div>
+      <div class="ps-submit-bar">
       <div class="notice notice-info" data-ps-summary role="status" aria-live="polite">
         <p class="notice-title">입력 확인</p>
         <p data-ps-summary-text>필수 항목을 입력하세요.</p>
@@ -191,18 +246,23 @@
 
       <div class="btn-row">
         <button type="submit" class="btn btn-primary" aria-describedby="promotion_studio-generate-hint" data-ps-submit>콘티 생성</button>
-        <button type="button" class="btn btn-secondary" data-ps-cancel hidden>취소</button>
         <span class="field-hint" id="promotion_studio-generate-hint">
           제품 설명으로 텍스트 콘티를 만듭니다. 보조 문서·사진은 아직 반영하지 않으며, 이미지 생성은 다음 단계입니다.
         </span>
       </div>
+      </div>
+      <div class="ps-pager">
+        <button type="button" class="btn btn-secondary" data-ps-go="files">← 이전: 자료 첨부</button>
+        <button type="button" class="btn btn-secondary" data-ps-go="result">결과 보기 →</button>
+      </div>
+      </section>
     </div>
   </form>
 
-  <section class="card" aria-labelledby="promotion_studio-result-title" data-ps-result-card>
+  <section class="card" role="tabpanel" id="promotion_studio-pane-result" aria-labelledby="promotion_studio-tab-result" data-ps-pane="result" data-ps-result-card hidden>
     <div class="card-header">
       <div>
-        <h2 class="card-title" id="promotion_studio-result-title">콘티 결과</h2>
+        <h2 class="card-title" id="promotion_studio-result-title" tabindex="-1">콘티 결과</h2>
         <p class="card-description">장면별 구성과 포르투갈어·한국어 문구를 표시합니다.</p>
       </div>
       <div class="ps-download" data-work-ignore>
@@ -227,6 +287,8 @@
     </div>
     <div class="notice notice-info" data-ps-busy role="status" hidden>
       <p class="ps-busy-line"><span class="spinner" aria-hidden="true"></span> 콘티를 생성하고 있습니다. 장면 수에 따라 1분 이상 걸릴 수 있습니다.</p>
+      {# 생성 중에는 결과 탭에 있으므로 취소 버튼을 이 안내 안에 둡니다 #}
+      <div class="btn-row"><button type="button" class="btn btn-secondary" data-ps-cancel hidden>취소</button></div>
     </div>
     <div class="notice notice-danger" data-ps-error-box role="alert" hidden>
       <p class="notice-title" data-ps-error-title>콘티를 만들지 못했습니다</p>
@@ -258,5 +320,9 @@
       <p>콘티 조건을 입력하고 콘티 생성을 누르면 결과가 이곳에 표시됩니다.</p>
     </div>
     <div class="stack" data-ps-result hidden></div>
+    <div class="ps-pager">
+      <button type="button" class="btn btn-secondary" data-ps-go="review">← 입력 확인으로 돌아가기</button>
+      <span></span>
+    </div>
   </section>
 </div>

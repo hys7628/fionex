@@ -26,7 +26,7 @@ FEATURE = {
     "id": "promotion_studio",
     "label": "홍보 스튜디오",
     "title": "홍보 스튜디오",
-    "description": "바이어용·소비자용 포르투갈어 홍보 영상 콘티를 구성하고 PDF로 내려받습니다.",
+    "description": "포르투갈어 홍보 영상 콘티를 만들고 PDF로 내려받습니다.",
     "icon": "megaphone",
 }
 

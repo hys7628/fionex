@@ -67,8 +67,10 @@ def squash(text):
 
 
 def without_footer(flat):
-    """쪽 넘김 위치에 끼어드는 바닥글(안내·쪽 번호)을 빼고 본문만 남깁니다."""
-    return re.sub(re.escape(squash(rw.FOOTER)) + r"\d+/\d+", "", flat)
+    """쪽 넘김 위치에 끼어드는 머리('GREEN CLAIM REPORT')·꼬리(브랜드·안내·쪽 번호·날짜)를 빼고 본문만 남깁니다."""
+    chrome = (re.escape(squash(rw.KICKER)) + r"FIONEX\|WEAVEABRIGHTERTOMORROW·" + re.escape(squash(rw.FOOTER))
+              + r"\d+/\d+[\d.]+\|")
+    return re.sub(chrome, "", flat)
 
 
 class ReportBase(Base):
@@ -254,7 +256,10 @@ class PdfContentTest(ReportBase):
         for page in reader.pages:
             for font in page["/Resources"]["/Font"].values():
                 fonts.add(str(font.get_object()["/BaseFont"]))
-        self.assertTrue(any("NanumGothic" in name for name in fonts) and any("Vera" in name for name in fonts), fonts)
+        # 공통 Pretendard 하나로 한글·라틴을 그림(이전 나눔고딕·Vera 미사용). /Helvetica는 ReportLab 캔버스가 페이지마다 넣는
+        # 기본 글꼴 선언(그리는 글자 없음)이라 허용합니다.
+        embedded = fonts - {"/Helvetica"}
+        self.assertTrue(embedded and all("Pretendard" in name for name in embedded), fonts)
 
     def test_updated_on_shown_from_review_not_regenerated(self):
         """PDF의 업데이트 날짜는 검수 응답 값 그대로(보고서 생성 시각·확보일로 바꾸지 않음)."""

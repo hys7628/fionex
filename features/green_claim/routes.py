@@ -25,7 +25,7 @@ FEATURE = {
     "id": "green_claim",
     "label": "그린 클레임 체크",
     "title": "그린 클레임 체크",
-    "description": "인증 요건 대비 보유 증빙의 차이와 친환경 주장 문구의 위험을 확인하고 포르투갈어 수정안을 검토합니다.",
+    "description": "친환경 홍보 문구의 표현 위험을 검토합니다.",
     "icon": "shield",
 }
 

@@ -607,3 +607,424 @@ fixture 서버(5013 many·5014 kotra0, FLASK_SKIP_DOTENV=1, urlopen 차단), 브
 | 회귀 | 유지 | test_home_layout 78/78, test_home_features 23/23(바로가기 항목 3개를 '영역 없음·사이드바 이동' 확인으로 바꿈), 6차 29/29, 뉴스 상세 46/46, JS 예외 0 | 통과 |
 | `python -m unittest discover -s tests/test_home` | OK | 94 OK | 통과 |
 외부 호출 0건.
+
+## 2026-10-26 공통 블루·아쿠아·민트 대시보드 UI (DEV-COMMON-002)
+변경: static/css/tokens.css, static/css/common.css, docs/design_system.md (기능 파일·base.html·app_shell.js 변경 없음)
+환경: Conda jasonenv Python 3.11.17, Flask 3.1.2. 검증 서버 127.0.0.1:5013(저장소 밖 실행기: FLASK_SKIP_DOTENV=1, API 키 제거, urllib.request.urlopen 차단). 브라우저: 시스템 Chrome + playwright-core 1.48.2(세션 임시 폴더에 설치, 저장소·requirements 미추가).
+
+### 서버·테스트
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| `import app` + test_client `GET /`, tokens.css·common.css | 200 | 200(55,697 bytes), 200, 200 | 통과 |
+| `python -m unittest discover -s tests/test_common` | OK | 56 OK | 통과 |
+| `-s tests/test_home` | OK | 94 OK | 통과 |
+| `-s tests/test_market_analysis` | OK | 71 OK | 통과 |
+| `-s features/green_claim/tests` (PYTHONUTF8=1) | OK | 178 OK (UTF-8 미설정 시 cp949 콘솔 인코딩 오류로 중단 → 환경 문제, 재실행 통과) | 통과 |
+| `-s tests/test_green_claim`·`test_product_brochure`·`test_promotion_studio` | - | 0건(테스트 없음) | 해당 없음 |
+
+### 화면(5개 탭 × 1440·1024·390, 전체 화면 캡처 15장 육안 확인)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| Home·시장 분석·제품소개서·그린 클레임 체크·홍보 스튜디오 진입 | 패널 표시, AppShell.current 일치 | 15/15 일치 | 통과 |
+| 가로 스크롤·화면 밖 요소(스크롤 컨테이너 제외) | 없음 | 15/15 없음 | 통과 |
+| JS 예외·console error | 없음 | 0건(3개 폭) | 통과 |
+| 수정 전 캡처와 비교 | 배치 동일, 색·모서리·테두리·안내 상자만 변경 | 같음(카드 1px 테두리 추가로 높이 2px 차이 수준) | 통과 |
+| 390 Home·홍보 스튜디오 | 카드·안내·버튼 겹침·잘림 없음 | 같음 | 통과 |
+
+### 상호작용(26/26 통과)
+탭 진입 애니메이션 panel-enter·종료 후 opacity 1/transform none, 그린 클레임 입력 → Home → 복귀 시 입력 유지, 사이드바 작성 중 점·머리글 칩·aria-current, active 메뉴 rgb(234,242,253)/rgb(21,89,184), 메뉴 hover rgb(240,245,251), 입력 키보드 초점 블루 테두리 + rgba(29,106,212,.28) 3px 링 + outline 2px(투명), primary hover translateY(-1px)·그림자 증가·radius 10px·그라데이션, Tab 초점 버튼 outline solid 블루, disabled 점선·글자 rgb(84,99,122), 1440 스크롤 500px 후 사이드바 top 0·높이 900, 카드 1px rgb(231,236,243)·16px·그림자, notice info/danger tint·3px 강조·제목 상태색·본문 네이비, 상태 배지 점 있음 vs neutral 점 없음, 표 머리 rgb(246,248,251)·숫자 tabular-nums 오른쪽·행 hover rgb(246,249,254), spinner 회전, 시장 분석 빈 입력 실행 → field-error 3건, 390 메뉴 열림·main inert·메뉴 초점 → Esc 닫힘·토글로 초점 복귀 → 메뉴로 그린 클레임 이동 후 닫힘, reduced-motion에서 탭 진입 애니메이션 none·transition 0s·버튼 hover 이동 none.
+(첫 실행 25/26: 입력 초점을 transition 150ms 중에 측정한 스크립트 문제 → 300ms 대기 후 26/26. 표·notice·배지는 테스트용 임시 요소로 계산 스타일만 확인 후 제거, 화면 데이터 아님)
+
+### 대비(WCAG 계산)
+흰 글자/primary 5.17, /그라데이션 끝 4.70, primary-text/흰 6.66·/soft 5.90, text 15.67, muted/흰 6.10·/배경 5.63, success/soft 5.31, warning/soft 6.17, danger/soft 5.83, info/soft 6.07, neutral 6.61, 입력 테두리 3.50.
+
+### 미검증
+실제 사용자 브라우저(Edge·Safari·Firefox·모바일 기기), 화면낭독기, Windows 고대비 모드, 실제 외부 데이터가 들어온 상태의 표·뉴스·환율 화면(이번 검증은 외부 차단 상태의 오류·설정 필요 화면), 그린 클레임·시장 분석의 실제 분석 결과 화면(유료/외부 호출 필요해 미실행), PDF 출력물(화면 CSS와 별개라 영향 없음으로 판단, 미확인).
+
+## 2026-10-26 시장 분석 분류 배지 정리 (DEV-COMMON-003)
+변경: features/market_analysis/templates/market_analysis/panel.html (badge-info → badge-neutral)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| 시장 분석 1440 배지 계산 스타일·캡처 | badge-neutral, 블루그레이, 점 없음, 문구 동일 | bg rgb(238,242,247), 글자 rgb(71,86,110), ::before none, "브라질 · 수입" | 통과 |
+| `python -m unittest discover -s tests/test_market_analysis` | OK | 71 OK | 통과 |
+| 5개 탭 × 1440/1024/390 재캡처(검증 서버 5013, 외부 차단) | 가로 스크롤 없음, JS 예외 0 | 15/15, 예외 0 | 통과 |
+| 공통 상호작용 재실행 | 26/26 | 26/26 | 통과 |
+외부 호출 0건.
+
+## 2026-10-26 로딩·오류·성공·다운로드 UX 정리 (DEV-COMMON-004)
+변경: static/js/app_shell.js, static/css/common.css, features/home(home.js·panel.html·feature_spec), features/market_analysis(market_analysis.js·panel.html·feature_spec), features/green_claim(green_claim.js·feature_spec), features/product_brochure·promotion_studio panel.html, docs/design_system.md
+환경: Conda jasonenv Python 3.11.17, Flask 3.1.2. 검증 서버 127.0.0.1:5013(저장소 밖 실행기: FLASK_SKIP_DOTENV=1, API 키 제거, urlopen 차단, ComexStat get_latest_month·query_imports·lookup_code를 가상 수치로 대체 — 기존 test_market_analysis와 같은 패치 방식, 실제 통계 아님). 그린 클레임 검수 성공 응답은 features/green_claim/tests/test_review_report_flow.py의 가상 사례 A + 모의 AI로 만든 JSON을 브라우저 route로 반환. 지연·500·네트워크 끊김은 Playwright route로 주입. 브라우저: 시스템 Chrome + playwright-core 1.48.2(세션 임시 폴더).
+
+### 단위 테스트
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| `python -m unittest discover -s tests/test_common` | 56 OK | 통과 |
+| `-s tests/test_home` | 94 OK | 통과 |
+| `-s tests/test_market_analysis` | 71 OK | 통과 |
+| `-s features/green_claim/tests` (PYTHONUTF8=1) | 178 OK | 통과 |
+| `-s tests/test_green_claim`·`test_product_brochure`·`test_promotion_studio` | 0건(테스트 없음) | 해당 없음 |
+| JS 문법(node vm 파싱) app_shell·home·market_analysis·green_claim | 오류 없음 | 통과 |
+새 JS helper 단위 테스트: JS 테스트 체계가 없어 추가하지 않음(브라우저 검증으로 대신).
+
+### UX 상호작용(36/36 통과, 첫 실행 34/36은 검증 실행기 문제 — 아래)
+| 항목 | 결과 |
+|---|---|
+| 시장 분석 실행 중 | 버튼 '분석 중...'·disabled·aria-busy, 결과 영역 aria-busy, 중복 클릭·requestSubmit 재제출에도 analyze 요청 1회, 완료 후 '분석 실행'·활성·결과 표시 |
+| 시장 분석 PDF | 'PDF 준비 중...'·disabled·aria-busy, PDF 생성 중 '다시 불러오기' 완료 후에도 PDF 버튼 비활성 유지(수정 전 버그 시나리오), 요청 1회·다운로드 발생, notice-success role=status → 4초 뒤 제거, 버튼 복원 |
+| 시장 분석 PDF 500 | notice-danger role=alert·서버 문장·5초 뒤에도 유지·버튼 복원·결과 표 유지 |
+| 시장 분석 PDF 네트워크 끊김 | 고정 문장('연결하지 못했거나'), Failed to fetch 등 원문 없음, notice 1개 |
+| 시장 분석 조회 네트워크 끊김 | 폼 오류 role=alert 고정 문장, 원문 없음, 이전 결과 유지, 버튼 복원 |
+| 시장 분석 실행 중 탭 이동 → 복귀 | 완료 상태(버튼 '분석 실행'·활성, aria-busy false, 오류 없음) |
+| 바이어 목록 500(HTML 응답) | '새로고침' 안내 없음, 재시도 버튼 → 다시 불러와 표 표시 |
+| Home 일일 브리핑 PDF | 'PDF 준비 중...'·disabled·aria-busy(버튼·영역), 중복 클릭에도 요청 1회, 실제 서버 PDF 다운로드, 버튼 복원, '다운로드를 요청했습니다.' 4초 뒤 숨김 |
+| Home PDF 500 / 네트워크 끊김 | notice-danger role=alert 5초 뒤에도 유지·버튼 복원 / '서버에 연결하지 못했습니다' 고정 문장, notice 1개 |
+| Home 환율·뉴스 재시도 실패 2회 | 요청 오류 notice 각 1개(누적 없음), role=alert, aria-busy 해제 |
+| Home 로딩 문구 | 4개 모두 '...' |
+| 그린 클레임 검수(키 없음 실제 서버, 900ms 지연) | '검수 중...'·disabled·aria-busy, 옆 안내 문장 유지·스피너 중복 없음, 요청 1회, notice-danger role=alert, 버튼 복원 |
+| 그린 클레임 검수 성공(모의 응답) → PDF(실제 서버 생성) | 'PDF 준비 중...'·안내 '30초', 요청 1회, 다운로드 발생, 버튼 복원, notice-success, 5초 뒤에도 유지(B 유형) |
+| 그린 클레임 PDF 네트워크 끊김 | notice-danger 1개·고정 문장·버튼 복원 |
+| 그린 클레임 파일 추출 500(지연 800ms) | 누른 버튼만 '글자 추출 중...', 두 버튼 disabled, 실패 notice-danger role=alert, '글자 추출' 복원 |
+| 제품소개서·홍보 스튜디오 | 버튼 4개 모두 disabled + '준비 중' 안내 aria-describedby 연결 |
+| 390px 작업 중 버튼 | 가로 스크롤 없음 |
+| reduced-motion | 작업 중 버튼 회전 animation-duration 0s |
+| JS 예외 | 모든 페이지 0건 |
+첫 실행 실패 2건: 모의 실행기에 `if __name__ == "__main__"`가 없어 그린 클레임 PDF 별도 프로세스(Windows spawn)가 실행기를 다시 실행 → 서버 PDF 30초 시간 제한. 이때도 화면은 실패 notice·버튼 복원으로 처리됨. 실행기 수정 후 36/36.
+
+### 공통 회귀
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 5개 탭 × 1440/1024/390 캡처 | 15/15 표시, 가로 스크롤·화면 밖 요소 없음, JS 예외 0 | 통과 |
+| 공통 상호작용(DEV-COMMON-002 스크립트) | 26/26 | 통과 |
+| 작업 중 화면 캡처 육안(시장 분석 1440·390 버튼, Home PDF, 그린 클레임 검수, 바이어 오류) | 원래 색 + 회전 표시, 문구 잘림 없음 | 통과 |
+
+### 외부 호출
+전송 0건. 차단된 시도 45건(news.google.com·brasilapi.com.br·olinda.bcb.gov.br), ComexStat는 모의 함수, OpenAI 키 없음.
+
+### 미검증
+Firefox·Safari·모바일 기기·화면낭독기 실제 낭독, Firefox에서 disabled 버튼 초점 유지 여부, 시장 분석 AI 분석 실행·성공 화면(유료 호출), 실제 ComexStat 응답으로 조회, 실제 외부 뉴스·환율이 들어온 Home, 그린 클레임 실제 AI 검수·OCR.
+
+## 2026-10-26 결과 초점·키보드·화면낭독 흐름 (DEV-COMMON-005)
+변경: static/js/app_shell.js, static/css/common.css, features/market_analysis(JS·panel·spec), features/home(JS·spec), docs/design_system.md, tests/test_common/test_shell_a11y.py(신규)
+환경: jasonenv Python 3.11.17, Flask 3.1.2. 검증 서버 127.0.0.1:5013(저장소 밖 모의 실행기: FLASK_SKIP_DOTENV=1, API 키 제거, urlopen 차단, ComexStat 가상 수치). 시장 분석 AI는 meta의 ai.ready만 브라우저 route로 true로 바꾸고 /api/market-analysis/ai는 가상 응답(성공·실패). 그린 클레임 검수 성공은 통합 테스트 가상 사례 JSON. Chrome + playwright-core 1.48.2, 키보드는 Playwright keyboard.press(Tab·Shift+Tab·Enter·Space·ArrowLeft/Right·End).
+수정 전 재현: 분석 완료 후 activeElement BODY·결과 제목 top -127, AI 실행 중·완료 후 BODY, 바이어 재시도 성공 후 BODY, aria-live 영역 결과 2,874자·바이어 82,992자.
+
+### 단위 테스트
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| `-s tests/test_common` | 62 OK(신규 test_shell_a11y 6건 포함) | 통과 |
+| `-s tests/test_home` | 94 OK | 통과 |
+| `-s tests/test_market_analysis` | 71 OK | 통과 |
+| `-s features/green_claim/tests` (PYTHONUTF8=1) | 178 OK | 통과 |
+| JS 문법(node vm) app_shell·home·market_analysis | 오류 없음 | 통과 |
+
+### 키보드·초점(41/41 + Home 상세 4/4 통과)
+| 시나리오 | 결과 |
+|---|---|
+| skip link | 첫 Tab에 화면에 보임 → Enter로 main#main-content 초점 |
+| 사이드바 | Enter로 탭 전환 → 탭 h1 초점, Shift+Tab 역순, Space는 링크라 전환 안 함(기본 동작) |
+| 시장 분석 빈 입력 | 첫 오류 필드(품목코드) 초점, aria-invalid, aria-describedby에 오류 문장 |
+| 시장 분석 정상 분석(키보드, 결과 제목이 화면 밖인 상태에서) | '분석 결과' h2 초점, 위 여백 포함 화면 안으로 스크롤, role=status "분석 결과가 준비되었습니다…", Tab → PDF 버튼, Shift+Tab → 왼쪽 열 '다시 불러오기'(DOM 순서) |
+| 시장 분석 AI 성공·실패 | 실행 중·완료 후 '④ AI 분석' region 초점(BODY 아님), 성공 status / 실패 role=alert, Tab으로 영역 안 첫 요소·'AI 분석 실행' 도달 |
+| 시장 분석 PDF 성공·실패 | 작업 끝나면 PDF 버튼으로 초점 복원, 실패 role=alert(성공 안내가 초점 안 뺏음) |
+| 시장 분석 조회 네트워크 실패 | 실행 버튼 초점 복원, 폼 오류 role=alert |
+| 분석 중 Home으로 이동 | 완료돼도 숨긴 시장 분석으로 초점 이동 없음 |
+| 바이어 목록 | 자동 로딩 실패 초점 이동 없음 → 재시도 실패 시 새 재시도 버튼 → 성공 시 목록 제목, 하위 탭 화살표·End 이동 |
+| Home | 자동 로딩 중 사용자가 둔 도시 select 초점 유지, PDF 성공(Enter)·실패(Space) 버튼 초점 복원 + 실패 role=alert, 환율·뉴스 재시도 실패 → 새 재시도 버튼, 전시회 필터 button+aria-pressed Enter 전환 |
+| Home 상세 Google 검색(뉴스 0건이라 숨긴 '더 보기'를 스크립트로 열어 확인) | 실패 → '다시 검색' 버튼, 성공(버튼 숨김) → 결과 건수 문장(role=status), 검색 중 검색창으로 옮기면 초점 유지 |
+| 그린 클레임 | 2단계 이동 시 단계 제목 초점, 검수 실패 → 검수 버튼 복원 + role=alert, 검수 성공 → 3단계 결과 제목 1회, PDF 성공·실패 → PDF 버튼 복원, 중간 단계(추출) 실패 → 추출 버튼 유지 |
+| 제품소개서·홍보 스튜디오 | 입력은 Tab 접근, disabled 버튼은 Tab에서 빠짐 |
+| reduced-motion | 결과 제목 초점 직후 이미 목표 위치(top 24px) — 즉시 스크롤 |
+| 기본 모션 | 초점 직후 이동 중 → 1초 뒤 top 24px(부드러운 스크롤) |
+| 390px | 결과 제목이 sticky 상단바(56px) 아래에 보임, 가로 스크롤 없음 |
+| JS 예외 | 전 시나리오 0건 |
+첫 실행 38/41: 기대값 오류 1(Shift+Tab 앞 요소), PDF 생성 대기 부족 2 → 스크립트 수정 후 41/41. 이후 캡처에서 결과 제목이 화면 맨 위에 붙고 390px에서 상단바에 가려지는 문제 발견 → scroll-margin-top 추가, 위치 기준을 강화(1440 ≥20px, 390 ≥56px)해 재실행 41/41.
+
+### 화면낭독기 관련
+실제 NVDA·VoiceOver 실행: 하지 않음. 브라우저 DOM 점검만: role=status/alert, aria-live 위치(큰 결과·바이어 목록 제거, 짧은 상태 문장만), aria-busy, aria-describedby, 초점 대상(tabindex=-1 제목·region).
+
+### 회귀
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 5개 탭 × 1440/1024/390 캡처 | 15/15, 가로 스크롤 없음, JS 예외 0 | 통과 |
+| 공통 상호작용(DEV-COMMON-002) | 26/26 | 통과 |
+| 로딩·오류·다운로드 UX(DEV-COMMON-004) | 36/36 | 통과 |
+| 초점 캡처 육안(1440 키보드, 1440 기본, 390) | 제목 위 여백, 키보드 초점 테두리 표시, 상단바에 안 가림 | 통과 |
+
+### 외부 호출
+전송 0건. 차단 시도 104건(news.google.com·brasilapi.com.br·olinda.bcb.gov.br).
+
+### 미검증
+실제 화면낭독기 낭독, Firefox·Safari·모바일 기기 초점 동작, 실제 OpenAI AI 분석·그린 클레임 AI 검수, 실제 외부 뉴스가 있는 Home 상세(이번엔 0건 상태에서 확인).
+
+## 2026-10-26 FIONEX 공식 로고 적용 (DEV-COMMON-006)
+변경: static/assets/fionex_logo.png(신규), templates/base.html, static/css/common.css, static/css/tokens.css, docs/design_system.md, tests/test_common/test_shell_a11y.py
+환경: jasonenv Python 3.11.17(Pillow로 원본 검사), 검증 서버 127.0.0.1:5013(저장소 밖 모의 실행기, urlopen 차단), Chrome + playwright-core 1.48.2.
+
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| 원본 검사(Pillow) | 크기·비율·투명 | 2172×724, 3.0, RGBA, 모서리 알파 0 | 확인 |
+| 흰 배경 합성 미리보기 | 글자·리본 식별 | 네이비 글자·블루/민트 리본 선명 | 확인 |
+| 복사본 동일성(cmp) | 원본과 같음 | identical | 통과 |
+| GET /static/assets/fionex_logo.png | 200 | 200, 870,173 bytes | 통과 |
+| 1440·1024 사이드바 | 1개 표시, 168×56, 비율 3.000, 사이드바 안, 메뉴와 간격, 세로 스크롤 없음 | 168×56 at x20 y24, 첫 메뉴와 간격 24px, 스크롤 없음 | 통과 |
+| 로고 정렬 | 로고 글자 시작이 메뉴 아이콘 세로선 근처 | 29.8px vs 28px | 통과 |
+| 390 상단바 | 120×40, 메뉴 버튼 오른쪽, 상단바 높이 안 | 통과 | 통과 |
+| 390 메뉴(드로어) | 로고가 닫기 버튼과 겹치지 않음, 비율 유지 | 통과 | 통과 |
+| alt·filter·brand-mark | alt=FIONEX, filter none, .brand-mark 0개 | 통과 | 통과 |
+| 가로 스크롤·JS·로드 오류(3폭) | 없음 | 없음 | 통과 |
+| 2배율(1440) 캡처 육안 | 흐리지 않음 | 글자·슬로건 선명 | 통과 |
+| 로고 검증 스크립트 | - | 15/15 | 통과 |
+| `-s tests/test_common` | OK | 63 OK(로고 구조 테스트 1건 추가) | 통과 |
+| `-s tests/test_home` / `test_market_analysis` / `features/green_claim/tests` | OK | 94 / 71 / 178 OK | 통과 |
+| 5개 탭 × 1440/1024/390 | 정상 | 15/15, 가로 스크롤·JS 예외 0 | 통과 |
+| 공통 상호작용 / 키보드·초점 | 유지 | 26/26 / 41/41 | 통과 |
+외부 호출: 0건.
+
+### 미검증
+실제 사용자 브라우저(Edge·Safari·모바일 기기)·고해상도 실제 모니터, 1배율 화면에서 슬로건 가독성(약 5px로 판독 어려움 — 원본 축소 그대로), 큰 PNG 첫 로딩 시간.
+
+## 2026-10-26 브랜드 폰트 Brand New Hyosung 적용 (DEV-COMMON-007)
+변경: static/css/common.css, static/css/tokens.css, docs/design_system.md, tests/test_common/test_shell_a11y.py (폰트 파일 static/fonts/brand/*.ttf는 사용자 제공 그대로)
+환경: jasonenv Python 3.11.17, fontTools 4.55.3(세션 임시 폴더), 검증 서버 127.0.0.1:5013(모의 실행기, urlopen 차단), Chrome + playwright-core 1.48.2. 실제 렌더링 글꼴은 CDP CSS.getPlatformFontsForNode(요소별 실제 사용 글꼴·글자 수)로 측정.
+
+### 폰트 파일
+| 파일 | usWeightClass | 한글 | ASCII | 포르투갈어 악센트 | 기타 |
+|---|---|---|---|---|---|
+| Brand New Hyosung Light.ttf | 300 | 11,172 | 전부 | 없음 | – — • € 없음 |
+| Brand New Hyosung Medium.ttf | 500 | 11,172 | 전부 | 없음 | 동일 |
+| Brand New Hyosung Bold.ttf | 700 | 11,172 | 전부 | 없음 | 동일 |
+
+### 실제 렌더링 글꼴(27/27 통과)
+body 본문·사이드바 메뉴(활성/일반)·버튼·select·Home KPI(현재 시각)·카드 제목·badge·notice 제목·필터 칩·그린 클레임 안내문·input(품목코드)·시장 분석 KPI·표 td.num·표 th·차트 SVG text.ma-axis·차트 툴팁 → 모두 "Brand New Hyosung(웹폰트)"만 사용.
+포르투갈어: 시장 분석 품목명 'Fios texturizados de poliésteres' → Brand New Hyosung 90자 + Malgun Gothic 1자(é). textarea 입력('… Nosso fio é 100% sustentável e não causa …')은 CDP로 측정 불가 → font-family "Brand New Hyosung" + 캡처 육안(é·á·ã만 대체 글꼴로 조금 가늘고 a 모양 다름, 글자 누락 없음).
+file 선택 버튼: 수정 전 Arial → 수정 후 "Brand New Hyosung". 화면 요소 굵기: 수정 전 400·500·700 → body 굵기 지정 후 500·700만(OS가 그리는 select option 제외).
+표 숫자 tabular-nums 유지, SVG text font-family 상속 "Brand New Hyosung".
+폰트 face: 500 loaded·700 loaded·300 unloaded(미사용이라 요청 안 함).
+
+### 네트워크
+| 요청 | 결과 |
+|---|---|
+| /static/fonts/brand/Brand New Hyosung Medium.ttf | 200 (application/octet-stream) |
+| /static/fonts/brand/Brand New Hyosung Bold.ttf | 200 (application/octet-stream) |
+| 그 외 글꼴 요청 | 없음 |
+| 127.0.0.1:5013 밖 요청 | 0건 |
+
+### 회귀
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 5개 탭 × 1440/1024/390 | 15/15, 가로 스크롤·화면 밖 요소 없음, JS 예외 0. 캡처 육안: 사이드바 메뉴·버튼·칩·표 머리·badge·notice·placeholder·KPI·그린 클레임 긴 안내문 줄바꿈·잘림 이상 없음 | 통과 |
+| 공통 상호작용 / 키보드·초점 / 로딩·오류 UX / 로고 | 26/26 / 41/41 / 36/36 / 15/15 | 통과 |
+| `-s tests/test_common` | 64 OK(폰트 로컬 파일·외부 CDN 없음 테스트 추가) | 통과 |
+| PDF 관련 파일 diff(features/*/pdf*·report*·fonts, common/pdf_utils.py) | 변경 없음 | 통과 |
+포르투갈어 대체 글꼴 비교 캡처(현재 스택 vs Segoe UI 우선 vs Malgun만): 차이 작음 → 스택 유지.
+
+### 미검증
+macOS·iOS·Android 실제 렌더링(대체 글꼴 다름), 실제 사용자 브라우저·고해상도 모니터, 웹 사용권, 느린 네트워크에서 swap 전환 체감.
+
+## 2026-10-26 웹·모든 탭 PDF Pretendard 통일 (DEV-COMMON-008)
+변경: static/fonts/pretendard/(신규), common/config.py, static/css/common.css·tokens.css, features/home/report.py, features/market_analysis/pdf_report.py, features/green_claim/report_worker.py·tests/test_report.py, tests/test_common/test_shell_a11y.py, 기능별 fonts/ 3곳 삭제, 문서
+환경: jasonenv Python 3.11.17, fontTools 4.55.3·PyMuPDF 1.24.14(세션 임시 폴더 설치, 저장소·requirements 미변경), 검증 서버 127.0.0.1:5013(모의, urlopen 차단), Chrome + playwright-core 1.48.2.
+
+### 파일
+| 확인 | 결과 |
+|---|---|
+| 복사본과 배포본 바이트 비교(cmp) | woff2 4·ttf 2·LICENSE.txt 모두 동일 |
+| TTF 형식·굵기·임베딩 | glyf(TrueType), Regular 400·Bold 700, fsType 0, Version 1.309 |
+| 글리프 | 한글 11,172/11,172, ASCII 전부, 포르투갈어 악센트 누락 없음, ⓘ만 없음 |
+
+### PDF 실제 생성(가상 데이터, PyMuPDF로 열기·렌더링)
+| PDF | 쪽수·크기 | 포함 글꼴 | 포르투갈어 문자(추출) | 대체·깨짐 |
+|---|---|---|---|---|
+| Home 일일 브리핑(build_daily, 외부 수집 차단) | 2쪽, 47,657 bytes | Pretendard-Regular·Bold (+ ReportLab 기본 선언 Helvetica) | ê ú | U+FFFD 0, 실제 [U+] 대체 0 |
+| 시장 분석(ComexStat 가상 수치, 품목명 'poliésteres … ação têxtil') | 53쪽, 254,942 bytes | Pretendard-Regular·Bold | Í á ã ç é ê | 0, 0 |
+| 그린 클레임(통합 테스트 가상 사례, POST /api/green-claim/report 별도 프로세스) | 6쪽, 94,562 bytes | Pretendard-Regular·Bold | É Í à á â ã ç é ê í ó õ ú | 0, 0('[U+XXXX]'는 범례 고정 문장) |
+페이지 이미지 육안(Home 1쪽, 시장 분석 1쪽, 그린 클레임 2쪽): 표 넘침·잘림·겹침 없음, não·Código·§1º·poliésteres 정상. 시장 분석 차트 축 라벨 반올림 겹침은 기존 표기 규칙(글꼴 무관).
+/Helvetica 확인: Pretendard만 쓰는 최소 ReportLab 문서도 페이지 리소스에 Helvetica(/F1 12 Tf 선언 1회, 그린 글자 없음) 포함.
+
+### 웹(27/27 통과, CDP 실제 렌더링 글꼴)
+body·사이드바(Medium/SemiBold)·버튼·select·Home KPI·카드 제목·badge·notice·필터 칩·그린 클레임 안내문·input·시장 분석 KPI·표 th/td.num·차트 SVG text·툴팁·file 선택 버튼 → 모두 Pretendard 웹폰트만. 포르투갈어(Perú·Tecnotêxtil·poliésteres 91자)도 대체 글꼴 없음. 화면 굵기 400·500·600·700, face 4개 loaded.
+네트워크: /static/fonts/pretendard/Pretendard-{Regular,Medium,SemiBold,Bold}.woff2 각 200, Brand New Hyosung·외부 요청 0건.
+
+### 테스트·회귀
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| `-s tests/test_common` | 65 OK(Pretendard 단일 로컬 글꼴·모든 PDF 공통 경로·기능별 fonts 폴더 없음 테스트) | 통과 |
+| `-s tests/test_home` / `test_market_analysis` | 94 / 71 OK | 통과 |
+| `-s features/green_claim/tests` | 첫 실행 1 실패(/Helvetica) → 기대값 수정 후 178 OK | 통과 |
+| 5개 탭 × 1440/1024/390 | 15/15, 가로 스크롤·JS 예외 0, 캡처 육안 줄바꿈 이상 없음 | 통과 |
+| 공통 상호작용 / 키보드·초점 / 로딩·오류 UX / 로고 | 26/26 / 41/41 / 36/36 / 15/15 | 통과 |
+외부 호출 0건.
+
+### 미검증
+실제 외부 데이터(긴 뉴스 제목·실제 AI 분석 표)로 만든 PDF의 줄바꿈, macOS·모바일 렌더링, PDF 뷰어별(Acrobat·브라우저) 표시.
+
+## 2026-10-26 Home 주요 카드 강조 (DEV-HOME-021)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| 1440 Home 계산 스타일 | 제목 4개 22px/700, 업계 소식·전시회 설명 문장 0개, 강조 카드 4개 | 바이어 시간·환율·업계 소식·다가오는 전시회 22px/700, 설명 0, 카드 4 | 통과 |
+| 1440·390 캡처 육안 | 위 띠·포인트 막대 표시, 도시 선택과 제목 한 줄, 줄바꿈·넘침 없음 | 같음 | 통과 |
+| 5개 탭 × 1440/1024/390(검증 서버, 외부 차단) | 가로 스크롤·JS 예외 없음 | 15/15 | 통과 |
+| `-s tests/test_home` / `tests/test_common` | OK | 94 / 65 OK | 통과 |
+외부 호출 0건.
+
+## 2026-10-26 환율 등락 색 (DEV-HOME-022)
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| /api/home/fx 가상 응답(상승 0.53%·하락 0.49%), 1440·390 | 상승 빨강 알약, 하락 파랑 알약, BRL/KRW 'USD 경유' 색 없음 | up rgb(180,35,24)/rgb(253,238,237), down rgb(21,89,184)/rgb(238,245,254), BRL/KRW 기본색 | 통과 |
+| 가상 응답(변동 0%·직전 고시 없음) | 변동 없음 회색 알약, 비교 데이터 없음 색 없음 | flat rgb(71,86,110)/rgb(238,242,247), 비교 없음 기본색 | 통과 |
+| 캡처 육안·가로 스크롤·JS 예외 | 이상 없음 | 이상 없음(비교 없음 문장 390 두 줄은 기존과 같음) | 통과 |
+| `-s tests/test_home` | OK | 94 OK | 통과 |
+외부 호출 0건.
+
+## 2026-10-26 바이어 우선순위 등급·AI 브리핑 (DEV-MA-BUYER-002)
+환경: jasonenv Python 3.11.17, 검증 서버 127.0.0.1:5013(모의 실행기, urlopen 차단, OpenAI 키 없음), Chrome + playwright-core 1.48.2. 브리핑 성공 화면은 실제 buyer_briefing.run에 가짜 generate·가상 통계를 넣어 만든 응답 JSON을 브라우저 route로 반환.
+
+### 단위 테스트
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| `-s tests/test_market_analysis` | 83 OK(신규 test_buyer_briefing 12건: 공개 규칙·근거 한 단계 상향·등급순 정렬·근거 파일로 B 안 앞자리·코드 검사(없는 ID·근거 없는 수치·관세·인증·공급 조건·T2T 수요)·전화/CNPJ 미전송·같은 업체 재호출 없음·묶음 시장 맥락·S1 없는 시장 맥락 제거·업체 없음/설정 누락(호출 0)/AIError 후 재실행·라우트 400/404/만료 묶음 안내·buyers 응답 등급 필드) | 통과 |
+| `-s tests/test_common` / `test_home` / `features/green_claim/tests` | 65 / 94 / 178 OK | 통과 |
+
+### 브라우저(18/18)
+| 항목 | 결과 |
+|---|---|
+| 목록(키 없음) | 등급·근거·브리핑 열, 첫 5곳 A, 전체 등급순, '수입 실적 기반 아님 · 업종과 공개 근거 기준', 요약 A 242·B 457·C 140, 'AI 브리핑' 비활성 |
+| meta 준비됨 + 실제 서버(키 없음) | 설정 필요 notice-warning, 요청 1회, 브리핑 제목 초점 |
+| 성공(가상 응답) 1440·390 | 작업 중 '브리핑 중...'·aria-busy·모든 브리핑 버튼 잠금·결과 영역 aria-busy, 중복 클릭에도 요청 1회, 4구역·출처 칩 C1·S1·코드 검사로 뺀 2개·시장 맥락 포함·고정 안내 3개, 완료 후 브리핑 제목 초점·status 알림·버튼 복원, 가로 스크롤 없음 |
+| 네트워크 실패 | notice-danger role=alert, 고정 문장(브라우저 원문 없음), 다시 시도 안내 |
+| JS 예외 | 0 |
+첫 실행 16/18: 390 가로 스크롤(.visually-hidden이 표 스크롤 상자 밖 → .table-wrap position: relative), 작업 중 비활성 버튼 강제 클릭 후 main 초점이라 결과 초점 생략(focusLost에 main 포함) → 수정 후 18/18.
+
+### PDF
+가상 통계로 시장 분석 PDF 생성(65쪽): ⑥에 'A 242 · B 457 · C 140', 등급 규칙 4줄, 등급·근거 열 정상(3쪽 렌더링 육안), 깨진 글자 0.
+
+### 회귀
+5개 탭 × 1440/1024/390 15/15, 공통 상호작용 26/26, 키보드·초점 41/41, 로딩·오류 UX 36/36.
+외부 호출 0건.
+
+### 미검증
+실제 OpenAI 브리핑(품질·비용·시간), 실제 재생·T2T 근거가 있는 업체의 등급 상향·브리핑, 관세·반덤핑 자료 연동(자료 없음).
+
+## 2026-10-26 시장/바이어 분석 이름·검색·브리핑 PDF (DEV-MA-BUYER-003)
+환경: jasonenv Python 3.11.17, 검증 서버 127.0.0.1:5013(모의, urlopen 차단) + 브리핑 검증용 실행기(AI 설정 '준비됨' 표시, 브리핑 generate만 고정 가짜 응답), Chrome + playwright-core, PyMuPDF(세션 임시 폴더).
+
+| 절차 | 기대 | 실제 | 판정 |
+|---|---|---|---|
+| `-s tests/test_market_analysis` | OK | 84 OK(브리핑 PDF 라우트: 서버 보관본으로 PDF·업체명·구역·Pretendard 글꼴, 없는/빈 ID 410 추가) | 통과 |
+| `-s tests/test_common` / `test_home` / `features/green_claim/tests` | OK | 65 / 94 / 178 OK | 통과 |
+| 탭 이름 | 사이드바·h1·문서 제목 '시장/바이어 분석' | 일치 | 통과 |
+| 검색 | alcatec 1곳, CNPJ 기호 포함 1곳, 'São Paulo'·'SAO PAULO' 68곳, 'itaúna' 2곳, 'Jaraguá do Sul' 22곳, 등급 C 140곳(모두 C, aria-pressed), 없는 말 → 빈 상태, 머리글 '작성 중' 칩 없음 | 일치 | 통과 |
+| 브리핑 화면(1440) | 머리 요약(지역·업종·시장 맥락), 4블록, 2열, Q/A 2개 | 일치 | 통과 |
+| 브리핑 PDF | 받기 전 비활성 → 받은 뒤 활성, 'PDF 준비 중...' → 다운로드 buyer_briefing_05236060000121_20261026.pdf, 성공 안내, 버튼 초점 복원 | 일치 | 통과 |
+| PDF 렌더링 | 1쪽, Pretendard, 업체 표·안내·4구역·뺀 문장·출처 링크·바닥글 | 육안 확인 | 통과 |
+| 390 | 검색·브리핑 후 가로 스크롤 없음, 브리핑 1열 | 일치 | 통과 |
+| 신규 점검 / 기존 브리핑 점검 | - | 14/14 / 18/18(선택자 갱신 후) | 통과 |
+| 회귀 | 5개 탭 × 3폭, 공통 상호작용, 키보드·초점, 로딩·오류 | 15/15, 26/26, 41/41, 36/36 | 통과 |
+외부 호출 0건.
+
+### 미검증
+실제 OpenAI 브리핑과 그 PDF, 시장 맥락(S1)이 들어간 브리핑 PDF의 실제 길이(가상 응답은 시장 맥락 없이 1쪽).
+
+## 2026-10-26 바이어 목록 → 업체 상세 (DEV-MA-BUYER-004)
+환경: 검증 서버 127.0.0.1:5013(모의, urlopen 차단) + 브리핑 generate만 가짜로 바꾼 실행기, Chrome + playwright-core.
+
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 상세 점검(detail.js) | 16/16: 목록에 회사명 버튼·'상세 보기'·AI 버튼 없음 / 진입 시 목록 숨김·제목 초점·'검색 결과 3 / N곳' / 정보 9항목 / 빈 브리핑·받기 활성·PDF 비활성 / 다음·이전 이동 / 브리핑 중 다른 업체 이동 시 그 화면 유지·받기 잠금·안내, 완료 후에도 유지 / 돌아오면 보관 브리핑 표시(요청 1회)·PDF 활성·'다시 받기' / PDF 다운로드 / 목록 복귀 시 검색어·스크롤·초점 유지 / Esc / 시장 통계 탭 다녀와도 상세 유지 / 390 가로 스크롤 없음 / JS 예외 0 | 통과 |
+| 이동 버튼 위치 | 상세 진입 후 '← 바이어 목록으로' top 1440: 24px, 390: 72px(상단바 아래), 초점 업체명 제목 | 통과 |
+| 검색 점검 | 11/11 | 통과 |
+| 회귀 | 5개 탭 × 3폭 15/15, 공통 상호작용 26/26, 키보드·초점 41/41, 로딩·오류 36/36 | 통과 |
+| `-s tests/test_common` / `-s tests/test_market_analysis` | 65 / 84 OK | 통과 |
+외부 호출 0건.
+
+### 미검증
+실제 OpenAI 브리핑, 브라우저 뒤로 가기(연결 안 함).
+
+
+## 2026-10-26 바이어 목록 '상세 보기' 펼치기 + AI 브리핑 글래스 창 (DEV-MA-BUYER-005)
+환경: 검증 서버 127.0.0.1:5013(모의, urlopen 차단) + 브리핑 generate만 가짜로 바꾼 실행기, Chrome + playwright-core.
+
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 창·펼치기 점검(dialog.js) | 17/17: 행 버튼 '상세 보기'+'AI 브리핑' / 펼침 10항목·'상세 접기'·aria-expanded/controls·창 안 열림, 다시 누르면 접힘 / AI 브리핑 → 창 열림·제목·자동 1회 호출 / 패널 backdrop-filter blur·반투명 배경 / 완료 시 브리핑·PDF 활성·'다시 받기'·초점 창 안 브리핑 제목 / 창 안 PDF 다운로드 / Esc 닫힘·연 버튼 초점 복귀 / 같은 업체 재열기 추가 호출 없음 / 바깥 클릭 닫힘 / 2번째 생성 중 3번째 창: 자동 호출 안 함·받기 잠금·안내, 완료 후에도 3번째 창 유지 / 2번째 재열기 보관 표시 / 390 가로 넘침 없음 / reduced-motion 애니메이션 0s / JS 예외 0 | 통과 |
+| 창 머리 가림 | 브리핑 제목 초점 후 패널 scrollTop 0, 머리 top 1px(overflow: clip 적용 후) | 통과 |
+| 검색 점검 | 11/11 | 통과 |
+| 회귀 | 5개 탭 × 3폭 15/15, 공통 상호작용 26/26, 키보드·초점 41/41, 로딩·오류 36/36 | 통과 |
+| `-s tests/test_common` / `-s tests/test_market_analysis` | 65 / 84 OK | 통과 |
+외부 호출 0건.
+
+참고: 로딩·오류 점검의 시장 분석 PDF 항목이 두 번 실패(다운로드 8초 대기 초과)했으나, 다운로드 대기만 30초로 늘린 같은 점검에서 실제 대기 3.6초로 36/36 통과. 단독 측정 PDF 응답 약 3.1초(테스트 지연 1.5초 별도). 코드 회귀가 아닌 시간 여유 부족으로 판단, 시험 도구 대기 시간 문제로 남김.
+
+### 미검증
+실제 OpenAI 브리핑, prefers-reduced-transparency 화면(에뮬레이션 미사용), backdrop-filter 미지원 브라우저 화면.
+
+## 2026-10-26 AI 브리핑 창 안 하위 탭 (DEV-MA-BUYER-006)
+환경: 검증 서버 127.0.0.1:5013(모의, urlopen 차단; 창 점검은 브리핑 generate만 가짜로 바꾼 실행기), Chrome + playwright-core.
+
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 창 점검(dialog.js, 탭 6항목 추가) | 23/23: 탭 '업체 상세 \| AI 브리핑'·열 때 AI 브리핑 선택·'생성 중' 표시 / ← 키로 상세 탭(초점·10항목·탭 위치 그대로) / 상세 탭에서 완료 시 초점 유지·'새 결과' / End 키로 브리핑 탭·표시 지움 / 다시 열면 브리핑 탭·재호출 없음 / 기존 17항목 | 통과 |
+| 검색 점검 | 11/11 (390 항목을 상세 펼치기·브리핑 창 기준으로 갱신, 브리핑 영역 선택자 갱신) | 통과 |
+| 회귀 | 5개 탭 × 3폭 15/15(가로 스크롤 없음·JS 예외 0), 공통 상호작용 26/26, 키보드·초점 41/41, 로딩·오류 36/36(다운로드 대기 30초판, 실제 9.5초) | 통과 |
+| `-s tests/test_common` / `-s tests/test_market_analysis` | 65 / 84 OK | 통과 |
+외부 호출 0건.
+
+### 미검증
+실제 OpenAI 브리핑, prefers-reduced-transparency 화면.
+
+## 2026-10-26 시장 통계 조회 조건 → 분석 결과 두 화면 (DEV-MA-STATS-007)
+환경: 검증 서버 127.0.0.1:5013(모의, urlopen 차단·ComexStat 가짜 응답), Chrome + playwright-core.
+
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 두 화면 점검(steps.js, 1440·390) | 18/18: 처음 조건 화면만 / 잘못된 코드 → 조건 화면 유지·칸 초점 / 아래로 스크롤해 '분석 실행' → 즉시 결과 화면·불러오는 중·aria-busy·조건 요약·제목 초점·막대 보임 / 완료 → 결과 표·'다시 불러오기' / '← 조회 조건 변경' → 입력 유지·'분석 결과 보기'·제목 초점 / '분석 결과 보기' → 재조회 없음 / 다시 불러오기 502 → 조건 화면·오류 안내·이전 결과 유지 / 가로 스크롤·JS 예외 없음 | 통과 |
+| 회귀 | 5개 탭 × 3폭 15/15(가로 스크롤 없음), 공통 상호작용 26/26, 키보드·초점 41/41, 로딩·오류 36/36(다운로드 대기 30초판, 실제 8.5초), 바이어 검색 11/11 | 통과 |
+| `-s tests/test_common` / `-s tests/test_market_analysis` | OK / OK | 통과 |
+점검 스크립트 갱신: 결과 화면에서 '분석 실행'을 누르던 단계는 먼저 '← 조회 조건 변경'을 누르도록, 결과 제목 부드러운 스크롤 기대(2항목)는 '화면 전환 즉시 결과 막대 보임'으로, 390 '분석 중...' 버튼 캡처는 결과 화면 캡처로 바꿈. 조회 실패 시 '분석 실행' 초점 복원 항목은 기대 그대로 통과.
+외부 호출 0건.
+
+### 미검증
+실제 ComexStat 조회, AI 브리핑 창 점검(dialog.js)은 이번 변경 후 다시 돌리지 않음(바이어 목록 코드 변경 없음).
+
+## 2026-10-26 develop 병합 충돌 정리 (DEV-MERGE-001)
+환경: 병합 중 작업 트리, 검증 서버 127.0.0.1:5013(모의, urlopen 차단), Chrome + playwright-core.
+
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 충돌 표시 남음 | 두 panel.html·저장소 전체 `<<<<<<<`/`>>>>>>>` 없음, 두 파일 = develop 버전(줄바꿈 제외 동일) | 통과 |
+| 내 작업 유지 | common/config.py Pretendard PDF_FONT_FILES·홈 report.py Pretendard 유지, 내 담당 파일(static/css·market_analysis·home·templates)은 HEAD 대비 변경 없음 | 통과 |
+| 단위 테스트 | test_common 70 OK(수정 후), test_home 94 OK, test_market_analysis 84 OK, green_claim 178 OK, test_product_brochure 156 OK(수정 후), test_promotion_studio 68 OK | 통과 |
+| 수정 전 실패 | test_common 1(자리 표시 버튼 2개 기대) · test_product_brochure 2(첫 `<dialog>`가 시장/바이어 분석 창). develop 원본(git archive)에서는 156 OK → 병합 조합 문제로 확인 | 수정함 |
+| 브라우저 회귀 | 5개 탭 × 3폭 15/15(가로 스크롤 없음·JS 예외 0), 공통 상호작용 26/26, 키보드·초점 41/41, 로딩·오류 36/36, 시장 통계 두 화면 18/18, 바이어 검색 11/11 | 통과 |
+점검 스크립트 갱신: 옛 제품소개서 textarea·'준비 중' 버튼 기대 2항목을 실제 기능 기준(공통 입력칸 초점은 시장 분석 품목코드 칸, 결과 전 PDF 버튼 비활성+이유 안내)으로 변경.
+외부 호출 0건.
+
+### 미검증
+AI 브리핑 창 점검(dialog.js, AI 모의 서버) 재실행 안 함, 제품소개서·홍보 스튜디오 실제 OpenAI·PDF 생성 화면 흐름.
+
+## 2026-10-26 조회 조건 한 줄 + 분석 결과 ①~⑤ 하위 탭 (DEV-MA-STATS-008)
+환경: 검증 서버 127.0.0.1:5013(모의, urlopen 차단), Chrome + playwright-core.
+
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 탭·한 줄 점검(rtabs.js, 1440·768·390) | 21/21: 조건 4칸 1440 한 줄·768 2줄·390 1칸씩 / 결과 탭 5개·① 선택·①만 표시·'1 / 5'·이전 비활성·다음 '② 시장 추세' / → 키 ②(초점·그래프) / '다음' ③·초점 유지 / ⑤에서 선택 탭이 탭 줄 안에 보임·다음 비활성·초점 '이전' / '이전' ④(AI 실행 버튼 보임) / 다시 조회 시 ①·가로 스크롤 없음·JS 예외 0 | 통과 |
+| 회귀 | 시장 통계 두 화면 18/18, 5개 탭 × 3폭 15/15, 공통 상호작용 26/26, 키보드·초점 41/41(④ 접는 영역 → ④ 탭 기준으로 3항목 갱신), 로딩·오류 36/36(다운로드 대기 30초판, 실제 10.7초), 바이어 검색 11/11 | 통과 |
+| `-s tests/test_common` / `-s tests/test_market_analysis` | 70 / 84 OK | 통과 |
+외부 호출 0건.
+
+### 미검증
+실제 ComexStat 조회·실제 AI 분석 결과가 ④ 탭에 표시되는 화면.
+
+## 2026-10-26 제품소개서 필수 확인 항목 빨간 경고 (DEV-PB-REQ-001)
+환경: 검증 서버 127.0.0.1:5013(모의, urlopen 차단), 분석 응답은 Playwright route로 가짜 주입, Chrome + playwright-core.
+
+| 절차 | 실제 | 판정 |
+|---|---|---|
+| 경고 점검(reqcheck.js) | 12/12: '필수' 표시·처음엔 경고 없음 / 적용 전 빈 제품명에서 나가면 빨간 '입력' 경고·테두리(글자색 rgb(180,35,24)) / 적용 시 notice-danger·role=alert·'필수 확인 항목 2개'·체크 줄 빨강·첫 문제로 초점 / 체크하면 즉시 해제 / 설명 비우면 즉시 '입력' 경고 / 새 분석 시 경고 초기화 / 분석 적용 3개(표시명 입력 포함) / 표시명 입력 → '확인 체크' 경고 / 모두 고치면 해제·'다시 적용 필요' / 다시 적용 → notice-info·생성 버튼 활성 / JS 예외 0 / 390 가로 스크롤 없음 | 통과 |
+| Node 로직 점검 | review_logic_check.js 51/51(필수 확인 1건 추가) | 통과 |
+| 회귀 | 5개 탭 × 3폭 15/15, 공통 상호작용 26/26, 키보드·초점 41/41, 로딩·오류 36/36 | 통과 |
+| `-s tests/test_common` / `-s tests/test_product_brochure` | 70 / 156 OK | 통과 |
+외부 호출 0건.
+
+### 미검증
+실제 PDF 분석(OpenAI) 결과 화면.

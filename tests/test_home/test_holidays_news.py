@@ -69,6 +69,13 @@ class NewsTestBase(unittest.TestCase):
         env.start()
         self.addCleanup(env.stop)
 
+    def clock(self):
+        now = [1000.0]
+        p = mock.patch.object(service, "monotonic", lambda: now[0])
+        p.start()
+        self.addCleanup(p.stop)
+        return now
+
     def use(self, fake):
         p = mock.patch.object(service, "_http_get", fake)
         p.start()
@@ -91,11 +98,18 @@ class NewsTests(NewsTestBase):
         self.assertEqual(data["summary"], {"pending": 3})  # KOTRA 제외
 
     def test_cache_and_refresh(self):
+        now = self.clock()
         fake = self.use(FakeHttp())
         service.get_news()
         service.get_news()
         self.assertEqual(len(fake.calls), 4)
+        service.get_news(refresh="abit")  # 성공 수집 1분 안: 다시 가져오지 않음
+        self.assertEqual(len(fake.calls), 4)
+        now[0] += service.NEWS_REFRESH_MIN_SECONDS
         service.get_news(refresh="abit")
+        self.assertEqual(len(fake.calls), 6)
+        now[0] += service.NEWS_CACHE_SECONDS - service.NEWS_REFRESH_MIN_SECONDS - 1
+        service.get_news()  # 6시간 안: 캐시
         self.assertEqual(len(fake.calls), 6)
         for entry in service._news_cache.values():
             entry["expires"] = 0
@@ -103,8 +117,10 @@ class NewsTests(NewsTestBase):
         self.assertEqual(len(fake.calls), 10)
 
     def test_failure_isolation_and_stale(self):
+        now = self.clock()
         self.use(FakeHttp())
         service.get_news()
+        now[0] += service.NEWS_REFRESH_MIN_SECONDS
         self.use(FakeHttp(fail={"google"}))
         data = service.get_news(refresh="google")
         self.assertEqual((data["media"]["google"]["status"], data["media"]["google"]["stale"]), ("error", True))
@@ -341,7 +357,9 @@ class NewsSearchTests(NewsTestBase):
 class HolidayTests(unittest.TestCase):
     def setUp(self):
         service._cache.clear()
+        service._holiday_failures.clear()
         self.addCleanup(service._cache.clear)
+        self.addCleanup(service._holiday_failures.clear)
 
     def test_brasilapi_cached(self):
         calls = []
@@ -363,8 +381,25 @@ class HolidayTests(unittest.TestCase):
                 mock.patch.object(service, "FALLBACK_DIR", Path(tmp)):
             self.assertEqual(service.get_holidays(2026)["source"], "none")
             Path(tmp, "holidays_br_2026.json").write_text(json.dumps([{"date": "2026-11-02", "name": "TEST_ONLY"}]), encoding="utf-8")
+            service._holiday_failures.clear()  # 실패 결과 10분 캐시가 지난 상황
             self.assertEqual(service.get_holidays(2026)["source"], "fallback")
-        self.assertNotIn(2026, service._cache)  # 실패는 캐시하지 않음
+        self.assertNotIn(2026, service._cache)  # 실패는 성공 캐시에 넣지 않음
+
+    def test_failure_cached_ten_minutes(self):
+        now = [1000.0]
+        calls = []
+
+        def fail(year):
+            calls.append(year)
+            raise urllib.error.URLError("offline")
+        with mock.patch.object(service, "_fetch_brasilapi", fail), mock.patch.object(service, "monotonic", lambda: now[0]):
+            service.get_holidays(2031)
+            now[0] += service.HOLIDAY_FAILURE_CACHE_SECONDS - 1
+            service.get_holidays(2031)
+            self.assertEqual(calls, [2031])  # 10분 안: API를 다시 부르지 않음
+            now[0] += 2
+            service.get_holidays(2031)
+        self.assertEqual(calls, [2031, 2031])
 
     def test_route_year_validation(self):
         with mock.patch.object(service, "_fetch_brasilapi", lambda year: [{"date": f"{year}-01-01", "name": "TEST"}]):

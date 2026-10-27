@@ -66,6 +66,12 @@ def news_ok():
     return {"items": items, "media": media, "summary": {"pending": 0}}
 
 
+def translate_ok(items):
+    """가상 번역: 이미 요약이 있는 기사는 그대로, Google·ABIT 기사에 가상 한국어 한 줄."""
+    return {"status": "ok", "summaries": {i["id"]: i.get("summary_ko") or f"가상 번역 {i['id']}"
+                                         for i in items if i["origin"] in ("google", "abit")}}
+
+
 def fairs_ok(limit=3, min_brazil=0):
     def fair(name, start, end, d_day, verified):
         return {"name": name, "start": start, "end": end, "d_day": d_day, "status": "upcoming",
@@ -85,7 +91,8 @@ NOW = datetime(2026, 10, 26, 1, 0, tzinfo=timezone.utc)  # 서울 10/26(월) 10:
 
 class ReportTestBase(unittest.TestCase):
     def setUp(self):
-        patches = {"get_holidays": holidays, "get_fx": fx_ok, "get_news": news_ok, "get_upcoming_fairs": fairs_ok}
+        patches = {"get_holidays": holidays, "get_fx": fx_ok, "get_news": news_ok, "get_upcoming_fairs": fairs_ok,
+                   "translate_titles": translate_ok}  # 제목 번역은 가상 결과(실제 AI 호출 없음)
         for name, fn in patches.items():
             p = mock.patch.object(service, name, side_effect=fn)
             self.mocks = getattr(self, "mocks", {})
@@ -227,6 +234,23 @@ class PdfLayoutTests(ReportTestBase):
         self.assertIn("https://example.com/news/1?a=1&b=2", links)
         self.assertNotIn("https://", text)  # 긴 URL 문자열은 본문에 없음
         self.assertIn("example.com", text)  # 짧은 도메인만
+
+    def test_news_titles_with_korean_translation(self):
+        _, text, _ = self.pdf()
+        self.assertIn("TEST Indústria têxtil amplia Produção em São Paulo nº 4", text)  # 원문 제목
+        self.assertIn("가상 번역 n4", text)  # 그 아래 한국어 번역
+        self.assertIn("상파울루 섬유업계, 생산 확대", text)  # 이미 있던 번역은 그대로
+        self.assertNotIn("[AI 요약]", text)
+
+    def test_translation_failure_keeps_titles_and_notes_reason(self):
+        with mock.patch.object(service, "translate_titles",
+                               return_value={"status": "unavailable", "message": "AI 설정 없음(가상)", "summaries": {}}):
+            data = report.collect("America/Sao_Paulo", NOW)
+        _, text, _ = self.pdf(data)
+        self.assertIn("TEST Indústria têxtil amplia Produção em São Paulo nº 4", text)
+        self.assertNotIn("가상 번역", text)
+        self.assertIn("AI 설정 없음(가상)", text)
+        self.assertEqual(data["failures"], [])  # 번역 실패는 수집 실패가 아님(유의사항에만 적음)
 
     def test_page_numbers_n_of_total(self):
         reader, text, _ = self.pdf()

@@ -415,3 +415,308 @@
 - 외부 호출: 없음.
 - 검증: validation.md 2026-10-26 바로가기 제외 항목.
 - 담당자 판단: 미기재(담당자 검토 필요)
+
+## DEV-COMMON-002 공통 블루·아쿠아·민트 대시보드 UI 정리
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 16:31 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통(common_setup) (브랜치 feature/common_setup, 작업 전 git status clean)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: resources/design/dashboard_reference.png의 색감·카드 질감·버튼·상태 표현·인터랙션 분위기만 참고해 fionex 전체 공통 디자인을 밝은 블루·아쿠아·민트 B2B 대시보드로 통일. 배치 복제 금지, 기능 정보 구조·업무 흐름 유지. tokens.css 우선 정리(hex 반복 금지), 배경·사이드바·카드·버튼·입력·숫자·배지/태그·notice·표·인터랙션·탭 진입 효과·reduced-motion·shell 정리. 공통 기능 로직은 필요하면 이유·영향 확인 후 최소 수정. feature 파일은 공통 변경으로 해결 안 될 때만. 5개 탭 × 1440/1024/390 실제 검증, design_system.md 갱신, Git 작업 금지, 한국어 보고.
+- 판단:
+  - 기능 CSS 5개는 hex/rgba 없이 공통 토큰만 사용 → 기존 변수 이름은 유지하고 값만 바꾸면 5개 탭에 일관 반영(기능 파일 수정 불필요). 새 변수는 보조(`-border`, neutral, aqua, primary-gradient, shadow-hover/primary, focus-halo, motion, overlay)만 추가.
+  - 블루는 기존 #1f63d8(royal에 가까움)을 #1d6ad4로 약간 맑게. 주 버튼 그라데이션 끝 색 #1677c4도 흰 글자 4.7:1. hover 그라데이션 후보(#1a80cc 끝)는 4.20:1로 미달 → hover는 색 변경 없이 그림자·1px 상승만.
+  - 모서리: 버튼 pill → 10px(모바일 앱 느낌 제거), 카드 18 → 16px, md 12 → 10px. 배지·상태 칩만 pill 유지.
+  - notice: 4px 왼쪽 선 + 진한 tint → 옅은 tint + 1px 상태 테두리 + 3px 강조선, 제목을 상태 글자색으로(아이콘 없이 뜻 전달), 본문 네이비.
+  - 배지: 기본 `.badge`를 흰 배경→neutral(블루그레이)로. 분류 라벨용 `.badge-neutral`(점 없음)·`.tag` 추가. 기존 기능 코드의 배지는 모두 상태 modifier가 붙어 있어 영향 없음.
+  - 숫자: Home·시장 분석 CSS가 이미 숫자 요소에 tabular-nums 적용 → 공통은 `.num`/`.tabular-nums` 유틸과 표 숫자 칸만 추가(body 전체 적용은 하지 않음).
+  - 탭 진입: CSS만으로 `.feature-panel:not([hidden])`에 220ms 1회 애니메이션(app_shell.js 변경 없음). fill-mode backwards라 끝난 뒤 transform이 남지 않음(그린 클레임 fixed 팝오버 기준 박스 영향 없음).
+  - 공통 기능 로직: 변경 없음. 5개 탭 로딩(.spinner+텍스트+disabled+aria-busy)·오류(.notice-danger/.field-error)가 이미 공통 체계 사용. 일회성 성공 안내는 Home(4초 자동 숨김)·시장 분석(안내 문장)·그린 클레임(다음 상태 변화 때 지움)이 각자 처리 중이고, 그린 클레임 성공 문구는 "브라우저 다운로드 목록에서 확인" 안내·면책 문장을 담고 있어 자동 숨김 시 정보 손실 → 공통 자동 숨김을 강제하지 않음. 통일이 필요하면 opt-in helper(AppShell 쪽)를 담당자 합의 후 추가하도록 제안만 함.
+  - base.html·app_shell.js: DOM·id·data 속성 변경 필요 없음 → 수정하지 않음.
+- 변경 파일: static/css/tokens.css, static/css/common.css, docs/design_system.md. (features/·base.html·app_shell.js·common/·.env.example·requirements.txt 변경 없음)
+- 외부 호출: 0건(검증 서버에서 urllib.request.urlopen 차단, API 키 제거, FLASK_SKIP_DOTENV=1).
+- 발견 문제: 첫 상호작용 검사에서 입력 초점 링이 비어 보였음 → 150ms transition 진행 중 측정한 검증 스크립트 문제, 300ms 대기 후 재측정 통과(코드 수정 없음). Playwright `networkidle` 대기는 페이지 주기 요청으로 끝나지 않아 `load`+3초 대기로 변경.
+- 검증: validation.md 2026-10-26 공통 대시보드 UI 항목.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 사용자 브라우저(Edge·Safari·모바일 기기)·화면낭독기·Windows 고대비 모드 미확인. 다른 담당자 탭은 공통 토큰 변경으로 색·모서리가 함께 바뀜(팀 공유 필요). 시장 분석의 '브라질 · 수입'은 분류 성격이지만 기능 코드가 badge-info를 써서 블루로 남음(담당자 판단 필요).
+
+## DEV-COMMON-003 시장 분석 '브라질 · 수입' 분류 배지 정리 (DEV-COMMON-002 후속)
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통 + market_analysis (브랜치 feature/common_setup)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: 홍은주가 공통 UI와 5개 탭(Home·시장 분석·제품소개서·그린 클레임 체크·홍보 스튜디오)을 모두 담당하기로 확정. features/ 직접 수정 가능, 공통 디자인과 의미가 맞지 않는 부분은 직접 정리.
+- 정정: DEV-COMMON-002 '남은 한계'의 "담당자 판단 필요"는 담당 범위 확정으로 해소. 아래처럼 직접 수정함.
+- 변경: features/market_analysis/templates/market_analysis/panel.html — 고정 대상 시장 라벨 `badge badge-info` → `badge badge-neutral`.
+  - 기존 동작: 상태(정보) 배지처럼 블루 + 점 표시.
+  - 변경 동작: 분류 라벨(블루그레이 rgb(71,86,110) / rgb(238,242,247), 점 없음). 문구·위치·JS·API·PDF(pdf_report.py의 같은 문구) 변경 없음.
+  - 이유: 상태가 아닌 단순 분류 라벨에 상태색을 쓰지 않는다는 design_system 배지 규칙에 맞춤.
+- API contract 변경: 없음.
+- 검증: validation.md 2026-10-26 DEV-COMMON-003.
+- 담당자 판단: 미기재(담당자 검토 필요)
+
+## DEV-COMMON-004 5개 탭 로딩·오류·성공·다운로드 UX 점검과 공통 패턴 정리
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통 + home·market_analysis·green_claim·product_brochure·promotion_studio (브랜치 feature/common_setup, 작업 전 git status clean, 최근 커밋 8e6bb38)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: 5개 탭의 로딩·오류·성공·다운로드 UX를 먼저 감사하고, 버튼 disabled·aria-busy·작업 중 문구, 중복 요청 방지, 오류 notice(자동 제거 금지·원문 노출 금지), 성공 A(일회성 3~5초)/B(유지) 구분, 다운로드 공통 helper·Blob URL 해제, finally 복원, race·탭 이동, 접근성을 정리. 비즈니스 로직·API contract 변경 금지(명백한 UX 버그만 최소 수정). Git 작업 금지.
+- 감사 결과 요약: Home·그린 클레임은 busy 플래그·finally 복원·재시도·고정 문장 오류가 이미 갖춰짐(그린 클레임은 요청 번호·AbortController·시간 제한까지). 다운로드는 3개 탭 모두 AppShell.work.downloadBlob(60초 뒤 revoke) 사용, 탭별 임시 <a> 구현 없음. 제품소개서·홍보 스튜디오는 미구현(버튼 disabled, API 없음).
+- 발견 문제와 판단:
+  1. 시장 분석 PDF 중복 요청 가능(버그): PDF 요청 중 플래그가 없어, PDF 생성 중 '다시 불러오기'·AI 분석이 끝나면 updatePdfButton이 PDF 버튼을 다시 켬 → pdfBusy 추가.
+  2. 시장 분석 브라우저 오류 원문 노출(버그): 조회·AI·PDF catch가 err.message를 그대로 표시 → fetch 실패 시 "Failed to fetch", AI 응답이 JSON이 아니면 SyntaxError 문장. 서버 오류 객체({code,message})만 표시하고 Error는 고정 문장으로.
+  3. 시장 분석 PDF 결과가 작은 안내 문장에만 표시되고 화면낭독기 전달 없음, 성공 문구는 다음 상태 변화까지 남음 → 결과 카드에 aria-live 안내 영역 추가, 성공 notice-success 4초 뒤 제거(A), 실패 notice-danger role=alert 유지. 응답이 application/pdf가 아니면 실패 처리(서버는 항상 application/pdf로 응답, 정상 흐름 영향 없음).
+  4. 시장 분석 바이어 목록 실패 시 "새로고침해 주세요"(새로고침하면 다른 탭 작업 소실, 앱 정책과 충돌) → 같은 자리 재시도 버튼.
+  5. Home 오류 notice(뉴스·환율 요청 실패, PDF 실패)에 role 없음 → 화면낭독기 전달 안 됨 → role=alert, 전시회 확인 불가는 role=status.
+  6. 5개 탭 모두 실행 중 버튼 문구가 그대로 → 공통 AppShell.ui.setButtonBusy(button, label) 추가(문구 교체·aria-busy, disabled는 기능 코드가 계속 관리해 기존 활성 조건과 충돌 없음). CSS로 작업 중 버튼은 원래 색 + 작은 회전 표시(점선 '사용 불가'와 구분). 버튼 옆 스피너가 있던 Home PDF 진행 문구는 삭제, 그린 클레임 상태 문장은 스피너만 뺌.
+  7. 로딩 문구 혼재("~하는 중"/"검색 중...") → Home 영역 문장 '...'로 통일. 소요 시간·요금 안내 문장은 의미가 있어 유지.
+  8. 제품소개서·홍보 스튜디오 결과 카드 PDF 버튼이 '준비 중' 안내와 연결 안 됨 → aria-describedby로 기존 안내 연결.
+- 문제 없음으로 판단(수정 안 함): 오류 후 버튼 영구 disabled(모든 경로 finally/취소 함수에서 복원), Blob URL 미해제(downloadBlob 60초 revoke), 같은 notice 누적(Home은 id로 교체, 그린 클레임 replaceChildren), 성공 메시지 누적, 오류가 빨리 사라짐(자동 제거 없음), 탭 이동 후 loading 꼬임(브라우저 확인), race(그린 클레임 seq, Home·시장 분석은 버튼 잠금으로 순서 보장 → AbortController 추가 안 함). 일회성 성공 자동 제거 공통 helper는 2곳(Home·시장 분석)뿐이라 만들지 않고 4초를 문서 기준으로 둠.
+- Chrome에서 초점 있는 버튼을 disabled로 바꿔도 activeElement 유지 확인 → 초점 복구 코드 추가 안 함(다른 브라우저 미확인).
+- 변경 파일: static/js/app_shell.js(AppShell.ui.setButtonBusy), static/css/common.css(작업 중 버튼), features/home/static/home.js·templates/home/panel.html, features/market_analysis/static/market_analysis.js·templates/market_analysis/panel.html, features/green_claim/static/green_claim.js, features/product_brochure/templates/product_brochure/panel.html, features/promotion_studio/templates/promotion_studio/panel.html, docs/design_system.md, features/home·market_analysis·green_claim/feature_spec.md.
+- API contract 변경: 없음(요청·응답 형식, 라우트, 서버 코드 변경 없음).
+- 외부 호출: 0건 전송. 검증 서버에서 urlopen 차단(시도 45건 모두 차단: news.google.com·brasilapi.com.br·olinda.bcb.gov.br), ComexStat 함수는 가상 수치 모의, OpenAI 키 없음.
+- 발견 문제(검증 도구): 모의 실행기에 `if __name__ == "__main__"`가 없어 그린 클레임 PDF 별도 프로세스(Windows spawn)가 실행기를 다시 실행 → PDF 30초 시간 제한 실패(UI는 실패 notice·버튼 복원으로 올바르게 처리). 실행기 수정 후 재실행 통과. 앱 코드 문제 아님.
+- 검증: validation.md 2026-10-26 DEV-COMMON-004.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: JS 단위 테스트 체계가 없어 setButtonBusy는 브라우저 검증만. Firefox·Safari·화면낭독기 미확인. 시장 분석 AI 실행 버튼은 실행 시 결과 블록이 다시 그려져 초점이 사라짐(기존 동작, 이번 미수정). 시장 분석 AI 실제 실행·성공 화면은 유료 호출이라 미실행.
+
+## DEV-COMMON-005 결과 영역 초점·키보드·화면낭독 흐름 정리
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통 + market_analysis·home (감사: 5개 탭) (브랜치 feature/common_setup, 작업 전 git status clean, 최근 커밋 65f6e86)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: 결과 생성·갱신 때 초점 상실·위치 인지 문제를 감사 후 정리. 시장 분석 AI 결과 후 초점 상실 우선 재현. 자동 로딩은 초점 이동 금지, 사용자 실행으로 큰 결과가 생기면 결과 제목 초점 검토, 짧은 완료는 status, 오류는 alert·첫 오류 필드, 성공 안내로 초점 뺏지 않음, disabled→enabled 버튼 자동 초점 금지, tabindex=-1, preventScroll + reduced-motion 스크롤, 큰 결과 전체 aria-live 지양, skip link·landmark·heading 확인. API·계산 변경 금지, Git 작업 금지.
+- 정정(DEV-COMMON-004): "Chrome에서 초점 있는 버튼을 disabled로 바꿔도 activeElement 유지"는 잘못된 결론이었음. 렌더링이 없는 빈 테스트 페이지(setContent)에서만 측정한 결과였고, 실제 앱 페이지에서는 disabled로 바꾸는 순간 초점이 body로 이동함(focus fixup, 재현 결과 아래). 그래서 이번 작업에서 공통 복원 처리를 추가함.
+- 재현(수정 전, 모의 서버·키보드 Enter): 분석 완료 후 activeElement BODY, 결과 제목 화면 위치 top -127(화면 밖), 결과 영역 aria-live=polite에 2,874자; AI 실행 중·완료 후 BODY(실행 버튼이 innerHTML로 다시 그려짐), 그 상태에서 Tab → 결과 표 안 링크; 바이어 재시도 성공 후 BODY; 바이어 목록 aria-live=polite에 82,992자. skip link·main#main-content·nav 레이블·탭별 heading(h1→h2→h3)은 정상.
+- 판단:
+  - 같은 패턴(버튼 disabled로 초점 상실, 결과 시작점 초점+스크롤)이 시장 분석 3곳·Home 2곳·그린 클레임 4개 버튼에 반복 → AppShell.ui에 작은 helper 2개.
+    1. setButtonBusy: 시작 때 버튼에 초점이 있었으면 기억, 끝났을 때 초점이 비어 있고(body) 버튼이 활성·보이면 버튼으로 복원(setTimeout 0: disabled 복원이 뒤에 오는 기능 대비). 기능이 결과·오류 칸으로 옮겼으면 건드리지 않음.
+    2. focusResult(target, {scroll, from}): tabindex 없으면 -1 부여, focus(preventScroll) 후 scrollIntoView(reduced-motion이면 auto). 숨겨진 탭/화면·detached 대상, 또는 사용자가 작업 중 from 밖으로 초점을 옮긴 경우 옮기지 않음(탭 이동 중 끝난 작업이 초점을 뺏지 않음).
+  - 시장 분석: 분석 완료 → '분석 결과' h2(tabindex=-1)로 초점·스크롤(넓은 화면 오른쪽 위/좁은 화면 입력 아래에 결과가 생겨 위치 인지가 필요, 다음 행동 PDF·AI·그래프가 결과 안). AI 실행 시작·완료 → '④ AI 분석' region에 초점(버튼이 다시 그려지는 구조는 유지, 대규모 렌더링 리팩터링 안 함). 결과·바이어 aria-live 제거, 숨은 role=status 문장으로 짧게 알림. 바이어 재시도 성공 → 목록 제목, 다시 실패 → 새 재시도 버튼. 입력 오류 첫 필드 초점은 기존 유지. 결과 안 '브라질 수입' 라벨 badge-neutral(분류).
+  - Home: 자동 로딩 초점 이동 없음 유지. PDF 완료/실패는 helper 복원으로 버튼 초점. 업계 소식 상세 'Google News에서 검색'이 검색 중 disabled·성공 후 hidden으로 초점 상실 → 성공 시 결과 건수 문장(role=status), 실패 시 다시 검색 버튼.
+  - 그린 클레임: 기존 구조(중간 단계 초점 이동 없음, 최종 검수 결과 때만 3단계 제목 초점, 단계 aria-live) 유지. 버튼 초점 복원만 helper로 더해짐(코드 변경 없음).
+  - 제품소개서·홍보 스튜디오: 미구현이라 변경 없음(disabled 버튼은 Tab에서 빠지고 '준비 중' 안내 연결은 DEV-COMMON-004에서 완료).
+  - 스크롤 위치: 처음엔 결과 제목이 화면 맨 위에 붙어 초점 테두리가 잘리고, 390px에서는 sticky 상단바(56px)에 가려짐(캡처로 발견, 검증 스크립트 기준이 느슨했음) → common.css에서 [tabindex="-1"] scroll-margin-top 24px(960px 미만 상단바+16px). 그린 클레임 단계 제목·Home 상세 제목에도 적용됨.
+  - skip link·main·nav는 이미 있음 → 추가하지 않음. heading 위계 명백한 오류 없음 → 수정 없음.
+- 변경 파일: static/js/app_shell.js, static/css/common.css, features/market_analysis/static/market_analysis.js·templates/market_analysis/panel.html·feature_spec.md, features/home/static/home.js·feature_spec.md, docs/design_system.md, tests/test_common/test_shell_a11y.py(신규).
+- API contract 변경: 없음. 계산·필터·판정 로직 변경 없음.
+- 외부 호출: 0건 전송(urlopen 차단 시도 104건 모두 차단, ComexStat 모의, OpenAI 키 없음, 시장 분석 AI 응답은 브라우저 route로 가상 응답).
+- 발견 문제(검증 도구): 검증 서버가 템플릿 수정 전에 시작돼 이전 템플릿을 캐시(debug 꺼짐) → 재시작. 테스트 기대값 오류 1건(결과 제목에서 Shift+Tab의 앞 요소는 왼쪽 열 '다시 불러오기'가 맞음), PDF 생성 대기 부족 1건 → 스크립트 수정. Git Bash의 `python -`가 멈춰 해당 프로세스만 종료.
+- 검증: validation.md 2026-10-26 DEV-COMMON-005.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 화면낭독기(NVDA·VoiceOver) 미실행(DOM role·aria 점검만). 작업 중에는 초점이 body에 머무름(끝나면 복원) — disabled 대신 aria-disabled로 바꾸면 작업 중에도 유지되지만 3개 탭 버튼 로직 변경이 커서 이번 범위 밖. Firefox·Safari 초점 동작 미확인. ④ AI 분석 summary 안의 h3(details/summary 안 heading)는 기존 구조 유지.
+
+## DEV-COMMON-006 공통 사이드바·상단바에 FIONEX 공식 로고 적용
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통(common_setup) (브랜치 feature/common_setup, 작업 전 git status clean, 최근 커밋 3ce7907)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: 사용자 제공 FIONEX_LOGO.png로 임시 CSS 로고(.brand-mark) 교체. 사이드바 150~170px·상단바 110~130px, height auto, 비율 유지, 텍스트 중복 금지, 슬로건 포함 원본 사용, 투명 여부 확인(배경 있으면 CSS로 제거하지 말고 보고), filter·배경 박스·과한 hover 금지, alt="FIONEX", 심볼 crop 금지, 팔레트 변경 금지, design_system에 Brand 규칙. Git 작업 금지.
+- 원본 확인(사용자 Downloads/FIONEX_LOGO.png, 870,173 bytes): 2172×724(3:1), RGBA, 네 모서리 알파 0(투명 배경). 완전 불투명 픽셀 0.2%(글자 알파 약 202~253, 빛 번짐 반투명) → 흰 배경 합성 미리보기로 글자·리본 식별 확인, 처리 없이 원본 사용. 내용 영역(알파>32) x 127~2032 → 좌우 투명 여백 약 6%.
+- 판단:
+  - 경로: 기존 공통 asset 폴더 static/assets/(README: 공개·사용 허가 자료) + 이름 규칙 snake_case → static/assets/fionex_logo.png(원본과 바이트 동일, 파일 1개).
+  - 기존 브랜드는 링크가 아닌 span → 링크를 새로 만들지 않음(홈 이동은 메뉴 '홈'과 중복). 사이드바·상단바 모두 같은 img, alt="FIONEX", width/height 원본 값으로 자리 확보.
+  - 크기: 사이드바 168px(높이 56px), 상단바 120px(높이 40px, 상단바 56px 안). tokens.css에 --brand-logo-width, --brand-logo-width-compact 추가. 작은 화면 메뉴(드로어)는 닫기 버튼과 같은 줄이라 max-width:100%·min-width:0으로 넘치지 않게.
+  - 정렬: 원본 왼쪽 투명 여백 때문에 로고 글자가 메뉴 아이콘보다 약 10px 안쪽 → .sidebar-head 좌우 padding --space-3 → --space-1(측정: 로고 글자 시작 약 29.8px, 메뉴 아이콘 28px).
+  - .brand-mark는 base.html 한 곳만 사용 → DOM·CSS 삭제. .sidebar-brand/.topbar-brand의 글자 스타일(크기·굵기)도 텍스트가 없어져 삭제.
+  - 파일 크기 870KB를 168px로 표시: 지시가 원본 사용·파일 하나라 리사이즈 사본을 만들지 않음(남은 문제로 보고).
+- 변경 파일: static/assets/fionex_logo.png(신규), templates/base.html, static/css/common.css, static/css/tokens.css, docs/design_system.md, tests/test_common/test_shell_a11y.py(로고 구조 테스트 1건 추가).
+- 외부 호출: 0건(검증 서버 urlopen 차단).
+- 검증: validation.md 2026-10-26 DEV-COMMON-006.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 사이드바 168px에서 슬로건 글자 높이가 약 5px라 1배율 화면에서는 읽기 어려움(원본 축소 지시대로 유지). 870KB PNG를 작은 크기로 표시(첫 로딩 부담) — 표시 크기 2배 정도로 줄인 최적화 사본은 담당자 결정 필요. 로고 사용권·출처 기록(assets.md)은 사용자 제공 파일이라는 사실만 기록.
+
+## DEV-COMMON-007 웹 UI 브랜드 폰트(Brand New Hyosung) 적용
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통(common_setup) (브랜치 feature/common_setup, 작업 전 상태: 사용자가 만든 미추적 static/fonts/ 외 변경 없음, 최근 커밋 cdec84d)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 요약: static/fonts/brand/의 실제 파일로 @font-face 등록(파일명 그대로, 없는 굵기 가정 금지), --font-sans를 Brand New Hyosung 우선으로, 400/600 합성 점검·토큰 정리, 개별 font-family 정리, 버튼·입력·file 버튼·표·KPI·차트 SVG 글꼴 확인, 한·영·포 글리프 확인, 줄바꿈 회귀, PDF 변경 금지, 외부 CDN 금지, 실제 computed font·HTTP 200 확인. Git 작업 금지.
+- 현재 구조 조사: 글꼴은 tokens.css --font-sans 한 곳 + common.css body만 사용, 기능 CSS의 font-family 0건(font: inherit 4곳은 컨트롤 상속용), 굵기는 모두 토큰 경유(직접 숫자 0건), @font-face 없음.
+- 폰트 확인(fontTools 4.55.3, 세션 임시 폴더 설치 — 저장소·requirements 미변경): Light/Medium/Bold usWeightClass 300/500/700, family 'Brand New Hyosung', 한글 11,172/11,172, ASCII 전부, 숫자 폭 균일. 포르투갈어 악센트 문자 전부 없음(á ã â à ç é ê í ó õ ô ú ü 대·소문자), – — • € 없음. 저작권 'Copyright (c) 2023 by HYOSUNG CORPORATION. All rights reserved.', 라이선스 문구 없음, fsType 4.
+- 판단:
+  - @font-face는 공통 CSS 맨 앞(common.css), 경로 ../fonts/brand/<원본 파일명>(공백 포함, 따옴표 URL). 매핑은 메타데이터 그대로 300/500/700.
+  - 굵기: 400 요청 시 브라우저가 500을, 600 요청 시 700을 고르므로 합성은 없지만, 토큰을 실제 파일에 맞춰 명시(regular·medium 500, semibold·bold 700) + body font-weight 지정. 화면이 지나치게 굵어지지 않는지 1440/1024/390 캡처로 확인(본문 Medium이 데이터 화면 가독성에 적합). 이전 시스템 글꼴(Malgun: 400/700만)에서도 600은 이미 700으로 그려졌으므로 강조 굵기 체감 변화는 작음.
+  - fallback 순서는 기존 스택 앞에 브랜드 폰트만 추가. 포르투갈어 악센트 대체 글꼴로 Segoe UI를 앞에 두는 안을 캡처로 비교했으나 Malgun과 차이가 작아 지시 스택 유지.
+  - ::file-selector-button이 Arial로 그려짐(실측) → font: inherit. body 기본 굵기 400 요청(실측) → 토큰 지정. select의 option 목록은 OS가 그리는 드롭다운이라 400 그대로(측정 제외).
+  - 차트 SVG text는 HTML 상속으로 이미 브랜드 폰트(실측) → .ma-svg text 규칙 추가 안 함. 기능 CSS 변경 없음.
+- 변경 파일: static/css/common.css(@font-face 3개, body 굵기, file 버튼 font), static/css/tokens.css(--font-sans, 굵기 토큰), docs/design_system.md(Typography), tests/test_common/test_shell_a11y.py(폰트 로컬 파일·외부 CDN 없음 테스트). static/fonts/brand/*.ttf 3개는 사용자가 넣은 파일 그대로(변경 없음, 미추적 상태).
+- PDF: 변경 없음(features/*/fonts, report·pdf 코드 diff 0).
+- 외부 호출: 0건(브라우저 외부 요청 0, 서버 urlopen 차단).
+- 검증: validation.md 2026-10-26 DEV-COMMON-007.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 포르투갈어 악센트·– — • €는 시스템 글꼴 대체(모양·굵기 섞임), 웹 사용권 미확인(fsType 4·라이선스 문구 없음), 폰트 2.6MB 첫 로딩(서브셋·woff2 변환은 사용권 확인 후 검토), Flask가 .ttf를 application/octet-stream으로 응답(브라우저 로드는 정상), macOS·모바일 실제 렌더링 미확인.
+
+## DEV-COMMON-008 웹·모든 탭 PDF 글꼴을 Pretendard로 통일
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통 + home·market_analysis·green_claim PDF (브랜치 feature/common_setup, 작업 전 미커밋: DEV-COMMON-007 브랜드 폰트 변경 7개 파일·미추적 static/fonts/)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "글꼴 C:\Users\user\Documents\AX2\fionex\static\fonts\Pretendard-1.3.9 여기있는걸로 통일해주고 파일명도 리드미에 맞춰서 통일해주고 우리 전체탭 pdf 도 이 글꼴로 해줘"
+- 판단:
+  - '리드미'는 Pretendard 폴더에 README가 없어(LICENSE.txt만), 공식 배포본 파일명 규칙(`Pretendard-<굵기>`)을 그대로 쓰고 새 공통 폴더에 README.md(파일·용도·원본 경로·SHA-256·라이선스·글리프)를 만들어 이름을 그 표와 일치시키는 것으로 해석.
+  - 배포본(67MB) 전체를 쓰지 않고 필요한 파일만 `static/fonts/pretendard/`로 복사(원본과 바이트 동일 확인): 웹 woff2 Regular·Medium·SemiBold·Bold(약 3.1MB), PDF TTF Regular·Bold(약 5.4MB), LICENSE.txt.
+  - PDF: ReportLab은 CFF(.otf)를 못 쓰므로 배포본 `public/static/alternative/*.ttf`(glyf 외곽선) 사용. fontTools 확인: 한글 11,172·ASCII·포르투갈어 악센트·· • – — … € ₩ ▲ ▼ ①~⑥ ※ 포함, ⓘ만 없음, fsType 0, OFL 1.1.
+  - 공통화: `common/config.py`에 FONT_DIR·PDF_FONT_FILES·PDF_FONT_NAMES 추가 → Home report.py·시장 분석 pdf_report.py는 등록 경로·이름만 교체, 그린 클레임 report_worker.py는 글자별 글꼴 선택·[U+XXXX] 구조를 유지하고 latin·ko 두 자리 모두 Pretendard(Vera·나눔고딕 제거, 사용하지 않게 된 os import 삭제).
+  - 웹: Brand New Hyosung @font-face → Pretendard woff2 4개, --font-sans 맨 앞 Pretendard, 굵기 토큰 400·500·600·700 원복(파일 1:1). DEV-COMMON-007의 file 버튼 font: inherit·body 굵기 지정은 유지.
+  - 정리: 쓰지 않게 된 기능별 fonts/ 폴더 3곳(home·market_analysis Noto Sans KR+OFL+README, green_claim 나눔고딕+OFL+README) 삭제(Git 이력에 남음). 사용자가 넣은 static/fonts/brand/(Brand New Hyosung)·static/fonts/Pretendard-1.3.9/(배포본)은 삭제하지 않음 — 커밋 제외 권장.
+  - 그린 클레임 테스트 기대값 변경: 'NanumGothic·Vera 포함' → '포함 글꼴 모두 Pretendard'. 처음 실패(/Helvetica 포함) → 최소 PDF로 ReportLab 캔버스 기본 선언(/F1 12 Tf, 그리는 글자 없음)임을 확인하고 /Helvetica만 허용.
+- 변경 파일: static/fonts/pretendard/(신규: woff2 4·ttf 2·LICENSE.txt·README.md), common/config.py, static/css/common.css, static/css/tokens.css, features/home/report.py, features/market_analysis/pdf_report.py, features/green_claim/report_worker.py, features/green_claim/tests/test_report.py, tests/test_common/test_shell_a11y.py, 삭제 features/{home,market_analysis,green_claim}/fonts/*(12개), docs/design_system.md, docs/decisions.md, README.md, requirements.txt(주석), features/{home,market_analysis,green_claim}/feature_spec.md.
+- 외부 호출: 0건(PDF 생성·브라우저 검증 모두 urlopen 차단·가상 데이터).
+- 검증: validation.md 2026-10-26 DEV-COMMON-008.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 시장 분석 PDF 차트 축 라벨이 작은 값에서 반올림으로 겹침(1500→"2K", 0.x→"1/0") — 글꼴과 무관한 기존 표기 규칙, 이번 미수정. PDF 글꼴 크기 변화로 실제 데이터(긴 뉴스 제목·AI 표)의 줄바꿈은 가상 데이터로만 확인. Flask가 woff2를 application/octet-stream으로 응답(로드는 정상). 미추적 원본 폴더 2곳(약 71MB) 처리 결정 필요.
+
+## DEV-HOME-021 Home 주요 카드 제목 강조·설명 문장 삭제
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/common_setup, 작업 전 미커밋 변경 없음, 최근 커밋 f5813d9)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "홈에 이거 브라질 섬유·의류 관련 최신 소식입니다.브라질·중남미 섬유 전시회 일정입니다.  빼고 바이어시간, 환율,업계 소식,다가오는 전시회 이거를 좀 강조하고 싶은데 그림자나 굵기나 색상을 다르게? 보기 좋게해"
+- 판단: 두 설명 문장(card-description) 삭제. 강조는 네 카드에 똑같이 적용(카드마다 다른 그림자 금지 규칙 유지): 위쪽 3px 로고색 그라데이션 띠(배경 레이어라 모서리에 맞게 잘림), 제목 --font-size-xl·Bold·자간 -0.02em + 앞 4px 세로 포인트 막대(블루→아쿠아→민트). 공통 .card·.card-title은 수정하지 않고 Home 전용 클래스(.home-main-card·.home-card-title)로 한정, 색은 토큰만. 960px 미만은 제목 18px.
+- 변경 파일: features/home/templates/home/panel.html, features/home/static/home.css, features/home/feature_spec.md.
+- 외부 호출: 0건. 검증: validation.md DEV-HOME-021.
+- 담당자 판단: 미기재(담당자 검토 필요)
+
+## DEV-HOME-022 환율 전일 대비 등락 색 표시
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / home (브랜치 feature/common_setup, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "환율 등락 색상으로 나타내줘"
+- 판단: 국내 시세 표기 관례대로 상승 빨강·하락 파랑·변동 없음 회색, 옅은 배경 알약(기존 상태 토큰 danger/info/neutral, 대비 5.8·6.1·6.6:1). 기존 ▲·▼ 기호와 '상승/하락' 낱말 유지(색만으로 구분하지 않음). 전일 대비가 있는 USD/KRW·USD/BRL만 적용, BRL/KRW(USD 경유 계산값)·비교 데이터 없음은 색 없음. 서버·API·계산 변경 없음(화면 JS가 change_pct 부호로 data-direction만 붙임). PDF의 전일 대비 표기는 이번에 바꾸지 않음.
+- 변경 파일: features/home/static/home.js(fxChangeDirection, data-direction), features/home/static/home.css(등락 색 규칙), features/home/feature_spec.md.
+- 외부 호출: 0건(가상 FX 응답으로 화면 확인). 검증: validation.md DEV-HOME-022.
+- 담당자 판단: 미기재(담당자 검토 필요)
+
+## DEV-MA-BUYER-002 바이어 우선순위 등급(②)·바이어별 AI 브리핑(③)
+- 유형: development_instruction (서비스 프롬프트 buyer_briefing_v1.md 신규 작성, 실제 모델 실험은 미실행)
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis (+공통 소폭: common.css .table-wrap, app_shell.js focusLost) (브랜치 feature/common_setup, 작업 전 미커밋 변경 없음, 최근 커밋 8529489)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음(모의만)
+- 지시: 사용자가 붙여 넣은 '바이어 분석 기능 제안(①분포 ②등급 ③AI 브리핑)' + "시장분석 탭 수정할건데 1번은 빼고 가자 만들어줘"
+- 판단:
+  - ② 제안 규칙 그대로 코드화. '연락 가능'은 표의 높음(대표 전화+회사 도메인)으로 해석 → A 242·B 457·C 140(대안 '연락 수단 1개 이상'이면 A 500, 제안 표 정의와 달라 채택 안 함). 1340501(Estamparia e texturização)은 가연 포함 코드라 관련도 높음. 등급 근거 한 줄은 코드가 생성.
+  - ③ 제안의 4가지 자료 중 관세 18%·반덤핑 유예는 확인된 정적 자료가 없어 넣지 않음(수치를 만들지 않음, 프롬프트 금지 + 코드 검사). 시장 통계는 시장 통계 탭의 조회 묶음(bundle)을 재사용(추가 ComexStat 호출 없음). 재생·T2T 근거는 기존 근거 파일(현재 0건).
+  - 호출 1회 정책: 기존 시장 분석 AI처럼 5회 검토를 하지 않고 1회 생성 + 코드 검사(통과 항목만 표시). 같은 업체·묶음은 서버 메모리 3시간 재사용. 화면은 작업 중 모든 브리핑 버튼 잠금.
+  - 미정 항목은 제안의 추천을 따르거나 보류: 브랜드 묶음(자료 없음)·포르투갈어 첫 연락 문구(제품소개서와 겹침 확인 전)·③ 별도 PDF는 이번에 미구현, ②는 기존 PDF ⑥에 포함.
+  - 개인정보: AI 입력에 전화번호·CNPJ 번호를 넣지 않음(테스트로 확인).
+- 발견·수정한 문제: (1) 표 칸의 .visually-hidden(absolute)이 .table-wrap 스크롤 상자 밖으로 나가 390px 바이어 화면에 페이지 가로 스크롤(문서 폭 992px) → 공통 .table-wrap에 position: relative. (2) 작업 중 비활성 버튼을 누르면 main(tabindex=-1)에 초점이 가 결과 제목으로 초점 이동이 생략됨 → 공통 focusLost가 main도 '초점 없음'으로 봄. (3) 등급 열 추가로 업종 칸 nth-child 선택자가 밀림 → 5번째로 수정. (4) 바이어 카드 설명 '근거 업체 먼저' → '우선순위 등급순'.
+- 변경 파일: features/market_analysis/buyers.py, buyer_briefing.py(신규), prompts/buyer_briefing_v1.md(신규), routes.py, pdf_report.py, static/market_analysis.js·css, templates/market_analysis/panel.html, feature_spec.md, tests/test_market_analysis/test_buyer_briefing.py(신규 12건), static/css/common.css, static/js/app_shell.js, docs/design_system.md.
+- API contract: 기존 응답 필드 유지, buyers 응답에 등급 필드 추가, 새 엔드포인트 POST /api/market-analysis/buyer-briefing.
+- 외부 호출: 0건(가짜 AI·가상 통계, 브라우저는 route 가상 응답 + 키 없는 실제 서버).
+- 검증: validation.md DEV-MA-BUYER-002.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 OpenAI 브리핑 품질·비용·소요 시간 미검증, 숫자 없는 사실 오류는 코드로 못 잡음(고정 안내로 사람 확인 요구), 관세·반덤핑 자료·재생·T2T 근거·브랜드 묶음 미준비, ③ PDF 미구현, PDF가 53→65쪽(등급 열로 행 높이 증가).
+
+## DEV-MA-BUYER-003 탭 이름 '시장/바이어 분석'·바이어 검색·브리핑 PDF·가독성
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis (브랜치 feature/common_setup, 작업 전 미커밋 변경 없음, 최근 커밋 c28f265)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "시장분석탭을 시장/바이어 분석탭이라는 이름도 바꾸고 바이어쪽에 ai 분석한 후 pdf 변환기능 넣고 가독성 좋게 만들어줘 그리고 검색기능도 넣어줘"
+- 판단:
+  - 이름은 FEATURE label·title·설명만 변경(기능 id·주소·API 경로·Git 브랜치명 유지). 통계 PDF 제목·바닥글도 맞춤. 담당 배정 기록(decisions.md)·브랜치 규칙의 '시장 분석'은 과거 기록이라 유지.
+  - 브리핑 PDF는 화면이 보낸 JSON 대신 서버 보관본(briefing_id)으로 생성 → 내용 변조·AI 재호출 없음, 만료 시 410 안내.
+  - 가독성: 브리핑을 요약 머리 + 2열 블록 + Q/A 카드 + 안내 한 상자로 재구성(정보 항목은 그대로). 기존 고정 안내 3개 notice를 한 상자 목록으로 합쳐 세로 길이 감소.
+  - 검색: 839곳을 받은 상태라 브라우저에서 거름(서버 요청 없음). 국세청 자료가 악센트 없는 대문자라 악센트·대소문자·CNPJ 기호 무시.
+  - 함께 고친 것: 통계 PDF 축 눈금 반올림 겹침(DEV-COMMON-008에서 보고한 남은 문제).
+- 발견 문제(검증 도구): 기존 검증 스크립트가 바뀌기 전 브리핑 마크업을 찾아 2건 실패 → 선택자만 갱신. 기존 PDF 테스트의 제목 기대값을 새 제목으로 수정. 새 테스트의 문자열 비교를 assertIs → assertEqual.
+- 변경 파일: features/market_analysis/routes.py, buyer_briefing.py, pdf_report.py, static/market_analysis.js·css, templates/market_analysis/panel.html, feature_spec.md, tests/test_market_analysis/test_buyer_briefing.py·test_phase2.py, README.md, docs/design_system.md.
+- API contract: 새 엔드포인트 POST /api/market-analysis/buyer-briefing/pdf, 브리핑 응답에 briefing_id 추가(기존 필드 유지).
+- 외부 호출: 0건(브라우저 검증은 브리핑 generate만 가짜로 바꾼 저장소 밖 실행기).
+- 검증: validation.md DEV-MA-BUYER-003.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 OpenAI 브리핑 미실행, 브리핑 보관은 서버 메모리 3시간(재시작 시 PDF 받으려면 다시 브리핑 필요), 검색은 현재 받은 기준 자료 범위.
+
+## DEV-MA-BUYER-004 바이어 목록 → 업체 상세 화면(정보·AI 브리핑·PDF)
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis (브랜치 feature/common_setup, 작업 전 미커밋 변경 없음, 최근 커밋 bc71ee5)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: (서브탭 3개 제안에 대해) "시장 통계 | 바이어 목록 | AI 브리핑 이렇게 말고 바이어 목록누르면 상세로 들어가게 할수있나"
+- 판단: 서브탭은 2개 유지, 목록 → 상세(같은 탭 안 화면 전환, Home 업계 소식 상세와 같은 방식). 브리핑을 상세 안으로 옮기고 목록 행의 AI 버튼은 '상세 보기'로 바꿈(유료 호출은 상세에서 사용자가 명시적으로). 업체별 브리핑을 화면 메모리에 보관해 이전·다음 이동 시 재호출 없음. 진행 중 다른 업체로 옮겨도 결과가 엉뚱한 화면에 덮이지 않게 업체별로 처리. 상세 화면에서 브리핑 머리의 업체 정보는 위 업체 카드와 중복이라 시장 맥락 한 줄로 축소(PDF는 업체 표 유지). 상세를 열 때 제목으로 스크롤하면 이동 버튼 줄이 가려져, 초점은 제목·스크롤은 상세 맨 위로 조정.
+- 변경 파일: features/market_analysis/templates/market_analysis/panel.html, static/market_analysis.js·css, feature_spec.md. Python·API 변경 없음.
+- 외부 호출: 0건.
+- 검증: validation.md DEV-MA-BUYER-004.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 브라우저 뒤로 가기로 목록 복귀 안 됨, 실제 OpenAI 브리핑 미실행.
+
+
+## DEV-MA-BUYER-005 바이어 목록 '상세 보기' 펼치기 + AI 브리핑 글래스 창
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis + 공통 토큰 (브랜치 feature/common_setup, 최근 커밋 f0245e5)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "상세보기는 그냥 목록탭에서 가볍게 확인하게 해주고 AI 브리핑누르면 AI브리핑이랑 상세보기 Glassmorphism하게 보이게 해줘"
+- 판단: DEV-MA-BUYER-004 상세 화면을 없애고 (1) 행 아래 펼치기, (2) 네이티브 `<dialog>` 모달 글래스 창(초점 가둠·Esc·초점 복귀를 브라우저 기본 동작으로)으로 대체. 'AI 브리핑'을 누른 것이 곧 브리핑 요청이므로 받은 적 없는 업체는 창을 열 때 자동 1회 호출하고 목록에 유료 안내 문장을 붙임. 글래스 값은 tokens.css에 새 토큰으로 두고 떠 있는 창 전용으로 제한, blur 미지원·투명도 줄이기 설정에서는 불투명 면으로 대체. 패널 `overflow: hidden`이면 브리핑 제목 초점 시 패널이 스크롤되어 머리가 가려져 `overflow: clip`으로 바꿈.
+- 변경 파일: static/css/tokens.css, features/market_analysis/templates/market_analysis/panel.html, static/market_analysis.js·css, feature_spec.md, docs/design_system.md. Python·API 변경 없음.
+- 외부 호출: 0건.
+- 검증: validation.md DEV-MA-BUYER-005.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 OpenAI 브리핑 미실행, prefers-reduced-transparency 화면 미확인(Chrome 에뮬레이션 미사용).
+
+## DEV-MA-BUYER-006 AI 브리핑 창 안 하위 탭(업체 상세 | AI 브리핑)
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis (브랜치 feature/common_setup, DEV-MA-BUYER-005 미커밋 상태에서 이어서 작업)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "시장통계 바이어목록처럼 보기 쉽게 만들어줘" → 적용 위치 질문에 "AI 브리핑 창 안" 선택
+- 판단: 바깥 하위 탭과 같은 클래스·키보드 동작을 쓰도록 탭 연결 코드를 `bindTabs`로 묶어 두 곳에서 사용. 사용자가 누른 것이 'AI 브리핑'이라 열 때 브리핑 탭. 상세 탭을 보는 사이 브리핑이 끝나면 초점을 빼앗지 않고 탭 옆 '새 결과' 표시. 탭 전환 시 창 높이가 바뀌어 탭이 움직여 창 높이를 고정.
+- 변경 파일: features/market_analysis/templates/market_analysis/panel.html, static/market_analysis.js·css, feature_spec.md, docs/design_system.md. Python·API 변경 없음.
+- 외부 호출: 0건.
+- 검증: validation.md DEV-MA-BUYER-006.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 OpenAI 브리핑 미실행.
+
+## DEV-MA-STATS-007 시장 통계 조회 조건 → 분석 결과 두 화면
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis (브랜치 feature/common_setup, DEV-MA-BUYER-006 미커밋 상태에서 이어서 작업)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "시장 바이오분석탭에서 시장통계에서 조회조건 다음창으로 분석결과 넘어가게 해줘야지" (중간에 세션이 끊겨 "계속 진행해"로 재개)
+- 판단: 2열 workspace를 두 화면 순서로 변경. 수십 초 걸리는 조회를 기다리는 동안 결과 화면에서 진행 상태를 보이도록 '분석 실행' 즉시 전환. 실패는 입력 수정이 필요할 수 있어 조건 화면으로 되돌림(이전 결과 유지). '다시 불러오기'는 결과 화면 막대로 이동. 조건 요약을 막대에 둬 결과 화면에서도 무엇을 조회했는지 보이게 함.
+- 변경 파일: features/market_analysis/templates/market_analysis/panel.html, static/market_analysis.js·css, feature_spec.md. Python·API 변경 없음.
+- 외부 호출: 0건.
+- 검증: validation.md DEV-MA-STATS-007.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 ComexStat 조회로는 확인하지 않음(모의 서버), 브라우저 뒤로 가기와 연결하지 않음.
+
+## DEV-MERGE-001 develop → feature/common_setup 병합 충돌 정리
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / 공통 (브랜치 feature/common_setup, 사람이 시작한 병합 중 상태, MERGE_HEAD 4092930)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "지금 깃 충돌난거 오류없이 병합해줘" → "아니 내꺼위주로 병합해"
+- 판단: 충돌 2곳(제품소개서·홍보 스튜디오 panel.html)에서 내 쪽 변경은 미구현 자리 표시 버튼에 aria-describedby(…-pending)를 붙인 한 줄뿐이었고, develop은 그 버튼을 실제 기능 버튼으로 바꿈. 내 쪽 줄을 그대로 고르면 제품소개서는 data-review-empty가 사라져 product_brochure.js에서 null 오류, 홍보 스튜디오는 죽은 PDF 버튼이 중복되어 "오류 없이" 조건을 못 지킴 → 두 파일은 develop 구조로 정리. 그 밖의 내 작업(공통 UI·Pretendard·시장/바이어 분석)은 자동 병합으로 유지됨을 확인. requirements.txt reportlab 설명이 develop의 옛 글꼴 설명으로 되돌아가 내 쪽 Pretendard 통일 설명으로 복구하고 develop의 새 사용처(홍보 스튜디오·제품소개서, Noto Sans KR) 추가. 병합으로 깨진 테스트 3건(내 낡은 자리 표시 버튼 테스트, 첫 <dialog>를 집던 제품소개서 테스트) 수정.
+- 변경 파일: features/product_brochure/templates/product_brochure/panel.html, features/promotion_studio/templates/promotion_studio/panel.html, requirements.txt, tests/test_common/test_shell_a11y.py, tests/test_product_brochure/test_panel.py, 이 기록 파일들.
+- Git: add·commit은 사람이 수행(이번 작업은 파일 정리만).
+- 외부 호출: 0건.
+- 검증: validation.md DEV-MERGE-001.
+- 남은 한계: 홍보 스튜디오·제품소개서 PDF는 아직 Noto Sans KR(Pretendard 통일 미적용). 두 탭 실제 OpenAI 기능은 미실행.
+
+## DEV-MA-STATS-008 조회 조건 한 줄 + 분석 결과 ①~⑤ 하위 탭
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / market_analysis (브랜치 feature/common_setup, 최근 커밋 c3f0e67 develop 병합, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "코드 체계/ 품목코드/ 시작월 / 종료월 입력하는거 한줄로 해서 보기 좋게 하고 분석결과 1,2,3,4,5 서브탭 처럼 하나씩 넘겨보게 하는 걸로 갔으면 좋겠어"
+- 판단: 네 칸 높이를 맞추려고 긴 안내 두 개를 줄 아래로 모음. 결과 탭은 바이어 창과 같은 bindTabs 사용, '하나씩 넘겨보기'를 위해 아래 이전/다음 버튼(다음 항목 이름 표시) 추가. 항상 봐야 하는 해석 주의·경고는 탭 밖 위쪽에 유지. 좁은 화면 탭 줄 가로 스크롤 시 선택 탭이 가려져 탭 줄만 옮기도록 보완.
+- 변경 파일: features/market_analysis/templates/market_analysis/panel.html, static/market_analysis.js·css, feature_spec.md. Python·API 변경 없음.
+- 외부 호출: 0건.
+- 검증: validation.md DEV-MA-STATS-008.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 ComexStat·실제 AI 분석 화면 미확인(모의 서버).
+
+## DEV-PB-REQ-001 제품소개서 필수 확인 항목 빨간 경고
+- 유형: development_instruction
+- 날짜/시간: 2026-10-26 (Asia/Seoul)
+- 작업자/기능: 홍은주 / product_brochure (브랜치 feature/common_setup, 최근 커밋 74f5893, 작업 전 미커밋 변경 없음)
+- 모델/설정(개발 도구): Claude Code (claude-opus-5-5). 서비스 AI 호출 없음
+- 지시 원문: "제품소개서 부분 필수확인요소를 확인하게 해주고 안적히면 빨간색으로 경고해줘"
+- 판단: 필수 기준은 서버 생성 조건(제품명·제품 설명 값+확인, 표시명 값+확인)과 동일하게 Review 모듈의 순수 함수로 두고 Node 점검 추가. 처음부터 빨갛게 하지 않고 적용 시점(및 빈 칸에서 나갈 때)부터 표시, 고치면 즉시 해제. 공통 .field-error·aria-invalid 사용, 체크 누락은 체크 줄 빨강(문구로 뜻 전달). 기존 적용 스냅샷 동작은 유지.
+- 변경 파일: features/product_brochure/static/product_brochure.js·css, templates/product_brochure/panel.html, feature_spec.md, tests/test_product_brochure/review_logic_check.js. Python·API 변경 없음.
+- 외부 호출: 0건.
+- 검증: validation.md DEV-PB-REQ-001.
+- 담당자 판단: 미기재(담당자 검토 필요)
+- 남은 한계: 실제 PDF 분석(OpenAI) 결과로는 확인하지 않음(가짜 응답 주입).

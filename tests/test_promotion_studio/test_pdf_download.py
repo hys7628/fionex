@@ -148,7 +148,9 @@ class BuildPdfTest(unittest.TestCase):
 
     def test_logo_embedded(self):
         reader, _ = pdf_text(self.build(logo=png_bytes()))
-        self.assertTrue(reader.pages[0].images)
+        plain, _ = pdf_text(self.build())
+        # 표지: 공통 머리 FIONEX 로고에 더해 올린 로고가 들어감
+        self.assertEqual(len(reader.pages[0].images), len(plain.pages[0].images) + 1)
 
     def test_broken_logo_raises(self):
         board, _, _ = service.parse_pdf_request(*request_parts())

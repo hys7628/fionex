@@ -7,6 +7,7 @@
 - 공개 통계 캐시는 서버 메모리에만 둡니다(서버 재시작 시 비워짐). 같은 날(KST) 같은 조건은 재사용합니다.
   사용자 입력·결과는 저장하지 않습니다.
 """
+import hashlib
 import json
 import re
 import secrets
@@ -105,28 +106,135 @@ def country_list():
 
 
 # ---------- 캐시 ----------
+# 서버 메모리만 씁니다(디스크·DB 저장 없음, 서버를 다시 시작하면 사라짐). 성공한 조회 결과만 담고,
+# 조회가 실패하면 기존 캐시를 stale(이전 자료)로 돌려줍니다.
+CACHE_TTL_SECONDS = 6 * 3600       # 최신 제공 월·통계 행 재사용 시간(ComexStat은 월 단위로 갱신)
+REFRESH_MIN_SECONDS = 10 * 60      # '다시 불러오기'라도 이 시간 안에 받은 자료는 다시 조회하지 않음(호출 한도 보호)
+MAX_ROWS_CACHE = 20                # 품목코드별 통계 행 캐시 최대 개수(넘치면 가장 오래 쓰지 않은 것부터 삭제)
 _cache_lock = threading.Lock()
-_latest_cache = {}   # {"day": "YYYY-MM-DD", "value": (y, m, updated), "checked_at": iso}
-_rows_cache = {}     # (system, code) → {"day", "year_from", "year_to", "rows", "fetched_at"}
+_latest_cache = {}   # {"at": monotonic, "value": (y, m, updated), "checked_at": iso}
+_rows_cache = {}     # (system, code) → {"at", "used", "year_from", "year_to", "rows", "fetched_at"}
 
 
-def _today():
-    return now_kst().date().isoformat()
+# ---------- 스냅샷(ComexStat 점검·장애 대비) ----------
+# build_snapshot.py로 수동 생성한 MDIC 공개 원본 CSV 요약. ComexStat 조회가 실패하고 메모리 캐시도 없을 때만 씁니다.
+SNAPSHOT_FILE = Path(__file__).resolve().parent / "data" / "comexstat_snapshot.json"
+SNAPSHOT_LABEL = "MDIC 공개 원본 자료"
+_snapshot_state = {"mtime": None, "data": None}
+
+
+def load_snapshot():
+    """스냅샷 dict 또는 None(파일 없음·깨짐). 파일이 새로 생기거나 바뀌면(수정 시각 비교) 서버를 다시 시작하지 않아도 다시 읽습니다."""
+    try:
+        mtime = SNAPSHOT_FILE.stat().st_mtime
+    except OSError:
+        mtime = None
+    with _cache_lock:
+        if mtime != _snapshot_state["mtime"]:
+            data = None
+            if mtime is not None:
+                try:
+                    data = json.loads(SNAPSHOT_FILE.read_text(encoding="utf-8"))
+                    if not isinstance(data.get("rows"), list) or not data.get("source", {}).get("latest_month"):
+                        data = None
+                except (OSError, ValueError, AttributeError):
+                    data = None
+            _snapshot_state.update(mtime=mtime, data=data)
+        return _snapshot_state["data"]
+
+
+def snapshot_date(snap):
+    return str(snap["source"].get("retrieved_at") or "")[:10]
+
+
+def snapshot_rows(code_system, code, year_from, year_to):
+    """스냅샷에서 query_imports와 같은 형식의 행. 범위(코드·연도) 밖이면 None.
+    hs6은 그 6자리로 시작하는 NCM 행을 연·월·국가별로 합산합니다."""
+    snap = load_snapshot()
+    if not snap:
+        return None
+    src = snap["source"]
+    prefix = str(src.get("ncm_prefix") or "")
+    years = set(src.get("years") or [])
+    if not all(y in years for y in range(year_from, year_to + 1)):
+        return None
+    if code_system == "ncm" and code.startswith(prefix):
+        return [{k: r[k] for k in ("year", "month", "country", "fob", "kg", "code_name")}
+                for r in snap["rows"] if r["ncm"] == code and year_from <= r["year"] <= year_to]
+    if code_system == "hs6" and code == prefix:
+        name = (snap.get("code_names") or {}).get("hs6", {}).get(code)
+        sums = {}
+        for r in snap["rows"]:
+            if r["ncm"].startswith(code) and year_from <= r["year"] <= year_to:
+                acc = sums.setdefault((r["year"], r["month"], r["country"]), [0, 0])
+                acc[0] += r["fob"] or 0
+                acc[1] += r["kg"] or 0
+        return [{"year": y, "month": m, "country": c, "fob": fob, "kg": kg, "code_name": name}
+                for (y, m, c), (fob, kg) in sorted(sums.items())]
+    return None
+
+
+def snapshot_code_name(code_system, code):
+    snap = load_snapshot() or {}
+    return ((snap.get("code_names") or {}).get(code_system) or {}).get(code)
+
+
+# ---------- ComexStat 점검·장애 기억 ----------
+# 연결 실패·5xx·호출 한도는 한 번 실패에 재시도까지 약 1분이 걸립니다. 실패를 확인하면 10분 동안은 ComexStat을 건너뛰고
+# 바로 저장 자료(메모리 캐시·스냅샷)를 씁니다. 사용자가 '다시 불러오기'(refresh)를 누르면 이 기간에도 다시 시도합니다.
+SOURCE_DOWN_SECONDS = 10 * 60
+_DOWN_CODES = ("MA_SOURCE_UNAVAILABLE", "MA_SOURCE_RATE_LIMITED")
+_source_down = {"until": 0.0, "error": None}
+
+
+def _comex(call, *args, refresh=False):
+    """ComexStat 호출. 최근 점검·장애를 확인했으면(refresh가 아니면) 호출하지 않고 그때 오류를 바로 냅니다."""
+    with _cache_lock:
+        down = _source_down["error"] if _monotonic() < _source_down["until"] else None
+    if down is not None and not refresh:
+        raise down
+    try:
+        result = call(*args)
+    except ComexStatError as err:
+        if err.code in _DOWN_CODES:
+            with _cache_lock:
+                _source_down.update(until=_monotonic() + SOURCE_DOWN_SECONDS, error=err)
+        raise
+    with _cache_lock:
+        _source_down.update(until=0.0, error=None)
+    return result
+
+
+def source_down():
+    """최근 ComexStat 점검·장애를 확인해 건너뛰는 중인지."""
+    with _cache_lock:
+        return _monotonic() < _source_down["until"]
+
+
+def _usable(entry, refresh):
+    """캐시를 그대로 쓸지: 6시간 안이고, 다시 불러오기여도 받은 지 10분 안이면 재사용."""
+    age = _monotonic() - entry["at"]
+    return age < (REFRESH_MIN_SECONDS if refresh else CACHE_TTL_SECONDS)
 
 
 def get_latest(refresh=False):
-    """최신 제공 월. 같은 날에는 재사용하고, 실패 시 이전 값이 있으면 그 값을 stale로 돌려줍니다."""
+    """최신 제공 월. 6시간 동안 재사용하고, 실패 시 이전 값이 있으면 그 값을 stale로 돌려줍니다."""
     with _cache_lock:
         cached = dict(_latest_cache) if _latest_cache else None
-    if cached and cached["day"] == _today() and not refresh:
+    if cached and _usable(cached, refresh):
         return cached, False
     try:
-        value = comex.get_latest_month()
+        value = _comex(comex.get_latest_month, refresh=refresh)
     except ComexStatError:
         if cached:
             return cached, True
+        snap = load_snapshot()
+        if snap:  # 캐시도 없으면 스냅샷의 최신 월(메모리 캐시에는 넣지 않아 다음 요청에서 다시 확인)
+            y, m = (int(v) for v in snap["source"]["latest_month"].split("-"))
+            return {"at": _monotonic(), "value": (y, m, snapshot_date(snap)), "checked_at": snap["source"].get("retrieved_at"),
+                    "snapshot": True}, True
         raise
-    entry = {"day": _today(), "value": value, "checked_at": now_kst().isoformat(timespec="seconds")}
+    entry = {"at": _monotonic(), "value": value, "checked_at": now_kst().isoformat(timespec="seconds")}
     with _cache_lock:
         _latest_cache.clear()
         _latest_cache.update(entry)
@@ -134,23 +242,31 @@ def get_latest(refresh=False):
 
 
 def _get_rows(code_system, code, year_from, year_to, refresh):
-    """(rows, cache_status, fetched_at). cache_status: fresh | cached | stale."""
+    """(rows, cache_status, fetched_at). cache_status: fresh | cached | stale | snapshot."""
     key = (code_system, code)
     with _cache_lock:
         cached = _rows_cache.get(key)
+        if cached:
+            cached["used"] = _monotonic()
     covers = cached and cached["year_from"] <= year_from and cached["year_to"] >= year_to
-    if covers and cached["day"] == _today() and not refresh:
+    if covers and _usable(cached, refresh):
         return cached["rows"], "cached", cached["fetched_at"]
     try:
-        rows = comex.query_imports(code_system, code, year_from, year_to)
+        rows = _comex(comex.query_imports, code_system, code, year_from, year_to, refresh=refresh)
     except ComexStatError:
         if covers:
             return cached["rows"], "stale", cached["fetched_at"]
+        snap_rows = snapshot_rows(code_system, code, year_from, year_to)
+        if snap_rows is not None:  # 캐시도 없으면 MDIC 공개 원본 스냅샷(범위 밖이면 원래 오류)
+            return snap_rows, "snapshot", load_snapshot()["source"].get("retrieved_at")
         raise
-    entry = {"day": _today(), "year_from": year_from, "year_to": year_to, "rows": rows,
+    now = _monotonic()
+    entry = {"at": now, "used": now, "year_from": year_from, "year_to": year_to, "rows": rows,
              "fetched_at": now_kst().isoformat(timespec="seconds")}
     with _cache_lock:
         _rows_cache[key] = entry
+        while len(_rows_cache) > MAX_ROWS_CACHE:
+            del _rows_cache[min(_rows_cache, key=lambda k: _rows_cache[k]["used"])]
     return rows, "fresh", entry["fetched_at"]
 
 
@@ -158,6 +274,10 @@ def clear_cache():
     with _cache_lock:
         _latest_cache.clear()
         _rows_cache.clear()
+        _snapshot_state.update(mtime=None, data=None)  # 스냅샷 파일을 다시 읽게 함
+        _source_down.update(until=0.0, error=None)
+    with _ai_cache_lock:
+        _ai_cache.clear()
 
 
 # ---------- 입력 검증 ----------
@@ -390,7 +510,7 @@ def compute(rows, req, code_name=None):
     notes = []
     missing = span - current["months_with_record"]
     if missing:
-        notes.append("조회 기간 %d개월 중 %d개월은 ComexStat 수입 기록이 없습니다. 0으로 채우지 않고 '기록 없음'으로 표시했습니다." % (span, missing))
+        notes.append("조회 기간 %d개월 중 %d개월은 수입 기록이 없습니다. 0으로 채우지 않고 '기록 없음'으로 표시했습니다." % (span, missing))
     prior_missing = span - prior["months_with_record"]
     if prior["months_with_record"] and prior_missing:
         notes.append("전년 동기(%s~%s) 중 %d개월은 기록이 없습니다. 전년 대비 증감률 해석에 주의하세요." % (
@@ -401,7 +521,7 @@ def compute(rows, req, code_name=None):
     if brazil_names:
         share = (brazil_fob / current["fob"] * 100) if (brazil_fob is not None and current["fob"]) else None
         notes.append("원산지가 브라질(Brasil)인 재수입분%s은 대상 시장 자신이라 공급국 목록·순위에서 제외했습니다. "
-                     "전체 수입액과 비중의 분모(ComexStat 공식 합계)에는 포함되어 있습니다. ComexStat 수입 통계는 원산지 기준이라 "
+                     "전체 수입액과 비중의 분모(MDIC 공식 합계)에는 포함되어 있습니다. MDIC 수입 통계는 원산지 기준이라 "
                      "브라질에서 만든 상품이 수리·반송 등으로 다시 들어오면 원산지가 브라질로 기록됩니다(MDIC 통계 이용 매뉴얼)." % (
                          " USD {:,}(전체의 {:.1f}%)".format(int(round(brazil_fob)), share) if share is not None else ""))
     unmapped = sorted({c["country"]["name_pt"] for c in per_country if c["country"]["code"] is None})
@@ -433,7 +553,7 @@ def compute(rows, req, code_name=None):
         },
         "outlier": {
             "rule": "같은 조회의 단가 중앙값 대비 ½배 미만 또는 2배 초과이면 '확인 필요'로 표시합니다(값은 삭제하지 않음). 단가가 3개 미만이면 판정하지 않습니다.",
-            "country_basis": "공급국은 ComexStat 기준 원산지 국가입니다(판매 회사 국가 아님).",
+            "country_basis": "공급국은 MDIC 통계 기준 원산지 국가입니다(판매 회사 국가 아님).",
             "monthly_median": month_median,
             "country_median": country_median,
         },
@@ -463,7 +583,8 @@ def meta():
         return out
     y, m, updated = entry["value"]
     latest = month_index(y, m)
-    out["latest"] = {"month": month_label(latest), "updated": updated, "checked_at": entry["checked_at"], "stale": stale}
+    out["latest"] = {"month": month_label(latest), "updated": updated, "checked_at": entry["checked_at"], "stale": stale,
+                     "snapshot": bool(entry.get("snapshot"))}
     out["default"]["from"] = month_label(latest - DEFAULT_MONTHS + 1)
     out["default"]["to"] = month_label(latest)
     return out
@@ -484,23 +605,37 @@ def analyze(payload):
     rows, cache_status, fetched_at = _get_rows(req.code_system, req.code, year_from, year_to, req.refresh)
 
     code_name = next((r["code_name"] for r in rows if r.get("code_name")), None)
-    if not rows:
+    if not rows and cache_status == "snapshot":
+        # 스냅샷 대체 중에는 코드표 조회(ComexStat)도 못 하므로 스냅샷 코드표로 확인합니다.
+        code_name = snapshot_code_name(req.code_system, req.code)
+        if code_name is None:
+            raise InputError({"code": "MDIC 공개 원본 자료에서 %s 코드 %s를 찾지 못했습니다. 코드를 확인해 주세요." % (
+                CODE_LABEL[req.code_system], req.code)})
+    elif not rows:
         # 결과 없음과 존재하지 않는 코드를 구분합니다(현행 코드표 기준).
-        found = comex.lookup_code(req.code_system, req.code)
+        found = _comex(comex.lookup_code, req.code_system, req.code, refresh=req.refresh)
         if found is None:
             raise InputError({"code": "ComexStat 현행 코드표에서 %s 코드 %s를 찾지 못했습니다. 코드를 확인해 주세요." % (
                 CODE_LABEL[req.code_system], req.code)})
         code_name = found or None
 
     result = compute(rows, req, code_name)
-    result["notes"].insert(0, "품목코드 이름과 유효성은 ComexStat 현행 코드표 기준입니다. 과거 기간에 같은 코드가 적용됐는지(NCM 개정)는 확인하지 않았습니다.")
-    result["notes"].append("ComexStat은 올해 각 달의 수치를 매월 다시 집계하고, 지난해 수치는 이듬해 2월에 한 번 수정한 뒤 고정합니다(MDIC 통계 이용 매뉴얼). "
-                           "같은 조건이라도 조회 시점에 따라 최근 수치가 달라질 수 있습니다.")
+    snapshot_used = cache_status == "snapshot"
+    result["notes"].insert(0, ("품목코드 이름은 MDIC 공개 코드표(NCM.csv) 기준입니다. " if snapshot_used else
+                               "품목코드 이름과 유효성은 ComexStat 현행 코드표 기준입니다. ") +
+                           "과거 기간에 같은 코드가 적용됐는지(NCM 개정)는 확인하지 않았습니다.")
+    result["notes"].append("MDIC는 올해 각 달의 수치를 매월 다시 집계하고, 지난해 수치는 이듬해 2월에 한 번 수정한 뒤 고정합니다(MDIC 통계 이용 매뉴얼). "
+                           + ("이번 자료는 원본을 받은 날 기준이라 이후 수정된 최근 수치와 다를 수 있습니다." if snapshot_used else
+                              "같은 조건이라도 조회 시점에 따라 최근 수치가 달라질 수 있습니다."))
     if latest_error:
         result["notes"].insert(0, "최신 제공 월을 확인하지 못해 종료 월 상한을 검사하지 않았습니다.")
+    snap = load_snapshot() if cache_status == "snapshot" else None
+    if snap:
+        result["notes"].insert(0, "ComexStat이 점검 중이거나 연결되지 않아 %s(기준: %s)를 사용했습니다. MDIC가 공개한 원본 CSV를 미리 받아 요약한 자료이며 "
+                               "ComexStat 실시간 조회 결과가 아닙니다." % (SNAPSHOT_LABEL, snapshot_date(snap)))
     result["sources"] = [{
-        "name": "ComexStat (브라질 산업통상서비스부 MDIC)",
-        "url": comex.SITE_URL,
+        "name": snap["source"]["name"] if snap else "ComexStat (브라질 산업통상서비스부 MDIC)",
+        "url": (snap["source"]["files"][-1]["url"] if snap and snap["source"].get("files") else comex.SITE_URL),
         "api": comex.BASE_URL + "/general",
         "metrics": "FOB 금액(USD), 순중량(kg)",
         "data_updated": latest_entry["value"][2] if latest_entry else None,
@@ -559,20 +694,63 @@ def get_bundle(bundle_id):
 def clear_bundles():
     with _bundles_lock:
         _bundles.clear()
+    with _ai_cache_lock:  # 서버 재시작과 같은 효과: AI 결과 캐시도 비움
+        _ai_cache.clear()
+
+
+# 같은 통계(새 '분석 실행'으로 묶음이 달라도 수치가 같으면)의 완료된 AI 결과. 유료 재호출을 막습니다.
+AI_CACHE_TTL_SECONDS = 6 * 3600
+MAX_AI_CACHE = 10
+_ai_cache = {}   # 통계 서명 → {"at", "state"}
+_ai_cache_lock = threading.Lock()
+
+
+def stats_signature(stats):
+    """AI 입력이 되는 통계 내용의 서명. 받은 시각·캐시 상태·묶음 번호처럼 수치와 무관한 값은 뺍니다."""
+    body = {k: v for k, v in stats.items() if k not in ("sources", "bundle_id")}
+    return hashlib.sha256(json.dumps(body, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+
+def _cached_ai(sig):
+    with _ai_cache_lock:
+        hit = _ai_cache.get(sig)
+        if hit and _monotonic() - hit["at"] > AI_CACHE_TTL_SECONDS:
+            del _ai_cache[sig]
+            hit = None
+        return hit["state"] if hit else None
+
+
+def _store_ai(sig, state):
+    with _ai_cache_lock:
+        now = _monotonic()
+        for k in [k for k, v in _ai_cache.items() if now - v["at"] > AI_CACHE_TTL_SECONDS]:
+            del _ai_cache[k]
+        _ai_cache[sig] = {"at": now, "state": state}
+        while len(_ai_cache) > MAX_AI_CACHE:
+            del _ai_cache[min(_ai_cache, key=lambda k: _ai_cache[k]["at"])]
 
 
 def run_ai(bundle_id):
-    """AI 분석(초안+5차례 검토). 이미 끝난 묶음은 저장된 결과를 돌려주고 다시 호출하지 않습니다.
-    실패·중단된 묶음은 끝난 단계 다음부터 이어서 진행합니다. 같은 묶음이 실행 중이면 409."""
+    """AI 분석(초안+5차례 검토). 이미 끝난 묶음, 또는 같은 통계로 6시간 안에 끝난 결과가 있으면 저장된 결과를 돌려주고
+    다시 호출하지 않습니다. 실패·중단된 묶음은 끝난 단계 다음부터 이어서 진행합니다(미완료 결과는 공유 캐시에 넣지 않음).
+    같은 묶음이 실행 중이면 409."""
     b = get_bundle(bundle_id)
     if not b["lock"].acquire(blocking=False):
         raise BundleError("MA_AI_RUNNING", "이 조회의 AI 분석이 이미 진행 중입니다. 끝날 때까지 기다려 주세요.", 409)
     try:
         if b["ai"] is not None and b["ai"]["status"] == "complete":
             return {**b["ai"]["result"], "reused": True}
+        sig = stats_signature(b["stats"])
+        if b["ai"] is None:
+            done = _cached_ai(sig)
+            if done is not None:
+                b["ai"] = done
+                return {**done["result"], "reused": True}
         state = b["ai"] or analysis.new_state()
         state = analysis.run(state, b["stats"])
         b["ai"] = state
+        if state["status"] == "complete":
+            _store_ai(sig, state)
         return {**state["result"], "reused": False}
     finally:
         b["lock"].release()

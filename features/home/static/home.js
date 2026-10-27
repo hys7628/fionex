@@ -592,6 +592,7 @@
     if (old) old.remove();
     const notice = make("div", "notice notice-danger");
     notice.id = "home-news-request-error";
+    notice.setAttribute("role", "alert");
     notice.append(make("p", "notice-title", "업계 소식 불러오기 실패"));
     notice.append(make("p", "", "서버에서 뉴스 목록을 받지 못했습니다. 잠시 후 다시 시도하세요."));
     const button = make("button", "btn btn-secondary", "업계 소식 다시 시도");
@@ -743,7 +744,12 @@
         externalSearch = { query: query, status: "error", items: [], message: "Google News 검색 결과를 가져오지 못했습니다." };
       }
     }
-    if (!detail.view.hidden) renderDetail();
+    if (!detail.view.hidden) {
+      renderDetail();
+      // 검색 중 비활성·성공 후 숨김으로 버튼 초점이 사라지므로 결과 건수 문장(실패 시 다시 검색 버튼)으로 이어 줍니다.
+      const ok = externalSearch && externalSearch.query === query && externalSearch.status === "ok";
+      AppShell.ui.focusResult(ok ? detail.externalStatus : detail.externalButton, { scroll: "nearest", from: [detail.external] });
+    }
   }
 
   function openNewsDetail() {
@@ -814,6 +820,12 @@
     return direction + " " + Math.abs(pct).toFixed(2) + "%";
   }
 
+  // 등락 색(home.css data-direction): 상승 빨강·하락 파랑(국내 시세 표기 관례)·변동 없음 회색. 비교 데이터가 없으면 색 없음.
+  function fxChangeDirection(info) {
+    if (info.change_pct === null || info.change_pct === undefined || !info.previous) return "";
+    return info.change_pct > 0 ? "up" : info.change_pct < 0 ? "down" : "flat";
+  }
+
   // Home 요약 타일: 통화쌍 → 큰 숫자(+작은 단위) → 전일 대비 → 가장 작은 회색 한 줄(월/일 고시 · 짧은 출처).
   // 전체 출처명·고시일·직전 고시일은 타일 title로 두고, 자세한 설명은 '출처 및 유의사항'에 있습니다.
   // 값이 없으면 숫자 자리에 "확인 불가"/"계산 불가"만 둡니다.
@@ -843,6 +855,8 @@
     const tile = fxTile(info.pair, formatRate(info.rate, FX_DIGITS[name]), quote, fxChangeText(info),
       shortFxDate(info.date) + " 고시 · " + (FX_SHORT_SOURCES[info.source] || info.source_name));
     tile.title = info.date + " 고시 · " + info.source_name + (info.previous ? " · 전일 대비: 직전 고시일 " + info.previous.date + " 대비" : "");
+    const direction = fxChangeDirection(info);
+    if (direction) tile.querySelector(".home-fx-line").dataset.direction = direction;
     return tile;
   }
 
@@ -896,6 +910,7 @@
     if (old) old.remove();
     const notice = make("div", "notice notice-danger");
     notice.id = "home-fx-request-error";
+    notice.setAttribute("role", "alert");
     notice.append(make("p", "notice-title", "환율 불러오기 실패"));
     notice.append(make("p", "", "서버에서 환율을 받지 못했습니다. 잠시 후 다시 시도하세요."));
     const button = make("button", "btn btn-secondary", "환율 다시 시도");
@@ -1081,6 +1096,7 @@
     fairsEl.filter.hidden = true;
     fairsEl.filterEmpty.hidden = true;
     const notice = make("div", "notice notice-warning");
+    notice.setAttribute("role", "status");
     notice.append(make("p", "notice-title", "일정 확인 불가"),
       make("p", "", "전시회 일정 자료를 확인할 수 없습니다. 다른 홈 기능은 그대로 사용할 수 있습니다."));
     const button = make("button", "btn btn-secondary", "전시회 일정 다시 시도");
@@ -1133,7 +1149,6 @@
   const reportEl = {
     body: panel.querySelector("#home-report-body"),
     button: panel.querySelector("#home-report-button"),
-    loading: panel.querySelector("#home-report-loading"),
     status: panel.querySelector("#home-report-status"),
     notices: panel.querySelector("#home-report-notices"),
     city: panel.querySelector("#home-report-city"),
@@ -1150,6 +1165,7 @@
 
   function showReportError(message) {
     const notice = make("div", "notice notice-danger");
+    notice.setAttribute("role", "alert");
     notice.append(make("p", "notice-title", "PDF를 만들지 못했습니다"),
       make("p", "", message + " 버튼을 다시 눌러 시도할 수 있습니다."));
     reportEl.notices.replaceChildren(notice);
@@ -1159,8 +1175,8 @@
     if (reportBusy) return;
     reportBusy = true;
     reportEl.button.disabled = true;
+    AppShell.ui.setButtonBusy(reportEl.button, "PDF 준비 중...");
     reportEl.body.setAttribute("aria-busy", "true");
-    reportEl.loading.hidden = false;
     clearTimeout(reportStatusTimer);
     reportEl.status.hidden = true;
     reportEl.notices.replaceChildren();
@@ -1184,8 +1200,8 @@
     } finally {
       reportBusy = false;
       reportEl.button.disabled = false;
+      AppShell.ui.setButtonBusy(reportEl.button, null);
       reportEl.body.setAttribute("aria-busy", "false");
-      reportEl.loading.hidden = true;
     }
   }
 

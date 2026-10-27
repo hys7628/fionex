@@ -32,6 +32,23 @@ def req(start="2026-01", end="2026-03", countries=(), code_system="ncm", code="5
         {"code_system": code_system, "code": code, "from": start, "to": end, "countries": list(countries)}, LATEST)
 
 
+_no_snapshot = None
+
+
+def setUpModule():
+    """이 파일은 스냅샷이 없는 상태(조회 실패 = 오류)를 검사합니다. 실제 data/comexstat_snapshot.json 대신 없는 경로를 씁니다.
+    스냅샷 대체는 test_snapshot.py에서 따로 검사합니다."""
+    global _no_snapshot
+    _no_snapshot = mock.patch.object(service, "SNAPSHOT_FILE", Path(__file__).resolve().parent / "_no_snapshot.json")
+    _no_snapshot.start()
+    service.clear_cache()
+
+
+def tearDownModule():
+    _no_snapshot.stop()
+    service.clear_cache()
+
+
 class ValidateTest(unittest.TestCase):
     def errors(self, **payload):
         base = {"code_system": "ncm", "code": "54023310", "from": "2024-01", "to": "2026-09"}
@@ -177,15 +194,48 @@ class AnalyzeTest(unittest.TestCase):
         self.assertEqual(r2["sources"][0]["cache_status"], "cached")
         self.assertEqual(self.latest.call_count, 1)
 
-    def test_refresh_bypasses_cache(self):
+    def clock(self, start=1000.0):
+        """service._monotonic를 손으로 움직이는 시계로 바꿉니다."""
+        now = [start]
+        p = mock.patch.object(service, "_monotonic", lambda: now[0])
+        p.start()
+        self.addCleanup(p.stop)
+        return now
+
+    def test_refresh_within_ten_minutes_uses_cache(self):
+        now = self.clock()
         with mock.patch.object(comex, "query_imports", return_value=[row("2026-01", "China", 10, 5)]) as q:
             service.analyze(self.payload())
+            now[0] += service.REFRESH_MIN_SECONDS - 1
+            r = service.analyze(self.payload(refresh=True))
+            self.assertEqual((q.call_count, r["sources"][0]["cache_status"]), (1, "cached"))
+            now[0] += 2  # 10분이 지나면 다시 불러오기가 실제로 다시 조회
             service.analyze(self.payload(refresh=True))
         self.assertEqual(q.call_count, 2)
 
+    def test_cache_lasts_six_hours(self):
+        now = self.clock()
+        with mock.patch.object(comex, "query_imports", return_value=[row("2026-01", "China", 10, 5)]) as q:
+            service.analyze(self.payload())
+            now[0] += service.CACHE_TTL_SECONDS - 1
+            service.analyze(self.payload())
+            self.assertEqual((q.call_count, self.latest.call_count), (1, 1))
+            now[0] += 2
+            service.analyze(self.payload())
+        self.assertEqual((q.call_count, self.latest.call_count), (2, 2))
+
+    def test_rows_cache_limited(self):
+        self.clock()
+        with mock.patch.object(comex, "query_imports", return_value=[]), mock.patch.object(comex, "lookup_code", return_value="x"):
+            for i in range(service.MAX_ROWS_CACHE + 3):
+                service.analyze(self.payload(code="5402%04d" % i))
+        self.assertEqual(len(service._rows_cache), service.MAX_ROWS_CACHE)
+
     def test_stale_on_failure(self):
+        now = self.clock()
         with mock.patch.object(comex, "query_imports", return_value=[row("2026-01", "China", 10, 5)]):
             service.analyze(self.payload())
+        now[0] += service.REFRESH_MIN_SECONDS + 1
         fail = ComexStatError("MA_SOURCE_RATE_LIMITED", "한도", 429, True)
         with mock.patch.object(comex, "query_imports", side_effect=fail):
             r = service.analyze(self.payload(refresh=True))
@@ -211,7 +261,8 @@ class AnalyzeTest(unittest.TestCase):
     def test_latest_unavailable_skips_upper_bound(self):
         self.latest.side_effect = ComexStatError("MA_SOURCE_UNAVAILABLE", "x", 502, True)
         with mock.patch.object(comex, "query_imports", return_value=[row("2026-01", "China", 10, 5)]):
-            r = service.analyze(self.payload(to="2026-12", **{"from": "2026-01"}))
+            # 최신 월 확인 실패로 ComexStat 점검을 기억하므로, 통계는 '다시 불러오기'(refresh)일 때만 다시 시도
+            r = service.analyze(self.payload(to="2026-12", refresh=True, **{"from": "2026-01"}))
         self.assertIn("최신 제공 월을 확인하지 못해", r["notes"][0])
 
 
@@ -251,18 +302,26 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(calls[0][2]["filters"][0]["filter"], "subHeading")
 
     def test_retry_429_then_success(self):
-        patch, calls = self.transport([(429, {}), (200, {"data": {"year": "2026", "monthNumber": "09", "updated": "2026-10-06"}})])
+        patch, calls = self.transport([(429, {}), (200, {"data": {"list": []}})])
         with patch:
-            self.assertEqual(comex.get_latest_month(), (2026, 9, "2026-10-06"))
+            self.assertEqual(comex.query_imports("ncm", "54023310", 2025, 2025), [])
         self.assertEqual(len(calls), 2)
         self.assertIn(15.0, self.sleeps)
 
     def test_max_two_retries(self):
         patch, calls = self.transport([(429, {}), (503, {}), (429, {})])
         with patch, self.assertRaises(ComexStatError) as ctx:
-            comex.get_latest_month()
+            comex.query_imports("ncm", "54023310", 2025, 2025)
         self.assertEqual(len(calls), 3)
         self.assertEqual(ctx.exception.code, "MA_SOURCE_RATE_LIMITED")
+
+    def test_latest_month_single_attempt(self):
+        """최신 월 확인은 재시도 대기 없이 한 번만(점검 중이면 바로 저장 자료로 대신)."""
+        patch, calls = self.transport([(503, {})])
+        with patch, self.assertRaises(ComexStatError) as ctx:
+            comex.get_latest_month()
+        self.assertEqual((len(calls), ctx.exception.code), (1, "MA_SOURCE_UNAVAILABLE"))
+        self.assertNotIn(15.0, self.sleeps)
 
     def test_client_error_not_retried(self):
         patch, calls = self.transport([(400, {})])

@@ -5,9 +5,16 @@ OpenAI 설정은 import 시점이 아니라 AI 함수를 호출할 때 환경변
 python-dotenv(requirements.txt)로 .env를 환경변수에 넣습니다. 이미 설정된 OS 환경변수가 우선합니다(README.md).
 """
 import os
+from pathlib import Path
 
 # 서비스(대시보드)명. 2026-10-24 확정(docs/decisions.md).
 SERVICE_NAME = "fionex"
+
+# 공통 글꼴 Pretendard(SIL OFL 1.1). 웹(@font-face, woff2)과 모든 탭 PDF(ReportLab, TrueType)가 같은 폴더를 씁니다.
+# 파일 목록·출처·해시: static/fonts/pretendard/README.md
+FONT_DIR = Path(__file__).resolve().parent.parent / "static" / "fonts" / "pretendard"
+PDF_FONT_FILES = {"regular": FONT_DIR / "Pretendard-Regular.ttf", "bold": FONT_DIR / "Pretendard-Bold.ttf"}
+PDF_FONT_NAMES = {"regular": "Pretendard", "bold": "Pretendard-Bold"}
 
 # 환경변수 이름. 값은 코드에 고정하지 않습니다.
 ENV_OPENAI_API_KEY = "OPENAI_API_KEY"

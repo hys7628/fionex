@@ -146,7 +146,8 @@ class PdfSceneImageTest(unittest.TestCase):
         res = self.post([("scene_image_1.png", png(150, 100)), ("scene_image_3.png", png(150, 100))])
         self.assertEqual(res.status_code, 200)
         reader = PdfReader(io.BytesIO(res.data))
-        self.assertEqual([bool(reader.pages[i].images) for i in (1, 2, 3)], [True, False, True])
+        # 쪽마다 공통 머리의 FIONEX 로고 1개가 있으므로 그보다 많으면 장면 이미지가 있는 쪽
+        self.assertEqual([len(reader.pages[i].images) > 1 for i in (1, 2, 3)], [True, False, True])
         self.assertIn("Imagem gerada por IA", reader.pages[1].extract_text())
         self.assertIn("Imagem não gerada", reader.pages[2].extract_text())
 
@@ -178,7 +179,7 @@ class PdfPhotoFallbackTest(unittest.TestCase):
         res = self.post(photos=[("a.png", png(80, 60)), ("b.jpg", self.jpeg())])
         self.assertEqual(res.status_code, 200)
         reader = PdfReader(io.BytesIO(res.data))
-        self.assertTrue(all(reader.pages[i].images for i in (1, 2, 3)))
+        self.assertTrue(all(len(reader.pages[i].images) > 1 for i in (1, 2, 3)))  # 공통 머리 로고 1개 + 사진
         self.assertIn("첨부한 제품 사진(AI 생성 아님)", reader.pages[1].extract_text())
         self.assertNotIn("이미지 미생성", "".join(p.extract_text() for p in reader.pages))
 

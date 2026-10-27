@@ -178,7 +178,9 @@ class CatalogPreviewTests(RenderedPanel):
     @classmethod
     def rendered_pages(cls):
         html = create_app().test_client().get("/").get_data(as_text=True)
-        dialog = html[html.index("<dialog"):html.index("</dialog>")]
+        # 페이지에는 다른 탭의 <dialog>도 있으므로(시장/바이어 분석 AI 브리핑 창) 카탈로그 미리보기 창을 속성으로 찾습니다.
+        start = html.index("data-catalog-dialog")
+        dialog = html[start:html.index("</dialog>", start)]
         return dialog, re.split(r"<article ", dialog)[1:]
 
     def test_four_pages_with_disclaimer_page_number_and_ai_image_notice(self):

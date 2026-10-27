@@ -1,44 +1,38 @@
 """홈 일일 브리핑 PDF. 버튼을 누른 시점의 홈 데이터를 모아 A4 PDF를 메모리에서 만듭니다(서버에 저장하지 않음).
 
 - 데이터는 기존 service 함수와 그 캐시를 그대로 씁니다: 공휴일(get_holidays), 환율(get_fx), 뉴스(get_news),
-  전시회(get_upcoming_fairs). 뉴스 AI 요약은 이미 만든 요약만 씁니다(PDF 때문에 OpenAI를 부르지 않음).
+  전시회(get_upcoming_fairs).
+- 뉴스는 원문 제목 아래 한국어 번역(제목만 보고 옮긴 한 줄)을 붙입니다(2026-10-27). 화면 AI 요약과 같은 기능·캐시를 쓰며,
+  PDF에 실을 상위 기사 중 아직 번역이 없는 Google·ABIT 포르투갈어 제목만 한 번 묶어 요청합니다(service.translate_titles).
+  번역하지 못하면 원문 제목만 싣고 유의사항에 사유를 적습니다. KOTRA 기사는 한국어 제목이라 번역하지 않습니다.
 - 영역별로 실패를 나눕니다. 실패한 영역은 "확인 불가"로 두고 마지막 유의사항에 목록으로 적습니다. 값을 채워 넣지 않습니다.
-- 폰트: features/home/fonts/Noto Sans KR(OFL). 한글·포르투갈어 악센트 포함.
+- 폰트: 공통 Pretendard(static/fonts/pretendard/, OFL, common/config.py PDF_FONT_FILES). 한글·포르투갈어 악센트 포함.
+- 디자인: 공통 PDF 디자인(common/pdf_theme.py) — 머리 'DAILY BRIEFING'·로고, 큰 제목, 막대 구역 제목, 민트 머리 표, 브랜드 꼬리.
 """
 import logging
 from datetime import datetime
 from io import BytesIO
-from pathlib import Path
 from xml.sax.saxutils import escape
 
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer
 
+from common import pdf_theme as theme
+from common.config import PDF_FONT_NAMES
 from features.home.buyer_time import CITIES, DEFAULT_CITY, SEOUL, buyer_time, format_day, format_day_time, next_holiday_text
 
 logger = logging.getLogger(__name__)
 
 NEWS_LIMIT = 8
 FAIRS_LIMIT = 3
-FONT_DIR = Path(__file__).resolve().parent / "fonts"
-FONT = "NotoSansKR"
-FONT_BOLD = "NotoSansKR-Bold"
+FONT = PDF_FONT_NAMES["regular"]
+FONT_BOLD = PDF_FONT_NAMES["bold"]
 ORIGIN_LABELS = {"kotra": "KOTRA", "google": "Google News", "abit": "ABIT"}
 SOURCE_NAMES = {"brasilapi": "BrasilAPI 국가 공휴일", "fallback": "대체 공휴일 자료", "none": "확인 불가"}
 
-# 흑백 출력에서도 구분되도록 색은 보조로만 씁니다.
-INK = colors.HexColor("#17243b")
-MUTED = colors.HexColor("#55657d")
-LINE = colors.HexColor("#b9c5d6")
-SHADE = colors.HexColor("#eef3fa")
-LINK = colors.HexColor("#1a56bd")
+MARGIN = 18 * mm
 
 
 # ---------- 데이터 모으기 ----------
@@ -74,7 +68,8 @@ def collect(city=DEFAULT_CITY, now=None):
         news = service.get_news()
         # 최신순 상위 8건. 필터를 통과한 KOTRA 기사가 있으면 최소 1건은 넣습니다(service.NEWS_SOURCE_MINIMUM).
         top, selected = service.select_top_news(news["items"], NEWS_LIMIT, service.NEWS_SOURCE_MINIMUM)
-        data["news"] = {"items": top, "media": news["media"], "total": len(news["items"]), "selected": selected}
+        data["news"] = {"items": top, "media": news["media"], "total": len(news["items"]), "selected": selected,
+                        "translation": _translate(service, top)}
         logger.info("브리핑 뉴스 선정: %s", ", ".join(f"{k}={selected.get(k, 0)}" for k in ORIGIN_LABELS))
         for key, info in news["media"].items():
             if info["status"] != "ok":
@@ -97,6 +92,20 @@ def collect(city=DEFAULT_CITY, now=None):
     return data
 
 
+def _translate(service, items):
+    """상위 기사 제목 번역을 붙입니다(항목에 summary_ko). 반환 상태 문장(성공이면 None)."""
+    try:
+        result = service.translate_titles(items)
+    except Exception:
+        logger.exception("브리핑: 기사 제목 번역 실패")
+        return "제목 번역을 만들지 못했습니다"
+    for item in items:
+        text = result.get("summaries", {}).get(item["id"])
+        if text:
+            item["summary_ko"] = text
+    return None if result.get("status") == "ok" else (result.get("message") or "제목 번역을 만들지 못했습니다")
+
+
 def build_daily(city=DEFAULT_CITY, now=None):
     """(PDF bytes, 파일명). PDF 엔진 오류만 예외로 올라갑니다."""
     data = collect(city, now)
@@ -104,29 +113,22 @@ def build_daily(city=DEFAULT_CITY, now=None):
 
 
 # ---------- PDF 만들기 ----------
-_fonts_ready = False
-
-
 def _register_fonts():
-    global _fonts_ready
-    if not _fonts_ready:
-        pdfmetrics.registerFont(TTFont(FONT, str(FONT_DIR / "NotoSansKR-Regular.ttf")))
-        pdfmetrics.registerFont(TTFont(FONT_BOLD, str(FONT_DIR / "NotoSansKR-Bold.ttf")))
-        _fonts_ready = True
+    theme.register_fonts()
 
 
 def _styles():
-    base = ParagraphStyle("body", fontName=FONT, fontSize=9.5, leading=14, textColor=INK, alignment=TA_LEFT)
-    return {
-        "body": base,
-        "small": ParagraphStyle("small", parent=base, fontSize=8, leading=11.5, textColor=MUTED),
-        "title": ParagraphStyle("title", parent=base, fontName=FONT_BOLD, fontSize=18, leading=24, spaceAfter=2),
-        "h2": ParagraphStyle("h2", parent=base, fontName=FONT_BOLD, fontSize=12.5, leading=17, spaceBefore=10, spaceAfter=5,
-                             keepWithNext=1),  # 제목만 쪽 끝에 남지 않게
-        "item": ParagraphStyle("item", parent=base, fontName=FONT_BOLD, fontSize=9.5, leading=13.5),
-        "cell": ParagraphStyle("cell", parent=base, fontSize=8.8, leading=12.5),
-        "head": ParagraphStyle("head", parent=base, fontName=FONT_BOLD, fontSize=8.8, leading=12.5),
-    }
+    s = theme.styles()
+    s["h2"] = None  # 구역 제목은 theme.SectionTitle
+    s["item"] = ParagraphStyle("item", parent=s["body"], fontName=FONT_BOLD, fontSize=9.4, leading=13.5)
+    s["head"] = s["label"]
+    s["translation"] = ParagraphStyle("translation", parent=s["body"], fontSize=9.2, leading=13.6, spaceBefore=1, spaceAfter=1)
+    s["num"] = ParagraphStyle("num", parent=s["body"], fontName=FONT_BOLD, fontSize=11, leading=14, textColor=theme.PRIMARY)
+    return s
+
+
+def _h2(text, tag=None):
+    return theme.SectionTitle(text, tag, size=12, space_before=10, space_after=5)
 
 
 def _p(text, style):
@@ -135,35 +137,26 @@ def _p(text, style):
 
 def _link(url, text, style):
     # 외부 문자열은 이스케이프한 뒤 넣습니다(ReportLab 문단은 간이 마크업을 해석함).
-    return Paragraph(f'<a href="{escape(url, {chr(34): "&quot;"})}" color="#1a56bd">{escape(text)}</a>', style)
+    return Paragraph(f'<a href="{escape(url, {chr(34): "&quot;"})}" color="#1d6ad4">{escape(text)}</a>', style)
 
 
 def _table(rows, widths, header=True):
-    table = Table(rows, colWidths=widths, repeatRows=1 if header else 0)
-    style = [
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LINEBELOW", (0, 0), (-1, -1), 0.4, LINE),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-    ]
     if header:
-        style += [("BACKGROUND", (0, 0), (-1, 0), SHADE), ("LINEBELOW", (0, 0), (-1, 0), 0.8, INK)]
-    table.setStyle(TableStyle(style))
-    return table
+        return theme.data_table(rows, widths)
+    return theme.kv_table(rows, widths[0], sum(widths))
 
 
 def render(data):
     _register_fonts()
     s = _styles()
-    width = A4[0] - 36 * mm
+    width = A4[0] - 2 * MARGIN
     story = []
 
-    # 0. 머리말
+    # 0. 머리말: 큰 제목 + 한 줄 소개 + 시각 표
     buyer = data.get("buyer")
     city_name = CITIES.get(data["city"], data["city"])
-    story.append(_p("fionex 일일 브리핑", s["title"]))
+    story.append(_p("일일 브리핑", s["title"]))
+    story.append(_p("브라질 바이어 현지 시간과 환율, 원단·원사·섬유 업계 소식, 다가오는 전시회를 한 번에 정리했습니다.", s["lead"]))
     head_rows = [
         [_p("생성 시각", s["head"]), _p(data["generated_at"].strftime("%Y-%m-%d %H:%M") + " KST", s["cell"])],
         [_p("서울 시각", s["head"]), _p(format_day_time(buyer["seoul"]) if buyer else "확인 불가", s["cell"])],
@@ -178,40 +171,15 @@ def render(data):
     story += _notes_section(data, s)
 
     buf = BytesIO()
-    generated = data["generated_at"].strftime("%Y-%m-%d %H:%M KST")
-
-    class FooterCanvas(Canvas):
-        """쪽마다 꼬리말을 미뤄 두었다가 저장할 때 전체 쪽 수를 알고 'n / N'으로 찍습니다."""
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self._pages = []
-
-        def showPage(self):
-            self._pages.append(dict(self.__dict__))
-            self._startPage()
-
-        def save(self):
-            total = len(self._pages)
-            for page in self._pages:
-                self.__dict__.update(page)
-                self.saveState()
-                self.setFont(FONT, 7.5)
-                self.setFillColor(MUTED)
-                self.drawString(18 * mm, 10 * mm, f"fionex 일일 브리핑 · {generated} 생성")
-                self.drawRightString(A4[0] - 18 * mm, 10 * mm, f"{self._pageNumber} / {total}")
-                self.restoreState()
-                super().showPage()
-            super().save()
-
-    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm,
-                            bottomMargin=18 * mm, title="fionex 일일 브리핑", author="fionex")
-    doc.build(story, canvasmaker=FooterCanvas)
+    canvas_cls = theme.numbered_canvas("DAILY BRIEFING", data["generated_at"].strftime("%Y.%m.%d"), MARGIN)
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN, topMargin=theme.CONTENT_TOP,
+                            bottomMargin=theme.CONTENT_BOTTOM, title="fionex 일일 브리핑", author="fionex")
+    doc.build(story, canvasmaker=canvas_cls)
     return buf.getvalue()
 
 
 def _buyer_section(buyer, s, width):
-    out = [_p("1. 바이어 시간", s["h2"])]
+    out = [_h2("바이어 시간", "현지 업무시간 기준")]
     if buyer is None:
         return out + [_p("확인 불가", s["body"])]
     if buyer["next_start"]:
@@ -247,7 +215,7 @@ def _change_text(info):
 
 
 def _fx_section(fx, s, width):
-    out = [_p("2. 환율", s["h2"])]
+    out = [_h2("환율", "USD 기준 고시 환율")]
     if fx is None:
         return out + [_p("확인 불가", s["body"])]
     rows = [[_p(h, s["head"]) for h in ("통화", "값", "고시일", "전일 대비", "출처")]]
@@ -268,7 +236,7 @@ def _fx_section(fx, s, width):
         rows.append([_p("BRL/KRW", s["cell"]), _p("계산 불가", s["cell"]), _p("-", s["cell"]),
                      _p("USD/KRW와 USD/BRL이 모두 있어야 계산", s["cell"]), _p("USD 경유 계산값", s["cell"])])
     # 값·고시일·전일 대비가 보통 한 줄에 들어가는 너비(2026-10-25 글자 폭 측정).
-    out.append(_table(rows, (17 * mm, 34 * mm, 38 * mm, 47 * mm, width - 136 * mm)))
+    out.append(_table(rows, (21 * mm, 38 * mm, 42 * mm, 38 * mm, width - 139 * mm)))
     out.append(Spacer(1, 3))
     out.append(_p("BRL/KRW = USD/KRW ÷ USD/BRL (USD 경유 계산값). 주말·공휴일에는 최근 고시일 값입니다. 전망·해석 없음.", s["small"]))
     return out
@@ -290,16 +258,18 @@ def _news_date(value):
 
 
 def _news_section(news, s, width):
-    out = [_p("3. 최신 뉴스", s["h2"])]
+    out = [_h2("최신 뉴스", "원문 제목 + 한국어 번역")]
     if news is None or not news["items"]:
         return out + [_p("뉴스를 불러오지 못했습니다" if news is None or all(
             m["status"] != "ok" for m in news["media"].values()) else "수집 기간 안에 해당하는 소식이 없습니다", s["body"])]
-    out.append(_p(f"최신순 상위 {len(news['items'])}건(수집 {news['total']}건 중). 원문 제목 그대로 표시합니다.", s["small"]))
+    out.append(_p(f"최신순 상위 {len(news['items'])}건(수집 {news['total']}건 중). 제목을 누르면 원문으로 이동합니다.", s["small"]))
+    out.append(Spacer(1, 3))
+    rows = []
     for index, item in enumerate(news["items"], 1):
         # 제목이 원문 링크입니다. 긴 주소(Google News 경유 URL)는 본문에 쓰지 않고 매체 도메인만 보입니다.
-        block = [_link(item["url"], f"{index}. {item['title']}", s["item"])]
+        block = [_link(item["url"], item["title"], s["item"])]
         if item.get("summary_ko") and item["origin"] in ("google", "abit"):
-            block.append(_p("[AI 요약] " + item["summary_ko"], s["body"]))
+            block.append(Paragraph('<font color="#0a7262"><b>번역</b></font>  ' + escape(item["summary_ko"]), s["translation"]))
         media = item.get("media")
         domain = item.get("media_domain")
         if media and domain and domain not in media:
@@ -308,13 +278,13 @@ def _news_section(news, s, width):
         meta = " · ".join(x for x in (ORIGIN_LABELS.get(item["origin"], item["origin"]), media or domain,
                                        _news_date(item["published_at"]), " · ".join(item.get("tags") or ())) if x)
         block.append(_p(meta, s["small"]))
-        block.append(Spacer(1, 3))
-        out.append(KeepTogether(block))
+        rows.append([_p(f"{index:02d}", s["num"]), block])
+    out.append(theme.data_table(rows, (12 * mm, width - 12 * mm), head_rows=0))
     return out
 
 
 def _fairs_section(fairs, s, width):
-    out = [_p("4. 다가오는 전시회", s["h2"])]
+    out = [_h2("다가오는 전시회", "담당자 확인 자료")]
     if fairs is None:
         return out + [_p("일정 확인 불가", s["body"])]
     if not fairs["fairs"]:
@@ -331,7 +301,7 @@ def _fairs_section(fairs, s, width):
 
 
 def _notes_section(data, s):
-    out = [_p("5. 출처 및 유의사항", s["h2"])]
+    out = [_h2("출처 및 유의사항")]
     lines = []
     buyer, fx, news, fairs = data.get("buyer"), data.get("fx"), data.get("news"), data.get("fairs")
     if buyer:
@@ -356,8 +326,10 @@ def _notes_section(data, s):
     lines += [
         "업무시간 09:00~18:00은 가정값입니다.",
         "BRL/KRW는 USD/KRW ÷ USD/BRL로 계산한 USD 경유 값이며 공식 고시 환율이 아닙니다.",
-        "[AI 요약]은 Google News·ABIT 포르투갈어 제목만 보고 만든 한국어 한 줄이며 기사 본문을 보지 않았습니다. 원문을 확인하세요. KOTRA 뉴스는 요약하지 않습니다.",
+        "뉴스 '번역'은 Google News·ABIT 포르투갈어 제목만 보고 AI가 옮긴 한국어 한 줄이며 기사 본문을 보지 않았습니다. 원문을 확인하세요. KOTRA 뉴스는 한국어 제목이라 번역하지 않습니다.",
     ]
+    if news and news.get("translation"):
+        lines.append("제목 번역: " + news["translation"] + " — 원문 제목만 실었습니다.")
     if fairs and any(not f["verified"] for f in fairs["fairs"]):
         lines.append("'확인 필요' 전시회는 공식 출처에서 일정이 다르게 표기되는 등 추가 확인이 필요합니다.")
     for line in lines:

@@ -21,8 +21,9 @@ logger = logging.getLogger(__name__)
 
 USER_AGENT = "fionex/0.1 (internal dashboard)"
 TIMEOUT_SECONDS = 10
-CACHE_SECONDS = 60 * 60          # 정상 결과(하루 1회 고시, 수출입은행은 영업일 11시 전후 갱신)
+CACHE_SECONDS = 3 * 60 * 60      # 정상 결과(하루 1회 고시, 수출입은행은 영업일 11시 전후 갱신). 2026-10-27 1시간 → 3시간
 FAILURE_CACHE_SECONDS = 5 * 60   # 실패·설정 필요 결과. 재시도 버튼(refresh)은 바로 다시 조회
+REFRESH_MIN_SECONDS = 60         # 정상 결과를 받은 지 이 시간 안의 refresh는 다시 조회하지 않음(연타·호출 한도 보호)
 LOOKBACK_DAYS = 7          # 최근 고시값을 찾는 최대 기간
 PREVIOUS_LOOKBACK_DAYS = 7  # 최근 고시일 이전에서 직전 고시값을 찾는 최대 기간
 SOURCES = ("usd_krw", "usd_brl")
@@ -69,18 +70,21 @@ def get_fx(refresh=None):
 
     소스 결과: status ok|error|not_configured, rate, date(고시일), previous{rate,date}|None, change_pct|None,
     source, source_name, fetched_at[, error{code,message,retryable}]
-    refresh에 소스 이름을 주면 그 소스만 캐시를 무시하고 다시 가져옵니다.
+    refresh에 소스 이름을 주면 그 소스만 캐시를 무시하고 다시 가져옵니다. 단 정상 결과를 받은 지 1분 안이면 캐시를 씁니다
+    (실패 결과는 바로 다시 조회).
     """
     now = monotonic()
     data = {}
     for name in SOURCES:
         cached = _cache.get(name)
-        if name != refresh and cached and cached["expires"] > now:
+        fresh_ok = cached and cached["result"]["status"] == "ok" and now - cached["at"] < REFRESH_MIN_SECONDS
+        if cached and cached["expires"] > now and (name != refresh or fresh_ok):
             data[name] = cached["result"]
             continue
         result = _load(name)
         ttl = CACHE_SECONDS if result["status"] == "ok" else FAILURE_CACHE_SECONDS
-        _cache[name] = {"result": result, "expires": monotonic() + ttl}
+        at = monotonic()
+        _cache[name] = {"result": result, "at": at, "expires": at + ttl}
         data[name] = result
     data["brl_krw"] = derive_brl_krw(data["usd_krw"], data["usd_brl"])
     return data

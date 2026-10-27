@@ -38,14 +38,15 @@
       <button type="button" class="btn btn-ghost btn-icon" aria-controls="sidebar" aria-expanded="false" data-menu-toggle>
         {{ icon("menu") }}<span class="visually-hidden">메뉴 열기</span>
       </button>
-      <span class="topbar-brand">{{ service_name }}</span>
+      <span class="topbar-brand"><img class="brand-logo" src="{{ url_for('static', filename='assets/fionex_logo.png') }}" alt="FIONEX" width="2172" height="724"></span>
     </header>
 
     <div class="sidebar-backdrop" data-sidebar-backdrop hidden></div>
 
     <aside class="sidebar" id="sidebar" data-sidebar>
       <div class="sidebar-head">
-        <span class="sidebar-brand"><span class="brand-mark" aria-hidden="true"></span>{{ service_name }}</span>
+        {# 공식 로고(슬로건 포함 원본, 투명 PNG). 비율·색 변경 금지: docs/design_system.md 'Brand' #}
+        <span class="sidebar-brand"><img class="brand-logo" src="{{ url_for('static', filename='assets/fionex_logo.png') }}" alt="FIONEX" width="2172" height="724"></span>
         <button type="button" class="btn btn-ghost btn-icon sidebar-close" data-menu-close>
           {{ icon("close") }}<span class="visually-hidden">메뉴 닫기</span>
         </button>
