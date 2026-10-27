@@ -227,6 +227,38 @@ NEWS_ERRORS = {
 _news_cache = {}
 
 
+def _load_news_snapshot(medium):
+    """실제 수집한 공개 뉴스만 최대 7일간 장애 대체 자료로 사용합니다."""
+    if medium not in ("google", "abit"):
+        return None
+    path = Path(__file__).resolve().parent / "data" / "news_snapshot.json"
+    try:
+        if path.stat().st_size > 2 * 1024 * 1024:
+            return None
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        if doc.get("schema_version") != 1:
+            return None
+        fetched = datetime.fromisoformat(doc["fetched_at"])
+        age = (datetime.now(timezone.utc) - fetched).total_seconds()
+        if age < 0 or age > 7 * 24 * 3600:
+            return None
+        result = doc["media"][medium]
+        items = result["items"]
+        if not isinstance(items, list) or not items:
+            return None
+        for item in items:
+            if item["origin"] != medium or not _is_http_url(item["url"]):
+                return None
+            if not all(isinstance(item.get(k), str) and item[k] for k in ("id", "title", "published_at")):
+                return None
+        return {"items": items[:NEWS_MAX_ITEMS_PER_MEDIUM],
+                "collected": result["collected"], "after_filter": result["after_filter"],
+                "fetched_at": doc["fetched_at"], "at": float("-inf"), "expires": 0,
+                "snapshot": True}
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return None
+
+
 class NewsSearchQueryError(ValueError):
     """검색어가 비었거나 너무 짧거나 김(외부 요청 전에 거절)."""
 
@@ -260,6 +292,10 @@ def get_news(refresh=None):
                 result = future.result()
             except NewsFetchError as err:
                 errors[medium] = err.code
+                if medium not in _news_cache:
+                    snapshot = _load_news_snapshot(medium)
+                    if snapshot:
+                        _news_cache[medium] = snapshot
                 continue
             except Exception:  # 예상하지 못한 오류도 다른 경로에 영향을 주지 않게 합니다.
                 logger.exception("뉴스 수집 중 오류(%s)", medium)
@@ -296,6 +332,13 @@ def get_news(refresh=None):
         }
         if code is not None:
             info["error"] = {"code": code, "message": NEWS_ERRORS[code], "retryable": code != "key_missing"}
+            if cached and cached.get("snapshot"):
+                when = datetime.fromisoformat(cached["fetched_at"]).astimezone(ZoneInfo("Asia/Seoul"))
+                info["snapshot"] = True
+                info["error"]["message"] = (
+                    "실시간 뉴스 수집에 실패해 %s(KST)에 수집한 저장 자료를 표시합니다. "
+                    "최신 뉴스가 아닐 수 있으며 저장 자료는 자동 갱신되지 않습니다."
+                    % when.strftime("%Y-%m-%d %H:%M"))
         media[medium] = info
     # 이미 만든 AI 요약만 붙입니다(새 요약은 summarize_news에서 따로 요청해 목록 표시를 늦추지 않음).
     items = []
@@ -714,4 +757,5 @@ def _limit(items):
 
 
 _NEWS_FETCHERS = {"kotra": _fetch_kotra, "google": _fetch_google, "abit": _fetch_abit}
+
 
