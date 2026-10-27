@@ -1,0 +1,681 @@
+{
+  "experiment": "news_summary_ab_2026_10_25_1639",
+  "type": "service_prompt_experiment",
+  "worker": "홍은주",
+  "feature": "home",
+  "run_at": "2026-10-25T16:39:47+09:00",
+  "requested_model_env": "OPENAI_MODEL",
+  "settings": {
+    "temperature": "미전송(공급자 기본값)",
+    "store": false,
+    "max_output_tokens": 4096,
+    "timeout_seconds": 60.0
+  },
+  "input_note": "A~D는 가상 제목. 실제 제목은 Google News RSS 공개 제목(본문 없음).",
+  "runs": [
+    {
+      "prompt": "features/home/prompts/news_summary_v1.md",
+      "requested_count": 30,
+      "ok": true,
+      "model": "gpt-5.4-mini-2026-03-17",
+      "usage": {
+        "input_tokens": 1408,
+        "output_tokens": 956,
+        "total_tokens": 2364
+      },
+      "seconds": 5.45,
+      "metrics": {
+        "unknown_ids": 0,
+        "missing_ids": 0,
+        "duplicate_ids": 0,
+        "raw_with_unverified_numbers": 2,
+        "raw_over_60_chars": 0,
+        "expected_empty_total": 3,
+        "expected_empty_returned_empty": 3,
+        "expected_summary_returned_empty": 0,
+        "final_accepted": 23,
+        "validation_reasons": {
+          "empty": 5,
+          "unverified_number": 2
+        }
+      },
+      "rows": [
+        {
+          "id": "A1",
+          "kind": "정상",
+          "expect": "summary",
+          "title": "Malharias de Santa Catarina investem em teares mais eficientes",
+          "raw_summary_ko": "산타카타리나의 편물업체가 더 효율적인 직기를 투자한다",
+          "raw_chars": 29,
+          "unverified_numbers": [],
+          "final_summary_ko": "산타카타리나의 편물업체가 더 효율적인 직기를 투자한다"
+        },
+        {
+          "id": "A2",
+          "kind": "정상",
+          "expect": "summary",
+          "title": "Associação têxtil lança programa de capacitação para costureiras",
+          "raw_summary_ko": "섬유협회가 재봉사 교육 프로그램을 시작한다",
+          "raw_chars": 23,
+          "unverified_numbers": [],
+          "final_summary_ko": "섬유협회가 재봉사 교육 프로그램을 시작한다"
+        },
+        {
+          "id": "B1",
+          "kind": "숫자 함정(연도만)",
+          "expect": "summary",
+          "title": "Confecções brasileiras apostam em recuperação das vendas em 2027",
+          "raw_summary_ko": "브라질 의류업체들이 2027년 매출 회복을 기대한다",
+          "raw_chars": 28,
+          "unverified_numbers": [],
+          "final_summary_ko": "브라질 의류업체들이 2027년 매출 회복을 기대한다"
+        },
+        {
+          "id": "B2",
+          "kind": "숫자 함정(숫자 없음)",
+          "expect": "summary",
+          "title": "Exportações de tecidos devem crescer no próximo ano",
+          "raw_summary_ko": "직물 수출이 내년에 늘어날 전망이다",
+          "raw_chars": 19,
+          "unverified_numbers": [],
+          "final_summary_ko": "직물 수출이 내년에 늘어날 전망이다"
+        },
+        {
+          "id": "C1",
+          "kind": "정보 부족",
+          "expect": "empty",
+          "title": "Veja as novidades da semana",
+          "raw_summary_ko": "",
+          "raw_chars": 0,
+          "unverified_numbers": [],
+          "final_summary_ko": ""
+        },
+        {
+          "id": "C2",
+          "kind": "정보 부족",
+          "expect": "empty",
+          "title": "Clique e saiba mais",
+          "raw_summary_ko": "",
+          "raw_chars": 0,
+          "unverified_numbers": [],
+          "final_summary_ko": ""
+        },
+        {
+          "id": "C3",
+          "kind": "정보 부족",
+          "expect": "empty",
+          "title": "Confira o que mudou hoje",
+          "raw_summary_ko": "",
+          "raw_chars": 0,
+          "unverified_numbers": [],
+          "final_summary_ko": ""
+        },
+        {
+          "id": "D1",
+          "kind": "여러 숫자",
+          "expect": "summary",
+          "title": "Importações de tecidos da Ásia caem 8% no terceiro trimestre de 2026",
+          "raw_summary_ko": "아시아산 직물 수입이 2026년 3분기 8% 감소한다",
+          "raw_chars": 29,
+          "unverified_numbers": [
+            "3"
+          ],
+          "final_summary_ko": ""
+        },
+        {
+          "id": "D2",
+          "kind": "여러 숫자",
+          "expect": "summary",
+          "title": "Feira em São Paulo reúne 300 expositores de 15 países entre 3 e 5 de novembro",
+          "raw_summary_ko": "상파울루 박람회에 300개 전시업체와 15개국이 참여한다",
+          "raw_chars": 31,
+          "unverified_numbers": [],
+          "final_summary_ko": "상파울루 박람회에 300개 전시업체와 15개국이 참여한다"
+        },
+        {
+          "id": "D3",
+          "kind": "여러 숫자(소수·금액)",
+          "expect": "summary",
+          "title": "Preço do fio de poliéster sobe 2,5% e chega a R$ 14,80 por quilo",
+          "raw_summary_ko": "폴리에스터 실 가격이 2,5% 올라 R$ 14,80가 됐다",
+          "raw_chars": 32,
+          "unverified_numbers": [],
+          "final_summary_ko": "폴리에스터 실 가격이 2,5% 올라 R$ 14,80가 됐다"
+        },
+        {
+          "id": "6628ff31adb867b4",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Sinditec recebe comitiva italiana para discutir inovação na indústria têxtil",
+          "raw_summary_ko": "신디텍이 이탈리아 대표단과 섬유산업 혁신을 논의한다",
+          "raw_chars": 28,
+          "unverified_numbers": [],
+          "final_summary_ko": "신디텍이 이탈리아 대표단과 섬유산업 혁신을 논의한다"
+        },
+        {
+          "id": "365c7b7ae4e4c4b6",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Be@t leva ao Pavilhão do Conhecimento tecido produzido com resíduos florestais",
+          "raw_summary_ko": "비아트가 플로레스타산 잔재로 만든 직물을 선보인다",
+          "raw_chars": 27,
+          "unverified_numbers": [],
+          "final_summary_ko": "비아트가 플로레스타산 잔재로 만든 직물을 선보인다"
+        },
+        {
+          "id": "8e3c95d309068978",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Shopping Circuito de Compras lança Fashion Brás 2026",
+          "raw_summary_ko": "쇼핑 시르쿠이투 데 콤프라스가 Fashion Brás 2026을 시작한다",
+          "raw_chars": 40,
+          "unverified_numbers": [],
+          "final_summary_ko": "쇼핑 시르쿠이투 데 콤프라스가 Fashion Brás 2026을 시작한다"
+        },
+        {
+          "id": "486f86745adb25e6",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Vista do alto, uma vila italiana parece dividida em dois mundos: de um lado ficam as fábricas, do outro, casas alinhadas em ruas quase perfeitas",
+          "raw_summary_ko": "",
+          "raw_chars": 0,
+          "unverified_numbers": [],
+          "final_summary_ko": ""
+        },
+        {
+          "id": "b31c1fb4a2b99f55",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Teka avança no reposicionamento da marca e inaugura loja em um dos principais centros comerciais do país",
+          "raw_summary_ko": "테카가 브랜드 재편을 진행하며 매장 1곳을 연다",
+          "raw_chars": 26,
+          "unverified_numbers": [
+            "1"
+          ],
+          "final_summary_ko": ""
+        },
+        {
+          "id": "43b70a0eeb625bf0",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Marques’Almeida reforça e-commerce",
+          "raw_summary_ko": "마르키스알메이다가 이커머스를 강화한다",
+          "raw_chars": 20,
+          "unverified_numbers": [],
+          "final_summary_ko": "마르키스알메이다가 이커머스를 강화한다"
+        },
+        {
+          "id": "e9cbe5abe22c9e1c",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Americanos valorizam vestuário que dura",
+          "raw_summary_ko": "미국 소비자들이 오래가는 의류를 선호한다",
+          "raw_chars": 22,
+          "unverified_numbers": [],
+          "final_summary_ko": "미국 소비자들이 오래가는 의류를 선호한다"
+        },
+        {
+          "id": "f56d0a5956665554",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "[Imagem] Exposição de tecnologia têxtil que apresenta tecnologias modernas na indústria de vestuário.",
+          "raw_summary_ko": "",
+          "raw_chars": 0,
+          "unverified_numbers": [],
+          "final_summary_ko": ""
+        },
+        {
+          "id": "326de146b477ccfa",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Minas Gerais certifica 13 fazendas produtoras de algodão",
+          "raw_summary_ko": "미나스제라이스가 목화 생산 농장 13곳을 인증한다",
+          "raw_chars": 27,
+          "unverified_numbers": [],
+          "final_summary_ko": "미나스제라이스가 목화 생산 농장 13곳을 인증한다"
+        },
+        {
+          "id": "f49d1472d0a9b244",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Continental investe 10 ME em centro de competências tecnológicas em Famalicão",
+          "raw_summary_ko": "콘티넨탈이 파말리캉의 기술역량센터에 10 ME를 투자한다",
+          "raw_chars": 31,
+          "unverified_numbers": [],
+          "final_summary_ko": "콘티넨탈이 파말리캉의 기술역량센터에 10 ME를 투자한다"
+        },
+        {
+          "id": "55b533fe10d74bc2",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Marca catarinense reaproveita 200 kg de resíduos têxteis em coleção apresentada em Milão",
+          "raw_summary_ko": "산타카타리나 브랜드가 밀라노 컬렉션에 섬유 폐기물 200 kg을 재활용했다",
+          "raw_chars": 41,
+          "unverified_numbers": [],
+          "final_summary_ko": "산타카타리나 브랜드가 밀라노 컬렉션에 섬유 폐기물 200 kg을 재활용했다"
+        },
+        {
+          "id": "5699dceea76b5d7b",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "A transformação digital e a inovação aumentam a competitividade da indústria têxtil e de vestuário do Vietnã.",
+          "raw_summary_ko": "베트남 섬유·의류산업에서 디지털 전환과 혁신이 경쟁력을 높인다",
+          "raw_chars": 34,
+          "unverified_numbers": [],
+          "final_summary_ko": "베트남 섬유·의류산업에서 디지털 전환과 혁신이 경쟁력을 높인다"
+        },
+        {
+          "id": "1634e32aed8d7ec5",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Após participar do Congresso Internacional Brasil 2026, comitiva da SDE realiza visita técnica às instalações da Vicunha no Ceará",
+          "raw_summary_ko": "SDE 대표단이 비쿠냐의 세아라 시설을 기술 방문한다",
+          "raw_chars": 29,
+          "unverified_numbers": [],
+          "final_summary_ko": "SDE 대표단이 비쿠냐의 세아라 시설을 기술 방문한다"
+        },
+        {
+          "id": "daee34a44af6ef09",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Transformação digital na indústria têxtil e de vestuário: da mineração de dados ao aproveitamento do poder da IA.",
+          "raw_summary_ko": "섬유·의류산업의 디지털 전환을 다룬다",
+          "raw_chars": 20,
+          "unverified_numbers": [],
+          "final_summary_ko": "섬유·의류산업의 디지털 전환을 다룬다"
+        },
+        {
+          "id": "7d25127940372bef",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Bahia e Portugal articulam parceria para atrair investimentos e impulsionar inovação e cadeias produtivas",
+          "raw_summary_ko": "바이아와 포르투갈이 투자 유치와 혁신 협력을 논의한다",
+          "raw_chars": 29,
+          "unverified_numbers": [],
+          "final_summary_ko": "바이아와 포르투갈이 투자 유치와 혁신 협력을 논의한다"
+        },
+        {
+          "id": "e8bc7b6a2a9b5716",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Evento de moda movimenta a indústria têxtil em Minas Gerais",
+          "raw_summary_ko": "패션 행사가 미나스제라이스의 섬유산업을 움직인다",
+          "raw_chars": 26,
+          "unverified_numbers": [],
+          "final_summary_ko": "패션 행사가 미나스제라이스의 섬유산업을 움직인다"
+        },
+        {
+          "id": "f2a09235fb0c6857",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Brasil detém 34% do comércio mundial de algodão, mas avanço dos sintéticos desafia setor",
+          "raw_summary_ko": "브라질이 세계 면화무역의 34%를 차지한다",
+          "raw_chars": 23,
+          "unverified_numbers": [],
+          "final_summary_ko": "브라질이 세계 면화무역의 34%를 차지한다"
+        },
+        {
+          "id": "15f65af868e72d7e",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Câmara analisa regras de saúde e ergonomia na indústria têxtil",
+          "raw_summary_ko": "의회가 섬유산업의 건강과 인체공학 규정을 검토한다",
+          "raw_chars": 27,
+          "unverified_numbers": [],
+          "final_summary_ko": "의회가 섬유산업의 건강과 인체공학 규정을 검토한다"
+        },
+        {
+          "id": "0fd59c6c7443f821",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "CAMARA DOS DEPUTADOS - Projeto de Lei propõe medidas de proteção à saúde dos trabalhadores da indústria têxtil; veja detalhes e tramitação na Câmara.",
+          "raw_summary_ko": "국회의원이 섬유산업 노동자 건강보호 법안을 제안한다",
+          "raw_chars": 28,
+          "unverified_numbers": [],
+          "final_summary_ko": "국회의원이 섬유산업 노동자 건강보호 법안을 제안한다"
+        },
+        {
+          "id": "2dd9a75e5d113b9c",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Projeto estabelece regras de saúde e ergonomia para trabalhadores do setor têxtil",
+          "raw_summary_ko": "섬유업 종사자 건강·인체공학 규정을 마련한다",
+          "raw_chars": 24,
+          "unverified_numbers": [],
+          "final_summary_ko": "섬유업 종사자 건강·인체공학 규정을 마련한다"
+        }
+      ]
+    },
+    {
+      "prompt": "features/home/prompts/news_summary_v2.md",
+      "requested_count": 30,
+      "ok": true,
+      "model": "gpt-5.4-mini-2026-03-17",
+      "usage": {
+        "input_tokens": 1648,
+        "output_tokens": 895,
+        "total_tokens": 2543
+      },
+      "seconds": 4.25,
+      "metrics": {
+        "unknown_ids": 0,
+        "missing_ids": 0,
+        "duplicate_ids": 0,
+        "raw_with_unverified_numbers": 1,
+        "raw_over_60_chars": 0,
+        "expected_empty_total": 3,
+        "expected_empty_returned_empty": 3,
+        "expected_summary_returned_empty": 0,
+        "final_accepted": 25,
+        "validation_reasons": {
+          "empty": 4,
+          "unverified_number": 1
+        }
+      },
+      "rows": [
+        {
+          "id": "A1",
+          "kind": "정상",
+          "expect": "summary",
+          "title": "Malharias de Santa Catarina investem em teares mais eficientes",
+          "raw_summary_ko": "산타카타리나 편직업체, 더 효율적인 직기 투자",
+          "raw_chars": 25,
+          "unverified_numbers": [],
+          "final_summary_ko": "산타카타리나 편직업체, 더 효율적인 직기 투자"
+        },
+        {
+          "id": "A2",
+          "kind": "정상",
+          "expect": "summary",
+          "title": "Associação têxtil lança programa de capacitação para costureiras",
+          "raw_summary_ko": "섬유협회, 재봉사 대상 교육 프로그램 출범",
+          "raw_chars": 23,
+          "unverified_numbers": [],
+          "final_summary_ko": "섬유협회, 재봉사 대상 교육 프로그램 출범"
+        },
+        {
+          "id": "B1",
+          "kind": "숫자 함정(연도만)",
+          "expect": "summary",
+          "title": "Confecções brasileiras apostam em recuperação das vendas em 2027",
+          "raw_summary_ko": "브라질 의류업체, 2027년 매출 회복에 기대",
+          "raw_chars": 25,
+          "unverified_numbers": [],
+          "final_summary_ko": "브라질 의류업체, 2027년 매출 회복에 기대"
+        },
+        {
+          "id": "B2",
+          "kind": "숫자 함정(숫자 없음)",
+          "expect": "summary",
+          "title": "Exportações de tecidos devem crescer no próximo ano",
+          "raw_summary_ko": "직물 수출, 내년 증가 전망",
+          "raw_chars": 15,
+          "unverified_numbers": [],
+          "final_summary_ko": "직물 수출, 내년 증가 전망"
+        },
+        {
+          "id": "C1",
+          "kind": "정보 부족",
+          "expect": "empty",
+          "title": "Veja as novidades da semana",
+          "raw_summary_ko": "",
+          "raw_chars": 0,
+          "unverified_numbers": [],
+          "final_summary_ko": ""
+        },
+        {
+          "id": "C2",
+          "kind": "정보 부족",
+          "expect": "empty",
+          "title": "Clique e saiba mais",
+          "raw_summary_ko": "",
+          "raw_chars": 0,
+          "unverified_numbers": [],
+          "final_summary_ko": ""
+        },
+        {
+          "id": "C3",
+          "kind": "정보 부족",
+          "expect": "empty",
+          "title": "Confira o que mudou hoje",
+          "raw_summary_ko": "",
+          "raw_chars": 0,
+          "unverified_numbers": [],
+          "final_summary_ko": ""
+        },
+        {
+          "id": "D1",
+          "kind": "여러 숫자",
+          "expect": "summary",
+          "title": "Importações de tecidos da Ásia caem 8% no terceiro trimestre de 2026",
+          "raw_summary_ko": "아시아산 직물 수입, 2026년 3분기 8% 감소",
+          "raw_chars": 27,
+          "unverified_numbers": [
+            "3"
+          ],
+          "final_summary_ko": ""
+        },
+        {
+          "id": "D2",
+          "kind": "여러 숫자",
+          "expect": "summary",
+          "title": "Feira em São Paulo reúne 300 expositores de 15 países entre 3 e 5 de novembro",
+          "raw_summary_ko": "상파울루 박람회, 300개 전시업체와 15개국 참가",
+          "raw_chars": 28,
+          "unverified_numbers": [],
+          "final_summary_ko": "상파울루 박람회, 300개 전시업체와 15개국 참가"
+        },
+        {
+          "id": "D3",
+          "kind": "여러 숫자(소수·금액)",
+          "expect": "summary",
+          "title": "Preço do fio de poliéster sobe 2,5% e chega a R$ 14,80 por quilo",
+          "raw_summary_ko": "폴리에스터 원사 가격 2,5% 올라 R$ 14,80로",
+          "raw_chars": 29,
+          "unverified_numbers": [],
+          "final_summary_ko": "폴리에스터 원사 가격 2,5% 올라 R$ 14,80로"
+        },
+        {
+          "id": "6628ff31adb867b4",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Sinditec recebe comitiva italiana para discutir inovação na indústria têxtil",
+          "raw_summary_ko": "산디텍, 이탈리아 사절단과 섬유산업 혁신 논의",
+          "raw_chars": 25,
+          "unverified_numbers": [],
+          "final_summary_ko": "산디텍, 이탈리아 사절단과 섬유산업 혁신 논의"
+        },
+        {
+          "id": "365c7b7ae4e4c4b6",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Be@t leva ao Pavilhão do Conhecimento tecido produzido com resíduos florestais",
+          "raw_summary_ko": "Be@t, 잔여 산림자원으로 만든 직물 선보여",
+          "raw_chars": 25,
+          "unverified_numbers": [],
+          "final_summary_ko": "Be@t, 잔여 산림자원으로 만든 직물 선보여"
+        },
+        {
+          "id": "8e3c95d309068978",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Shopping Circuito de Compras lança Fashion Brás 2026",
+          "raw_summary_ko": "쇼핑 Circuito de Compras, Fashion Brás 2026 출범",
+          "raw_chars": 44,
+          "unverified_numbers": [],
+          "final_summary_ko": "쇼핑 Circuito de Compras, Fashion Brás 2026 출범"
+        },
+        {
+          "id": "486f86745adb25e6",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Vista do alto, uma vila italiana parece dividida em dois mundos: de um lado ficam as fábricas, do outro, casas alinhadas em ruas quase perfeitas",
+          "raw_summary_ko": "",
+          "raw_chars": 0,
+          "unverified_numbers": [],
+          "final_summary_ko": ""
+        },
+        {
+          "id": "b31c1fb4a2b99f55",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Teka avança no reposicionamento da marca e inaugura loja em um dos principais centros comerciais do país",
+          "raw_summary_ko": "테카, 브랜드 재정비 속 매장 열어",
+          "raw_chars": 19,
+          "unverified_numbers": [],
+          "final_summary_ko": "테카, 브랜드 재정비 속 매장 열어"
+        },
+        {
+          "id": "43b70a0eeb625bf0",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Marques’Almeida reforça e-commerce",
+          "raw_summary_ko": "마르케스’알메이다, 이커머스 강화",
+          "raw_chars": 18,
+          "unverified_numbers": [],
+          "final_summary_ko": "마르케스’알메이다, 이커머스 강화"
+        },
+        {
+          "id": "e9cbe5abe22c9e1c",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Americanos valorizam vestuário que dura",
+          "raw_summary_ko": "미국인들, 오래가는 의류 선호",
+          "raw_chars": 16,
+          "unverified_numbers": [],
+          "final_summary_ko": "미국인들, 오래가는 의류 선호"
+        },
+        {
+          "id": "f56d0a5956665554",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "[Imagem] Exposição de tecnologia têxtil que apresenta tecnologias modernas na indústria de vestuário.",
+          "raw_summary_ko": "섬유기술 전시회, 최신 기술 소개",
+          "raw_chars": 18,
+          "unverified_numbers": [],
+          "final_summary_ko": "섬유기술 전시회, 최신 기술 소개"
+        },
+        {
+          "id": "326de146b477ccfa",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Minas Gerais certifica 13 fazendas produtoras de algodão",
+          "raw_summary_ko": "미나스제라이스, 목화 생산 농장 13곳 인증",
+          "raw_chars": 24,
+          "unverified_numbers": [],
+          "final_summary_ko": "미나스제라이스, 목화 생산 농장 13곳 인증"
+        },
+        {
+          "id": "f49d1472d0a9b244",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Continental investe 10 ME em centro de competências tecnológicas em Famalicão",
+          "raw_summary_ko": "컨티넨탈, 기술 역량센터에 10 ME 투자",
+          "raw_chars": 23,
+          "unverified_numbers": [],
+          "final_summary_ko": "컨티넨탈, 기술 역량센터에 10 ME 투자"
+        },
+        {
+          "id": "55b533fe10d74bc2",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Marca catarinense reaproveita 200 kg de resíduos têxteis em coleção apresentada em Milão",
+          "raw_summary_ko": "카타리나 브랜드, 섬유 폐기물 200 kg 재활용",
+          "raw_chars": 27,
+          "unverified_numbers": [],
+          "final_summary_ko": "카타리나 브랜드, 섬유 폐기물 200 kg 재활용"
+        },
+        {
+          "id": "5699dceea76b5d7b",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "A transformação digital e a inovação aumentam a competitividade da indústria têxtil e de vestuário do Vietnã.",
+          "raw_summary_ko": "베트남 섬유·의류업계, 디지털 전환과 혁신",
+          "raw_chars": 23,
+          "unverified_numbers": [],
+          "final_summary_ko": "베트남 섬유·의류업계, 디지털 전환과 혁신"
+        },
+        {
+          "id": "1634e32aed8d7ec5",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Após participar do Congresso Internacional Brasil 2026, comitiva da SDE realiza visita técnica às instalações da Vicunha no Ceará",
+          "raw_summary_ko": "SDE 사절단, 비쿠냐 시설 기술 방문",
+          "raw_chars": 21,
+          "unverified_numbers": [],
+          "final_summary_ko": "SDE 사절단, 비쿠냐 시설 기술 방문"
+        },
+        {
+          "id": "daee34a44af6ef09",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Transformação digital na indústria têxtil e de vestuário: da mineração de dados ao aproveitamento do poder da IA.",
+          "raw_summary_ko": "섬유·의류산업의 디지털 전환과 AI 활용",
+          "raw_chars": 22,
+          "unverified_numbers": [],
+          "final_summary_ko": "섬유·의류산업의 디지털 전환과 AI 활용"
+        },
+        {
+          "id": "7d25127940372bef",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Bahia e Portugal articulam parceria para atrair investimentos e impulsionar inovação e cadeias produtivas",
+          "raw_summary_ko": "바이아와 포르투갈, 투자 유치와 혁신 협력",
+          "raw_chars": 23,
+          "unverified_numbers": [],
+          "final_summary_ko": "바이아와 포르투갈, 투자 유치와 혁신 협력"
+        },
+        {
+          "id": "e8bc7b6a2a9b5716",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Evento de moda movimenta a indústria têxtil em Minas Gerais",
+          "raw_summary_ko": "패션 행사, 미나스제라이스 섬유산업에 활력",
+          "raw_chars": 23,
+          "unverified_numbers": [],
+          "final_summary_ko": "패션 행사, 미나스제라이스 섬유산업에 활력"
+        },
+        {
+          "id": "f2a09235fb0c6857",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Brasil detém 34% do comércio mundial de algodão, mas avanço dos sintéticos desafia setor",
+          "raw_summary_ko": "브라질, 세계 면화 무역 34% 차지",
+          "raw_chars": 20,
+          "unverified_numbers": [],
+          "final_summary_ko": "브라질, 세계 면화 무역 34% 차지"
+        },
+        {
+          "id": "15f65af868e72d7e",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Câmara analisa regras de saúde e ergonomia na indústria têxtil",
+          "raw_summary_ko": "의회, 섬유산업 건강·인체공학 규정 검토",
+          "raw_chars": 22,
+          "unverified_numbers": [],
+          "final_summary_ko": "의회, 섬유산업 건강·인체공학 규정 검토"
+        },
+        {
+          "id": "0fd59c6c7443f821",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "CAMARA DOS DEPUTADOS - Projeto de Lei propõe medidas de proteção à saúde dos trabalhadores da indústria têxtil; veja detalhes e tramitação na Câmara.",
+          "raw_summary_ko": "의회, 섬유산업 노동자 건강 보호 법안 제안",
+          "raw_chars": 24,
+          "unverified_numbers": [],
+          "final_summary_ko": "의회, 섬유산업 노동자 건강 보호 법안 제안"
+        },
+        {
+          "id": "2dd9a75e5d113b9c",
+          "kind": "실제 제목(google)",
+          "expect": "review",
+          "title": "Projeto estabelece regras de saúde e ergonomia para trabalhadores do setor têxtil",
+          "raw_summary_ko": "섬유업 종사자 건강·인체공학 규정 마련",
+          "raw_chars": 21,
+          "unverified_numbers": [],
+          "final_summary_ko": "섬유업 종사자 건강·인체공학 규정 마련"
+        }
+      ]
+    }
+  ]
+}

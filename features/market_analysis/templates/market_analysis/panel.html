@@ -1,46 +1,182 @@
-{# 시장 분석 작업 영역. 입력 항목은 공통 UI 확인용 예시이며 명세 확정 후 담당자가 교체합니다.
-   통계·차트는 실제 조회 결과만 표시합니다. 꾸민 수치를 넣지 않습니다. #}
-<div class="workspace">
-  <form class="card" aria-labelledby="market_analysis-input-title">
+{# 시장 분석 작업 영역. 통계·차트는 실제 조회 결과만 표시합니다. 꾸민 수치를 넣지 않습니다.
+   기본값(품목·기간)은 /api/market-analysis/meta 응답으로 채웁니다.
+   하위 탭: 시장 통계(조회 조건 + 분석 결과) / 바이어 목록(전체 폭). 탭 전환은 market_analysis.js #}
+<div class="ma-subtabs" role="tablist" aria-label="시장 분석 화면">
+  <button type="button" class="ma-subtab" role="tab" id="market_analysis-tab-stats" aria-controls="market_analysis-pane-stats"
+          aria-selected="true" data-ma-tab="stats"><span class="ma-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" focusable="false" fill="none"
+          stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><span class="ma-tab-text"><span class="ma-tab-label">시장 통계</span><span class="ma-tab-sub">수입 추세·공급국</span></span></button>
+  <button type="button" class="ma-subtab" role="tab" id="market_analysis-tab-buyers" aria-controls="market_analysis-pane-buyers"
+          aria-selected="false" tabindex="-1" data-ma-tab="buyers"><span class="ma-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" focusable="false" fill="none"
+          stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l6-4 6 4v13"/><path d="M15 21V11l6 3v7M3 21h18M7 11h4M7 15h4"/></svg></span><span class="ma-tab-text"><span class="ma-tab-label">바이어 목록</span><span class="ma-tab-sub">잠재 바이어·AI 브리핑</span></span></button>
+</div>
+
+{# 시장 통계는 두 화면 순서: ① 조회 조건 → '분석 실행' → ② 분석 결과('← 조회 조건 변경'으로 돌아감, 결과는 유지) #}
+<div class="ma-steps" role="tabpanel" id="market_analysis-pane-stats" aria-labelledby="market_analysis-tab-stats" data-ma-pane="stats">
+  <form class="card" aria-labelledby="market_analysis-input-title" novalidate data-ma-form data-ma-view="form">
     <div class="card-header">
       <div>
-        <h2 class="card-title" id="market_analysis-input-title">조회 조건</h2>
-        <p class="card-description">품목과 기간을 정해 수입 동향을 조회합니다.</p>
+        <h2 class="card-title" id="market_analysis-input-title" tabindex="-1">조회 조건</h2>
+        <p class="card-description">브라질 수입 통계(MDIC ComexStat)에서 품목·기간·공급국 조건으로 조회합니다. ComexStat이 점검 중이면 MDIC 공개 원본 자료로 대신 계산합니다.</p>
       </div>
     </div>
+
     <div class="field">
-      <label class="field-label" for="market_analysis-code">품목코드</label>
-      <input class="input" id="market_analysis-code" name="code" type="text" autocomplete="off"
-             aria-describedby="market_analysis-code-hint">
-      <p class="field-hint" id="market_analysis-code-hint">코드 체계와 조회 범위는 기능 명세 확정 후 안내합니다.</p>
+      <span class="field-label">대상 시장</span>
+      <p><span class="badge badge-neutral">브라질 · 수입</span></p>
+      <p class="field-hint">대상 시장은 브라질로 고정됩니다.</p>
     </div>
-    <div class="grid">
+
+    {# 코드 체계 · 품목코드 · 시작 월 · 종료 월을 한 줄로(좁은 화면은 2열 → 1열). 긴 안내는 줄 아래에 모아 칸 높이를 맞춥니다. #}
+    <div class="ma-cond-row">
       <div class="field">
-        <label class="field-label" for="market_analysis-from">시작 월</label>
-        <input class="input" id="market_analysis-from" name="from" type="month">
+        <label class="field-label" for="market_analysis-code_system">코드 체계<span class="field-required">필수</span></label>
+        <select class="select" id="market_analysis-code_system" name="code_system" aria-describedby="market_analysis-code_system-error">
+          <option value="ncm" selected>NCM 8자리 (브라질)</option>
+          <option value="hs6">HS 6자리 (국제 공통)</option>
+        </select>
+        <p class="field-error" id="market_analysis-code_system-error" data-error-for="code_system" hidden></p>
       </div>
       <div class="field">
-        <label class="field-label" for="market_analysis-to">종료 월</label>
-        <input class="input" id="market_analysis-to" name="to" type="month">
+        <label class="field-label" for="market_analysis-code">품목코드<span class="field-required">필수</span></label>
+        <input class="input" id="market_analysis-code" name="code" type="text" inputmode="numeric" autocomplete="off"
+               aria-describedby="market_analysis-code-hint market_analysis-code-error">
+        <p class="field-error" id="market_analysis-code-error" data-error-for="code" hidden></p>
+      </div>
+      <div class="field">
+        <label class="field-label" for="market_analysis-from">시작 월<span class="field-required">필수</span></label>
+        <input class="input" id="market_analysis-from" name="from" type="month"
+               aria-describedby="market_analysis-period-hint market_analysis-from-error">
+        <p class="field-error" id="market_analysis-from-error" data-error-for="from" hidden></p>
+      </div>
+      <div class="field">
+        <label class="field-label" for="market_analysis-to">종료 월<span class="field-required">필수</span></label>
+        <input class="input" id="market_analysis-to" name="to" type="month"
+               aria-describedby="market_analysis-period-hint market_analysis-to-error">
+        <p class="field-error" id="market_analysis-to-error" data-error-for="to" hidden></p>
       </div>
     </div>
+    <div class="ma-cond-hints">
+      <p class="field-hint" id="market_analysis-code-hint">품목코드 기본값 54023310: 폴리에스터 DTY 미염색(시장 분석용 후보, 수출 신고 코드 확정 아님). 점(.)은 넣어도 됩니다.</p>
+      <p class="field-hint" id="market_analysis-period-hint" data-ma-period-hint>최신 제공 월을 확인하는 중입니다.</p>
+    </div>
+
+    <fieldset class="fieldset">
+      <legend class="field-label">공급국 비교 <span class="field-hint">(선택)</span></legend>
+      <p class="field-hint" id="market_analysis-countries-hint">선택하지 않으면 전체 국가 기준입니다. 선택한 국가는 아래 비교표에 따로 표시하며, 비중은 항상 브라질 전체 수입액 기준입니다.</p>
+      {# 나라 고르기 창은 접어 두고 필요할 때 펼침(2026-10-27). 닫혀 있어도 선택한 나라는 요약 줄에 보이고 조회에 그대로 쓰임 #}
+      <details class="ma-country-picker" data-ma-country-picker>
+        <summary>
+          <span class="ma-country-picker-title">나라 고르기</span>
+          <span class="ma-country-picker-chosen" data-ma-country-chosen>선택한 공급국 없음 · 전체 국가 기준</span>
+        </summary>
+        <div class="ma-country-picker-body">
+          <div data-work-ignore>
+            <label class="visually-hidden" for="market_analysis-country-search">공급국 검색</label>
+            <input class="input" id="market_analysis-country-search" type="search" placeholder="국가 검색 (예: 중국, China)" autocomplete="off">
+          </div>
+          <div class="ma-country-list" role="group" aria-describedby="market_analysis-countries-hint market_analysis-countries-error" data-ma-country-list>
+            <p class="field-hint">공급국 목록을 불러오는 중입니다.</p>
+          </div>
+          <p class="field-hint" data-ma-country-count aria-live="polite">선택한 공급국 없음</p>
+        </div>
+      </details>
+      <p class="field-error" id="market_analysis-countries-error" data-error-for="countries" hidden></p>
+    </fieldset>
+
+    <div class="notice notice-danger" role="alert" data-ma-form-error hidden></div>
+
     <div class="btn-row">
-      <button type="submit" class="btn btn-primary" disabled aria-describedby="market_analysis-pending">분석 실행</button>
-      <span class="field-hint" id="market_analysis-pending">준비 중: 아직 사용할 수 없습니다.</span>
+      <button type="submit" class="btn btn-primary" data-ma-submit>분석 실행</button>
+      <button type="button" class="btn btn-secondary" data-ma-to-result hidden>분석 결과 보기 →</button>
     </div>
+    <p class="field-hint">'분석 실행'을 누르면 분석 결과 화면으로 넘어갑니다. ComexStat 호출 한도 때문에 첫 조회는 수십 초 걸릴 수 있습니다. 6시간 안에 같은 품목을 다시 조회하면 받아 둔 자료를 사용합니다.</p>
   </form>
 
+  <div class="ma-result-view" data-ma-view="result" hidden>
+  <div class="ma-step-bar">
+    <button type="button" class="btn btn-secondary" data-ma-to-form>← 조회 조건 변경</button>
+    <p class="ma-query-summary"><span class="visually-hidden">조회 조건: </span><span data-ma-query-summary></span></p>
+    <button type="button" class="btn btn-ghost" data-ma-refresh hidden>다시 불러오기</button>
+  </div>
   <section class="card" aria-labelledby="market_analysis-result-title">
     <div class="card-header">
       <div>
-        <h2 class="card-title" id="market_analysis-result-title">분석 결과</h2>
-        <p class="card-description">수입액·수입량·주요 공급국·평균단가 추세와 출처를 표시합니다.</p>
+        <h2 class="card-title" id="market_analysis-result-title" tabindex="-1">분석 결과</h2>
+        <p class="card-description">수입액·수입량·평균 수입단가 추세와 공급국 현황을 출처와 함께 표시합니다.</p>
       </div>
-      <button type="button" class="btn btn-secondary" disabled>PDF 다운로드</button>
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" disabled aria-describedby="market_analysis-pdf-hint" data-ma-pdf>PDF 다운로드</button>
+        <span class="field-hint" id="market_analysis-pdf-hint" data-ma-pdf-hint>분석 결과가 생기면 화면 내용 그대로 A4 PDF로 받을 수 있습니다.</span>
+      </div>
     </div>
-    <div class="empty-state">
-      <p class="empty-state-title">아직 결과가 없습니다</p>
-      <p>분석 기능이 개발되면 조회 결과가 이곳에 표시됩니다.</p>
+    <div data-ma-pdf-message aria-live="polite"></div>
+    {# 큰 결과 전체를 낭독하지 않도록 aria-live는 짧은 상태 문장(data-ma-status)에만 둡니다. #}
+    <p class="visually-hidden" role="status" data-ma-status></p>
+    <div data-ma-result>
+      <div class="empty-state">
+        <p class="empty-state-title">아직 결과가 없습니다</p>
+        <p>조회 조건을 확인하고 '분석 실행'을 누르세요.</p>
+      </div>
     </div>
   </section>
+  </div>
+</div>
+
+{# 바이어 목록(PDF의 ⑥): 조회 조건과 무관한 기준 자료. 분석 PDF에도 전체 목록이 들어갑니다. #}
+<div role="tabpanel" id="market_analysis-pane-buyers" aria-labelledby="market_analysis-tab-buyers" data-ma-pane="buyers" hidden>
+  {# 목록 화면: 회사명·'상세 보기'를 누르면 같은 탭 안의 업체 상세 화면으로 바뀝니다(주소 변경 없음). #}
+  <div class="ma-buyer-view" data-ma-buyer-list-view>
+    <section class="card" aria-labelledby="market_analysis-buyers-title">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title" id="market_analysis-buyers-title" tabindex="-1">바이어 목록 (리젠 T2T 잠재 바이어)</h2>
+          <p class="card-description">브라질 원사·원단 제조 기업(국세청 CNPJ 공개 자료). 우선순위 등급(A·B·C, 업종·연락처·공개 근거 기준)순으로 표시합니다.
+            '상세 보기'로 행 아래에서 업체 정보를 펼쳐 보고, 'AI 브리핑'으로 브리핑 창을 엽니다.</p>
+        </div>
+      </div>
+      <div data-ma-buyers><p class="field-hint">바이어 목록을 불러오는 중...</p></div>
+    </section>
+  </div>
+
+  {# AI 브리핑 창(글래스, <dialog> 모달): 목록의 'AI 브리핑'을 누르면 업체 상세 + AI 브리핑을 띄웁니다.
+     브리핑이 없는 업체면 바로 받습니다(OpenAI 1회, 유료). 받은 업체는 다시 호출하지 않고 표시합니다.
+     근거는 국세청 CNPJ(C1)·시장 통계 탭 조회 결과(S1, 있을 때만)·재생·T2T 공개 근거(T*)뿐이며 코드가 문장을 검사합니다.
+     Esc·닫기·바깥 클릭으로 닫으면 누른 버튼으로 초점이 돌아갑니다. #}
+  <dialog class="ma-dialog" aria-labelledby="market_analysis-dialog-title" data-ma-dialog>
+    <div class="ma-dialog-panel">
+      <header class="ma-dialog-head">
+        <div class="ma-dialog-head-text" data-ma-dialog-head></div>
+        <button type="button" class="btn btn-ghost btn-icon" data-ma-dialog-close>
+          <span aria-hidden="true">✕</span><span class="visually-hidden">창 닫기</span>
+        </button>
+      </header>
+      {# 창 안 하위 탭(바깥 '시장 통계 | 바이어 목록'과 같은 모양·키보드). 열 때는 AI 브리핑 탭 #}
+      <div class="ma-subtabs ma-dialog-tabs" role="tablist" aria-label="업체 보기">
+        <button type="button" class="ma-subtab" role="tab" id="market_analysis-dtab-detail" aria-controls="market_analysis-dpane-detail"
+                aria-selected="false" tabindex="-1" data-ma-dtab="detail">업체 상세</button>
+        <button type="button" class="ma-subtab" role="tab" id="market_analysis-dtab-brief" aria-controls="market_analysis-dpane-brief"
+                aria-selected="true" data-ma-dtab="brief">AI 브리핑<span class="ma-tab-badge" data-ma-brief-badge hidden></span></button>
+      </div>
+      <div class="ma-dialog-body">
+        <section class="ma-glass-block" role="tabpanel" id="market_analysis-dpane-detail" aria-labelledby="market_analysis-dtab-detail" data-ma-dpane="detail" data-ma-detail hidden></section>
+        <section class="ma-glass-block" role="tabpanel" id="market_analysis-dpane-brief" aria-labelledby="market_analysis-dtab-brief" data-ma-dpane="brief">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title" id="market_analysis-briefing-title" tabindex="-1">AI 바이어 브리핑</h3>
+              <p class="card-description" id="market_analysis-briefing-cost">출처 있는 자료만 쓰고, 받을 때마다 OpenAI를 1회 호출합니다(유료, 같은 업체는 다시 호출하지 않음).</p>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-secondary" aria-describedby="market_analysis-briefing-cost market_analysis-briefing-run-hint" data-ma-brief-run>AI 브리핑 받기</button>
+              <button type="button" class="btn btn-primary" disabled aria-describedby="market_analysis-briefing-pdf-hint" data-ma-brief-pdf>PDF 다운로드</button>
+            </div>
+          </div>
+          <p class="field-hint" id="market_analysis-briefing-run-hint" data-ma-brief-run-hint></p>
+          <p class="field-hint" id="market_analysis-briefing-pdf-hint" data-ma-brief-pdf-hint>브리핑을 받으면 PDF로 내려받을 수 있습니다.</p>
+          <div data-ma-brief-pdf-message aria-live="polite"></div>
+          <p class="visually-hidden" role="status" data-ma-briefing-status></p>
+          <div data-ma-briefing aria-busy="false"></div>
+        </section>
+      </div>
+    </div>
+  </dialog>
 </div>

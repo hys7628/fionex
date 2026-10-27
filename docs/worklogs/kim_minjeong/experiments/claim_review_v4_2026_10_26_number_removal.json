@@ -1,0 +1,30 @@
+{
+  "experiment_id": "SPE-2026_10_26-05",
+  "type": "service_prompt_experiment",
+  "worker": "김민정",
+  "feature": "green_claim",
+  "executed_by": "사용자(담당자) 직접 실행 1건. Claude는 실행하지 않았고 API를 호출하지 않음",
+  "model_reported": "gpt-5.4-mini-2026-03-17",
+  "prompt": {
+    "path": "features/green_claim/prompts/claim_review_v4.md",
+    "version": "claim_review_v4"
+  },
+  "review_time": "2026-10-26 13:40:53",
+  "input_text": "Nesta amostra, a embalagem contém 30% de material reciclado por massa. A afirmação refere-se apenas à embalagem.",
+  "input_note": "SPE-2026_10_26-03 사례 C·SPE-2026_10_26-04와 같은 공개 가능한 가상 문구",
+  "raw_api_response": null,
+  "raw_api_response_note": "원본 API 응답은 확보하지 않음. 아래는 사용자가 전달한 결과이며 복원·추정하지 않음",
+  "observed_by_user": {
+    "improvements": [
+      "포장 한정이 이미 명시되어 있음을 인정함",
+      "정상적인 한정 문장을 별도 수정 권고로 만들지 않음",
+      "함량 주장에 대해 검토 필요 1개를 반환함"
+    ],
+    "alternative_quoted": "Nesta amostra, a embalagem contém material reciclado por massa. A afirmação refere-se apenas à embalagem."
+  },
+  "assessment": "30%를 지우고 '질량 기준으로(por massa)'만 남겨 표현이 불완전함. 재활용 소재를 포함한다는 객관적 주장은 남아 있어 비율 삭제만으로 근거 확인 문제가 해결되지 않음",
+  "assessment_source": "전달받은 결과에 대한 평가(지시문 기준). Claude가 실제 화면·응답을 본 것이 아님",
+  "change": "claim_review_v5.md 작성(수치 삭제 시 딸린 표현 정리·수치 삭제를 근거 부족 해결로 제시하지 않기·모든 수치 삭제 금지 아님), 서버는 PROMPT_VERSION만 변경(feature_spec.md \"수치 삭제 예시 보완\")",
+  "rerun_result": "미실행(claim_review_v5 실제 모델 검증 안 함). 모의 검증만",
+  "not_measured": ["비용", "토큰", "처리 시간"]
+}

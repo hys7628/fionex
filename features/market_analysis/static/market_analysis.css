@@ -1,5 +1,945 @@
 /*
  * 시장 분석 탭 전용 스타일. 선택자는 .feature-market_analysis 안으로 한정합니다.
  * 공통 컴포넌트(.card, .btn, .input 등)를 복제·덮어쓰지 말고 tokens.css 변수를 사용합니다.
- * 예) .feature-market_analysis .xxx-list { gap: var(--space-3); }
  */
+/* 조회 조건 한 줄: 코드 체계 · 품목코드 · 시작 월 · 종료 월 (960px 이상 4칸, 600px 이상 2칸, 그 아래 1칸) */
+.feature-market_analysis .ma-cond-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (min-width: 600px) {
+  .feature-market_analysis .ma-cond-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 960px) {
+  .feature-market_analysis .ma-cond-row { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); }
+}
+.feature-market_analysis .ma-cond-hints { display: flex; flex-direction: column; gap: var(--space-1); margin-top: calc(-1 * var(--space-2)); }
+
+/* 공급국 선택 목록 */
+.feature-market_analysis .ma-country-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: var(--space-2) var(--space-4);
+  max-height: 220px;
+  overflow-y: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
+
+.feature-market_analysis .ma-country[hidden] { display: none; }
+.feature-market_analysis .ma-country-korea { font-weight: var(--font-weight-bold); }
+
+/* 결과 */
+.feature-market_analysis .ma-query {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.feature-market_analysis [data-ma-result] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.feature-market_analysis .ma-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.feature-market_analysis .ma-h3 {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.feature-market_analysis .ma-h4 {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.feature-market_analysis .ma-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: var(--space-3);
+}
+
+.feature-market_analysis .ma-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.feature-market_analysis .ma-tile-label,
+.feature-market_analysis .ma-tile-sub {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.feature-market_analysis .ma-tile-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-height-tight);
+}
+
+.feature-market_analysis .ma-metric-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+
+/* 그래프 */
+.feature-market_analysis .ma-chart {
+  position: relative;
+  margin: 0;
+}
+
+.feature-market_analysis .ma-chart-title {
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.feature-market_analysis .ma-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.feature-market_analysis .ma-grid { stroke: var(--color-border); stroke-width: 1; }
+.feature-market_analysis .ma-baseline { stroke: var(--color-border-strong); stroke-width: 1; }
+.feature-market_analysis .ma-axis { fill: var(--color-text-muted); font-size: 11px; }
+.feature-market_analysis .ma-bar { fill: var(--color-primary); }
+.feature-market_analysis .ma-line { fill: none; stroke: var(--color-primary); stroke-width: 2; stroke-linejoin: round; }
+.feature-market_analysis .ma-dot { fill: var(--color-primary); stroke: var(--color-surface); stroke-width: 2; }
+.feature-market_analysis .ma-dot-flag { fill: var(--color-surface); stroke: var(--color-warning); stroke-width: 2.5; }
+.feature-market_analysis .ma-hit { fill: transparent; }
+.feature-market_analysis .ma-hit:hover { fill: var(--color-primary-soft); fill-opacity: 0.5; }
+
+.feature-market_analysis .ma-tooltip {
+  position: absolute;
+  z-index: 1;
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  pointer-events: none;
+}
+
+.feature-market_analysis .ma-details summary {
+  cursor: pointer;
+  color: var(--color-primary-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.feature-market_analysis .ma-details[open] summary { margin-bottom: var(--space-3); }
+
+/* 좁은 결과 칸에서도 숫자가 두 줄로 꺾이지 않게(넘치면 .table-wrap이 가로 스크롤) */
+.feature-market_analysis .table td.num { white-space: nowrap; }
+.feature-market_analysis .table td.num .badge { display: flex; width: fit-content; margin: var(--space-1) 0 0 auto; }
+
+.feature-market_analysis .ma-row-korea th,
+.feature-market_analysis .ma-row-korea td { background: var(--color-primary-soft); }
+
+.feature-market_analysis .ma-sources {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: var(--space-5);
+  font-size: var(--font-size-sm);
+}
+
+.feature-market_analysis .ma-sources a { color: var(--color-primary-text); word-break: break-all; }
+
+/* AI 분석 영역 */
+.feature-market_analysis [data-ma-ai] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* 접힌 안내(통계 참고 사항) */
+.feature-market_analysis .ma-period-notes { display: flex; flex-direction: column; gap: var(--space-2); }
+.feature-market_analysis [data-ma-ai] .table td a { color: var(--color-primary-text); }
+
+/* 하위 탭(시장 통계 / 바이어 목록) */
+.feature-market_analysis .ma-subtabs {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.feature-market_analysis .ma-subtab {
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.feature-market_analysis .ma-subtab:hover { color: var(--color-text); }
+.feature-market_analysis .ma-subtab:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+.feature-market_analysis .ma-subtab[aria-selected="true"] {
+  color: var(--color-primary-text);
+  border-bottom-color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 시장 통계 두 화면(① 조회 조건 → ② 분석 결과). 결과 화면 위 막대: 돌아가기 · 조회 조건 요약 · 다시 불러오기 */
+.feature-market_analysis .ma-result-view { display: flex; flex-direction: column; gap: var(--space-4); }
+.feature-market_analysis .ma-step-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.feature-market_analysis .ma-step-bar, .feature-market_analysis [data-ma-view="form"] { scroll-margin-top: var(--space-6); }
+.feature-market_analysis .ma-query-summary {
+  flex: 1 1 240px; min-width: 0; margin: 0;
+  color: var(--color-text-muted); font-size: var(--font-size-sm); font-variant-numeric: tabular-nums;
+}
+@media (max-width: 959.98px) {
+  .feature-market_analysis .ma-step-bar, .feature-market_analysis [data-ma-view="form"] { scroll-margin-top: calc(var(--topbar-height) + var(--space-4)); }
+}
+
+/* 결과 ①~⑤ 하위 탭(바깥 .ma-subtab 모양) + 아래 '← 이전 / 다음 →' 넘김. 좁은 화면은 탭 줄만 가로 스크롤 */
+.feature-market_analysis .ma-result-tabs {
+  position: relative; margin-bottom: 0; overflow-x: auto; scrollbar-width: thin;  /* relative: 탭 offsetLeft 기준 */
+  scroll-margin-top: var(--space-6);
+}
+.feature-market_analysis .ma-result-tabs .ma-subtab { flex-shrink: 0; white-space: nowrap; }
+.feature-market_analysis .ma-rpane { padding-top: 0; border-top: 0; }
+.feature-market_analysis .ma-pager {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding-top: var(--space-4); border-top: 1px solid var(--color-border);
+}
+.feature-market_analysis .ma-pager-pos { color: var(--color-text-muted); font-size: var(--font-size-sm); font-variant-numeric: tabular-nums; }
+@media (max-width: 959.98px) {
+  .feature-market_analysis .ma-result-tabs { scroll-margin-top: calc(var(--topbar-height) + var(--space-4)); }
+}
+@media (max-width: 599.98px) {
+  .feature-market_analysis .ma-pager .btn { flex: 1 1 0; min-width: 0; }
+  .feature-market_analysis .ma-pager-pos { order: -1; flex-basis: 100%; text-align: center; }
+}
+
+/* 바이어 목록 */
+.feature-market_analysis [data-ma-buyers] { display: flex; flex-direction: column; gap: var(--space-4); }
+.feature-market_analysis .ma-buyer-summary { display: flex; flex-direction: column; gap: var(--space-2); }
+.feature-market_analysis .ma-buyer-summary details[open] { display: flex; flex-direction: column; gap: var(--space-2); }
+.feature-market_analysis .ma-buyer-name { font-weight: var(--font-weight-medium); }
+.feature-market_analysis .ma-buyer-table td { vertical-align: top; }
+.feature-market_analysis .ma-buyer-table td:nth-child(2) { min-width: 16rem; }
+.feature-market_analysis .ma-buyer-table td:nth-child(5) { white-space: nowrap; }  /* 업종(#·회사명·등급·지역 다음) */
+.feature-market_analysis .ma-buyer-table td[title] { cursor: help; }
+
+/* ---------- 우선순위 등급·AI 바이어 브리핑 (2026-10-26) ---------- */
+.feature-market_analysis [data-ma-pane="buyers"] { display: flex; flex-direction: column; gap: var(--space-6); }
+/* 등급 표시: 글자(A/B/C)로 구분하고 색은 보조. A 블루, B 블루그레이, C 옅은 회색(상태색 아님) */
+.feature-market_analysis .ma-grade {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 1.75rem; padding: 0 var(--space-2);
+  border: 1px solid var(--color-neutral-border); border-radius: var(--radius-sm);
+  background: var(--color-neutral-soft); color: var(--color-neutral-text);
+  font-weight: var(--font-weight-bold); font-variant-numeric: tabular-nums; line-height: 1.6;
+}
+.feature-market_analysis .ma-grade-A { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-text-inverse); }
+.feature-market_analysis .ma-grade-B { border-color: var(--color-info-border); background: var(--color-info-soft); color: var(--color-info); }
+.feature-market_analysis .ma-grade-note { color: var(--color-text-muted); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
+.feature-market_analysis .ma-grade-rules { margin: var(--space-2) 0 0; padding-left: var(--space-5); color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.feature-market_analysis .ma-grade-cell { min-width: 11rem; }
+.feature-market_analysis .ma-brief-btn { min-height: 34px; padding: var(--space-1) var(--space-3); white-space: nowrap; }
+.feature-market_analysis [data-ma-briefing] { display: flex; flex-direction: column; gap: var(--space-4); }
+.feature-market_analysis .ma-src {
+  display: inline-block; padding: 0 var(--space-1); border-radius: var(--radius-sm); background: var(--color-surface-muted);
+  color: var(--color-primary-text); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); text-decoration: none;
+}
+.feature-market_analysis .ma-src:hover { text-decoration: underline; }
+
+/* 바이어 검색·등급 거르기 */
+.feature-market_analysis .ma-buyer-tools { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3) var(--space-4); }
+.feature-market_analysis .ma-buyer-search { flex: 1 1 18rem; min-width: 0; }
+.feature-market_analysis .ma-grade-filter { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.feature-market_analysis .ma-filter-chip {
+  display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--control-height); padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text);
+  font: inherit; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+.feature-market_analysis .ma-filter-chip:hover { border-color: var(--color-primary); background: var(--color-surface-hover); }
+.feature-market_analysis .ma-filter-chip[aria-pressed="true"] { border-color: var(--color-primary); background: var(--color-primary-soft); color: var(--color-primary-text); font-weight: var(--font-weight-semibold); }
+.feature-market_analysis .ma-filter-count { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.feature-market_analysis .ma-buyer-count { color: var(--color-text-muted); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
+
+/* 브리핑: 머리 요약 → 2열 블록(1100px 이상) → 안내·출처 */
+.feature-market_analysis .ma-brief-head {
+  display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface-muted);
+}
+.feature-market_analysis .ma-brief-title-row { display: flex; align-items: center; gap: var(--space-3); }
+.feature-market_analysis .ma-brief-title-row .ma-grade { min-width: 2.25rem; font-size: var(--font-size-lg); line-height: 2; }
+.feature-market_analysis .ma-brief-company { font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.feature-market_analysis .ma-brief-sub { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.feature-market_analysis .ma-brief-meta { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); margin: 0; }
+.feature-market_analysis .ma-brief-meta div { display: flex; gap: var(--space-2); font-size: var(--font-size-sm); }
+.feature-market_analysis .ma-brief-meta dt { color: var(--color-text-muted); }
+.feature-market_analysis .ma-brief-meta dd { margin: 0; font-weight: var(--font-weight-semibold); }
+.feature-market_analysis .ma-brief-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+.feature-market_analysis .ma-brief-col { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+@media (min-width: 1100px) {
+  .feature-market_analysis .ma-brief-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.feature-market_analysis .ma-brief-block {
+  display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle); border-left: 3px solid var(--color-primary); border-radius: var(--radius-md); background: var(--color-surface);
+}
+.feature-market_analysis .ma-brief-block-title { font-size: var(--font-size-md); font-weight: var(--font-weight-bold); }
+.feature-market_analysis .ma-brief-list { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); line-height: 1.65; }
+.feature-market_analysis .ma-qa-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.feature-market_analysis .ma-qa { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border-subtle); }
+.feature-market_analysis .ma-qa:last-child { padding-bottom: 0; border-bottom: 0; }
+.feature-market_analysis .ma-qa-q, .feature-market_analysis .ma-qa-a { display: flex; gap: var(--space-2); line-height: 1.6; }
+.feature-market_analysis .ma-qa-q { font-weight: var(--font-weight-semibold); }
+.feature-market_analysis .ma-qa-a { color: var(--color-text-muted); }
+.feature-market_analysis .ma-qa-mark {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: var(--radius-sm);
+  background: var(--color-primary-soft); color: var(--color-primary-text); font-size: var(--font-size-xs); font-weight: var(--font-weight-bold);
+}
+.feature-market_analysis .ma-qa-mark-a { background: var(--color-accent-soft); color: var(--color-accent-text); }
+.feature-market_analysis .ma-brief-notes { margin: var(--space-1) 0 0; padding-left: var(--space-5); color: var(--color-text); }
+.feature-market_analysis .ma-brief-sources-title { font-size: var(--font-size-sm); font-weight: var(--font-weight-bold); }
+.feature-market_analysis .ma-brief-sources ul { margin: var(--space-1) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--font-size-sm); overflow-wrap: anywhere; }
+
+/* 바이어 목록 → 업체 상세 화면 (2026-10-26) */
+.feature-market_analysis .ma-buyer-view { display: flex; flex-direction: column; gap: var(--space-6); }
+.feature-market_analysis .ma-detail-title { font-size: var(--font-size-xl); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.feature-market_analysis .ma-detail-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); gap: var(--space-3) var(--space-5); margin: 0;
+}
+.feature-market_analysis .ma-detail-grid > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.feature-market_analysis .ma-detail-grid dt { color: var(--color-text-muted); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
+.feature-market_analysis .ma-detail-grid dd { margin: 0; font-weight: var(--font-weight-medium); }
+.feature-market_analysis .ma-detail-grid ul { margin: 0; padding-left: var(--space-5); }
+.feature-market_analysis .ma-detail-wide { grid-column: 1 / -1; }
+.feature-market_analysis .ma-buyer-view { scroll-margin-top: var(--space-6); }
+@media (max-width: 959.98px) {
+  .feature-market_analysis .ma-buyer-view { scroll-margin-top: calc(var(--topbar-height) + var(--space-4)); }
+}
+.feature-market_analysis .ma-brief-market { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--color-surface-muted); font-size: var(--font-size-sm); }
+.feature-market_analysis .ma-brief-market-label { color: var(--color-text-muted); font-weight: var(--font-weight-semibold); margin-right: var(--space-1); }
+
+/* 목록 행 버튼·행 아래 상세 펼치기 */
+.feature-market_analysis .ma-row-actions { display: inline-flex; flex-direction: column; gap: var(--space-1); }
+.feature-market_analysis .ma-inline-row > td { background: var(--color-surface-muted); }
+.feature-market_analysis .ma-inline-row:hover { background: transparent; }
+.feature-market_analysis .ma-inline-detail { padding: var(--space-2) var(--space-1); }
+
+/* AI 브리핑 글래스 창(<dialog>). 글래스는 이 떠 있는 창에만 씁니다(design_system Brand·글래스). */
+.feature-market_analysis .ma-dialog {
+  width: min(1080px, calc(100vw - 2 * var(--space-4))); max-width: none; max-height: calc(100vh - 2 * var(--space-6));
+  padding: 0; border: 0; background: transparent; color: var(--color-text); overflow: visible;
+}
+.feature-market_analysis .ma-dialog::backdrop { background: var(--color-glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop-blur); backdrop-filter: var(--glass-backdrop-blur); }
+.feature-market_analysis .ma-dialog-panel {
+  /* 높이 고정: 탭을 바꿔도 창 크기·탭 위치가 흔들리지 않게 */
+  display: flex; flex-direction: column; height: calc(100vh - 2 * var(--space-6)); max-height: calc(100vh - 2 * var(--space-6)); overflow: clip;  /* hidden이면 초점 이동 스크롤이 패널 자체를 밀어 머리가 가려짐 */
+  border: 1px solid var(--color-glass-border); border-radius: var(--radius-lg);
+  background: var(--color-glass-surface); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-lg);
+  animation: ma-dialog-in var(--duration-enter) var(--ease-out);
+}
+.feature-market_analysis .ma-dialog-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4);
+  padding: var(--space-5) var(--space-6); border-bottom: 1px solid var(--color-glass-border);
+}
+/* 창 안 하위 탭: 바깥 .ma-subtab과 같은 모양, 머리 바로 아래에 고정(본문만 스크롤) */
+.feature-market_analysis .ma-dialog-head:has(+ .ma-dialog-tabs) { border-bottom: 0; padding-bottom: var(--space-3); }
+.feature-market_analysis .ma-dialog-tabs { flex-shrink: 0; margin: 0; padding: 0 var(--space-6); border-bottom-color: var(--color-glass-border); }
+.feature-market_analysis .ma-tab-badge { color: var(--color-primary-text); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); }
+.feature-market_analysis .ma-dialog-head-text { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.feature-market_analysis .ma-dialog-body { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-5) var(--space-6) var(--space-6); overflow-y: auto; overscroll-behavior: contain; }
+.feature-market_analysis .ma-glass-block {
+  display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5);
+  border: 1px solid var(--color-glass-border); border-radius: var(--radius-md); background: var(--color-glass-inner);
+}
+.feature-market_analysis .ma-dialog .ma-brief-block { background: var(--color-surface); }
+.feature-market_analysis .ma-detail-title { font-size: var(--font-size-xl); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+@keyframes ma-dialog-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+/* blur를 못 쓰거나 투명도 줄이기 설정이면 불투명 면(글자 대비 유지) */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .feature-market_analysis .ma-dialog-panel { background: var(--color-surface); }
+  .feature-market_analysis .ma-glass-block { background: var(--color-surface-muted); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .feature-market_analysis .ma-dialog-panel { background: var(--color-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .feature-market_analysis .ma-glass-block { background: var(--color-surface-muted); }
+  .feature-market_analysis .ma-dialog::backdrop { background: var(--color-overlay); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (max-width: 599.98px) {
+  .feature-market_analysis .ma-dialog { width: calc(100vw - 2 * var(--space-2)); max-height: calc(100vh - 2 * var(--space-2)); }
+  .feature-market_analysis .ma-dialog-panel { height: calc(100vh - 2 * var(--space-2)); max-height: calc(100vh - 2 * var(--space-2)); }
+  .feature-market_analysis .ma-dialog-head, .feature-market_analysis .ma-dialog-tabs, .feature-market_analysis .ma-dialog-body { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .feature-market_analysis .ma-glass-block { padding: var(--space-4); }
+}
+
+/* ===== 2026-10-27 디자인 통일(다른 탭 단계 표시줄과 같은 유리 막대) =====
+ * 바깥 하위 탭(시장 통계 / 바이어 목록)만 아이콘 + 이름·짧은 설명의 유리 막대로. 결과 ①~⑤·창 안 탭은 기존 밑줄 모양 유지.
+ * 흐림(backdrop-filter)은 쓰지 않음(안의 fixed 요소 위치 기준이 바뀌지 않게).
+ */
+.feature-market_analysis > .ma-subtabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(max-content, 1fr));
+  gap: var(--space-2);
+  margin-bottom: 0;  /* 아래 내용과의 간격은 패널 간격(머리글 아래와 같은 24px·모바일 20px)만 */
+  padding: var(--space-2);
+  border: 1px solid var(--color-glass-card-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-glass-card);
+  box-shadow: var(--shadow-glass);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.feature-market_analysis > .ma-subtabs .ma-subtab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  text-align: left;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.feature-market_analysis > .ma-subtabs .ma-subtab:hover { background: var(--color-glass-card-inner); }
+
+.feature-market_analysis > .ma-subtabs .ma-subtab[aria-selected="true"] {
+  border-color: var(--color-glass-card-border);
+  background: var(--color-glass-card-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.feature-market_analysis .ma-tab-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.feature-market_analysis > .ma-subtabs .ma-subtab[aria-selected="true"] .ma-tab-icon {
+  border-color: transparent;
+  background: var(--color-primary-gradient);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-primary);
+}
+
+.feature-market_analysis .ma-tab-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.feature-market_analysis .ma-tab-label {
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.feature-market_analysis .ma-tab-sub {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  white-space: nowrap;
+}
+
+/* 공급국 목록: 옅은 유리 구획, 체크한 나라는 블루 강조 */
+.feature-market_analysis .ma-country-list {
+  border-color: var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-inner);
+}
+
+.feature-market_analysis .ma-country:has(input:checked) {
+  color: var(--color-primary-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* 결과 구역·표: 카드 안 유리 구획 */
+.feature-market_analysis .table-wrap {
+  border-color: var(--color-glass-edge);
+  background: var(--color-surface);
+}
+
+/* 핵심 수치 타일: 흰 유리 카드 + 위쪽 블루→민트 강조선(홈 카드와 같은 결) */
+.feature-market_analysis .ma-tile {
+  position: relative;
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-strong);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.feature-market_analysis .ma-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+}
+
+/* 결과 화면 위 막대(조회 조건 변경 · 조건 요약 · 다시 불러오기)를 옅은 유리 줄로 묶고, 다시 불러오기는 테두리 버튼으로 */
+.feature-market_analysis .ma-step-bar {
+  padding: var(--space-2);
+  border: 1px solid var(--color-glass-card-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-glass-card);
+  box-shadow: var(--shadow-glass);
+}
+
+.feature-market_analysis .ma-step-bar [data-ma-refresh] {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+/* 바이어 표: 행 사이 여백을 살짝 줄이고 등급 근거 글자는 보조 색 */
+.feature-market_analysis .ma-grade-cell { color: var(--color-text-muted); }
+
+/* 바이어 목록 ⓘ 접힘 상자: 개수 요약·등급 기준·규칙·참고 사항(기본 닫힘, 내용은 그대로) */
+.feature-market_analysis .ma-info {
+  border: 1px solid var(--color-glass-edge);
+  border-left: 3px solid var(--color-info-border);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-inner);
+}
+
+.feature-market_analysis .ma-info > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-info);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  list-style: none;
+}
+
+.feature-market_analysis .ma-info > summary::-webkit-details-marker { display: none; }
+
+.feature-market_analysis .ma-info-icon { flex: none; }
+
+.feature-market_analysis .ma-info-brief {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.feature-market_analysis .ma-info > summary::after {
+  content: "펼치기";
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.feature-market_analysis .ma-info[open] > summary::after { content: "접기"; }
+
+.feature-market_analysis .ma-info[open] > summary { border-bottom: 1px solid var(--color-border-subtle); }
+
+.feature-market_analysis .ma-info > .ma-buyer-summary {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.feature-market_analysis .ma-info-sub {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* 긴 출처 주소가 좁은 화면에서 가로로 넘치지 않게 */
+.feature-market_analysis .ma-info a { overflow-wrap: anywhere; }
+
+/* ===== 분석 결과 내부 디자인 통일(2026-10-27) ===== */
+/* 조회 정보 줄: 옅은 유리 구획(배지 · 코드 · 기간 · 공급국) */
+.feature-market_analysis .ma-query {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-inner);
+}
+
+/* 결과 ①~⑤ 탭: 밑줄 대신 유리 막대 안 알약 버튼(다른 탭 단계 표시와 같은 결) */
+.feature-market_analysis .ma-result-tabs {
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-inner);
+}
+
+.feature-market_analysis .ma-result-tabs .ma-subtab {
+  flex: 1 0 auto;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.feature-market_analysis .ma-result-tabs .ma-subtab:hover { background: var(--color-surface-hover); }
+
+.feature-market_analysis .ma-result-tabs .ma-subtab[aria-selected="true"] {
+  border-color: var(--color-glass-edge);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 결과 구역: 탭 아래 첫 구역은 구분선 없이 */
+.feature-market_analysis .ma-rpane { padding-top: var(--space-2); }
+
+/* 그래프 지표 선택: 선택 타일 */
+.feature-market_analysis .ma-metric-switch { gap: var(--space-2); }
+
+.feature-market_analysis .ma-metric-switch .choice {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.feature-market_analysis .ma-metric-switch .choice:hover { border-color: var(--color-primary); }
+
+.feature-market_analysis .ma-metric-switch .choice:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* 그래프: 흰 유리 카드 안에, 막대는 블루→아쿠아 */
+.feature-market_analysis .ma-chart {
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+
+/* 공급국 표: 나라 이름 칸 배경을 다른 칸과 같게 */
+.feature-market_analysis .table tbody th[scope="row"] {
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* AI 분석 실행: 전체 폭 대신 일반 버튼 폭 */
+.feature-market_analysis [data-ma-ai] > [data-ma-ai-run] { align-self: flex-start; }
+
+/* 근거 자료: 점 목록 대신 유리 카드 */
+.feature-market_analysis .ma-sources {
+  padding-left: 0;
+  list-style: none;
+}
+
+.feature-market_analysis .ma-sources > li {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-glass-edge);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  line-height: 1.7;
+}
+
+/* ===== ② 시장 추세 그래프 가독성(2026-10-27) =====
+ * 실제 칸 폭으로 그려 글자 크기 고정, 위에 최근·최고·최저·월평균 요약, 연도 띠, 월평균 점선, 마지막 달 강조, 마우스 위치 세로선. */
+.feature-market_analysis .ma-chart-title {
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-md);
+}
+
+.feature-market_analysis .ma-chart-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 128px), 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.feature-market_analysis .ma-chart-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
+
+.feature-market_analysis .ma-chart-stat-label,
+.feature-market_analysis .ma-chart-stat-sub {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.feature-market_analysis .ma-chart-stat-value {
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.feature-market_analysis .ma-chart-plot { overflow: hidden; }
+.feature-market_analysis .ma-chart-plot .ma-svg { width: 100%; height: auto; max-width: 100%; }
+
+.feature-market_analysis .ma-axis { font-size: 12px; font-variant-numeric: tabular-nums; }
+.feature-market_analysis .ma-axis-year { fill: var(--color-text-muted); font-weight: 700; }
+.feature-market_analysis .ma-grid { stroke: var(--color-border-subtle); stroke-dasharray: 3 3; }
+.feature-market_analysis .ma-year-band { fill: var(--color-surface-muted); }
+
+.feature-market_analysis .ma-fill-top { stop-color: var(--color-aqua); }
+.feature-market_analysis .ma-fill-bottom { stop-color: var(--color-primary); }
+.feature-market_analysis .ma-bar { fill: url(#market_analysis-bar-fill); fill-opacity: 0.55; transition: fill-opacity var(--transition-fast); }
+.feature-market_analysis .ma-bar-last { fill-opacity: 1; }
+.feature-market_analysis .ma-bar-hover { fill-opacity: 1; }
+
+.feature-market_analysis .ma-area-top { stop-color: var(--color-primary); stop-opacity: 0.18; }
+.feature-market_analysis .ma-area-bottom { stop-color: var(--color-primary); stop-opacity: 0; }
+.feature-market_analysis .ma-area { fill: url(#market_analysis-area-fill); stroke: none; }
+.feature-market_analysis .ma-line { stroke-width: 2.5; }
+
+.feature-market_analysis .ma-avg { stroke: var(--color-accent-text); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.feature-market_analysis .ma-avg-label {
+  fill: var(--color-accent-text);
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: var(--color-surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.feature-market_analysis .ma-cursor { stroke: var(--color-text-muted); stroke-width: 1; stroke-dasharray: 2 3; }
+.feature-market_analysis .ma-hit:hover { fill: transparent; }
+
+/* 월별 상세 표: 줄무늬·머리 고정·높이 제한으로 36개월도 한눈에 */
+.feature-market_analysis .ma-chart ~ .ma-details .table-wrap,
+.feature-market_analysis [data-ma-rpane="s2"] .ma-details .table-wrap {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.feature-market_analysis [data-ma-rpane="s2"] .ma-details .table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.feature-market_analysis [data-ma-rpane="s2"] .ma-details .table tbody tr:nth-child(even) {
+  background: var(--color-surface-muted);
+}
+
+.feature-market_analysis [data-ma-rpane="s2"] .ma-details .table tbody th[scope="row"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== 바이어 목록·AI 브리핑 창 디자인 통일(2026-10-27) =====
+ * 창 안 탭(업체 상세/AI 브리핑)은 결과 ①~⑤와 같은 알약 막대, 브리핑 구역은 핵심 수치 타일과 같은 흰 카드 + 위쪽 강조선,
+ * 업체 상세 항목·행 아래 펼침은 유리 구획. 문구·동작은 그대로. */
+.feature-market_analysis .ma-dialog-tabs {
+  gap: var(--space-1);
+  margin: 0 var(--space-6) var(--space-3);
+  padding: var(--space-1);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-inner);
+}
+
+.feature-market_analysis .ma-dialog-tabs .ma-subtab {
+  flex: 1 1 0;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.feature-market_analysis .ma-dialog-tabs .ma-subtab:hover { background: var(--color-surface-hover); }
+
+.feature-market_analysis .ma-dialog-tabs .ma-subtab[aria-selected="true"] {
+  border-color: var(--color-glass-edge);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 브리핑 구역 카드: 왼쪽 굵은 선 대신 위쪽 블루→민트 강조선 */
+.feature-market_analysis .ma-brief-block {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-glass-edge);
+  border-left: 1px solid var(--color-glass-edge);
+  box-shadow: var(--shadow-sm);
+}
+
+.feature-market_analysis .ma-brief-block::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+}
+
+.feature-market_analysis .ma-brief-block-title {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+/* 시장 맥락 미포함 안내 줄·출처: 옅은 유리 구획 */
+.feature-market_analysis .ma-brief-market {
+  border: 1px solid var(--color-glass-edge);
+  background: var(--color-glass-card-inner);
+}
+
+.feature-market_analysis .ma-brief-sources {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+/* 업체 상세(창 안·행 아래 펼침): 항목을 작은 흰 칸으로 */
+.feature-market_analysis .ma-detail-grid > div {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.feature-market_analysis .ma-inline-row > td {
+  background: var(--color-glass-card-inner);
+}
+
+/* 행 버튼: 같은 폭으로 정렬 */
+.feature-market_analysis .ma-row-actions .btn { width: 100%; }
+
+/* 바이어 목록 추가 조건(주·업종·연락처·정렬·초기화): 검색 줄 아래 옅은 유리 줄 한 줄, 좁으면 줄바꿈 */
+.feature-market_analysis .ma-buyer-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-inner);
+}
+
+.feature-market_analysis .ma-buyer-more > .field { flex: 1 1 10rem; min-width: 0; }
+.feature-market_analysis .ma-buyer-more .select { width: 100%; }
+.feature-market_analysis .ma-buyer-contact { flex: 0 1 auto; }
+.feature-market_analysis .ma-buyer-checks { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.feature-market_analysis .ma-buyer-checks .choice {
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.feature-market_analysis .ma-buyer-checks .choice:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.feature-market_analysis .ma-buyer-reset { flex: none; }
+
+/* 공급국 비교: 나라 고르기 창 접기/펼치기(요약 줄에 고른 나라 표시) */
+.feature-market_analysis .ma-country-picker {
+  border: 1px solid var(--color-glass-edge);
+  border-radius: var(--radius-md);
+  background: var(--color-glass-card-inner);
+}
+
+.feature-market_analysis .ma-country-picker > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  list-style: none;
+}
+
+.feature-market_analysis .ma-country-picker > summary::-webkit-details-marker { display: none; }
+
+.feature-market_analysis .ma-country-picker > summary::before {
+  content: "▸";
+  color: var(--color-primary);
+  transition: transform var(--transition-fast);
+}
+
+.feature-market_analysis .ma-country-picker[open] > summary::before { transform: rotate(90deg); }
+
+.feature-market_analysis .ma-country-picker-title {
+  color: var(--color-primary-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.feature-market_analysis .ma-country-picker-chosen {
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.feature-market_analysis .ma-country-picker > summary::after {
+  content: "펼치기";
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.feature-market_analysis .ma-country-picker[open] > summary::after { content: "접기"; }
+.feature-market_analysis .ma-country-picker[open] > summary { border-bottom: 1px solid var(--color-border-subtle); }
+
+.feature-market_analysis .ma-country-picker-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}

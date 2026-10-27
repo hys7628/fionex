@@ -166,9 +166,8 @@
     let text = "";
     let tone = "";
     let navText = "";
-    if (snap.hasUndownloadedResult) {
-      text = "다운로드하지 않은 결과 있음"; tone = "warning"; navText = "다운로드하지 않은 결과 있음";
-    } else if (snap.hasDraft) {
+    // 다운로드하지 않은 결과는 머리글·사이드바에 표시하지 않고 이탈 경고(LeaveGuard)만 유지합니다(2026-10-26 한윤수 요청, 공통 변경).
+    if (snap.hasDraft) {
       text = "작성 중인 입력 있음"; tone = "info"; navText = "작성 중";
     } else if (snap.downloadRequested) {
       text = "다운로드 요청됨 · 저장 여부는 브라우저에서 확인"; tone = "success";
@@ -222,12 +221,72 @@
     },
   };
 
+  /* ---------- 작업 중 버튼·결과 초점 ---------- */
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const busyFocus = new WeakSet();  // 작업을 시작할 때 초점이 있던 버튼
+
+  // body이거나, 본문 빈 곳을 눌러 main(tabindex=-1)에 초점이 간 경우도 '초점 없음'으로 봅니다.
+  function focusLost() {
+    const a = document.activeElement;
+    return !a || a === document.body || a === main;
+  }
+
+  // 숨겨진 탭·화면 안이거나 문서에서 빠진 요소에는 초점을 옮기지 않습니다(탭 이동 중 끝난 작업이 초점을 뺏지 않게).
+  function canFocus(el) {
+    return !!el && el.isConnected && !el.closest("[hidden]") && !el.closest("[inert]");
+  }
+
+  // 실행·다운로드 버튼을 '작업 중' 모양으로 바꿉니다(문구 교체 + aria-busy, 회전 표시는 common.css).
+  // label이 없으면 원래 문구로 되돌립니다. disabled는 바꾸지 않습니다: 다시 누를 수 있는 시점(중복 실행 방지)은 기능 코드가 정합니다.
+  // 초점이 있던 버튼을 disabled로 바꾸면 브라우저가 초점을 body로 옮기므로(focus fixup), 되돌릴 때 초점이 여전히
+  // 비어 있고 버튼을 다시 누를 수 있으면 그 버튼으로 초점을 돌려 줍니다. 기능 코드가 결과·오류 칸으로 초점을 옮겼으면 그대로 둡니다.
+  function setButtonBusy(button, label) {
+    if (!button) return;
+    if (label) {
+      if (!("idleLabel" in button.dataset)) button.dataset.idleLabel = button.textContent;
+      if (document.activeElement === button) busyFocus.add(button);
+      button.textContent = label;
+      button.setAttribute("aria-busy", "true");
+    } else if ("idleLabel" in button.dataset) {
+      button.textContent = button.dataset.idleLabel;
+      delete button.dataset.idleLabel;
+      button.removeAttribute("aria-busy");
+      if (busyFocus.has(button)) {
+        busyFocus.delete(button);
+        // disabled 복원이 이 호출 뒤에 오는 기능도 있어 다음 차례에 확인합니다.
+        setTimeout(function () {
+          if (focusLost() && canFocus(button) && !button.disabled) button.focus({ preventScroll: true });
+        }, 0);
+      }
+    }
+  }
+
+  // 사용자가 실행한 작업의 결과 시작점(제목·영역)으로 초점을 옮깁니다. 자동 로딩·성공 안내에는 쓰지 않습니다.
+  // tabindex가 없는 대상에는 tabindex="-1"을 붙여 Tab 순서에는 넣지 않습니다.
+  // options.scroll: "start" | "nearest" | false(기본 "nearest"). reduced-motion이면 부드러운 스크롤을 쓰지 않습니다.
+  // options.from: 요소 배열. 지금 초점이 body(사라짐)이거나 이 요소들 안에 있을 때만 옮깁니다(사용자가 다른 곳으로 옮겼으면 그대로).
+  // 옮겼으면 true를 돌려줍니다.
+  function focusResult(target, options) {
+    const opts = options || {};
+    const el = typeof target === "string" ? document.querySelector(target) : target;
+    if (!canFocus(el)) return false;
+    const from = (opts.from || []).filter(Boolean);
+    const current = document.activeElement;
+    if (!focusLost() && from.length && !from.some(function (f) { return f === current || f.contains(current); })) return false;
+    if (!el.matches("a[href], button, input, select, textarea, [tabindex]")) el.setAttribute("tabindex", "-1");
+    el.focus({ preventScroll: true });
+    const block = opts.scroll === undefined ? "nearest" : opts.scroll;
+    if (block) el.scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: block });
+    return document.activeElement === el;
+  }
+
   window.AppShell = {
     current: function () { return currentId; },
     show: function (id) { if (known(id)) window.location.hash = id; },
     onShow: function (id, fn) { if (known(id)) (handlers.show[id] = handlers.show[id] || []).push(fn); },
     onHide: function (id, fn) { if (known(id)) (handlers.hide[id] = handlers.hide[id] || []).push(fn); },
     work: work,
+    ui: { setButtonBusy: setButtonBusy, focusResult: focusResult },
   };
 
   showTab(idFromHash() || firstId);

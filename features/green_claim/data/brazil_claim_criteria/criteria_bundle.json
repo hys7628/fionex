@@ -1,0 +1,730 @@
+{
+  "schema_version": 1,
+  "bundle_id": "green_claim.brazil_claim_criteria",
+  "bundle_version": "2026-10-26.1",
+  "bundle_version_note": "자체 기준 묶음 버전. 공식 법령·코드의 판·버전이 아님",
+  "bundle_created_at": "2026-10-26T00:35:43+09:00",
+  "bundle_created_note": "이 구조화 파일을 기존 md 자료로 만든 시각. 공식 자료 조회 시각(sources[].retrieved_at)이 아님",
+  "freshness": {
+    "mode": "stored_only",
+    "rechecked_at": null,
+    "note": "저장된 기준 사용, 공식 출처 최신성 재확인 미실행. 조회 시각 이후의 개정 여부는 모름"
+  },
+  "evidence_files": [
+    {
+      "file": "cdc_l8078_excerpt.md",
+      "role": "CDC 포르투갈어 원문 발췌",
+      "sha256": "ec7ecf4af7a3593cf53a2e85b41aaede952b58a2e895c0f43bad8bb0f9fe0f40"
+    },
+    {
+      "file": "conar_excerpt.md",
+      "role": "CONAR 포르투갈어 원문 발췌",
+      "sha256": "cccb2b85de3fad70576e46f9b363a958faba30d3853be721baae06772041b98f"
+    },
+    {
+      "file": "review_criteria_ko.md",
+      "role": "한국어 비공식 번역·서비스 검토 지침",
+      "sha256": "8a15239adbbf36c9ada81b856e7eaf7ea7bd7ca56a5f074f8a64fbaf539abb89"
+    },
+    {
+      "file": "source_register.md",
+      "role": "출처·조회 시각·버전 단서·사용권",
+      "sha256": "ba466423abf0a86b51897d6854cbd523abb09c2dfd072ec9b4b76c6609d1d349"
+    }
+  ],
+  "sources": [
+    {
+      "id": "SRC-CDC",
+      "title": "Lei nº 8.078/1990 (Código de Defesa do Consumidor) 통합본",
+      "authority": "Presidência da República, Casa Civil (Planalto)",
+      "legal_nature": "law",
+      "url": "https://www.planalto.gov.br/ccivil_03/leis/l8078compilado.htm",
+      "retrieved_at": "2026-10-25T16:31:44+09:00",
+      "version_clue": "제정 1990-09-11, 관보 1990-09-12 게재·2007-01-10 정정(페이지 고지). 시행: Art. 118 \"공포 후 180일\". 페이지에 반영된 최근 개정 표기: Medida Provisória nº 1.393, de 2026(Art. 57 §1º·§2º, 과징금). 광고 조항 Art. 30~38에는 개정 표기 없음. 서버 Last-Modified 2026-10-13 09:50:35 GMT(파일 수정 시각)",
+      "official_edition": null,
+      "dates": {
+        "enacted": "1990-09-11",
+        "official_gazette_published": "1990-09-12",
+        "official_gazette_rectified": "2007-01-10",
+        "effective": null,
+        "effective_rule": "Art. 118: 공포 후 180일(정확한 시행 일자는 기록에 없음)",
+        "note": "공식 판·버전 번호 없음. Planalto 통합본(compilado)이며 페이지 고지상 관보(DOU) 게재본을 대체하지 않음"
+      },
+      "role": "원문 발췌 출처",
+      "excerpt_file": "cdc_l8078_excerpt.md",
+      "supporting_excerpt_ids": [
+        "CDC-118"
+      ],
+      "usage_rights": {
+        "status": "stored_law_text_no_legal_review",
+        "note": "Lei 9.610/1998 Art. 8º IV(법령 텍스트는 저작권 보호 대상 아님)에 따라 발췌 저장. 법률 전문가 검토 없음(source_register.md)"
+      }
+    },
+    {
+      "id": "SRC-CONAR-WEB",
+      "title": "Código Brasileiro de Autorregulamentação Publicitária(웹 게시본)",
+      "authority": "CONAR",
+      "legal_nature": "advertising_self_regulation",
+      "url": "https://www.conar.org.br/codigos",
+      "retrieved_at": "2026-10-25T16:31:51+09:00",
+      "version_clue": "웹 본문에서 Anexo U의 날짜 표기는 찾지 못함. 페이지의 \"aprovado ... 27 de agosto de 2026\"은 Anexo \"X\"(Apostas) 관련 표기",
+      "official_edition": null,
+      "dates": {
+        "annex_u_amendment_approved": null,
+        "effective": null,
+        "note": "웹 게시본에서 Anexo U 날짜 표기를 찾지 못함(source_register.md)"
+      },
+      "role": "원문 발췌 출처(웹 게시본)",
+      "excerpt_file": "conar_excerpt.md",
+      "supporting_excerpt_ids": [],
+      "usage_rights": {
+        "status": "ai_use_permission_unconfirmed",
+        "note": "CONAR 이용약관(2026년 5월, 2026-10-25 16:34:00 확인)상 상업·광고 목적 이용과 AI 시스템 입력 등은 사전 명시 허가 필요. 담당자의 기준 포함 결정은 허가가 아니며 AI 이용 허가는 미확인(source_register.md)"
+      }
+    },
+    {
+      "id": "SRC-CONAR-PDF",
+      "title": "Código Brasileiro de Autorregulamentação Publicitária PDF (\"Edição 2025\")",
+      "authority": "CONAR",
+      "legal_nature": "advertising_self_regulation",
+      "url": "https://conar.wpenginepowered.com/wp-content/uploads/2026/08/Codigo_CONAR_2026.pdf",
+      "retrieved_at": "2026-10-25T16:33:58+09:00",
+      "version_clue": "표지 \"Edição 2025\". 각주: 이 판은 2025년 11월 승인된 Anexo \"U\" 개정 문안을 반영하도록 갱신됨(승인 일자는 월까지만 표기). Resolução do Conselho de Conteúdo nº 01/2026(Anexo X, 2026-08-27 승인)도 수록. 서버 Last-Modified 2026-08-31 23:45:59 GMT",
+      "official_edition": "Edição 2025",
+      "dates": {
+        "annex_u_amendment_approved": "2025-11",
+        "effective": null,
+        "note": "PDF 각주의 Anexo U 개정 승인은 월까지만 표기. 시행일 미확인(review_criteria_ko.md)"
+      },
+      "role": "웹 게시본 대조용(발췌는 웹 게시본 기준)",
+      "excerpt_file": null,
+      "supporting_excerpt_ids": [],
+      "usage_rights": {
+        "status": "ai_use_permission_unconfirmed",
+        "note": "SRC-CONAR-WEB과 같음. PDF 사본은 저장소에 넣지 않음"
+      }
+    }
+  ],
+  "criteria": [
+    {
+      "id": "CDC-02-03",
+      "source_id": "SRC-CDC",
+      "legal_nature": "law",
+      "title_ko": "소비자·공급자 정의",
+      "excerpt": {
+        "file": "cdc_l8078_excerpt.md",
+        "heading": "## CDC-02-03 — Art. 2º, Art. 3º caput·§1º (소비자·공급자 정의)",
+        "text_pt": "Art. 2° Consumidor é toda pessoa física ou jurídica que adquire ou utiliza produto ou serviço como destinatário final.\n\nParágrafo único. Equipara-se a consumidor a coletividade de pessoas, ainda que indetermináveis, que haja intervindo nas relações de consumo.\n\nArt. 3° Fornecedor é toda pessoa física ou jurídica, pública ou privada, nacional ou estrangeira, bem como os entes despersonalizados, que desenvolvem atividade de produção, montagem, criação, construção, transformação, importação, exportação, distribuição ou comercialização de produtos ou prestação de serviços.\n\n§ 1° Produto é qualquer bem, móvel ou imóvel, material ou imaterial."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "### CDC-02-03 소비자·공급자 정의"
+      },
+      "translation_official": false,
+      "provisions": "Art. 2º caput·parágrafo único, Art. 3º caput·§1º",
+      "quote_pt": "\"Art. 2° Consumidor é toda pessoa física ou jurídica que adquire ou utiliza produto ou serviço como destinatário final.\" (나머지는 cdc_l8078_excerpt.md)",
+      "translation_ko": "소비자란 제품이나 서비스를 최종 수요자로서 취득하거나 사용하는 모든 자연인 또는 법인이다. 소비 관계에 개입한 불특정 다수의 집단도 소비자로 본다. 공급자는 생산·제조·수입·수출·유통·판매 등을 하는 국내외 공·사 법인과 자연인 등이다.",
+      "requirement_ko": null,
+      "review_guidance_ko": "직접 판정 기준이 아니라 적용 범위를 판단할 때 쓴다. 문구가 최종 소비자에게 닿는지, B2B 거래 상대에게만 쓰이는지를 직원이 확인하도록 안내하는 근거다.",
+      "scope_limits_ko": "리젠 T2T를 원료로 사는 기업 바이어가 \"최종 수요자(destinatário final)\"인지는 원문만으로 정해지지 않는다. B2B 소개 문구에 CDC 광고 조항이 그대로 적용된다고 단정하지 않는다. 해석은 법률 검토 필요.",
+      "evidence_needed_ko": "없음(범위 판단용).",
+      "status_ko": "원문 확보. 적용 해석 미확인.",
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CDC-06",
+      "source_id": "SRC-CDC",
+      "legal_nature": "law",
+      "title_ko": "소비자 기본권: 정보 제공, 기만·남용 광고로부터의 보호",
+      "excerpt": {
+        "file": "cdc_l8078_excerpt.md",
+        "heading": "## CDC-06 — Art. 6º caput, III, IV (소비자 기본권: 정보, 기만·남용 광고로부터의 보호)",
+        "text_pt": "Art. 6º São direitos básicos do consumidor:\n\nIII - a informação adequada e clara sobre os diferentes produtos e serviços, com especificação correta de quantidade, características, composição, qualidade, tributos incidentes e preço, bem como sobre os riscos que apresentem; (Redação dada pela Lei nº 12.741, de 2012) Vigência\n\nIV - a proteção contra a publicidade enganosa e abusiva, métodos comerciais coercitivos ou desleais, bem como contra práticas e cláusulas abusivas ou impostas no fornecimento de produtos e serviços;"
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "### CDC-06 소비자 기본권: 정보 제공, 기만·남용 광고로부터의 보호"
+      },
+      "translation_official": false,
+      "provisions": "Art. 6º caput, III, IV",
+      "quote_pt": "\"IV - a proteção contra a publicidade enganosa e abusiva, métodos comerciais coercitivos ou desleais, bem como contra práticas e cláusulas abusivas ou impostas no fornecimento de produtos e serviços;\"",
+      "translation_ko": "소비자의 기본권: (III) 여러 제품·서비스에 대해 수량·특성·구성·품질·세금·가격과 위험을 정확히 명시한 적절하고 명확한 정보, (IV) 기만적·남용적 광고, 강압적·불공정한 상업 수단, 남용적 관행·조항으로부터의 보호.",
+      "requirement_ko": null,
+      "review_guidance_ko": "표현이 제품 특성·구성을 명확하고 정확하게 전달하는지 살펴보는 일반 원칙.",
+      "scope_limits_ko": "소비자 권리 조항이다. B2B 문구 적용은 CDC-02-03 한계와 같다.",
+      "evidence_needed_ko": "구성·특성 정보가 사실인지는 제품 자료로 확인해야 한다.",
+      "status_ko": "원문 확보.",
+      "amendment_note_ko": "III은 Lei nº 12.741/2012에 따른 문안."
+    },
+    {
+      "id": "CDC-29",
+      "source_id": "SRC-CDC",
+      "legal_nature": "law",
+      "title_ko": "광고 등에 노출된 사람의 소비자 의제",
+      "excerpt": {
+        "file": "cdc_l8078_excerpt.md",
+        "heading": "## CDC-29 — Art. 29 (제5장 적용상 소비자 의제)",
+        "text_pt": "SEÇÃO I\n\nDas Disposições Gerais\n\nArt. 29. Para os fins deste Capítulo e do seguinte, equiparam-se aos consumidores todas as pessoas determináveis ou não, expostas às práticas nele previstas."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "### CDC-29 광고 등에 노출된 사람의 소비자 의제"
+      },
+      "translation_official": false,
+      "provisions": "Art. 29 (Capítulo V 일반 규정)",
+      "quote_pt": "\"Art. 29. Para os fins deste Capítulo e do seguinte, equiparam-se aos consumidores todas as pessoas determináveis ou não, expostas às práticas nele previstas.\"",
+      "translation_ko": "이 장(章)과 다음 장의 목적상, 이 장에서 정한 관행에 노출된 모든 사람은 특정 가능 여부와 관계없이 소비자로 본다.",
+      "requirement_ko": null,
+      "review_guidance_ko": "오퍼·광고(Art. 30~38)가 들어 있는 장에 대한 범위 규정이다. 공개 홍보물은 최종 구매자가 아니어도 노출된 사람이 넓게 소비자로 취급될 수 있음을 안내하는 근거.",
+      "scope_limits_ko": "B2B 바이어에게만 보내는 이메일·소개서까지 포함되는지는 원문만으로 판단할 수 없다. 법률 검토 필요.",
+      "evidence_needed_ko": "없음(범위 판단용).",
+      "status_ko": "원문 확보. 적용 해석 미확인.",
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CDC-30-31",
+      "source_id": "SRC-CDC",
+      "legal_nature": "law",
+      "title_ko": "오퍼·정보 제공",
+      "excerpt": {
+        "file": "cdc_l8078_excerpt.md",
+        "heading": "## CDC-30-31 — Art. 30, Art. 31 (오퍼·정보 제공)",
+        "text_pt": "SEÇÃO II\n\nDa Oferta\n\nArt. 30. Toda informação ou publicidade, suficientemente precisa, veiculada por qualquer forma ou meio de comunicação com relação a produtos e serviços oferecidos ou apresentados, obriga o fornecedor que a fizer veicular ou dela se utilizar e integra o contrato que vier a ser celebrado.\n\nArt. 31. A oferta e apresentação de produtos ou serviços devem assegurar informações corretas, claras, precisas, ostensivas e em língua portuguesa sobre suas características, qualidades, quantidade, composição, preço, garantia, prazos de validade e origem, entre outros dados, bem como sobre os riscos que apresentam à saúde e segurança dos consumidores.\n\nParágrafo único. As informações de que trata este artigo, nos produtos refrigerados oferecidos ao consumidor, serão gravadas de forma indelével. (Incluído pela Lei nº 11.989, de 2009)"
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "### CDC-30-31 오퍼·정보 제공"
+      },
+      "translation_official": false,
+      "provisions": "Art. 30, Art. 31 caput(parágrafo único는 냉장 제품 관련으로 이번 범위와 무관)",
+      "quote_pt": "\"Art. 31. A oferta e apresentação de produtos ou serviços devem assegurar informações corretas, claras, precisas, ostensivas e em língua portuguesa sobre suas características, qualidades, quantidade, composição, preço, garantia, prazos de validade e origem, entre outros dados, ...\"",
+      "translation_ko": "(30) 충분히 구체적인 모든 정보나 광고는 그것을 내보내거나 이용한 공급자를 구속하고 체결될 계약의 일부가 된다. (31) 제품의 제시는 특성·품질·수량·구성·가격·보증·유효기간·원산지 등에 대해 정확하고 명확하며 구체적이고 잘 보이는 포르투갈어 정보를 보장해야 한다.",
+      "requirement_ko": null,
+      "review_guidance_ko": "구체적인 수치·성능 표현은 약속으로 받아들여질 수 있다는 점, 브라질 대상 소비자용 제시에는 포르투갈어 정보가 요구된다는 점을 안내.",
+      "scope_limits_ko": "B2B 이메일·소개서 언어 요건에 Art. 31이 적용되는지는 미확인. \"포르투갈어가 아니면 위반\"처럼 단정하지 않는다.",
+      "evidence_needed_ko": "수치·성능·원산지 등 약속으로 해석될 수 있는 정보의 사실 여부.",
+      "status_ko": "원문 확보.",
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CDC-36",
+      "source_id": "SRC-CDC",
+      "legal_nature": "law",
+      "title_ko": "광고 식별과 근거 자료 보유",
+      "excerpt": {
+        "file": "cdc_l8078_excerpt.md",
+        "heading": "## CDC-36 — Art. 36 (광고 식별, 근거 자료 보유)",
+        "text_pt": "SEÇÃO III\n\nDa Publicidade\n\nArt. 36. A publicidade deve ser veiculada de tal forma que o consumidor, fácil e imediatamente, a identifique como tal.\n\nParágrafo único. O fornecedor, na publicidade de seus produtos ou serviços, manterá, em seu poder, para informação dos legítimos interessados, os dados fáticos, técnicos e científicos que dão sustentação à mensagem."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "### CDC-36 광고 식별과 근거 자료 보유"
+      },
+      "translation_official": false,
+      "provisions": "Art. 36 caput·parágrafo único",
+      "quote_pt": "\"Parágrafo único. O fornecedor, na publicidade de seus produtos ou serviços, manterá, em seu poder, para informação dos legítimos interessados, os dados fáticos, técnicos e científicos que dão sustentação à mensagem.\"",
+      "translation_ko": "광고는 소비자가 쉽고 즉시 광고임을 알아볼 수 있게 내보내야 한다. 공급자는 광고 메시지를 뒷받침하는 사실·기술·과학 자료를 정당한 이해관계인에게 알릴 수 있도록 보유해야 한다.",
+      "requirement_ko": null,
+      "review_guidance_ko": "친환경 주장마다 뒷받침 자료가 필요하다는 점을 안내한다. 대체 문장이 새 근거를 지어내지 않고 \"필요한 근거 자료\"를 알려 주는 근거.",
+      "scope_limits_ko": "우리 기능은 자료 보유 여부를 확인하지 않는다. 자료가 입력에 없다고 \"근거 없음\"으로 확정하지 않는다.",
+      "evidence_needed_ko": "주장마다 대응하는 시험·인증·계산 자료가 있는지.",
+      "status_ko": "원문 확보.",
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CDC-37",
+      "source_id": "SRC-CDC",
+      "legal_nature": "law",
+      "title_ko": "기만적·남용적 광고 금지",
+      "excerpt": {
+        "file": "cdc_l8078_excerpt.md",
+        "heading": "## CDC-37 — Art. 37 (기만·남용 광고 금지)",
+        "text_pt": "Art. 37. É proibida toda publicidade enganosa ou abusiva.\n\n§ 1° É enganosa qualquer modalidade de informação ou comunicação de caráter publicitário, inteira ou parcialmente falsa, ou, por qualquer outro modo, mesmo por omissão, capaz de induzir em erro o consumidor a respeito da natureza, características, qualidade, quantidade, propriedades, origem, preço e quaisquer outros dados sobre produtos e serviços.\n\n§ 2° É abusiva, dentre outras a publicidade discriminatória de qualquer natureza, a que incite à violência, explore o medo ou a superstição, se aproveite da deficiência de julgamento e experiência da criança, desrespeita valores ambientais, ou que seja capaz de induzir o consumidor a se comportar de forma prejudicial ou perigosa à sua saúde ou segurança.\n\n§ 3° Para os efeitos deste código, a publicidade é enganosa por omissão quando deixar de informar sobre dado essencial do produto ou serviço.\n\n§ 4° (Vetado)."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "### CDC-37 기만적·남용적 광고 금지"
+      },
+      "translation_official": false,
+      "provisions": "Art. 37 caput, §1º, §2º, §3º",
+      "quote_pt": "\"§ 1° É enganosa qualquer modalidade de informação ou comunicação de caráter publicitário, inteira ou parcialmente falsa, ou, por qualquer outro modo, mesmo por omissão, capaz de induzir em erro o consumidor a respeito da natureza, características, qualidade, quantidade, propriedades, origem, preço e quaisquer outros dados sobre produtos e serviços.\" / §2º 중 \"desrespeita valores ambientais\"",
+      "translation_ko": "모든 기만적 또는 남용적 광고는 금지된다. (§1) 전부 또는 일부가 거짓이거나, 다른 방식으로 또는 누락에 의해서라도 제품의 성질·특성·품질·수량·속성·원산지·가격 등에 대해 소비자를 오인하게 할 수 있는 광고성 정보·커뮤니케이션은 기만적이다. (§2) 남용적 광고에는 여러 유형과 함께 \"환경적 가치를 존중하지 않는\" 광고가 포함된다. (§3) 제품의 본질적 정보를 알리지 않으면 누락에 의한 기만 광고다.",
+      "requirement_ko": null,
+      "review_guidance_ko": "표현이 \"일부만 사실인데 전체처럼 보이게 하는지\", \"중요한 조건·범위를 빠뜨렸는지\", \"오인 가능성이 있는지\"를 문맥으로 살펴보는 핵심 기준. 이유 설명에 \"오인 가능성\"으로 표현하고 \"위반 확정\"으로 쓰지 않는다.",
+      "scope_limits_ko": "오인 여부는 실제 노출 대상과 맥락에 따라 달라진다. B2B 적용은 CDC-02-03·CDC-29 한계와 같다. 위반 여부 판단은 행정·사법 기관의 영역이다.",
+      "evidence_needed_ko": "주장이 거짓인지 여부는 제품 자료 확인 없이는 판단할 수 없다. 우리 기능은 \"오인될 수 있는 표현\"만 다룬다.",
+      "status_ko": "원문 확보.",
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CDC-38",
+      "source_id": "SRC-CDC",
+      "legal_nature": "law",
+      "title_ko": "광고 정보의 입증 책임",
+      "excerpt": {
+        "file": "cdc_l8078_excerpt.md",
+        "heading": "## CDC-38 — Art. 38 (입증 책임)",
+        "text_pt": "Art. 38. O ônus da prova da veracidade e correção da informação ou comunicação publicitária cabe a quem as patrocina."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "### CDC-38 광고 정보의 입증 책임"
+      },
+      "translation_official": false,
+      "provisions": "Art. 38",
+      "quote_pt": "\"Art. 38. O ônus da prova da veracidade e correção da informação ou comunicação publicitária cabe a quem as patrocina.\"",
+      "translation_ko": "광고 정보·커뮤니케이션의 진실성과 정확성에 대한 입증 책임은 그 광고를 후원(광고주로서 내보낸)한 자에게 있다.",
+      "requirement_ko": null,
+      "review_guidance_ko": "수정 방향에 \"이 주장을 쓰려면 회사가 입증 자료를 갖춰야 한다\"는 안내를 넣는 근거.",
+      "scope_limits_ko": "소송·행정 절차에서의 입증 책임 규정이다. 우리 결과가 입증 여부를 판단하지 않는다.",
+      "evidence_needed_ko": "입증 자료의 존재와 적정성.",
+      "status_ko": "원문 확보.",
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CDC-60",
+      "source_id": "SRC-CDC",
+      "legal_nature": "law",
+      "title_ko": "정정광고 (참고)",
+      "excerpt": {
+        "file": "cdc_l8078_excerpt.md",
+        "heading": "## CDC-60 — Art. 60 caput·§1º (정정광고)",
+        "text_pt": "Art. 60. A imposição de contrapropaganda será cominada quando o fornecedor incorrer na prática de publicidade enganosa ou abusiva, nos termos do art. 36 e seus parágrafos, sempre às expensas do infrator.\n\n§ 1º A contrapropaganda será divulgada pelo responsável da mesma forma, freqüência e dimensão e, preferencialmente no mesmo veículo, local, espaço e horário, de forma capaz de desfazer o malefício da publicidade enganosa ou abusiva."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "### CDC-60 정정광고 (참고)"
+      },
+      "translation_official": false,
+      "provisions": "Art. 60 caput·§1º",
+      "quote_pt": "\"Art. 60. A imposição de contrapropaganda será cominada quando o fornecedor incorrer na prática de publicidade enganosa ou abusiva, nos termos do art. 36 e seus parágrafos, sempre às expensas do infrator.\"",
+      "translation_ko": "공급자가 기만적·남용적 광고를 한 경우 정정광고가 부과되며 비용은 위반자가 부담한다. 정정광고는 원래 광고와 같은 형식·빈도·크기로, 가능하면 같은 매체·위치·시간에 내보낸다.",
+      "requirement_ko": null,
+      "review_guidance_ko": "직원에게 위험의 무게를 설명하는 참고 정보. 개별 항목 판정 근거로 쓰지 않는다.",
+      "scope_limits_ko": "행정 제재 규정. 조회본의 조문은 \"art. 36\"을 참조한다(원문 그대로).",
+      "evidence_needed_ko": "해당 없음.",
+      "status_ko": "원문 확보. 참고용.",
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CDC-66-69",
+      "source_id": "SRC-CDC",
+      "legal_nature": "law",
+      "title_ko": "형사 규정 (참고)",
+      "excerpt": {
+        "file": "cdc_l8078_excerpt.md",
+        "heading": "## CDC-66-69 — Art. 66, 67, 69 (형사 규정, 참고)",
+        "text_pt": "Art. 66. Fazer afirmação falsa ou enganosa, ou omitir informação relevante sobre a natureza, característica, qualidade, quantidade, segurança, desempenho, durabilidade, preço ou garantia de produtos ou serviços:\n\nPena - Detenção de três meses a um ano e multa.\n\n§ 1º Incorrerá nas mesmas penas quem patrocinar a oferta.\n\n§ 2º Se o crime é culposo;\n\nPena Detenção de um a seis meses ou multa.\n\nArt. 67. Fazer ou promover publicidade que sabe ou deveria saber ser enganosa ou abusiva:\n\nPena Detenção de três meses a um ano e multa.\n\nParágrafo único. (Vetado).\n\nArt. 69. Deixar de organizar dados fáticos, técnicos e científicos que dão base à publicidade:\n\nPena Detenção de um a seis meses ou multa."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "### CDC-66-69 형사 규정 (참고)"
+      },
+      "translation_official": false,
+      "provisions": "Art. 66, 67, 69",
+      "quote_pt": "\"Art. 67. Fazer ou promover publicidade que sabe ou deveria saber ser enganosa ou abusiva:\" (Pena 포함 전문은 cdc_l8078_excerpt.md)",
+      "translation_ko": "(66) 제품의 성질·특성·품질·수량·안전·성능·내구성·가격·보증에 대해 거짓 또는 오인 주장을 하거나 중요한 정보를 누락하면 처벌된다. (67) 기만적·남용적임을 알았거나 알았어야 하는 광고를 하거나 진행하면 처벌된다. (69) 광고의 근거가 되는 사실·기술·과학 자료를 정리해 두지 않으면 처벌된다.",
+      "requirement_ko": null,
+      "review_guidance_ko": "참고 정보. 결과 화면에서 형사 처벌 가능성을 근거로 개별 문구를 판정하지 않는다.",
+      "scope_limits_ko": "형사 책임 판단은 우리 기능 범위 밖이다.",
+      "evidence_needed_ko": "해당 없음.",
+      "status_ko": "원문 확보. 참고용.",
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-08-18",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "코드의 목적·적용 제외, 해석 기준, 용어 정의",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-08-18 — Capítulo I – Artigo 8º, 17, 18 (코드 목적·적용 제외, 해석 기준, 용어 정의)",
+        "text_pt": "SEÇÃO 2 – Objetivos\n\nArtigo 8º\n\nO principal objetivo deste Código é a regulamentação das normas éticas aplicáveis à publicidade e propaganda, assim entendidas como atividades destinadas a estimular o consumo de bens e serviços, bem como promover instituições, conceitos ou idéias.\n\nParágrafo único – Não são capituladas neste Código as atividades de Relações Públicas e “Publicity”, por serem ambas distintas tanto da publicidade quanto da propaganda.\n\nArtigo 17\n\nAo aferir a conformidade de uma campanha ou anúncio aos termos deste Código, o teste primordial deve ser o impacto provável do anúncio, como um todo, sobre aqueles que irão vê-lo ou ouvi-lo. A partir dessa análise global é que se examinará detalhadamente cada parte do conteúdo visual, verbal ou oral do anúncio, bem como a natureza do meio utilizado para sua veiculação.\n\nArtigo 18\n\nPara os efeitos deste Código:\n\na. a palavra anúncio é aplicada em seu sentido lato, abrangendo qualquer espécie de publicidade, seja qual for o meio que a veicule. Embalagens, rótulos, folhetos e material de ponto-de-venda são, para esse efeito, formas de publicidade. A palavra anúncio só abrange, todavia, a publicidade realizada em espaço ou tempo pagos pelo Anunciante;\n\nb. a palavra produto inclui bens, serviços, facilidades, instituições, conceitos ou ideias que sejam promovidos pela publicidade;\n\nc. a palavra consumidor refere-se a toda pessoa que possa ser atingida pelo anúncio, seja como consumidor final, público intermediário ou usuário."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-08-18 코드의 목적·적용 제외, 해석 기준, 용어 정의"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Artigo 8º caput·Parágrafo único, Artigo 17, Artigo 18 a~c",
+      "quote_pt": "\"A palavra anúncio só abrange, todavia, a publicidade realizada em espaço ou tempo pagos pelo Anunciante;\" / \"a palavra consumidor refere-se a toda pessoa que possa ser atingida pelo anúncio, seja como consumidor final, público intermediário ou usuário.\"",
+      "translation_ko": "(8) 이 코드의 주된 목적은 광고·선전, 즉 재화·서비스의 소비를 촉진하거나 기관·개념·아이디어를 알리는 활동에 적용되는 윤리 규범을 정하는 것이다. 단일 항: 홍보(Relações Públicas)와 퍼블리시티(Publicity)는 광고·선전과 구별되므로 이 코드의 대상이 아니다.\n(17) 캠페인이나 광고가 이 코드에 맞는지 판단할 때 첫째 기준은 광고 전체가 그것을 보거나 들을 사람들에게 줄 것으로 예상되는 영향이다. 이 전체 분석에서 출발해 광고의 시각·문자·음성 내용 각 부분과 게재 매체의 성격을 자세히 살핀다.\n(18) a. \"광고(anúncio)\"는 넓은 의미로, 매체와 관계없이 모든 종류의 광고를 포함한다. 포장·라벨·전단·판매시점 자료도 광고의 형태로 본다. 다만 \"광고\"는 광고주가 비용을 낸 지면이나 시간에 실린 광고만 포함한다. b. \"제품\"은 광고로 알리는 재화·서비스·편의·기관·개념·아이디어를 포함한다. c. \"소비자\"는 최종 소비자, 중간 대상(público intermediário), 사용자로서 광고에 닿을 수 있는 모든 사람을 말한다.",
+      "requirement_ko": "코드 적용 대상과 판단 방법(전체 인상 우선)을 정한다.",
+      "review_guidance_ko": "개별 단어보다 문서 전체가 주는 인상과 앞뒤 문맥을 먼저 본다(feature_spec의 \"단어 하나로 판정하지 않음\"과 대응). 결과의 한계 안내에 \"자료 종류(광고, 소개서, 이메일, 보도자료 등)에 따라 적용 여부가 달라질 수 있음\"을 표시하는 근거로 쓴다. 이 항목만으로 문구를 판정하지 않는다.",
+      "scope_limits_ko": "\"consumidor\"에 중간 대상이 포함되지만 \"anúncio\"는 비용을 낸 지면·시간으로 한정된다. 바이어에게 직접 보내는 이메일·소개서가 코드 대상인지 원문만으로 단정할 수 없다. 보도자료·홍보 활동은 Artigo 8º 단일 항에 따라 대상에서 제외될 수 있으나 경계는 미확인.",
+      "evidence_needed_ko": "해당 없음(범위 판단용).",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-27",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "사실대로 표시 (§1º 묘사, §2º 주장, §7º 조사·통계, §8º 과학 정보)",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-27 — Capítulo II, Seção 5 – Artigo 27 caput, §1º, §2º, §7º, §8º (사실대로 표시)",
+        "text_pt": "SEÇÃO 5 – Apresentação Verdadeira\n\nArtigo 27\n\nO anúncio deve conter uma apresentação verdadeira do produto oferecido, conforme disposto nos artigos seguintes desta Seção, onde estão enumerados alguns aspectos que merecem especial atenção.\n\n§ 1º – Descrições\n\nNo anúncio, todas as descrições, alegações e comparações que se relacionem com fatos ou dados objetivos devem ser comprobatórias, cabendo aos Anunciantes e Agências fornecer as comprovações, quando solicitadas.\n\n§ 2º – Alegações\n\nO anúncio não deverá conter informação de texto ou apresentação visual que direta ou indiretamente, por implicação, omissão, exagero ou ambigüidade, leve o Consumidor a engano quanto ao produto anunciado, quanto ao Anunciante ou seus concorrentes, nem tampouco quanto à:\n\na. natureza do produto (natural ou artificial);\n\nb. procedência (nacional ou estrangeira);\n\nc. composição;\n\nd. finalidade.\n\n§ 7º – Pesquisas e Estatísticas\n\na. o anúncio não se referirá a pesquisa ou estatística que não tenha fonte identificável e responsável;\n\nb. o uso de dados parciais de pesquisa ou estatística não deve levar a conclusões distorcidas ou opostas àquelas a que se chegaria pelo exame do total da referência.\n\n§ 8º – Informação Científica\n\nO anúncio só utilizará informação científica pertinente e defensável, expressa de forma clara até para leigos."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-27 사실대로 표시 (§1º 묘사, §2º 주장, §7º 조사·통계, §8º 과학 정보)"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Artigo 27 caput, §1º, §2º a~d, §7º a~b, §8º",
+      "quote_pt": "\"No anúncio, todas as descrições, alegações e comparações que se relacionem com fatos ou dados objetivos devem ser comprobatórias, cabendo aos Anunciantes e Agências fornecer as comprovações, quando solicitadas.\"",
+      "translation_ko": "(caput) 광고는 제공하는 제품을 사실대로 표시해야 하며, 이 절의 다음 조항들에 특히 주의할 사항이 열거되어 있다.\n(§1 묘사) 광고에서 객관적 사실이나 데이터와 관련된 모든 묘사·주장·비교는 입증할 수 있어야 하며, 요청이 있으면 광고주와 대행사가 입증 자료를 제출해야 한다.\n(§2 주장) 광고는 직접이든 간접이든 함축·누락·과장·모호함을 통해 제품, 광고주 또는 경쟁사에 관해, 그리고 a. 제품의 성질(천연 또는 인공), b. 원산지(국내 또는 외국), c. 구성, d. 용도에 관해 소비자를 오인하게 하는 문자 정보나 시각적 표현을 담아서는 안 된다.\n(§7 조사·통계) a. 식별 가능하고 책임 있는 출처가 없는 조사나 통계를 언급하지 않는다. b. 조사·통계의 일부 데이터를 사용해 전체를 검토했을 때와 다르거나 반대되는 결론으로 이끌어서는 안 된다.\n(§8 과학 정보) 광고는 관련성 있고 옹호될 수 있는 과학 정보만, 비전문가도 이해할 수 있게 명확히 표현해 사용한다.",
+      "requirement_ko": "객관적 주장은 입증 가능해야 하고, 함축·누락·과장·모호함으로 오인을 일으키지 않아야 하며, 통계·과학 정보는 출처와 맥락을 지켜야 한다.",
+      "review_guidance_ko": "수치·비율·비교·통계·과학적 표현이 있으면 \"입증 자료가 필요한 주장\"으로 표시하고 필요한 근거 종류를 안내한다. 과장·모호 표현이 성질·구성·원산지에 대한 오인을 일으킬 수 있는지 문맥으로 검토한다. 출처가 적혀 있어도 그 출처의 진위는 우리가 확인하지 않는다.",
+      "scope_limits_ko": "CONAR-08-18의 적용 범위 한계와 같다. \"comprobatórias\"는 \"입증 가능한\"으로 옮겼으며 법적 의미는 미검토.",
+      "evidence_needed_ko": "수치·비교·구성·원산지 주장마다 대응하는 시험·계산·조사 자료와 그 출처.",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-36",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "환경 보호 반영, 환경 유해 행동 조장 금지",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-36 — Capítulo II, Seção 10 – Artigo 36",
+        "text_pt": "SEÇÃO 10 – Meio Ambiente e Comunicação de Aspectos Socioambientais\n\nArtigo 36\n\nA publicidade deverá refletir as preocupações da humanidade com as condições e a qualidade de vida, com os cuidados e a proteção do meio ambiente e da biodiversidade, e com as mudanças climáticas. Assim, serão vigorosamente combatidos os anúncios que, direta ou indiretamente, estimulem:\n\na. a poluição do ar, das águas, das matas e da natureza em geral;\n\nb. a degradação do meio ambiente rural e urbano;\n\nc. a depredação da fauna, da flora e dos biomas;\n\nd. a poluição visual dos campos e das cidades;\n\ne. a poluição sonora;\n\nf. o desperdício de recursos naturais.\n\ng. a destinação irregular de resíduos;\n\nh. comportamentos prejudiciais ao meio ambiente."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-36 환경 보호 반영, 환경 유해 행동 조장 금지"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Artigo 36 caput, a~h",
+      "quote_pt": "\"Assim, serão vigorosamente combatidos os anúncios que, direta ou indiretamente, estimulem:\"",
+      "translation_ko": "광고는 삶의 조건과 질, 환경과 생물다양성의 보호, 기후변화에 대한 인류의 관심을 반영해야 한다. 따라서 직접 또는 간접적으로 다음을 조장하는 광고에는 강력히 대응한다: a. 대기·물·숲과 자연 전반의 오염, b. 농촌·도시 환경의 훼손, c. 동물·식물·생물군계의 파괴, d. 농촌과 도시의 시각 공해, e. 소음 공해, f. 천연자원의 낭비, g. 폐기물의 부적절한 처리, h. 환경에 해로운 행동.",
+      "requirement_ko": "광고가 환경에 해로운 행동을 직접·간접적으로 조장하지 않아야 한다.",
+      "review_guidance_ko": "문구가 a~h의 행동을 권하거나 정상인 것처럼 표현하는지 문맥으로 검토한다. 친환경 주장 검수의 중심 기준은 Artigo 36-B와 Anexo U이며, 이 조항은 보조 관점으로 쓴다.",
+      "scope_limits_ko": "\"vigorosamente combatidos\"는 CONAR가 강하게 대응한다는 뜻으로 옮겼고 구체적 제재 내용은 이 조항에 없다. 원료 B2B 소개 문구에 해당하는 사례가 있는지는 실제 사례 검토 필요.",
+      "evidence_needed_ko": "해당 없음(표현 성격 검토).",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-36A",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "긍정적 환경 특성 사용의 정당성",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-36A — Capítulo II, Seção 10 – Artigo 36-A",
+        "text_pt": "Artigo 36-A\n\nÉ legítimo o uso de características socioambientais positivas nas mensagens publicitárias. São encorajadas publicidades que destaquem cuidados para com o meio ambiente, devendo respeitar as regras e princípios previstos neste Código e na legislação em vigor, de modo a assegurar a correção das alegações e coibir o greenwashing"
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-36A 긍정적 환경 특성 사용의 정당성"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Artigo 36-A",
+      "quote_pt": "\"É legítimo o uso de características socioambientais positivas nas mensagens publicitárias.\"",
+      "translation_ko": "광고 메시지에서 긍정적인 사회·환경적 특성을 사용하는 것은 정당하다. 환경에 대한 배려를 강조하는 광고는 권장되며, 주장의 정확성을 보장하고 그린워싱을 막기 위해 이 코드와 현행 법령의 규칙·원칙을 지켜야 한다.",
+      "requirement_ko": "친환경 주장은 허용·권장되지만 코드와 법령의 규칙을 지켜야 한다.",
+      "review_guidance_ko": "친환경 표현이 있다는 것 자체를 위험으로 표시하지 않는다. 검토 대상은 정확성·조건 표시·근거 필요성이다.",
+      "scope_limits_ko": "원문에서 이 조항의 마지막 마침표가 웹 게시본에 없고 PDF에는 있다(의미 차이 없음).",
+      "evidence_needed_ko": "아래 CONAR-36B·Anexo U 항목에 따름.",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-36B",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "사회·환경 주장의 6개 원칙과 기술 용어",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-36B — Capítulo II, Seção 10 – Artigo 36-B, Parágrafo único (Termos Técnicos)",
+        "text_pt": "Artigo 36-B\n\nA publicidade que contenha alegações socioambientais, deverá atender as especificações do Anexo “U” e os seguintes princípios:\n\na. Veracidade – as alegações socioambientais devem ser verdadeiras e passíveis de verificação e comprovação;\n\nb. Qualificação – as alegações de ações ou atributos socioambientais pontuais, específicos ou relacionados a determinadas partes do produto ou etapas isoladas do ciclo de vida devem ser adequadamente qualificadas, de forma a indicar com precisão e veracidade o alcance, condições ou limites do benefício divulgado;\n\nc. Exatidão – as alegações socioambientais devem expressar, de modo exato e compreensível, as práticas e/ou atributos a que se referem. Alegações socioambientais amplas ou genéricas sem qualificação só podem ser feitas se possuírem evidências robustas que fundamentem a correspondente abrangência da ação e/ou atributo divulgado;\n\nd. Pertinência – as alegações socioambientais devem ter relação lógica com as práticas de atuação do Anunciante, de suas marcas, produtos e/ou serviços;\n\ne. Relevância – o benefício socioambiental salientado deverá ser significativo com relação ao impacto total que as empresas, suas marcas, produtos e/ou serviços exercem sobre a sociedade e o meio ambiente, em todo seu processo e ciclo de vida; caso o benefício socioambiental seja relacionado a aspecto ou etapa específica do ciclo de vida do produto ou serviço, tal limitação deverá ser devidamente informada;\n\nf. Concretude – as alegações socioambientais deverão corresponder às práticas adotadas. Caso as alegações socioambientais apregoem metas, compromissos ou ações futuras, é indispensável que se fundamentem em planos concretos, acessíveis e viáveis, de atuação de boa-fé até atingir o objetivo declarado, no prazo especificado, disponibilizando-se o acesso à informação, transparência e verificação da consecução dos compromissos.\n\nParágrafo único – Termos Técnicos\n\nOs termos e expressões utilizados não devem induzir o público em erro sobre a natureza e a abrangência dos processos, do produto, do serviço ou das ações do Anunciante. Quando os termos e expressões utilizados forem definidos por uma norma ou conceito consolidado, eles deverão ser usados no sentido que corresponda a essas definições. Poderá ser utilizado vocabulário técnico, científico ou jurídico, desde que seja adequado e compreensível para as pessoas a quem a mensagem publicitária se dirige."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-36B 사회·환경 주장의 6개 원칙과 기술 용어"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Artigo 36-B caput, a~f, Parágrafo único (Termos Técnicos)",
+      "quote_pt": "\"A publicidade que contenha alegações socioambientais, deverá atender as especificações do Anexo “U” e os seguintes princípios:\"",
+      "translation_ko": "사회·환경 주장을 담은 광고는 부속서 U의 세부 사항과 다음 원칙을 지켜야 한다.\na. 진실성(Veracidade): 주장은 사실이어야 하고 검증·입증할 수 있어야 한다.\nb. 한정(Qualificação): 특정 범위에 한정된(pontuais)·특정한(específicos) 활동이나 속성, 또는 제품의 일부나 수명주기의 개별 단계(etapas isoladas)에 관련된 주장은, 알리는 이익의 범위·조건·한계를 정확하고 사실대로 나타내도록 적절히 한정해야 한다.\nc. 정확성(Exatidão): 주장은 해당 관행·속성을 정확하고 이해할 수 있게 표현해야 한다. 한정 없는 넓거나 일반적인 주장은 그 범위를 뒷받침하는 확실한 증거가 있을 때만 할 수 있다.\nd. 관련성(Pertinência): 주장은 광고주와 그 브랜드·제품·서비스의 실제 활동과 논리적 관련이 있어야 한다.\ne. 중요성(Relevância): 강조한 이익은 기업·브랜드·제품·서비스가 전 과정과 수명주기에서 사회·환경에 미치는 전체 영향에 비해 의미 있어야 한다. 이익이 수명주기의 특정 측면·단계에만 관련되면 그 한계를 적절히 알려야 한다.\nf. 구체성(Concretude): 주장은 실제 채택한 관행과 일치해야 한다. 목표·약속·미래 행동을 내세우면, 구체적이고 접근 가능하며 실현 가능한 계획과 목표 달성까지의 선의의 실행에 근거해야 하고, 정해진 기한과 함께 정보 접근·투명성·이행 검증을 제공해야 한다.\n단일 항(기술 용어): 사용한 용어·표현은 광고주의 공정·제품·서비스·활동의 성질과 범위에 대해 대중을 오인하게 해서는 안 된다. 기준이나 확립된 개념으로 정의된 용어는 그 정의에 맞는 뜻으로 써야 한다. 기술·과학·법률 용어는 메시지 대상이 이해할 수 있고 적절하면 사용할 수 있다.",
+      "requirement_ko": "사회·환경 주장은 부속서 U와 위 6개 원칙을 따라야 한다.",
+      "review_guidance_ko": "6개 원칙을 검토 관점으로 쓴다. 세부 판단은 부속서 U 항목(CONAR-U-1~U-9)을 우선 참고한다. 정의가 있는 기술 용어가 다른 뜻으로 쓰였을 가능성이 있으면 \"검토 필요\"로 안내한다(특정 용어 목록으로 자동 판정하지 않음).",
+      "scope_limits_ko": "Artigo 36-B의 원칙 순서(Pertinência, Relevância, Concretude)와 문구는 부속서 U II의 순서(Concretude, Pertinência, Relevância)와 일부 다르다. 예: Concretude의 \"acessíveis e viáveis\"(36-B)와 \"compreensíveis claros e viáveis\"(부속서 U 4). 어느 쪽이 우선인지 원문에 명시가 없어 해석 미확인.",
+      "evidence_needed_ko": "각 주장의 사실 근거, 한정 범위(제품 일부·수명주기 단계), 목표 주장 시 계획·기한.",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-U-PRE",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "부속서 U의 목적, 그린워싱 정의, 해석 관계, 용어 정의",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-U-PRE — Anexo \"U\" – Preâmbulo(일부), I. Definições",
+        "text_pt": "ANEXO \"U\"Apelos de Sustentabilidade e alegações Socioambientais\n\nPreâmbulo\n\nEste Anexo tem como objetivo estabelecer princípios e diretrizes técnicas para garantir que os anúncios com apelos de sustentabilidade e alegações socioambientais sejam verdadeiros, regulares, adequados, verificáveis e transparentes.\n\nOs normativos aqui estabelecidos constituem uma atualização das regras originalmente previstas para o Anexo “U”, são inspirados nas diretrizes do Código de Publicidade e Comunicações de Marketing da Câmara Internacional de Comércio (ICC Advertising and Marketing Communications Code), no quadro internacional comparado de regulação e autorregulação da matéria e na experiência no exame de peças publicitárias pelo Conselho de Ética do CONAR.\n\nO problema e o combate ao greenwashing\n\nO termo greenwashing é comumente utilizado para referir-se à formulação de alegações ambientais falsas ou enganosas, quer por ação, quer por omissão, desprovidas de fundamentação e/ou passíveis de induzir o público a erro, tendo como resultado a projeção de imagem de responsabilidade ambiental não correspondente às ações efetivamente praticadas.\n\nEste Anexo deve ser interpretado e aplicado em conjunto com a parte geral do Código Brasileiro de Autorregulamentação Publicitária, em especial o disposto em seu artigo 1º, que prevê a necessidade do cumprimento da legislação e regulamentação aplicável.\n\nNesse contexto, é imperativo que os apelos estejam em conformidade com a legislação vigente, incluindo o Código de Defesa do Consumidor, normas ambientais específicas e referências técnicas aplicáveis.\n\nEm vista da constante evolução do debate sobre sustentabilidade, das pesquisas e evidências científicas sobre os impactos das ações antrópicas no meio ambiente, as disposições aqui previstas poderão ser complementadas por resoluções e notas técnicas do Conselho de Conteúdo do CONAR, voltadas à contínua atualização e à efetividade da implementação dos presentes princípios éticos aos anúncios.\n\nI. DEFINIÇÕES – Para os efeitos deste Anexo, entender-se-á por:\n\nAlegações socioambientais: quaisquer declarações, por meio de expressões visuais, som, símbolos e/ou sinais que indiquem, direta ou indiretamente, atributos, benefícios ou impactos relacionados à sustentabilidade ou ao desempenho ambiental e/ou social de um produto, serviço, empresa ou atividade. Elas podem incluir alegações sobre a ausência de impacto negativo de um produto, serviço ou empresa, sobre o impacto positivo ou um impacto comparativamente melhor acerca dos aspectos socioambientais.\n\nCiclo de vida: indica as etapas interligadas que compõem a trajetória de um produto, serviço ou processo. Inclui as etapas de extração de matéria prima e insumos, fabricação, produção, embalagem, distribuição, utilização, consumo, pós-consumo, abrangendo os recursos de energia envolvidos, emissões de gases, geração e destinação de resíduos.\n\nPublicidade relacionada a causas: é aquela que comunica a associação de instituições, empresas, marcas, produtos ou serviços com causas socioambientais, de iniciativa pública ou particular, realizada com o propósito de produzir resultados relevantes e tangíveis para a causa social e/ou ambiental apoiada.\n\nQualificação: constitui uma declaração que define, esclarece e/ou contextualiza uma alegação socioambiental, com o objetivo de assegurar sua correta e apropriada compreensão, garantindo que não leve o consumidor a engano quanto ao teor, à dimensão, alcance, condições ou limitações da alegação divulgada.\n\nOutras definições poderão ser estabelecidas por meio de resolução editada pelo Conselho de Conteúdo do CONAR, em conformidade com o disposto no presente Anexo."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-U-PRE 부속서 U의 목적, 그린워싱 정의, 해석 관계, 용어 정의"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Anexo \"U\" Preâmbulo(일부 문단), I. Definições",
+      "quote_pt": "\"O termo greenwashing é comumente utilizado para referir-se à formulação de alegações ambientais falsas ou enganosas, quer por ação, quer por omissão, desprovidas de fundamentação e/ou passíveis de induzir o público a erro, ...\"",
+      "translation_ko": "(목적) 지속가능성 호소와 사회·환경 주장을 담은 광고가 진실하고, 규칙에 맞고, 적절하고, 검증 가능하고, 투명하도록 원칙과 기술 지침을 정한다.\n(개정 배경) 이 규범은 기존 부속서 U 규칙을 개정한 것이며, 국제상업회의소(ICC) 광고·마케팅 커뮤니케이션 코드의 지침, 국제 비교 규제·자율규제 체계, CONAR 윤리위원회의 광고 심의 경험을 참고했다.\n(그린워싱) 그린워싱은 행위나 누락으로, 근거가 없거나 대중을 오인하게 할 수 있는 거짓 또는 오인 환경 주장을 만들어, 실제 행동과 맞지 않는 환경 책임 이미지를 내보이는 것을 흔히 가리킨다.\n(해석 관계) 이 부속서는 코드의 일반 규정, 특히 관련 법령 준수를 요구하는 제1조와 함께 해석·적용한다. 호소는 소비자보호법(CDC), 특정 환경 규범, 적용 가능한 기술 기준 등 현행 법령에 맞아야 한다. 이 부속서는 CONAR 내용위원회(Conselho de Conteúdo)의 결의와 기술 노트로 보완될 수 있다.\n(정의) 사회·환경 주장: 시각 표현·소리·기호·표시를 통해 제품·서비스·기업·활동의 지속가능성이나 환경·사회 성과에 관한 속성·이익·영향을 직접·간접적으로 나타내는 모든 진술. 부정적 영향이 없다는 주장, 긍정적 영향, 비교상 더 나은 영향에 대한 주장을 포함할 수 있다. 수명주기: 원료·투입물 추출부터 제조·생산·포장·유통·사용·소비·소비 후까지 서로 연결된 단계이며 에너지, 가스 배출, 폐기물 발생·처리를 포함한다. 대의 관련 광고: 기관·기업·브랜드·제품·서비스와 사회·환경 대의의 연관을 알리는 광고. 한정(qualificação): 주장의 내용·규모·범위·조건·한계에 대해 소비자가 오인하지 않도록 주장을 정의·설명·맥락화하는 진술. 그 밖의 정의는 내용위원회 결의로 정할 수 있다.",
+      "requirement_ko": "부속서 U는 코드 일반 규정·법령과 함께 적용되며, 위 정의에 따른 사회·환경 주장에 적용된다.",
+      "review_guidance_ko": "\"사회·환경 주장\"의 정의가 넓으므로(부정적 영향 없음, 비교 우위 포함) 검수 대상 구절을 고를 때 이 정의를 쓴다. 결과 화면의 그린워싱 설명은 위 정의를 요약해 쓰되 \"그린워싱으로 판정\"이라고 쓰지 않는다.",
+      "scope_limits_ko": "내용위원회의 결의·기술 노트 존재 여부 미확인. 서문 중 일부 문단(목적 보충, 소비자·기업 영향, 언어 접근성)은 발췌하지 않았다.",
+      "evidence_needed_ko": "해당 없음(정의·범위).",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-U-1",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "진실성: 근거·입증·출처, 추가 이익 주장, 정보 접근",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-U-1 — Anexo \"U\" – II. 도입, 1. Veracidade (1.1~1.3)",
+        "text_pt": "II. PRINCÍPIOS E REGRAS\n\nAlém de atender às provisões gerais do presente Código, a publicidade submetida a este Anexo deverá refletir a responsabilidade socioambiental e ações de sustentabilidade do Anunciante e levará em conta os seguintes princípios e regras:\n\n1. VERACIDADE – As alegações socioambientais devem ser verdadeiras, passíveis de verificação e comprovação. Devem ser estruturadas de forma a não tirar vantagem da preocupação dos consumidores com o meio ambiente e não explorar a falta de conhecimento técnico do público em geral sobre questões socioambientais.\n\n1.1. Fundamentação, Comprovação e Fontes – O Anunciante deve dispor de evidências, elementos e documentos comprobatórios que fundamentem as alegações ambientais e/ou sociais. O uso de fontes externas reconhecidas e confiáveis, que endossem ou se responsabilizem pelas informações socioambientais comunicadas, agregam robustez à evidência utilizada.\n\nA comprovação das alegações deve ser compatível com o tipo de afirmação realizada, exigindo-se rigor na metodologia empregada. Sempre que aplicável, a comprovação deve observar normas técnicas e metodologia reconhecidas nacional e internacionalmente e, quando exigido por lei, ser certificada por organismo competente. Deverá ser garantida, ainda, a atualidade das evidências utilizadas, por meio de revisões periódicas.\n\n1.2. Alegações sobre benefícios adicionais – As alegações socioambientais que envolvam aspectos de saúde, segurança ou outros benefícios adicionais devem ser sustentadas por evidências confiáveis e pertinentes a esses aspectos, que vão além da dimensão exclusivamente ambiental. Alegações como a de que um produto ou embalagem é \\”livre de\\” determinada substância podem implicar, mesmo que indiretamente, benefícios relacionados à saúde ou segurança e, por isso, também devem estar fundamentadas em comprovação técnica adequada e suficiente quanto a esses aspectos.\n\n1.3. Verificação e Acesso à Informação – Deve ser assegurado acesso facilitado a informações complementares compreensíveis e verificáveis sobre as alegações socioambientais divulgadas. Sempre que o tempo ou o espaço forem limitados, deve-se disponibilizar por meios acessórios, como websites, códigos QR, SACs (Serviços de Atendimento ao Consumidor), dados detalhados que permitam a verificação das práticas, propriedades ou benefícios divulgados, com o objetivo de garantir transparência e evitar a omissão de informações relevantes."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-U-1 진실성: 근거·입증·출처, 추가 이익 주장, 정보 접근"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Anexo \"U\" II 도입, 1, 1.1, 1.2, 1.3",
+      "quote_pt": "\"O Anunciante deve dispor de evidências, elementos e documentos comprobatórios que fundamentem as alegações ambientais e/ou sociais.\"",
+      "translation_ko": "(II 도입) 이 부속서가 적용되는 광고는 코드의 일반 규정을 지키는 것에 더해, 광고주의 사회·환경 책임과 지속가능성 활동을 반영하고 다음 원칙과 규칙을 고려한다.\n(1) 사회·환경 주장은 사실이어야 하고 검증·입증할 수 있어야 한다. 소비자의 환경 관심을 이용하거나 사회·환경 문제에 대한 일반 대중의 기술 지식 부족을 악용하지 않도록 구성해야 한다.\n(1.1) 광고주는 환경·사회 주장을 뒷받침하는 증거·자료·입증 문서를 갖추어야 한다. 정보를 보증하거나 책임지는 공신력 있는 외부 출처를 쓰면 증거가 더 견고해진다. 입증은 주장 유형에 맞아야 하고 방법론의 엄격성이 요구된다. 해당하는 경우 국내외에서 인정된 기술 기준과 방법론을 따르고, 법이 요구하면 권한 있는 기관의 인증을 받아야 한다. 정기 검토로 증거가 최신이도록 해야 한다.\n(1.2) 건강·안전 등 추가 이익을 포함하는 주장은 환경 측면을 넘어 그 측면에 맞는 신뢰할 수 있는 증거로 뒷받침해야 한다. 제품이나 포장이 특정 물질이 \"없다(livre de)\"는 주장은 간접적으로라도 건강·안전 이익을 암시할 수 있으므로 그 측면에 대해서도 적절하고 충분한 기술적 입증이 필요하다.\n(1.3) 주장에 대해 이해·검증 가능한 보충 정보에 쉽게 접근할 수 있어야 한다. 시간이나 지면이 제한되면 웹사이트, QR 코드, 고객센터(SAC) 등 보조 수단으로 관행·속성·이익을 검증할 수 있는 상세 자료를 제공해 투명성을 확보하고 중요한 정보 누락을 피해야 한다.",
+      "requirement_ko": "광고주가 근거 자료를 보유하고, 방법론·인증·최신성을 갖추며, 보충 정보 접근을 제공해야 한다.",
+      "review_guidance_ko": "원문에 근거·출처·보충 정보 안내가 없는 주장은 \"근거 자료 확인 필요\"로 안내한다. 근거가 없다고 단정하지 않는다(우리는 자료 보유 여부를 모른다). 대체 문장에서 새 수치·인증·출처를 만들지 않고, 필요한 근거 종류와 보충 정보 제공 방법만 제안한다.",
+      "scope_limits_ko": "\"법이 요구하면 인증\" 부분의 구체 법령은 이 조항에 없다. 웹 원문의 \\”livre de\\”는 게시 형식 그대로이다.",
+      "evidence_needed_ko": "주장별 시험·인증·계산 자료, 사용한 방법론·기준, 자료의 최신성, 외부 출처.",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-U-2",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "한정(Qualificação)",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-U-2 — Anexo \"U\" – II.2 Qualificação",
+        "text_pt": "2. QUALIFICAÇÃO – Alegações socioambientais genéricas ou imprecisas não qualificadas podem levar o consumidor a engano sobre o benefício divulgado. Ações ou atributos socioambientais pontuais, específicos ou relacionados a determinadas partes do produto ou etapas isoladas do ciclo de vida devem ser adequadamente qualificadas, de forma a indicar com precisão e veracidade o alcance, condições ou limites do benefício divulgado.\n\nO qualificador deve esclarecer o teor das alegações socioambientais, não as contradizer e deve ser apresentado de forma compreensível e destacada, devendo estar posicionado próximo à alegação que visa qualificar, de modo que ambos sejam entendidos de forma conjunta e integrada pelo consumidor."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-U-2 한정(Qualificação)"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Anexo \"U\" II.2",
+      "quote_pt": "\"O qualificador deve esclarecer o teor das alegações socioambientais, não as contradizer e deve ser apresentado de forma compreensível e destacada, devendo estar posicionado próximo à alegação que visa qualificar, ...\"",
+      "translation_ko": "한정되지 않은 일반적이거나 부정확한 사회·환경 주장은 알리는 이익에 대해 소비자를 오인하게 할 수 있다. 특정 범위에 한정된(pontuais)·특정한(específicos) 활동이나 속성, 또는 제품의 일부나 수명주기의 개별 단계(etapas isoladas)에 관련된 주장은 이익의 범위·조건·한계를 정확하고 사실대로 나타내도록 적절히 한정해야 한다. 한정 문구는 주장의 내용을 명확히 하고, 주장과 모순되지 않아야 하며, 이해하기 쉽고 눈에 띄게, 한정하려는 주장 가까이에 두어 소비자가 둘을 함께 이해하도록 해야 한다.",
+      "requirement_ko": "일부·특정 범위에 한정되는 주장에는 가까운 위치에 이해하기 쉬운 한정 문구가 필요하다.",
+      "review_guidance_ko": "주장이 제품 전체에 해당하는 것처럼 보이는데 실제로는 일부 원료·공정·단계에 관한 것일 가능성이 있으면 \"검토 필요\"로 안내하고, 한정 문구를 주장 가까이에 두는 수정 방향을 제시한다. 실제 범위는 회사 자료로 확인해야 한다고 안내한다.",
+      "scope_limits_ko": "한정 문구의 \"가까운 위치\"는 디자인 배치 판단을 포함할 수 있으나, 우리 기능은 디자인을 평가하지 않고 텍스트 안의 한정 문구 유무·내용만 본다.",
+      "evidence_needed_ko": "주장이 적용되는 제품 범위(원료 비율, 공정, 수명주기 단계).",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-U-3",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "정확성(Exatidão)",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-U-3 — Anexo \"U\" – II.3 Exatidão",
+        "text_pt": "3. EXATIDÃO – As alegações socioambientais devem expressar com exatidão as práticas e/ou atributos a que se referem, devendo ser comunicadas de forma compreensível, garantindo-se que não levem o consumidor a engano.\n\nAlegações socioambientais amplas ou genéricas sem qualificação só podem ser feitas se possuírem evidências robustas que fundamentem a correspondente abrangência da ação e/ou atributo divulgado."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-U-3 정확성(Exatidão)"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Anexo \"U\" II.3",
+      "quote_pt": "\"Alegações socioambientais amplas ou genéricas sem qualificação só podem ser feitas se possuírem evidências robustas que fundamentem a correspondente abrangência da ação e/ou atributo divulgado.\"",
+      "translation_ko": "사회·환경 주장은 관련 관행·속성을 정확하게, 이해할 수 있게 전달해 소비자를 오인하게 하지 않아야 한다. 한정 없는 넓거나 일반적인 주장은 그 범위에 맞는 확실한 증거가 있을 때만 할 수 있다.",
+      "requirement_ko": "일반적·포괄적 주장은 그 범위를 뒷받침하는 확실한 증거가 있어야 한다.",
+      "review_guidance_ko": "포괄적·추상적 친환경 표현은 단어만으로 판정하지 않고, 같은 문서 안에 범위·근거 설명이 있는지 문맥으로 본다. 설명이 없으면 \"구체화 또는 한정 필요\"를 안내한다.",
+      "scope_limits_ko": "\"확실한 증거(evidências robustas)\"의 기준은 원문에 정의되어 있지 않다.",
+      "evidence_needed_ko": "포괄적 주장을 뒷받침하는 전 범위 증거.",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-U-4",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "구체성(Concretude)",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-U-4 — Anexo \"U\" – II.4 Concretude",
+        "text_pt": "4. CONCRETUDE – As alegações socioambientais deverão corresponder às práticas adotadas. Caso as alegações socioambientais apregoem metas, compromissos ou ações futuras, é indispensável que se fundamentem em planos concretos, compreensíveis claros e viáveis, apoiados em atuação de boa-fé para atingir o objetivo declarado, no prazo especificado, disponibilizando-se o acesso à informação atualizada sobre a consecução dos compromissos."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-U-4 구체성(Concretude)"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Anexo \"U\" II.4",
+      "quote_pt": "\"As alegações socioambientais deverão corresponder às práticas adotadas.\"",
+      "translation_ko": "사회·환경 주장은 실제 채택한 관행과 일치해야 한다. 목표·약속·미래 행동을 내세우는 주장은 구체적이고 이해하기 쉽고 명확하며 실현 가능한 계획, 그리고 정해진 기한 안에 목표를 이루기 위한 선의의 실행에 근거해야 하며, 약속 이행에 관한 최신 정보에 접근할 수 있어야 한다.",
+      "requirement_ko": "현재 관행과 일치하고, 미래 목표는 계획·기한·이행 정보가 있어야 한다.",
+      "review_guidance_ko": "미래 목표·약속 표현(예: 특정 연도까지의 목표)이 있으면 기한·계획·이행 정보 제공 여부를 확인하라고 안내한다. 계획의 실재 여부는 판단하지 않는다.",
+      "scope_limits_ko": "Artigo 36-B f와 문구가 일부 다르다(CONAR-36B 참고).",
+      "evidence_needed_ko": "목표 관련 계획 문서, 기한, 진행 정보.",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-U-5",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "관련성(Pertinência)",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-U-5 — Anexo \"U\" – II.5 Pertinência",
+        "text_pt": "5. PERTINÊNCIA – As alegações socioambientais devem ter relação lógica com as práticas de atuação do Anunciante, suas marcas, produtos e/ou serviços. Alegações socioambientais de caráter geral devem necessariamente estar relacionadas ao ciclo de vida completo do produto ou atividade.\n\nNão serão considerados pertinentes apelos que divulguem como benefício socioambiental o mero cumprimento de disposições legais e regulamentares ou que destaquem características comuns ao segmento como se fossem atributo exclusivo ou distintivo.\n\nA publicidade relacionada a causas não deve induzir o público a erro quanto à natureza do apoio às ações externas, abstendo-se de gerar confusão entre os benefícios socioambientais da causa apoiada e as características do produto, marca, serviço ou atividades do próprio Anunciante."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-U-5 관련성(Pertinência)"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Anexo \"U\" II.5",
+      "quote_pt": "\"Não serão considerados pertinentes apelos que divulguem como benefício socioambiental o mero cumprimento de disposições legais e regulamentares ou que destaquem características comuns ao segmento como se fossem atributo exclusivo ou distintivo.\"",
+      "translation_ko": "사회·환경 주장은 광고주와 그 브랜드·제품·서비스의 실제 활동과 논리적 관련이 있어야 한다. 일반적 성격의 주장은 반드시 제품·활동의 전체 수명주기와 관련되어야 한다. 법령·규정을 지킨 것에 불과한 것을 사회·환경 이익으로 알리거나, 업계에 흔한 특성을 독점적·차별적 속성인 것처럼 강조하는 호소는 관련성이 있다고 보지 않는다. 대의 관련 광고는 외부 활동 지원의 성격에 대해 대중을 오인하게 해서는 안 되며, 지원하는 대의의 이익과 광고주 자신의 제품·브랜드·서비스·활동 특성을 혼동시키지 않아야 한다.",
+      "requirement_ko": "법정 의무 준수나 업계 공통 특성을 고유 이익처럼 내세우지 않는다. 일반 주장은 전체 수명주기와 관련되어야 한다.",
+      "review_guidance_ko": "\"업계 최초·유일\" 같은 차별성 표현이나 법적 의무 사항을 이익처럼 표현한 부분이 있으면 \"검토 필요\"로 안내한다. 업계 공통인지, 법정 의무인지는 직원이 확인할 사항으로 표시한다.",
+      "scope_limits_ko": "어떤 특성이 업계 공통인지에 대한 판단 기준은 원문에 없다.",
+      "evidence_needed_ko": "차별성 주장의 근거(업계 비교 자료), 관련 법정 의무 여부.",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-U-6",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "중요성(Relevância), 특정 영향, \"~ 없음\" 주장",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-U-6 — Anexo \"U\" – II.6 Relevância (6.1, 6.2)",
+        "text_pt": "6. RELEVÂNCIA – O benefício socioambiental salientado deverá ser significativo com relação ao impacto total que as empresas, suas marcas, produtos e serviços exercem sobre a sociedade e o meio ambiente, ao longo de todo seu processo e ciclo de vida.\n\n6.1. Impactos específicos – Caso o benefício socioambiental esteja relacionado a aspecto, parte ou etapa específica do ciclo de vida do produto ou serviço, tal limitação deverá ser informada de modo compreensível por meio de qualificador.\n\n6.2. Remoção ou substituição (“Livres de”) – Caso uma alegação se refira à redução ou remoção de componentes ou elementos com impacto ambiental, deve ficar evidente o que foi reduzido ou removido. Tais alegações são justificadas apenas se estiverem relacionadas a processos, componentes ou elementos alternativos que resultem em uma melhoria significativa em termos socioambientais."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-U-6 중요성(Relevância), 특정 영향, \"~ 없음\" 주장"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Anexo \"U\" II.6, 6.1, 6.2",
+      "quote_pt": "\"Caso uma alegação se refira à redução ou remoção de componentes ou elementos com impacto ambiental, deve ficar evidente o que foi reduzido ou removido.\"",
+      "translation_ko": "(6) 강조한 사회·환경 이익은 기업·브랜드·제품·서비스가 전 과정과 수명주기에 걸쳐 사회·환경에 미치는 전체 영향에 비해 의미 있어야 한다. (6.1) 이익이 수명주기의 특정 측면·부분·단계에 관련되면 그 한계를 한정 문구로 이해하기 쉽게 알려야 한다. (6.2) 환경 영향이 있는 구성 요소를 줄이거나 없앴다는 주장이면 무엇을 줄이거나 없앴는지 분명해야 한다. 이런 주장은 그 결과 사회·환경 측면에서 의미 있는 개선을 가져오는 대체 공정·구성 요소와 관련될 때만 정당화된다.",
+      "requirement_ko": "이익은 전체 영향 대비 의미 있어야 하고, 특정 단계 이익은 한계를 밝히며, 감축·제거 주장은 대상과 의미 있는 개선이 분명해야 한다.",
+      "review_guidance_ko": "일부 단계의 이익이 전체 이익처럼 보이는지, 무엇을 줄였는지가 빠졌는지를 문맥으로 검토한다. 개선이 \"의미 있는지\"는 우리가 판단하지 않고 근거 확인 필요로 안내한다.",
+      "scope_limits_ko": "\"의미 있는(significativo)\"의 정량 기준은 원문에 없다.",
+      "evidence_needed_ko": "수명주기 전체 영향 자료, 감축·제거 대상과 개선 정도.",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-U-7",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "인증·표시·기호",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-U-7 — Anexo \"U\" – II.7 Certificações, Sinais e Símbolos",
+        "text_pt": "7. CERTIFICAÇÕES, SINAIS E SÍMBOLOS – Certificações, sinais e símbolos de caráter socioambiental devem ter sua origem e significado claramente indicados, devendo abster-se de usos que levem o consumidor a engano ou confusão quanto à sua natureza, seu alcance ou seu fundamento.\n\nO uso de recursos gráficos não poderá sugerir aprovação oficial ou certificação por terceiros, quando inexistente. Quando houver certificação externa, deverá ser disponibilizado o acesso a informações sobre os atributos avaliados e os critérios adotados. A divulgação de atributos que são objeto de certificação externa deverá estar relacionada ao escopo e respeitar os limites da certificação conferida."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-U-7 인증·표시·기호"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Anexo \"U\" II.7",
+      "quote_pt": "\"O uso de recursos gráficos não poderá sugerir aprovação oficial ou certificação por terceiros, quando inexistente.\"",
+      "translation_ko": "사회·환경 성격의 인증·표시·기호는 그 출처와 의미를 분명히 나타내야 하며, 성격·범위·근거에 대해 소비자를 오인·혼동시키는 사용을 피해야 한다. 그래픽 요소는 공식 승인이나 제3자 인증이 없는데 있는 것처럼 암시해서는 안 된다. 외부 인증이 있으면 평가한 속성과 적용 기준에 대한 정보에 접근할 수 있어야 한다. 외부 인증 대상 속성을 알릴 때는 인증 범위와 관련되어야 하고 그 한계를 지켜야 한다.",
+      "requirement_ko": "인증·기호의 출처·의미 표시, 인증 범위 내 사용, 없는 인증을 암시하지 않음.",
+      "review_guidance_ko": "텍스트에 인증명·인증 표현이 있으면 인증 기관·범위·기준 정보가 함께 있는지 확인하라고 안내한다. 인증 보유·유효성은 판단하지 않으며 \"인증 없음\"으로 단정하지 않는다. 그래픽·로고는 평가하지 않는다(1단계 제외 범위).",
+      "scope_limits_ko": "이 항목의 \"그래픽 요소\" 부분은 디자인 영역이라 우리 기능의 검토 대상이 아니다.",
+      "evidence_needed_ko": "인증서, 인증 범위, 평가 기준, 유효기간.",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-U-8",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "비교",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-U-8 — Anexo \"U\" – II.8 Comparação",
+        "text_pt": "8. COMPARAÇÃO – Alegações socioambientais comparativas devem assegurar que sua base seja clara e atender ao objetivo de esclarecimento do público, em consonância com o previsto nos artigos 32, 36, 36-A e 36-B deste Código.\n\nA superioridade ambiental em relação a produtos ou processos anteriores do próprio Anunciante ou aos de seus concorrentes somente poderá ser afirmada quando houver comprovação adequada e passível de verificação."
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-U-8 비교"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Anexo \"U\" II.8",
+      "quote_pt": "\"A superioridade ambiental em relação a produtos ou processos anteriores do próprio Anunciante ou aos de seus concorrentes somente poderá ser afirmada quando houver comprovação adequada e passível de verificação.\"",
+      "translation_ko": "비교형 사회·환경 주장은 비교 기준을 분명히 하고 대중에게 설명하려는 목적에 맞아야 하며, 이 코드의 Artigo 32, 36, 36-A, 36-B와 일치해야 한다. 광고주 자신의 이전 제품·공정이나 경쟁사 대비 환경적 우위는 적절하고 검증 가능한 입증이 있을 때만 주장할 수 있다.",
+      "requirement_ko": "비교 기준을 밝히고, 우위 주장은 검증 가능한 입증이 있어야 한다.",
+      "review_guidance_ko": "\"기존 대비 ~% 감소\", \"일반 제품보다\" 같은 비교 표현에 비교 대상·기준이 있는지 확인하라고 안내한다. 비교 수치는 바꾸거나 새로 만들지 않는다.",
+      "scope_limits_ko": "Artigo 32(비교 광고)는 이번에 발췌하지 않았다. 필요 시 추가 검토.",
+      "evidence_needed_ko": "비교 대상, 비교 방법, 측정 자료.",
+      "status_ko": null,
+      "amendment_note_ko": null
+    },
+    {
+      "id": "CONAR-U-9",
+      "source_id": "SRC-CONAR-WEB",
+      "legal_nature": "advertising_self_regulation",
+      "title_ko": "특정 주장: 기후, 폐기물 처리",
+      "excerpt": {
+        "file": "conar_excerpt.md",
+        "heading": "## CONAR-U-9 — Anexo \"U\" – II.9 Alegações socioambientais específicas (9.1~9.2.3), 각주 1~4",
+        "text_pt": "9. ALEGAÇÕES SOCIOAMBIENTAIS ESPECÍFICAS – O rol de disposições sobre alegações socioambientais específicas abaixo elencado é exemplificativo, podendo ser complementado por meio de resolução do Conselho de Conteúdo do CONAR, atendidas as diretrizes do disposto no presente Código.\n\n9.1. Alegações sobre clima\n\nConsiderando a falta de conhecimento técnico do público em geral acerca das informações sobre o tema, as alegações e benefícios relacionados ao clima, em especial sobre a limitação ou redução da emissão dos gases de efeito estufa – GEE (dióxido de carbono e outros), devem ser qualificadas, de forma a indicar: a. a base da alegação; b. a modalidade de ação (redução de emissões, remoção de carbono e/ou compensação de emissões); e c. a etapa do ciclo de vida do produto ou atividade a que se refere, caso não esteja relacionada ao ciclo completo.\n\n9.1.1. As alegações a respeito de metas de redução ou compensação de emissões demandam informação de quando o benefício divulgado será atingido, em conformidade com as disposições de acordos internacionais ratificados1 e compromissos vigentes no país2. Referidas alegações devem estar fundamentadas em planos estabelecidos e verificáveis para sua concretização, sendo estimulada a disponibilização de canal para prover informações atualizadas sobre os progressos quantificados.\n\n9.1.2. As alegações deverão estar fundadas em comprovação confiável, que poderão abranger o inventário e cálculo das emissões, das reduções de emissões, remoções e compensação, baseado em metodologia reconhecida e, quando exigido por lei, certificada por organismos competentes3.\n\n9.1.3. As alegações compreendidas no presente item devem esclarecer se e em que medida há efetiva redução das emissões próprias ou se as alegações se baseiam em ações de compensação, a fim de evitar a compreensão equivocada de que os produtos e/ou seus respectivos processos de fabricação não geram emissões ou geram emissões irrisórias.\n\n9.1.4. Para as alegações compreendidas no presente item, estimula-se a disponibilização de canal para prover informações completas sobre o inventário de emissões, sobre as medidas implementadas para a redução de emissões e/ou sobre o esquema de compensação utilizado.\n\n9.2. Alegações sobre destinação de resíduos\n\nEstão abrangidas no presente item as alegações sobre as formas, atributos, sistemas e capacidades de destinação de resíduos após o fim do ciclo de vida útil do produto, podendo abranger sua embalagem e componentes, tais como “reutilizável”, “reciclável”, “compostável” e “degradável”, que deverão observar o disposto na legislação aplicável4 e nas diretrizes abaixo.\n\n9.2.1. As alegações sobre atributos e capacidades de destinação de resíduos do produto, de sua embalagem ou componentes, tais como “reutilizável”, “reciclável”, “biodegradável”, “degradável”, “compostável” ou equivalentes, devem ser qualificadas, de forma a indicar a parte do produto, componente ou embalagem a qual a alegação se refere, caso não seja correspondente a sua totalidade.\n\n9.2.2. Todas as alegações sobre a destinação de resíduos, incluindo ações de pós-consumo, economia circular, entre outras, devem ser sustentadas por evidências técnicas e científicas confiáveis, condizentes com as condições de destinação prováveis no mercado brasileiro.\n\n9.2.3. Deverão ser disponibilizadas informações, podendo, conforme as limitações de tempo e espaço nos anúncios, serem providas por meio de canal(is) acessório(s) (Códigos QR, site, SAC, etc.), acerca: a. das condições ou restrições especiais envolvidas em tais processos; b. de eventuais limitações quanto à disponibilidade de equipamentos das ações de processamento e de destinação de resíduos; e c. dos locais para destinação específica de produtos e resíduos submetidos aos sistemas de logística reversa para recolha pelo fornecedor, como pilhas, baterias, pneus, produtos eletrônicos e seus componentes, em conformidade com o previsto na Política Nacional de Resíduos Sólidos.\n\n1 Em especial o Acordo de Paris, promulgado no país por meio do Decreto nº 9.073/17.\n\n2 Em especial as metas de redução de emissões de gases de efeito estufa e outras ações climáticas estabelecidas no país como compromisso internacional a título de Contribuição Nacionalmente Determinada (NDC) no âmbito da Convenção-Quadro das Nações Unidas sobre Mudança do Clima.\n\n3 Vide Lei nº 15.042/2024, sobre o Sistema Brasileiro de Comércio de Emissões de Gases de Efeito Estufa (SBCE).\n\n4 Vide Política Nacional de Resíduos Sólidos: Lei nº 12.305/2010 e Decreto nº 10.936/22"
+      },
+      "review": {
+        "file": "review_criteria_ko.md",
+        "heading": "#### CONAR-U-9 특정 주장: 기후, 폐기물 처리"
+      },
+      "translation_official": false,
+      "compared_with_source_id": "SRC-CONAR-PDF",
+      "provisions": "Anexo \"U\" II.9, 9.1, 9.1.1~9.1.4, 9.2, 9.2.1~9.2.3, 각주 1~4",
+      "quote_pt": "\"As alegações compreendidas no presente item devem esclarecer se e em que medida há efetiva redução das emissões próprias ou se as alegações se baseiam em ações de compensação, ...\"",
+      "translation_ko": "(9) 아래 특정 주장 규정 목록은 예시이며, 내용위원회 결의로 보완될 수 있다.\n(9.1) 일반 대중의 기술 지식 부족을 고려해, 기후 관련 주장과 이익, 특히 온실가스(이산화탄소 등) 배출 제한·감축에 관한 주장은 a. 주장의 근거, b. 행동 방식(배출 감축, 탄소 제거, 배출 상쇄), c. 전체 주기가 아닐 경우 해당 수명주기 단계를 나타내도록 한정해야 한다.\n(9.1.1) 배출 감축·상쇄 목표에 관한 주장은 비준된 국제 협약(각주 1: 파리협정, Decreto nº 9.073/17)과 국내 약속(각주 2: 국가온실가스감축목표(NDC) 등)에 맞게, 알리는 이익이 언제 달성되는지 정보가 필요하다. 이행을 위한 확정되고 검증 가능한 계획에 근거해야 하며, 정량화된 진행 상황을 알리는 채널 제공이 권장된다.\n(9.1.2) 주장은 인정된 방법론에 따른 배출·감축·제거·상쇄의 목록과 계산 등 신뢰할 수 있는 입증에 근거해야 하며, 법이 요구하면 권한 있는 기관의 인증을 받아야 한다(각주 3: Lei nº 15.042/2024, 브라질 온실가스 배출권거래제(SBCE)).\n(9.1.3) 자체 배출을 실제로 줄였는지, 어느 정도인지, 아니면 상쇄에 근거한 주장인지 밝혀, 제품·공정이 배출이 없거나 미미하다는 오해를 피해야 한다.\n(9.1.4) 배출 목록, 감축 조치, 상쇄 방식에 대한 전체 정보를 제공하는 채널이 권장된다.\n(9.2) 이 항목은 제품(포장·구성품 포함)의 수명 종료 후 폐기물 처리 방식·속성·체계·능력에 관한 주장, 예를 들어 \"재사용 가능\", \"재활용 가능\", \"퇴비화 가능\", \"분해 가능\" 등을 다루며, 관련 법령(각주 4: 국가고형폐기물정책 Lei nº 12.305/2010, Decreto nº 10.936/22)과 아래 지침을 따라야 한다.\n(9.2.1) 재사용·재활용·생분해·분해·퇴비화 가능 등 폐기물 처리 속성 주장은, 제품 전체에 해당하지 않으면 해당하는 제품 부분·구성품·포장을 나타내도록 한정해야 한다.\n(9.2.2) 소비 후 활동, 순환경제 등을 포함한 모든 폐기물 처리 주장은 브라질 시장에서 예상되는 처리 여건에 맞는 신뢰할 수 있는 기술·과학 증거로 뒷받침해야 한다.\n(9.2.3) 광고의 시간·지면 제약에 따라 QR 코드·웹사이트·고객센터 등 보조 채널로, a. 해당 공정의 특별한 조건·제한, b. 처리 설비 이용 가능성의 한계, c. 역물류(logística reversa) 체계에 따라 공급자가 회수하는 제품·폐기물(배터리·타이어·전자제품과 그 구성품 등)의 지정 처리 장소에 관한 정보를, 국가고형폐기물정책에 맞게 제공해야 한다.",
+      "requirement_ko": "기후 주장은 근거·방식(감축/제거/상쇄)·단계를 밝히고 목표는 시점·계획이 필요하다. 폐기물 처리 주장은 적용 부분을 한정하고 브라질 여건에 맞는 증거와 조건 정보를 제공해야 한다.",
+      "review_guidance_ko": "탄소·배출 관련 표현은 감축/상쇄 구분, 적용 단계, 목표 시점 표시 여부를 확인하라고 안내한다. 재활용·순환 관련 표현은 제품 전체인지 일부인지, 브라질 처리 여건을 고려했는지 확인이 필요하다고 안내한다. 리젠 T2T 같은 재생 원료 소재에 이 항목이 어떻게 적용되는지(원료 단계 주장 vs 제품 폐기 단계 주장)는 문맥으로 구분하고, 불명확하면 \"판단 보류\"로 둔다.",
+      "scope_limits_ko": "9의 목록은 예시이며 다른 주장 유형을 배제하지 않는다. 각주의 법령(Decreto 9.073/17, Lei 15.042/2024, Lei 12.305/2010, Decreto 10.936/22)은 이번에 원문을 조회하지 않았다. 원문 예시 단어는 판정용 금칙어가 아니다.",
+      "evidence_needed_ko": "배출 목록·계산 방법·인증, 감축/상쇄 구분 자료, 목표 계획, 재활용·처리 가능성 시험 자료와 브라질 내 처리 여건 자료.",
+      "status_ko": null,
+      "amendment_note_ko": null
+    }
+  ],
+  "content_hash": {
+    "algorithm": "sha256",
+    "value": "33f124cbe94d957f63d66e2a1726fd63799e186ca9a48e6bd5791a6ff36ccca5",
+    "note": "content_hash를 뺀 묶음 전체(정렬 키·UTF-8 JSON)의 해시. 어떤 내용을 썼는지 식별·변경 감지용이며 최신성·법적 효력을 증명하지 않음"
+  }
+}
