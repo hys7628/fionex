@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import socket
+import threading
 import unicodedata
 import urllib.error
 import urllib.parse
@@ -18,7 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from time import monotonic
+from time import monotonic, sleep
 from zoneinfo import ZoneInfo
 
 from features.home import buyer_time, fairs, fx, news_summary, report
@@ -217,6 +218,7 @@ NEWS_ERRORS = {
     "access_denied": "요청이 거부되었습니다. 인증·접근 권한을 확인해야 합니다.",
     "timeout": "응답 시간이 초과되었습니다.",
     "fetch_failed": "뉴스를 불러오지 못했습니다.",
+    "source_unavailable": "Google News가 일시적으로 응답하지 않습니다(503/429). 잠시 후 다시 시도하세요. ABIT도 같은 수집 경로를 사용합니다.",
     "invalid_response": "응답 형식을 확인할 수 없습니다.",
 }
 
@@ -469,12 +471,58 @@ def _domain_of(url):
     return host[4:] if host.startswith("www.") else host or None
 
 
+
+# Google RSS는 Google/ABIT/검색이 공유합니다. 한 프로세스에서 요청을 직렬화하고
+# 503은 2초 후 한 번만 재시도합니다. Retry-After가 있으면 요청을 즉시 쉬며 존중합니다.
+_google_http_lock = threading.Lock()
+_google_pause_until = 0.0
+
+
+def _google_retry_after(headers):
+    value = (headers.get("Retry-After", "") if headers else "").strip()
+    if value.isdigit():
+        return float(value)
+    try:
+        target = parsedate_to_datetime(value)
+        if target.tzinfo is not None:
+            return max(0.0, (target - datetime.now(timezone.utc)).total_seconds())
+    except (TypeError, ValueError, OverflowError):
+        pass
+    return 0.0
+
+
+def _google_http_body(req):
+    global _google_pause_until
+    with _google_http_lock:
+        if monotonic() < _google_pause_until:
+            raise NewsFetchError("source_unavailable")
+        for attempt in range(2):
+            try:
+                with urllib.request.urlopen(req, timeout=NEWS_TIMEOUT_SECONDS) as res:
+                    return res.read(NEWS_MAX_RESPONSE_BYTES + 1)
+            except urllib.error.HTTPError as err:
+                if err.code not in (429, 503):
+                    raise
+                status = err.code
+                wait = _google_retry_after(err.headers)
+                err.close()
+                logger.warning("뉴스 요청 실패(news.google.com): HTTP %s; attempt=%s", status, attempt + 1)
+                if status == 503 and attempt == 0 and wait == 0:
+                    sleep(2)
+                    continue
+                _google_pause_until = monotonic() + max(60.0, wait)
+                raise NewsFetchError("source_unavailable") from None
+
+
 def _http_get(url, accept):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": accept})
     host = urllib.parse.urlsplit(url).netloc  # 로그에 쿼리(인증키 포함 가능)를 남기지 않습니다.
     try:
-        with urllib.request.urlopen(req, timeout=NEWS_TIMEOUT_SECONDS) as res:
-            body = res.read(NEWS_MAX_RESPONSE_BYTES + 1)
+        if urllib.parse.urlsplit(url).hostname == "news.google.com":
+            body = _google_http_body(req)
+        else:
+            with urllib.request.urlopen(req, timeout=NEWS_TIMEOUT_SECONDS) as res:
+                body = res.read(NEWS_MAX_RESPONSE_BYTES + 1)
     except urllib.error.HTTPError as err:
         logger.warning("뉴스 요청 실패(%s): HTTP %s", host, err.code)
         raise NewsFetchError("access_denied" if err.code in (401, 403) else "fetch_failed") from None
@@ -666,3 +714,4 @@ def _limit(items):
 
 
 _NEWS_FETCHERS = {"kotra": _fetch_kotra, "google": _fetch_google, "abit": _fetch_abit}
+
